@@ -338,7 +338,7 @@ function HomePage({ setPage, user, cart, setCart }) {
     const t = setInterval(() => {
       setAnimating(true);
       setTimeout(() => { setSlide(s => (s + 1) % HERO_SLIDES.length); setAnimating(false); }, 450);
-    }, 6000);
+    }, 5000);
     return () => clearInterval(t);
   }, []);
 
@@ -583,9 +583,9 @@ function ProductCard({ product, user, onAdd, setPage }) {
         </div>
       </div>
       <div>
-        <p style={{ fontSize:10, letterSpacing:'0.14em', color:'var(--mid)', textTransform:'uppercase', marginBottom:5 }}>{product.category}</p>
+        <p style={{ fontSize:10, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', marginBottom:5 }}>{product.category}</p>
         <p style={{ fontFamily:'var(--font-display)', fontSize:15, fontWeight:400, color:'var(--black)', marginBottom:2, lineHeight:1.3 }}>{product.name}</p>
-        <p style={{ fontSize:12, color:'var(--mid)', marginBottom:8 }}>{product.nameZh} · {product.size}</p>
+        <p style={{ fontSize:12, color:'var(--dark)', marginBottom:8 }}>{product.nameZh} · {product.size}</p>
         <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
           <span style={{ fontSize:15, fontWeight:500, color:'var(--black)' }}>NT$ {showPrice.toLocaleString()}</span>
           {user?.isPro && <span style={{ fontSize:11, color:'var(--mid)', textDecoration:'line-through' }}>NT$ {product.price.toLocaleString()}</span>}
