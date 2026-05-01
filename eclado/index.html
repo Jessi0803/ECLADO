@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECLADO — 韓國醫美院線保養</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gilda+Display&family=Jost:wght@200;300;400;500;600&family=Noto+Serif+TC:wght@200;300;400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --white: #fafaf9;
+    --off-white: #f4f3f1;
+    --light: #ebebea;
+    --mid: #c8c7c5;
+    --dark: #2a2a28;
+    --black: #141412;
+    --accent: #1a1a18;
+    --gold: #b8a98a;
+    --font-display: 'Gilda Display', Georgia, serif;
+    --font-body: 'Jost', 'Noto Serif TC', Helvetica, sans-serif;
+    --font-zh: 'Noto Serif TC', serif;
+  }
+  html { font-size: 16px; scroll-behavior: smooth; }
+  body { background: var(--white); color: var(--dark); font-family: 'Jost', 'Noto Serif TC', Helvetica, sans-serif; font-weight: 300; -webkit-font-smoothing: antialiased; }
+  h1, h2, h3 { font-family: 'Gilda Display', 'Noto Serif TC', Georgia, serif; }
+  /* Chinese body text */
+  p, span, button, a, label, input, textarea { font-family: 'Jost', 'Noto Serif TC', sans-serif; }
+  #root { min-height: 100vh; }
+
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+
+  /* Stripe placeholder pattern */
+  .img-placeholder {
+    background-color: var(--light);
+    background-image: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 4px,
+      var(--mid) 4px,
+      var(--mid) 5px
+    );
+    display: flex; align-items: center; justify-content: center;
+    color: var(--mid); font-family: var(--font-body); font-size: 11px;
+    letter-spacing: 0.08em; text-align: center; padding: 8px;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const NAV_LINKS = ['清潔', '精華液', '急救安瓶', '面膜', '眼霜', '面霜'];
+const NAV_ITEMS = [
+  { label: '所有產品', children: ['清潔', '精華液', '急救安瓶', '面膜', '眼霜', '面霜'] },
+  { label: '會員登錄', children: ['一般會員', '美容師專區'] },
+  { label: '品牌故事', children: null },
+  { label: '購物說明', children: ['退換貨說明', '運送方式', '付款說明', '常見問題'] },
+];
+
+const PRODUCTS = [
+  { id: 1, name: 'Deep Cleansing Foam', nameZh: '深層清潔泡沫洗面乳', category: '清潔', size: '200ml', price: 1280, proPrice: 960, isProOnly: false, tag: '暢銷',
+    img: 'https://images.unsplash.com/photo-1556228578-dd539282b964?w=600&q=80&fit=crop' },
+  { id: 2, name: 'Peptide Repair Serum', nameZh: '胜肽修護精華液', category: '精華液', size: '30ml', price: 3980, proPrice: 2980, isProOnly: false, tag: '新品',
+    img: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&q=80&fit=crop' },
+  { id: 3, name: 'SOS Ampoule Set', nameZh: '急救修護安瓶組', category: '急救安瓶', size: '5ml×6', price: 4800, proPrice: 3600, isProOnly: false, tag: '',
+    img: 'https://images.unsplash.com/photo-1617897903246-719242758050?w=600&q=80&fit=crop' },
+  { id: 4, name: 'Intensive Hydra Mask', nameZh: '密集保濕面膜', category: '面膜', size: '35ml×10', price: 2200, proPrice: 1650, isProOnly: false, tag: '',
+    img: 'https://images.unsplash.com/photo-1629198688000-71f23e745b6e?w=600&q=80&fit=crop' },
+  { id: 5, name: 'Eye Contour Complex', nameZh: '眼周緊緻精華', category: '眼霜', size: '30ml', price: 2800, proPrice: 2100, isProOnly: false, tag: '',
+    img: 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=600&q=80&fit=crop' },
+  { id: 6, name: 'Cell Recovery Cream', nameZh: '細胞修護乳霜', category: '面霜', size: '50g', price: 3600, proPrice: 2700, isProOnly: false, tag: '暢銷',
+    img: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=600&q=80&fit=crop' },
+  { id: 7, name: 'NK Cell Activator', nameZh: 'NK細胞活化安瓶', category: '急救安瓶', size: '3.5ml×10', price: 8800, proPrice: 6600, isProOnly: true, tag: '院線',
+    img: 'https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=600&q=80&fit=crop' },
+  { id: 8, name: 'AHA/BHA Peeling Gel', nameZh: 'AHA·BHA·PHA 煥膚凝膠', category: '清潔', size: '120ml', price: 1980, proPrice: 1485, isProOnly: false, tag: '',
+    img: 'https://images.unsplash.com/photo-1631390737500-0d64c52c7aa4?w=600&q=80&fit=crop' },
+];
+
+const HERO_SLIDES = [
+  {
+    headline: 'Science\nMeets Skin.',
+    sub: '韓國醫美院線 × 台灣專業代理',
+    cta: '探索系列',
+    img: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=1800&q=85&fit=crop',
+    layout: 'left',
+    accent: 'New Collection 2026',
+  },
+  {
+    headline: 'Precision\nFormula.',
+    sub: '細胞級修護，皮膚科醫師驗證',
+    cta: '查看安瓶系列',
+    img: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=1800&q=85&fit=crop',
+    layout: 'center',
+    accent: 'Professional Grade',
+  },
+  {
+    headline: 'Ritual of\nKorean Beauty.',
+    sub: '專業美容師首選，院線品質保證',
+    cta: '美容師專區',
+    img: 'https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=1800&q=85&fit=crop',
+    layout: 'split',
+    accent: 'For Professionals',
+  },
+];
+
+
+// ─── NAV ITEM with dropdown ────────────────────────────────────────────────
+function NavItem({ item, scrolled, setPage }) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+
+  React.useEffect(() => {
+    function handler(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  function handleChildClick(child) {
+    setOpen(false);
+    if (item.label === '所有產品') { setPage('shop'); }
+    else if (item.label === '會員登錄') {
+      if (child === '一般會員') setPage('login');
+      else if (child === '美容師專區') setPage('login');
+    }
+    else if (item.label === '品牌故事') { setPage('about'); }
+    else if (item.label === '購物說明') { setPage('info'); }
+  }
+
+  function handleMainClick() {
+    if (!item.children) {
+      if (item.label === '品牌故事') setPage('about');
+      return;
+    }
+    setOpen(o => !o);
+  }
+
+  const textColor = scrolled ? 'var(--dark)' : 'rgba(255,255,255,0.88)';
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}
+      onMouseEnter={() => item.children && setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button onClick={handleMainClick} style={{
+        background: 'none', border: 'none', cursor: 'pointer',
+        fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 400,
+        letterSpacing: '0.06em', color: textColor,
+        padding: '8px 18px', display: 'flex', alignItems: 'center', gap: 5,
+        transition: 'color 0.3s', height: 68,
+      }}>
+        {item.label}
+        {item.children && (
+          <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{ transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+            <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+          </svg>
+        )}
+      </button>
+
+      {item.children && open && (
+        <div style={{
+          position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+          background: 'rgba(250,250,249,0.98)', backdropFilter: 'blur(16px)',
+          border: '1px solid var(--light)', minWidth: 160,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+          zIndex: 200, padding: '8px 0',
+          animation: 'fadeInDown 0.18s ease',
+        }}>
+          {item.children.map(child => (
+            <button key={child} onClick={() => handleChildClick(child)} style={{
+              display: 'block', width: '100%', textAlign: 'left',
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--dark)',
+              padding: '11px 22px', letterSpacing: '0.04em',
+              transition: 'background 0.15s, color 0.15s',
+            }}
+            onMouseEnter={e => { e.target.style.background = 'var(--off-white)'; e.target.style.color = 'var(--black)'; }}
+            onMouseLeave={e => { e.target.style.background = 'none'; e.target.style.color = 'var(--dark)'; }}
+            >{child}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── COMPONENTS ──────────────────────────────────────────────────────────────
+
+function StripePlaceholder({ width, height, label, style = {} }) {
+  return (
+    <div className="img-placeholder" style={{ width, height, ...style }}>
+      <span style={{ fontFamily: 'var(--font-body)', fontSize: 10, letterSpacing: '0.1em', color: '#aaa', textTransform: 'uppercase' }}>{label}</span>
+    </div>
+  );
+}
+
+function Nav({ page, setPage, cartCount, user, setUser }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', handler);
+    return () => window.removeEventListener('scroll', handler);
+  }, []);
+
+  return (
+    <nav style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+      background: scrolled ? 'rgba(250,250,249,0.96)' : 'rgba(0,0,0,0)',
+      backdropFilter: scrolled ? 'blur(12px)' : 'none',
+      borderBottom: scrolled ? '1px solid var(--light)' : '1px solid rgba(255,255,255,0.1)',
+      transition: 'all 0.4s ease',
+    }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px', height: 68, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {/* Logo */}
+        <div onClick={() => setPage('home')} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400, letterSpacing: '0.22em', color: scrolled ? 'var(--black)' : 'var(--white)' }}>ECLADO</span>
+          <span style={{ fontSize: 9, letterSpacing: '0.28em', color: 'var(--gold)', textTransform: 'uppercase', fontWeight: 400 }}>Korean Cosmeceuticals</span>
+        </div>
+
+        {/* Center nav with dropdowns */}
+        <div style={{ display: 'flex', gap: 0, alignItems: 'center' }}>
+          {NAV_ITEMS.map(item => (
+            <NavItem key={item.label} item={item} scrolled={scrolled} setPage={setPage} />
+          ))}
+        </div>
+
+        {/* Right icons */}
+        <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+          {user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {user.isPro && (
+                <span style={{ fontSize: 10, letterSpacing: '0.1em', background: scrolled ? 'var(--black)' : 'rgba(255,255,255,0.15)', color: 'var(--white)', padding: '3px 8px', fontWeight: 500 }}>PRO</span>
+              )}
+              <button onClick={() => setPage('account')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: scrolled ? 'var(--dark)' : 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-body)' }}>
+                {user.name}
+              </button>
+              <button onClick={() => setUser(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: scrolled ? 'var(--mid)' : 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-body)' }}>登出</button>
+            </div>
+          ) : (
+            <button onClick={() => setPage('login')} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 13, color: scrolled ? 'var(--dark)' : 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-body)',
+              letterSpacing: '0.04em', transition: 'color 0.3s', whiteSpace: 'nowrap',
+            }}>登入 / 註冊</button>
+          )}
+          <button onClick={() => setPage('cart')} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 13, color: scrolled ? 'var(--dark)' : 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-body)',
+            letterSpacing: '0.04em', position: 'relative', padding: '4px 0', transition: 'color 0.3s', whiteSpace: 'nowrap',
+          }}>
+            購物車
+            {cartCount > 0 && (
+              <span style={{
+                position: 'absolute', top: -4, right: -14,
+                background: 'var(--black)', color: 'var(--white)',
+                fontSize: 9, width: 16, height: 16,
+                borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>{cartCount}</span>
+            )}
+          </button>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+// ─── HOME PAGE ─────────────────────────────────────────────────────────────
+function HomePage({ setPage, user, cart, setCart }) {
+  const [slide, setSlide] = useState(0);
+  const [animating, setAnimating] = useState(false);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setAnimating(true);
+      setTimeout(() => { setSlide(s => (s + 1) % HERO_SLIDES.length); setAnimating(false); }, 450);
+    }, 6000);
+    return () => clearInterval(t);
+  }, []);
+
+  const featured = PRODUCTS.filter(p => !p.isProOnly).slice(0, 4);
+
+  function addToCart(product) {
+    setCart(prev => {
+      const existing = prev.find(i => i.id === product.id);
+      if (existing) return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
+      return [...prev, { ...product, qty: 1 }];
+    });
+  }
+
+  return (
+    <div>
+      {/* HERO */}
+      <section style={{ height: '100vh', position: 'relative', overflow: 'hidden', background: '#1a1a18' }}>
+
+        {/* BG image — transitions between slides */}
+        {HERO_SLIDES.map((s, i) => (
+          <img key={i} src={s.img} alt="" style={{
+            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+            objectFit: 'cover', objectPosition: 'center',
+            opacity: i === slide ? 1 : 0,
+            transition: 'opacity 0.9s ease',
+            pointerEvents: 'none',
+          }} />
+        ))}
+
+        {/* === LAYOUT 1: LEFT — full bleed, text left === */}
+        {HERO_SLIDES[slide].layout === 'left' && (
+          <>
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(14,14,12,0.88) 45%, rgba(14,14,12,0.15))' }} />
+            <div style={{
+              position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+              justifyContent: 'center', padding: '0 10vw', maxWidth: 780,
+              opacity: animating ? 0 : 1, transition: 'opacity 0.45s ease',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                <div style={{ width: 36, height: 1, background: 'var(--gold)' }} />
+                <span style={{ fontSize: 10, letterSpacing: '0.34em', color: 'var(--gold)', textTransform: 'uppercase', fontFamily: 'var(--font-body)' }}>{HERO_SLIDES[slide].accent}</span>
+              </div>
+              <h1 style={{
+                fontFamily: 'var(--font-display)', fontSize: 'clamp(56px, 7.5vw, 104px)',
+                fontWeight: 300, color: 'var(--white)', lineHeight: 1.0,
+                letterSpacing: '-0.01em', whiteSpace: 'pre-line', marginBottom: 28,
+              }}>{HERO_SLIDES[slide].headline}</h1>
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.1em', marginBottom: 48, fontWeight: 300 }}>
+                {HERO_SLIDES[slide].sub}
+              </p>
+              <div style={{ display: 'flex', gap: 16 }}>
+                <button onClick={() => setPage('shop')} style={{ background: 'var(--white)', color: 'var(--black)', border: 'none', padding: '14px 32px', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'var(--font-body)', fontWeight: 500, transition: 'all 0.2s', whiteSpace: 'nowrap' }}
+                  onMouseEnter={e => { e.target.style.background='var(--gold)'; e.target.style.color='var(--white)'; }}
+                  onMouseLeave={e => { e.target.style.background='var(--white)'; e.target.style.color='var(--black)'; }}
+                >{HERO_SLIDES[slide].cta}</button>
+                <button onClick={() => setPage('login')} style={{ background: 'transparent', color: 'var(--white)', border: '1px solid rgba(255,255,255,0.35)', padding: '14px 32px', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
+                  onMouseEnter={e => e.target.style.borderColor='var(--white)'}
+                  onMouseLeave={e => e.target.style.borderColor='rgba(255,255,255,0.35)'}
+                >美容師專區</button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* === LAYOUT 2: CENTER — text centered, dark vignette === */}
+        {HERO_SLIDES[slide].layout === 'center' && (
+          <>
+            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, rgba(14,14,12,0.5) 0%, rgba(14,14,12,0.82) 100%)' }} />
+            <div style={{
+              position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+              justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 8vw',
+              opacity: animating ? 0 : 1, transition: 'opacity 0.45s ease',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
+                <div style={{ width: 24, height: 1, background: 'var(--gold)' }} />
+                <span style={{ fontSize: 10, letterSpacing: '0.34em', color: 'var(--gold)', textTransform: 'uppercase', fontFamily: 'var(--font-body)' }}>{HERO_SLIDES[slide].accent}</span>
+                <div style={{ width: 24, height: 1, background: 'var(--gold)' }} />
+              </div>
+              <h1 style={{
+                fontFamily: 'var(--font-display)', fontSize: 'clamp(52px, 8vw, 112px)',
+                fontWeight: 300, color: 'var(--white)', lineHeight: 1.0,
+                letterSpacing: '0.02em', whiteSpace: 'pre-line', marginBottom: 28,
+              }}>{HERO_SLIDES[slide].headline}</h1>
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.14em', marginBottom: 52, fontWeight: 300, maxWidth: 440 }}>
+                {HERO_SLIDES[slide].sub}
+              </p>
+              <button onClick={() => setPage('shop')} style={{ background: 'transparent', color: 'var(--white)', border: '1px solid rgba(255,255,255,0.6)', padding: '15px 44px', fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'all 0.25s', whiteSpace: 'nowrap' }}
+                onMouseEnter={e => { e.target.style.background='var(--white)'; e.target.style.color='var(--black)'; }}
+                onMouseLeave={e => { e.target.style.background='transparent'; e.target.style.color='var(--white)'; }}
+              >{HERO_SLIDES[slide].cta}</button>
+            </div>
+          </>
+        )}
+
+        {/* === LAYOUT 3: SPLIT — left dark panel + right image === */}
+        {HERO_SLIDES[slide].layout === 'split' && (
+          <>
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to left, rgba(14,14,12,0.1) 40%, rgba(14,14,12,0.92) 70%)' }} />
+            <div style={{
+              position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+              justifyContent: 'center', alignItems: 'flex-end', padding: '0 10vw',
+              opacity: animating ? 0 : 1, transition: 'opacity 0.45s ease',
+            }}>
+              <div style={{ maxWidth: 520, textAlign: 'right' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, marginBottom: 20 }}>
+                  <span style={{ fontSize: 10, letterSpacing: '0.34em', color: 'var(--gold)', textTransform: 'uppercase', fontFamily: 'var(--font-body)' }}>{HERO_SLIDES[slide].accent}</span>
+                  <div style={{ width: 36, height: 1, background: 'var(--gold)' }} />
+                </div>
+                <h1 style={{
+                  fontFamily: 'var(--font-display)', fontSize: 'clamp(48px, 6.5vw, 92px)',
+                  fontWeight: 300, color: 'var(--white)', lineHeight: 1.05,
+                  letterSpacing: '-0.01em', whiteSpace: 'pre-line', marginBottom: 24,
+                }}>{HERO_SLIDES[slide].headline}</h1>
+                <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.1em', marginBottom: 44, fontWeight: 300 }}>
+                  {HERO_SLIDES[slide].sub}
+                </p>
+                <div style={{ display: 'flex', gap: 16, justifyContent: 'flex-end' }}>
+                  <button onClick={() => setPage('login')} style={{ background: 'var(--gold)', color: 'var(--white)', border: 'none', padding: '14px 32px', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'var(--font-body)', fontWeight: 500, transition: 'opacity 0.2s', whiteSpace: 'nowrap' }}
+                    onMouseEnter={e => e.target.style.opacity='0.85'}
+                    onMouseLeave={e => e.target.style.opacity='1'}
+                  >{HERO_SLIDES[slide].cta}</button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Slide counter */}
+        <div style={{ position: 'absolute', bottom: 40, left: '10vw', display: 'flex', alignItems: 'center', gap: 20 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {HERO_SLIDES.map((_, i) => (
+              <div key={i} onClick={() => { setAnimating(true); setTimeout(() => { setSlide(i); setAnimating(false); }, 300); }} style={{
+                width: i === slide ? 28 : 8, height: 2,
+                background: i === slide ? 'var(--white)' : 'rgba(255,255,255,0.28)',
+                cursor: 'pointer', transition: 'all 0.35s',
+              }} />
+            ))}
+          </div>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', fontFamily: 'var(--font-body)' }}>
+            {String(slide + 1).padStart(2,'0')} / {String(HERO_SLIDES.length).padStart(2,'0')}
+          </span>
+        </div>
+
+        {/* Scroll indicator */}
+        <div style={{ position: 'absolute', right: 40, bottom: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 9, letterSpacing: '0.2em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', writingMode: 'vertical-rl' }}>Scroll</span>
+          <div style={{ width: 1, height: 40, background: 'rgba(255,255,255,0.18)' }} />
+        </div>
+      </section>
+
+      {/* BRAND STRIP */}
+      <section style={{ background: 'var(--black)', padding: '20px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px', display: 'flex', justifyContent: 'center', gap: 64, alignItems: 'center' }}>
+          {['韓國原廠直送', 'KFDA 認證', '皮膚科醫師驗證', '專業美容師培訓'].map(item => (
+            <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 4, height: 4, background: 'var(--gold)', borderRadius: '50%' }} />
+              <span style={{ fontSize: 12, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-body)' }}>{item}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* FEATURED PRODUCTS */}
+      <section style={{ padding: '100px 0', background: 'var(--white)' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 56 }}>
+            <div>
+              <p style={{ fontSize: 11, letterSpacing: '0.28em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 12 }}>Featured</p>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 300, lineHeight: 1.1, color: 'var(--black)' }}>精選商品</h2>
+            </div>
+            <button onClick={() => setPage('shop')} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 13, letterSpacing: '0.08em', color: 'var(--dark)',
+              fontFamily: 'var(--font-body)', borderBottom: '1px solid var(--dark)', paddingBottom: 2,
+            }}>全部商品 →</button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
+            {featured.map(product => (
+              <ProductCard key={product.id} product={product} user={user} onAdd={() => addToCart(product)} setPage={setPage} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ABOUT STRIP */}
+      <section style={{ background: 'var(--off-white)', padding: '100px 0' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+          <div>
+            <p style={{ fontSize: 11, letterSpacing: '0.28em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 16 }}>About ECLADO</p>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(28px, 3.5vw, 46px)', fontWeight: 300, lineHeight: 1.2, marginBottom: 28, color: 'var(--black)' }}>
+              源自韓國醫美診所<br />
+              <em style={{ fontStyle: 'normal', fontWeight: 300 }}>的專業配方</em>
+            </h2>
+            <p style={{ fontSize: 14, lineHeight: 1.9, color: '#666', maxWidth: 480, marginBottom: 32 }}>
+              ECLADO 是源自韓國醫美院線的頂級保養品牌，每一款產品皆由皮膚科醫師與研究團隊共同研發，以臨床驗證的有效成分，帶給您診所級的保養體驗。
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, maxWidth: 360 }}>
+              {[['10+', '年研發經驗'], ['50+', '院線合作診所'], ['95%', '顧客回購率'], ['KFDA', '認證通過']].map(([num, label]) => (
+                <div key={label}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 400, color: 'var(--black)', lineHeight: 1 }}>{num}</div>
+                  <div style={{ fontSize: 12, color: 'var(--mid)', letterSpacing: '0.06em', marginTop: 4 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <img src="https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=900&q=85&fit=crop" alt="品牌故事" style={{ width: '100%', height: 480, objectFit: 'cover', display: 'block' }} />
+        </div>
+      </section>
+
+      {/* PRO SECTION */}
+      <section style={{ background: 'var(--black)', padding: '100px 0' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px', textAlign: 'center' }}>
+          <p style={{ fontSize: 11, letterSpacing: '0.28em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 16 }}>Professional</p>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(32px, 4vw, 56px)', fontWeight: 300, color: 'var(--white)', marginBottom: 20, lineHeight: 1.1 }}>
+            美容師專業會員
+          </h2>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', maxWidth: 480, margin: '0 auto 48px', lineHeight: 1.8 }}>
+            申請成為認證美容師會員，享有院線保養品購買資格<br />及專業折扣價格，共同提升客戶的保養體驗。
+          </p>
+          <div style={{ display: 'flex', gap: 32, justifyContent: 'center', marginBottom: 52, flexWrap: 'wrap' }}>
+            {['院線保養品購買資格', '專業折扣優惠價', '產品操作培訓', '優先新品體驗'].map(item => (
+              <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 1, height: 14, background: 'var(--gold)' }} />
+                <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.06em' }}>{item}</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => setPage('login')} style={{
+            background: 'transparent', border: '1px solid var(--gold)', color: 'var(--gold)',
+            padding: '14px 48px', fontSize: 12, letterSpacing: '0.2em',
+            textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'var(--font-body)',
+            transition: 'all 0.25s',
+          }}
+          onMouseEnter={e => { e.target.style.background = 'var(--gold)'; e.target.style.color = 'var(--black)'; }}
+          onMouseLeave={e => { e.target.style.background = 'transparent'; e.target.style.color = 'var(--gold)'; }}
+          >申請美容師會員</button>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer style={{ background: 'var(--black)', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '60px 0 32px' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 48, marginBottom: 48 }}>
+            <div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, letterSpacing: '0.22em', color: 'var(--white)', marginBottom: 6 }}>ECLADO</div>
+              <div style={{ fontSize: 9, letterSpacing: '0.24em', color: 'var(--gold)', marginBottom: 20 }}>Korean Cosmeceuticals</div>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', lineHeight: 1.8 }}>
+                韓國醫美院線保養品<br />台灣專業代理
+              </p>
+            </div>
+            {[
+              { title: '產品系列', links: ['清潔系列', '精華液', '急救安瓶', '面膜', '眼霜', '面霜'] },
+              { title: '服務', links: ['關於我們', '美容師專區', '常見問題', '聯絡我們'] },
+              { title: '購物說明', links: ['訂單查詢', '配送說明', '退換貨政策', '隱私政策'] },
+            ].map(col => (
+              <div key={col.title}>
+                <div style={{ fontSize: 11, letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginBottom: 20 }}>{col.title}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {col.links.map(link => (
+                    <a key={link} href="#" style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', letterSpacing: '0.04em', transition: 'color 0.2s' }}
+                    onMouseEnter={e => e.target.style.color = 'var(--white)'}
+                    onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,0.4)'}
+                    >{link}</a>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.04em' }}>© 2026 ECLADO. All rights reserved.</span>
+            <div style={{ display: 'flex', gap: 20 }}>
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.06em' }}>LINE</span>
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.06em' }}>Instagram</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+// ─── PRODUCT CARD ─────────────────────────────────────────────────────────
+function ProductCard({ product, user, onAdd, setPage }) {
+  const [hovered, setHovered] = useState(false);
+  const showPrice = user?.isPro ? product.proPrice : product.price;
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{ cursor: 'pointer', position: 'relative' }}
+    >
+      {/* Tag */}
+      {product.tag && (
+        <div style={{
+          position: 'absolute', top: 12, left: 12, zIndex: 2,
+          background: product.tag === '院線' ? 'var(--dark)' : 'var(--gold)',
+          color: 'var(--white)', fontSize: 10, padding: '3px 10px',
+          letterSpacing: '0.12em', fontFamily: 'var(--font-body)',
+        }}>{product.tag}</div>
+      )}
+
+      {/* Image */}
+      <div style={{ position: 'relative', overflow: 'hidden', marginBottom: 16 }}>
+        <img src={product.img} alt={product.nameZh} style={{ width: '100%', height: 300, objectFit: 'cover', display: 'block', transition: 'transform 0.5s ease', transform: hovered ? 'scale(1.04)' : 'scale(1)' }} />
+        {/* Quick add */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          background: 'var(--black)', padding: '12px',
+          transform: hovered ? 'translateY(0)' : 'translateY(100%)',
+          transition: 'transform 0.25s ease',
+        }}>
+          <button onClick={e => { e.stopPropagation(); onAdd(); }} style={{
+            width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--white)', fontSize: 11, letterSpacing: '0.15em',
+            textTransform: 'uppercase', fontFamily: 'var(--font-body)', padding: '4px 0',
+          }}>加入購物車</button>
+        </div>
+      </div>
+
+      {/* Info */}
+      <div>
+        <p style={{ fontSize: 10, letterSpacing: '0.15em', color: 'var(--mid)', textTransform: 'uppercase', marginBottom: 6 }}>{product.category}</p>
+        <p style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 400, color: 'var(--black)', marginBottom: 2, lineHeight: 1.3 }}>{product.name}</p>
+        <p style={{ fontSize: 12, color: 'var(--mid)', marginBottom: 10 }}>{product.nameZh} · {product.size}</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: 16, fontWeight: 500, color: 'var(--black)' }}>
+            NT$ {showPrice.toLocaleString()}
+          </span>
+          {user?.isPro && (
+            <span style={{ fontSize: 11, color: 'var(--mid)', textDecoration: 'line-through' }}>
+              NT$ {product.price.toLocaleString()}
+            </span>
+          )}
+          {user?.isPro && (
+            <span style={{ fontSize: 10, background: 'var(--off-white)', color: 'var(--dark)', padding: '2px 7px', letterSpacing: '0.06em' }}>
+              專業價
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── SHOP PAGE ─────────────────────────────────────────────────────────────
+function ShopPage({ user, cart, setCart }) {
+  const [activeCategory, setActiveCategory] = useState('全部');
+  const categories = ['全部', ...NAV_LINKS];
+
+  function addToCart(product) {
+    setCart(prev => {
+      const existing = prev.find(i => i.id === product.id);
+      if (existing) return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
+      return [...prev, { ...product, qty: 1 }];
+    });
+  }
+
+  const filtered = PRODUCTS.filter(p => {
+    if (p.isProOnly && !user?.isPro) return false;
+    if (activeCategory === '全部') return true;
+    return p.category === activeCategory;
+  });
+
+  return (
+    <div style={{ paddingTop: 68 }}>
+      {/* Header */}
+      <div style={{ background: 'var(--off-white)', padding: '64px 32px 48px', textAlign: 'center', borderBottom: '1px solid var(--light)' }}>
+        <p style={{ fontSize: 11, letterSpacing: '0.28em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 12 }}>Shop</p>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 44, fontWeight: 300, color: 'var(--black)', lineHeight: 1.1 }}>全部商品</h1>
+      </div>
+
+      {/* Filter tabs */}
+      <div style={{ background: 'var(--white)', borderBottom: '1px solid var(--light)', padding: '0 32px', display: 'flex', gap: 0, justifyContent: 'center' }}>
+        {categories.map(cat => (
+          <button key={cat} onClick={() => setActiveCategory(cat)} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontFamily: 'var(--font-body)', fontSize: 13, color: activeCategory === cat ? 'var(--black)' : 'var(--mid)',
+            padding: '20px 24px', letterSpacing: '0.06em',
+            borderBottom: activeCategory === cat ? '1px solid var(--black)' : '1px solid transparent',
+            transition: 'all 0.2s', fontWeight: activeCategory === cat ? 500 : 300,
+          }}>{cat}</button>
+        ))}
+      </div>
+
+      {/* Products */}
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '60px 32px' }}>
+        {user?.isPro && (
+          <div style={{ background: 'var(--dark)', color: 'var(--white)', padding: '12px 20px', marginBottom: 40, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 10, background: 'var(--gold)', color: 'var(--black)', padding: '2px 8px', letterSpacing: '0.1em', fontWeight: 500 }}>PRO</span>
+            <span style={{ fontSize: 13, letterSpacing: '0.06em' }}>您已登入美容師帳號，可查看院線商品及專業折扣價格</span>
+          </div>
+        )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
+          {filtered.map(product => (
+            <ProductCard key={product.id} product={product} user={user} onAdd={() => addToCart(product)} />
+          ))}
+        </div>
+        {filtered.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--mid)', fontSize: 14 }}>此分類目前無商品</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── CART PAGE ─────────────────────────────────────────────────────────────
+function CartPage({ cart, setCart, setPage }) {
+  function updateQty(id, delta) {
+    setCart(prev => prev.map(i => i.id === id ? { ...i, qty: Math.max(0, i.qty + delta) } : i).filter(i => i.qty > 0));
+  }
+  const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+
+  return (
+    <div style={{ paddingTop: 68, minHeight: '80vh' }}>
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '60px 32px' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginBottom: 48 }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 40, fontWeight: 300 }}>購物車</h1>
+          <span style={{ fontSize: 14, color: 'var(--mid)' }}>{cart.length} 件商品</span>
+        </div>
+
+        {cart.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '80px 0' }}>
+            <p style={{ fontSize: 16, color: 'var(--mid)', marginBottom: 28, fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 300 }}>購物車是空的</p>
+            <button onClick={() => setPage('shop')} style={{
+              background: 'var(--black)', color: 'var(--white)', border: 'none',
+              padding: '12px 36px', fontSize: 12, letterSpacing: '0.15em',
+              cursor: 'pointer', fontFamily: 'var(--font-body)',
+            }}>繼續購物</button>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 48 }}>
+            {/* Items */}
+            <div>
+              {cart.map((item, idx) => (
+                <div key={item.id} style={{
+                  display: 'grid', gridTemplateColumns: '80px 1fr auto',
+                  gap: 20, alignItems: 'center',
+                  padding: '24px 0', borderBottom: '1px solid var(--light)',
+                }}>
+                  <img src={item.img} alt={item.nameZh} style={{ width: 80, height: 80, objectFit: 'cover', display: 'block' }} />
+                  <div>
+                    <p style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 400, marginBottom: 4 }}>{item.name}</p>
+                    <p style={{ fontSize: 12, color: 'var(--mid)', marginBottom: 12 }}>{item.nameZh} · {item.size}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <button onClick={() => updateQty(item.id, -1)} style={{ width: 28, height: 28, border: '1px solid var(--light)', background: 'none', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>−</button>
+                      <span style={{ fontSize: 14, minWidth: 24, textAlign: 'center' }}>{item.qty}</span>
+                      <button onClick={() => updateQty(item.id, 1)} style={{ width: 28, height: 28, border: '1px solid var(--light)', background: 'none', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>+</button>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ fontSize: 15, fontWeight: 500 }}>NT$ {(item.price * item.qty).toLocaleString()}</p>
+                    <button onClick={() => updateQty(item.id, -item.qty)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--mid)', marginTop: 8 }}>移除</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Summary */}
+            <div style={{ background: 'var(--off-white)', padding: '32px', height: 'fit-content' }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 400, marginBottom: 24 }}>訂單摘要</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, fontSize: 13, color: 'var(--dark)' }}>
+                <span>小計</span><span>NT$ {total.toLocaleString()}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, fontSize: 13, color: 'var(--dark)' }}>
+                <span>運費</span><span style={{ color: 'var(--mid)' }}>NT$ 150</span>
+              </div>
+              <div style={{ height: 1, background: 'var(--light)', margin: '20px 0' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 28, fontWeight: 500 }}>
+                <span style={{ fontSize: 15 }}>合計</span>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 20 }}>NT$ {(total + 150).toLocaleString()}</span>
+              </div>
+              <button onClick={() => setPage('checkout')} style={{
+                width: '100%', background: 'var(--black)', color: 'var(--white)', border: 'none',
+                padding: '16px', fontSize: 12, letterSpacing: '0.18em',
+                textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'var(--font-body)',
+                fontWeight: 500, transition: 'background 0.2s',
+              }}
+              onMouseEnter={e => e.target.style.background = '#333'}
+              onMouseLeave={e => e.target.style.background = 'var(--black)'}
+              >前往結帳</button>
+              <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--mid)', marginTop: 16, letterSpacing: '0.04em' }}>支援：銀行轉帳</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── CHECKOUT PAGE ─────────────────────────────────────────────────────────
+function CheckoutPage({ cart, setCart, setPage }) {
+  const [step, setStep] = useState(1); // 1=info, 2=payment, 3=done
+  const [form, setForm] = useState({ name: '', phone: '', email: '', address: '', city: '', note: '' });
+  const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (step === 1) setStep(2);
+    else if (step === 2) { setStep(3); setCart([]); }
+  }
+
+  if (step === 3) return (
+    <div style={{ paddingTop: 68, minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center', padding: '60px', maxWidth: 480 }}>
+        <div style={{ width: 56, height: 56, border: '1px solid var(--black)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px', fontSize: 22 }}>✓</div>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 300, marginBottom: 16 }}>訂單成立！</h2>
+        <p style={{ fontSize: 14, color: 'var(--mid)', lineHeight: 1.8, marginBottom: 12 }}>
+          訂單編號：<strong style={{ color: 'var(--dark)' }}>ECL-20260501-0042</strong>
+        </p>
+        <p style={{ fontSize: 13, color: 'var(--mid)', lineHeight: 1.8, marginBottom: 32 }}>
+          我們已透過 LINE 發送訂單通知給您<br />
+          請在 3 天內完成銀行轉帳，謝謝！
+        </p>
+        <div style={{ background: 'var(--off-white)', padding: '20px', marginBottom: 32, textAlign: 'left' }}>
+          <p style={{ fontSize: 12, letterSpacing: '0.1em', color: 'var(--mid)', marginBottom: 8, textTransform: 'uppercase' }}>匯款資訊</p>
+          <p style={{ fontSize: 13, lineHeight: 2 }}>銀行：國泰世華 013<br />帳號：123-456-789000<br />戶名：ECLADO 保養品有限公司</p>
+        </div>
+        <button onClick={() => setPage('home')} style={{
+          background: 'var(--black)', color: 'var(--white)', border: 'none',
+          padding: '12px 36px', fontSize: 12, letterSpacing: '0.15em', cursor: 'pointer',
+          fontFamily: 'var(--font-body)',
+        }}>返回首頁</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ paddingTop: 68 }}>
+      <div style={{ maxWidth: 860, margin: '0 auto', padding: '60px 32px' }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 300, marginBottom: 48 }}>結帳</h1>
+
+        {/* Steps */}
+        <div style={{ display: 'flex', gap: 0, marginBottom: 48, borderBottom: '1px solid var(--light)' }}>
+          {['配送資訊', '付款方式'].map((s, i) => (
+            <div key={s} style={{ padding: '12px 0', marginRight: 40, borderBottom: step === i + 1 ? '2px solid var(--black)' : '2px solid transparent', fontSize: 13, color: step === i + 1 ? 'var(--black)' : 'var(--mid)', letterSpacing: '0.06em', cursor: 'pointer', transition: 'all 0.2s' }}
+            onClick={() => { if (i + 1 < step) setStep(i + 1); }}>
+              {s}
+            </div>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 60 }}>
+          <div>
+            {step === 1 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {[['姓名', 'name', 'text'], ['手機', 'phone', 'tel'], ['Email', 'email', 'email']].map(([label, key, type]) => (
+                  <div key={key}>
+                    <label style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>{label}</label>
+                    <input type={type} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} required style={{ width: '100%', border: 'none', borderBottom: '1px solid var(--light)', padding: '10px 0', fontSize: 14, fontFamily: 'var(--font-body)', outline: 'none', background: 'none', color: 'var(--dark)' }}
+                    onFocus={e => e.target.style.borderBottomColor = 'var(--dark)'}
+                    onBlur={e => e.target.style.borderBottomColor = 'var(--light)'}
+                    />
+                  </div>
+                ))}
+                <div>
+                  <label style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>收件地址</label>
+                  <input type="text" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} required placeholder="縣市、區域、詳細地址" style={{ width: '100%', border: 'none', borderBottom: '1px solid var(--light)', padding: '10px 0', fontSize: 14, fontFamily: 'var(--font-body)', outline: 'none', background: 'none', color: 'var(--dark)' }}
+                  onFocus={e => e.target.style.borderBottomColor = 'var(--dark)'}
+                  onBlur={e => e.target.style.borderBottomColor = 'var(--light)'}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>備註（選填）</label>
+                  <textarea value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} rows={3} style={{ width: '100%', border: '1px solid var(--light)', padding: '10px 12px', fontSize: 14, fontFamily: 'var(--font-body)', outline: 'none', resize: 'vertical', background: 'none', color: 'var(--dark)' }}
+                  onFocus={e => e.target.style.borderColor = 'var(--dark)'}
+                  onBlur={e => e.target.style.borderColor = 'var(--light)'}
+                  />
+                </div>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div>
+                <div style={{ border: '1px solid var(--dark)', padding: '24px', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <span style={{ fontSize: 14, fontWeight: 500 }}>銀行轉帳</span>
+                    <span style={{ fontSize: 11, background: 'var(--dark)', color: 'var(--white)', padding: '3px 10px', letterSpacing: '0.1em' }}>唯一付款方式</span>
+                  </div>
+                  <div style={{ background: 'var(--off-white)', padding: '20px' }}>
+                    <p style={{ fontSize: 12, letterSpacing: '0.1em', color: 'var(--mid)', marginBottom: 10, textTransform: 'uppercase' }}>匯款資訊</p>
+                    <p style={{ fontSize: 13, lineHeight: 2.2, color: 'var(--dark)' }}>
+                      銀行：國泰世華 (013)<br />
+                      帳號：123-456-789000<br />
+                      戶名：ECLADO 保養品有限公司
+                    </p>
+                  </div>
+                  <p style={{ fontSize: 12, color: 'var(--mid)', marginTop: 16, lineHeight: 1.7 }}>
+                    ※ 下訂後請在 3 個工作天內完成匯款<br />
+                    ※ 匯款完成後請保留收據，我們確認後將出貨
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <button type="submit" style={{
+              marginTop: 32, background: 'var(--black)', color: 'var(--white)', border: 'none',
+              padding: '16px 48px', fontSize: 12, letterSpacing: '0.18em',
+              textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'var(--font-body)', fontWeight: 500,
+            }}>
+              {step === 1 ? '繼續付款' : '確認送出訂單'}
+            </button>
+          </div>
+
+          {/* Order summary sidebar */}
+          <div style={{ background: 'var(--off-white)', padding: '28px', height: 'fit-content' }}>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 400, marginBottom: 20 }}>訂單明細</h3>
+            {cart.map(item => (
+              <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, fontSize: 13 }}>
+                <span style={{ color: 'var(--dark)' }}>{item.nameZh} × {item.qty}</span>
+                <span>NT$ {(item.price * item.qty).toLocaleString()}</span>
+              </div>
+            ))}
+            <div style={{ height: 1, background: 'var(--light)', margin: '16px 0' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 8 }}>
+              <span>運費</span><span>NT$ 150</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 500, marginTop: 12 }}>
+              <span>合計</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 18 }}>NT$ {(total + 150).toLocaleString()}</span>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── LOGIN PAGE ─────────────────────────────────────────────────────────────
+function LoginPage({ setUser, setPage }) {
+  const [mode, setMode] = useState('login'); // login | register
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  function handleLogin(e, asPro = false) {
+    e.preventDefault();
+    setUser({ name: email.split('@')[0] || '會員', email, isPro: asPro });
+    setPage('shop');
+  }
+
+  return (
+    <div style={{ paddingTop: 68, minHeight: '100vh', display: 'flex' }}>
+      {/* Left visual */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: 'var(--black)', padding: 60, position: 'relative', overflow: 'hidden' }}>
+        <img src="https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=900&q=85&fit=crop" alt="login visual" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.35 }} />
+        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, letterSpacing: '0.22em', color: 'var(--white)', marginBottom: 8 }}>ECLADO</div>
+          <div style={{ fontSize: 9, letterSpacing: '0.3em', color: 'var(--gold)', marginBottom: 48, textTransform: 'uppercase' }}>Korean Cosmeceuticals</div>
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 300, color: 'var(--white)', lineHeight: 1.4, marginBottom: 24 }}>
+            Professional<br />Skincare.
+          </p>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.9 }}>
+            登入後享有完整購物體驗<br />美容師會員可查看院線專業商品
+          </p>
+        </div>
+      </div>
+
+      {/* Right form */}
+      <div style={{ width: 480, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '60px 56px', background: 'var(--white)' }}>
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 0, marginBottom: 40, borderBottom: '1px solid var(--light)' }}>
+          {['login', 'register'].map((m, i) => (
+            <button key={m} onClick={() => setMode(m)} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontFamily: 'var(--font-body)', fontSize: 14, padding: '12px 0',
+              marginRight: 32, color: mode === m ? 'var(--black)' : 'var(--mid)',
+              borderBottom: mode === m ? '1px solid var(--black)' : '1px solid transparent',
+              letterSpacing: '0.04em', fontWeight: mode === m ? 500 : 300, transition: 'all 0.2s',
+            }}>{m === 'login' ? '登入' : '註冊會員'}</button>
+          ))}
+        </div>
+
+        <form style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          {[['Email', 'email', 'email'], ['密碼', 'password', 'password']].map(([label, key, type]) => (
+            <div key={key}>
+              <label style={{ fontSize: 11, letterSpacing: '0.14em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 10 }}>{label}</label>
+              <input type={type} value={key === 'email' ? email : password}
+                onChange={e => key === 'email' ? setEmail(e.target.value) : setPassword(e.target.value)}
+                style={{ width: '100%', border: 'none', borderBottom: '1px solid var(--light)', padding: '10px 0', fontSize: 15, fontFamily: 'var(--font-body)', outline: 'none', background: 'none', color: 'var(--dark)' }}
+                onFocus={e => e.target.style.borderBottomColor = 'var(--dark)'}
+                onBlur={e => e.target.style.borderBottomColor = 'var(--light)'}
+              />
+            </div>
+          ))}
+
+          <button type="submit" onClick={e => handleLogin(e, false)} style={{
+            width: '100%', background: 'var(--black)', color: 'var(--white)', border: 'none',
+            padding: '16px', fontSize: 12, letterSpacing: '0.2em',
+            textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'var(--font-body)',
+            fontWeight: 500, marginTop: 8, transition: 'background 0.2s',
+          }}
+          onMouseEnter={e => e.target.style.background = '#333'}
+          onMouseLeave={e => e.target.style.background = 'var(--black)'}
+          >{mode === 'login' ? '登入' : '建立帳號'}</button>
+        </form>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, margin: '28px 0' }}>
+          <div style={{ flex: 1, height: 1, background: 'var(--light)' }} />
+          <span style={{ fontSize: 11, color: 'var(--mid)', letterSpacing: '0.1em' }}>或</span>
+          <div style={{ flex: 1, height: 1, background: 'var(--light)' }} />
+        </div>
+
+        {/* LINE Login */}
+        <button onClick={e => handleLogin(e, false)} style={{
+          width: '100%', background: '#00B900', color: 'var(--white)', border: 'none',
+          padding: '15px', fontSize: 13, letterSpacing: '0.08em',
+          cursor: 'pointer', fontFamily: 'var(--font-body)', fontWeight: 500,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          transition: 'opacity 0.2s',
+        }}
+        onMouseEnter={e => e.target.style.opacity = '0.85'}
+        onMouseLeave={e => e.target.style.opacity = '1'}
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="white"><path d="M10 2C5.6 2 2 5.1 2 8.8c0 2.5 1.6 4.7 4 5.9l-.5 2 2.3-1.2c.7.2 1.4.3 2.2.3 4.4 0 8-3.1 8-6.8C18 5.1 14.4 2 10 2z"/></svg>
+          使用 LINE 帳號登入
+        </button>
+
+        {/* Demo: Pro login */}
+        <div style={{ marginTop: 24, padding: '16px', background: 'var(--off-white)', borderLeft: '2px solid var(--gold)' }}>
+          <p style={{ fontSize: 11, letterSpacing: '0.1em', color: 'var(--mid)', marginBottom: 10, textTransform: 'uppercase' }}>設計預覽 — 快速登入</p>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button onClick={e => handleLogin(e, false)} style={{ flex: 1, background: 'none', border: '1px solid var(--light)', padding: '9px', fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-body)', color: 'var(--dark)', letterSpacing: '0.06em' }}>
+              一般消費者
+            </button>
+            <button onClick={e => handleLogin(e, true)} style={{ flex: 1, background: 'var(--dark)', border: '1px solid var(--dark)', padding: '9px', fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-body)', color: 'var(--white)', letterSpacing: '0.06em' }}>
+              美容師會員 PRO
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ─── ABOUT PAGE ─────────────────────────────────────────────────────────────
+function AboutPage() {
+  return (
+    <div style={{ paddingTop: 68 }}>
+      <div style={{ background: 'var(--black)', padding: '80px 32px', textAlign: 'center' }}>
+        <p style={{ fontSize: 11, letterSpacing: '0.3em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 16 }}>Our Story</p>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(36px, 5vw, 64px)', fontWeight: 300, color: 'var(--white)', lineHeight: 1.1 }}>品牌故事</h1>
+      </div>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '80px 32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center', marginBottom: 80 }}>
+          <div>
+            <p style={{ fontSize: 11, letterSpacing: '0.28em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 16 }}>About ECLADO</p>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 40, fontWeight: 300, lineHeight: 1.2, marginBottom: 24, color: 'var(--black)' }}>
+              源自韓國醫美診所<br />的專業配方
+            </h2>
+            <p style={{ fontSize: 14, lineHeight: 2, color: '#666', marginBottom: 20 }}>
+              ECLADO 創立於首爾，品牌核心理念源自韓國頂尖皮膚科醫師對於肌膚修護的深刻理解。每一款產品皆由醫療專業團隊與研究機構共同研發，以臨床驗證的有效成分，帶給您診所級的保養體驗。
+            </p>
+            <p style={{ fontSize: 14, lineHeight: 2, color: '#666' }}>
+              2026年正式進入台灣市場，由專業代理團隊引進，提供給美容師及一般消費者最頂尖的韓國醫美院線保養品。
+            </p>
+          </div>
+          <img src="https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=800&q=85&fit=crop" alt="品牌故事" style={{ width: '100%', height: 460, objectFit: 'cover' }} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}>
+          {[
+            { num: '10+', label: '年研發經驗', desc: '結合皮膚科學與臨床研究' },
+            { num: '50+', label: '院線合作診所', desc: '韓國頂級醫美診所首選' },
+            { num: '95%', label: '顧客回購率', desc: '真實有效，值得信賴' },
+          ].map(item => (
+            <div key={item.label} style={{ textAlign: 'center', padding: '40px 24px', border: '1px solid var(--light)' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 52, fontWeight: 300, color: 'var(--black)', lineHeight: 1, marginBottom: 8 }}>{item.num}</div>
+              <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '0.08em', marginBottom: 12 }}>{item.label}</div>
+              <div style={{ fontSize: 13, color: 'var(--mid)' }}>{item.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── INFO PAGE ───────────────────────────────────────────────────────────────
+function InfoPage({ setPage: sp }) {
+  const [active, setActive] = React.useState('退換貨說明');
+  const sections = {
+    '退換貨說明': {
+      title: '退換貨說明',
+      content: [
+        { q: '退換貨期限', a: '商品自收到日起 7 天內，如有品質瑕疵或錯誤出貨，可申請退換貨。' },
+        { q: '退換貨條件', a: '商品須保持未拆封、未使用之原始狀態，含原始包裝及所有配件。院線保養品因衛生考量，一經開封恕不退換。' },
+        { q: '退款方式', a: '確認收到退回商品並審核通過後，將以原付款方式退款，約 5-7 個工作天入帳。' },
+        { q: '申請方式', a: '請透過 LINE 官方帳號聯繫客服，說明退換貨原因並提供訂單編號與商品照片。' },
+      ]
+    },
+    '運送方式': {
+      title: '運送方式',
+      content: [
+        { q: '配送方式', a: '全台宅配（黑貓宅急便），離島地區可能需額外 2-3 個工作天。' },
+        { q: '運費說明', a: '單筆訂單運費 NT$150，滿 NT$2,000 享免運費優惠。' },
+        { q: '出貨時間', a: '確認付款後 1-2 個工作天出貨，出貨後約 1-3 個工作天送達。' },
+        { q: '出貨通知', a: '商品出貨後系統將自動透過 LINE 發送出貨通知，內含物流追蹤連結。' },
+      ]
+    },
+    '付款說明': {
+      title: '付款說明',
+      content: [
+        { q: '付款方式', a: '目前僅接受銀行轉帳（ATM 匯款）付款。' },
+        { q: '匯款資訊', a: '銀行：國泰世華銀行（013）\n帳號：123-456-789000\n戶名：ECLADO 保養品有限公司' },
+        { q: '付款期限', a: '請於下單後 3 個工作天內完成匯款，逾期訂單將自動取消。' },
+        { q: '匯款確認', a: '匯款完成後請保留收據，我們會在 1 個工作天內確認並安排出貨。' },
+      ]
+    },
+    '常見問題': {
+      title: '常見問題',
+      content: [
+        { q: '如何成為美容師會員？', a: '請先完成一般會員註冊，再透過 LINE 聯繫客服提供美容師執照或相關證明，審核通過後即可升級為美容師會員，享有院線商品購買資格及專業折扣。' },
+        { q: '院線商品跟客裝商品有什麼差別？', a: '院線商品需要專業操作技術，僅開放給認證美容師會員購買；客裝商品則適合一般消費者在家自行保養使用。' },
+        { q: '如何查詢訂單狀態？', a: '登入會員後可在「我的訂單」查詢所有訂單狀態。下單及出貨時系統也會自動發送 LINE 通知。' },
+        { q: '商品可以退款嗎？', a: '商品未拆封且在 7 天內，如有品質問題可申請退款。請透過 LINE 聯繫客服處理。' },
+      ]
+    },
+  };
+
+  const current = sections[active];
+  return (
+    <div style={{ paddingTop: 68 }}>
+      <div style={{ background: 'var(--off-white)', padding: '64px 32px 0', borderBottom: '1px solid var(--light)' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <p style={{ fontSize: 11, letterSpacing: '0.28em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 12 }}>Service</p>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 44, fontWeight: 300, color: 'var(--black)', marginBottom: 40 }}>購物說明</h1>
+          <div style={{ display: 'flex', gap: 0 }}>
+            {Object.keys(sections).map(key => (
+              <button key={key} onClick={() => setActive(key)} style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontFamily: 'var(--font-body)', fontSize: 13,
+                color: active === key ? 'var(--black)' : 'var(--mid)',
+                padding: '14px 24px 14px 0', marginRight: 8,
+                borderBottom: active === key ? '2px solid var(--black)' : '2px solid transparent',
+                letterSpacing: '0.06em', fontWeight: active === key ? 500 : 300,
+                transition: 'all 0.2s',
+              }}>{key}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '60px 32px' }}>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 300, marginBottom: 40, color: 'var(--black)' }}>{current.title}</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {current.content.map((item, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 32, padding: '28px 0', borderBottom: '1px solid var(--light)' }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--black)', letterSpacing: '0.04em', paddingTop: 2 }}>{item.q}</div>
+              <div style={{ fontSize: 14, color: '#555', lineHeight: 1.9, whiteSpace: 'pre-line' }}>{item.a}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN APP ────────────────────────────────────────────────────────────────
+function App() {
+  const [page, setPage] = useState('home');
+  const [user, setUser] = useState(null);
+  const [cart, setCart] = useState([]);
+
+  const cartCount = cart.reduce((sum, i) => sum + i.qty, 0);
+
+  function renderPage() {
+    switch (page) {
+      case 'home': return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} />;
+      case 'shop': return <ShopPage user={user} cart={cart} setCart={setCart} />;
+      case 'cart': return <CartPage cart={cart} setCart={setCart} setPage={setPage} />;
+      case 'checkout': return <CheckoutPage cart={cart} setCart={setCart} setPage={setPage} />;
+      case 'login': return <LoginPage setUser={setUser} setPage={setPage} />;
+      case 'about': return <AboutPage />;
+      case 'info': return <InfoPage setPage={setPage} />;
+      default: return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} />;
+    }
+  }
+
+  return (
+    <>
+      {page !== 'login' && (
+        <Nav page={page} setPage={setPage} cartCount={cartCount} user={user} setUser={setUser} />
+      )}
+      {renderPage()}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
