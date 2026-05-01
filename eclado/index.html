@@ -247,8 +247,7 @@ function Nav({ setPage, cartCount, user, setUser }) {
                 <button onClick={() => setPage('account')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)' }}>{user.name}</button>
                 <button onClick={() => setUser(null)} style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color: scrolled ? 'var(--mid)' : 'rgba(255,255,255,0.5)', fontFamily:'var(--font-body)' }}>登出</button>
               </div>
-            ) : (
-            )}
+            ) : null}
             <button onClick={() => setPage('cart')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)', letterSpacing:'0.04em', position:'relative', padding:'4px 0', whiteSpace:'nowrap' }}>
               購物車
               {cartCount > 0 && <span style={{ position:'absolute', top:-4, right:-14, background:'var(--black)', color:'var(--white)', fontSize:9, width:16, height:16, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center' }}>{cartCount}</span>}
@@ -288,8 +287,7 @@ function Nav({ setPage, cartCount, user, setUser }) {
                 <span style={{ fontSize:14, color:'var(--dark)' }}>{user.isPro && <span style={{ fontSize:10, background:'var(--black)', color:'var(--white)', padding:'2px 7px', marginRight:8 }}>PRO</span>}{user.name}</span>
                 <button onClick={() => { setUser(null); setDrawerOpen(false); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'var(--mid)', textAlign:'left', padding:0 }}>登出</button>
               </>
-            ) : (
-            )}
+            ) : null}
           </div>
         </div>
       )}
