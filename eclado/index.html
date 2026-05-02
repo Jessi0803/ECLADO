@@ -7,8 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gilda+Display&family=Jost:wght@200;300;400;500;600&family=Noto+Serif+TC:wght@200;300;400;500&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
@@ -105,32 +104,22 @@
 <body>
 <div id="root"></div>
 
-<!-- ★ 填入你的 Firebase 專案設定 ★ -->
+<!-- ★ 填入你的 Supabase 專案設定 ★ -->
 <script>
-  const firebaseConfig = {
-    apiKey:            "YOUR_API_KEY",
-    authDomain:        "YOUR_AUTH_DOMAIN",
-    projectId:         "YOUR_PROJECT_ID",
-    storageBucket:     "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId:             "YOUR_APP_ID"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  auth.languageCode = 'zh-TW';
+  const SUPABASE_URL  = 'YOUR_SUPABASE_URL';   // 例如 https://xxxx.supabase.co
+  const SUPABASE_ANON = 'YOUR_SUPABASE_ANON_KEY';
+  const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-  function fbError(code) {
-    const m = {
-      'auth/user-not-found':     '找不到此帳號，請先註冊',
-      'auth/wrong-password':     '密碼錯誤',
-      'auth/invalid-credential': 'Email 或密碼錯誤',
-      'auth/email-already-in-use':'此 Email 已被註冊',
-      'auth/invalid-email':      'Email 格式不正確',
-      'auth/weak-password':      '密碼至少需要 6 個字元',
-      'auth/too-many-requests':  '嘗試次數過多，請稍後再試',
-      'auth/network-request-failed': '網路異常，請確認連線',
-    };
-    return m[code] || '發生錯誤，請再試一次';
+  function sbError(msg) {
+    if (!msg) return '發生錯誤，請再試一次';
+    if (msg.includes('Invalid login credentials'))   return 'Email 或密碼錯誤';
+    if (msg.includes('Email not confirmed'))         return '請先驗證您的電子郵件，再登入';
+    if (msg.includes('User already registered'))     return '此 Email 已被註冊';
+    if (msg.includes('Password should be at least')) return '密碼至少需要 6 個字元';
+    if (msg.includes('Unable to validate email'))    return 'Email 格式不正確';
+    if (msg.includes('For security purposes'))       return '請稍後再試';
+    if (msg.includes('rate limit'))                  return '寄信次數過多，請稍後再試';
+    return msg;
   }
 </script>
 
@@ -864,14 +853,10 @@ function LoginPage({ setPage }) {
   async function handleSignIn(e) {
     e.preventDefault(); reset(); setLoading(true);
     try {
-      const result = await auth.signInWithEmailAndPassword(email, password);
-      if (!result.user.emailVerified) {
-        await auth.signOut();
-        setError('請先驗證您的電子郵件，再登入。可重新查收驗證信。');
-        return;
-      }
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) { setError(sbError(error.message)); return; }
       setPage('shop');
-    } catch(err) { setError(fbError(err.code)); }
+    } catch(err) { setError('網路異常，請確認連線'); }
     finally { setLoading(false); }
   }
 
@@ -881,12 +866,11 @@ function LoginPage({ setPage }) {
     if (password !== confirm) { setError('兩次密碼不一致'); return; }
     setLoading(true);
     try {
-      const result = await auth.createUserWithEmailAndPassword(email, password);
-      await result.user.sendEmailVerification();
-      await auth.signOut();
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) { setError(sbError(error.message)); return; }
       setSuccess('✓ 驗證信已發送！請查收 ' + email + ' 並點擊驗證連結後再登入。');
       setView('login');
-    } catch(err) { setError(fbError(err.code)); }
+    } catch(err) { setError('網路異常，請確認連線'); }
     finally { setLoading(false); }
   }
 
@@ -894,9 +878,10 @@ function LoginPage({ setPage }) {
   async function handleForgot(e) {
     e.preventDefault(); reset(); setLoading(true);
     try {
-      await auth.sendPasswordResetEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) { setError(sbError(error.message)); return; }
       setSuccess('✓ 密碼重設信已發送至 ' + email + '，請查收信箱。');
-    } catch(err) { setError(fbError(err.code)); }
+    } catch(err) { setError('網路異常，請確認連線'); }
     finally { setLoading(false); }
   }
 
@@ -1136,20 +1121,25 @@ function App() {
   const [cart, setCart] = useState([]);
   const cartCount = cart.reduce((sum,i) => sum+i.qty, 0);
 
-  // 監聽 Firebase 登入狀態
+  // 監聽 Supabase 登入狀態
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged(fbUser => {
-      if (fbUser && fbUser.emailVerified) {
-        setUser({ name: fbUser.email.split('@')[0], email: fbUser.email, isPro: false, uid: fbUser.uid });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({ name: session.user.email.split('@')[0], email: session.user.email, isPro: false, uid: session.user.id });
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setUser({ name: session.user.email.split('@')[0], email: session.user.email, isPro: false, uid: session.user.id });
       } else {
         setUser(null);
       }
     });
-    return () => unsub();
+    return () => subscription.unsubscribe();
   }, []);
 
   function handleSignOut() {
-    auth.signOut();
+    supabase.auth.signOut();
     setUser(null);
   }
 
