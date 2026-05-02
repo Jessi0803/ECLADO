@@ -1021,9 +1021,17 @@ function AboutPage() {
   const isMobile = useIsMobile();
   return (
     <div style={{ paddingTop:68 }}>
-      <div style={{ background:'var(--black)', padding: isMobile ? '56px 24px' : '80px 32px', textAlign:'center' }}>
-        <p style={{ fontSize:11, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase', marginBottom:14 }}>Our Story</p>
-        <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(28px,5vw,64px)', fontWeight:300, color:'var(--white)', lineHeight:1.1 }}>品牌故事</h1>
+      <div style={{ background:'var(--off-white)', borderBottom:'1px solid var(--light)', padding: isMobile ? '40px 24px 36px' : '56px 32px 48px' }}>
+        <div style={{ maxWidth:1100, margin:'0 auto', display:'flex', alignItems:'flex-end', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
+          <div>
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
+              <div style={{ width:32, height:1, background:'var(--gold)' }} />
+              <p style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase', margin:0 }}>Our Story</p>
+            </div>
+            <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(26px,4vw,52px)', fontWeight:300, color:'var(--black)', lineHeight:1.1, margin:0 }}>品牌故事</h1>
+          </div>
+          <p style={{ fontSize:13, color:'var(--mid)', letterSpacing:'0.06em', maxWidth:320, lineHeight:1.8, margin:0 }}>ECLADO LABORATORY — Glow Beyond Limits.</p>
+        </div>
       </div>
       <div style={{ maxWidth:1100, margin:'0 auto', padding: isMobile ? '48px 20px' : '80px 32px' }}>
 
@@ -1033,7 +1041,7 @@ function AboutPage() {
             <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--dark)', textTransform:'uppercase', marginBottom:14 }}>Since 1998</p>
             <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(24px,3.5vw,40px)', fontWeight:300, lineHeight:1.2, marginBottom:24, color:'var(--black)' }}>深耕28年<br />韓國院線的選擇</h2>
             <p style={{ fontSize:14, lineHeight:2, color:'#666', marginBottom:16 }}>ECLADO 創立於1998年，是韓國美容產業中具代表性的專業皮膚管理院線品牌。28年來不以流行趨勢為導向，而是以系統化產品設計與實驗室研發技術為核心，持續陪伴臨床與美容專業人士成長。</p>
-            <p style={{ fontSize:14, lineHeight:2, color:'#666' }}>如今品牌足跡遍佈全球23個國家，韓國超過8,000家皮膚管理中心御用，並成為150所韓國美容學院的指定品牌。台灣是第24個重要市場，由專業代理團隊獨家引進。</p>
+            <p style={{ fontSize:14, lineHeight:2, color:'#666' }}>如今品牌足跡遍佈全球23個國家，韓國超過8,000家皮膚管理中心御用，並成為150所韓國美容學院的指定品牌。</p>
           </div>
           <img src="https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=800&q=85&fit=crop" alt="" style={{ width:'100%', height: isMobile ? 240 : 460, objectFit:'cover' }} />
         </div>
