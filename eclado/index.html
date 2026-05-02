@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gilda+Display&family=Jost:wght@200;300;400;500;600&family=Noto+Serif+TC:wght@200;300;400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
@@ -102,6 +104,36 @@
 </head>
 <body>
 <div id="root"></div>
+
+<!-- ★ 填入你的 Firebase 專案設定 ★ -->
+<script>
+  const firebaseConfig = {
+    apiKey:            "YOUR_API_KEY",
+    authDomain:        "YOUR_AUTH_DOMAIN",
+    projectId:         "YOUR_PROJECT_ID",
+    storageBucket:     "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId:             "YOUR_APP_ID"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  auth.languageCode = 'zh-TW';
+
+  function fbError(code) {
+    const m = {
+      'auth/user-not-found':     '找不到此帳號，請先註冊',
+      'auth/wrong-password':     '密碼錯誤',
+      'auth/invalid-credential': 'Email 或密碼錯誤',
+      'auth/email-already-in-use':'此 Email 已被註冊',
+      'auth/invalid-email':      'Email 格式不正確',
+      'auth/weak-password':      '密碼至少需要 6 個字元',
+      'auth/too-many-requests':  '嘗試次數過多，請稍後再試',
+      'auth/network-request-failed': '網路異常，請確認連線',
+    };
+    return m[code] || '發生錯誤，請再試一次';
+  }
+</script>
+
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
@@ -245,7 +277,7 @@ function Nav({ setPage, cartCount, user, setUser }) {
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                 {user.isPro && <span style={{ fontSize:10, letterSpacing:'0.1em', background: scrolled ? 'var(--black)' : 'rgba(255,255,255,0.15)', color:'var(--white)', padding:'3px 8px', fontWeight:500 }}>PRO</span>}
                 <button onClick={() => setPage('account')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)' }}>{user.name}</button>
-                <button onClick={() => setUser(null)} style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color: scrolled ? 'var(--mid)' : 'rgba(255,255,255,0.5)', fontFamily:'var(--font-body)' }}>登出</button>
+                <button onClick={() => setUser()} style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color: scrolled ? 'var(--mid)' : 'rgba(255,255,255,0.5)', fontFamily:'var(--font-body)' }}>登出</button>
               </div>
             ) : null}
             <button onClick={() => setPage('cart')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)', letterSpacing:'0.04em', position:'relative', padding:'4px 0', whiteSpace:'nowrap' }}>
@@ -285,7 +317,7 @@ function Nav({ setPage, cartCount, user, setUser }) {
             {user ? (
               <>
                 <span style={{ fontSize:14, color:'var(--dark)' }}>{user.isPro && <span style={{ fontSize:10, background:'var(--black)', color:'var(--white)', padding:'2px 7px', marginRight:8 }}>PRO</span>}{user.name}</span>
-                <button onClick={() => { setUser(null); setDrawerOpen(false); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'var(--mid)', textAlign:'left', padding:0 }}>登出</button>
+                <button onClick={() => { setUser(); setDrawerOpen(false); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'var(--mid)', textAlign:'left', padding:0 }}>登出</button>
               </>
             ) : null}
           </div>
@@ -817,20 +849,62 @@ function CheckoutPage({ cart, setCart, setPage }) {
 }
 
 // ─── LOGIN PAGE ───────────────────────────────────────────────────────────────
-function LoginPage({ setUser, setPage }) {
-  const [mode, setMode] = useState('login');
-  const [email, setEmail] = useState('');
+function LoginPage({ setPage }) {
+  const [view, setView]         = useState('login'); // 'login' | 'register' | 'forgot'
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm]   = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+  const [success, setSuccess]   = useState('');
 
-  function handleLogin(e, asPro=false) {
-    e.preventDefault();
-    setUser({ name: email.split('@')[0] || '會員', email, isPro: asPro });
-    setPage('shop');
+  function reset() { setError(''); setSuccess(''); }
+
+  // ── 登入 ──
+  async function handleSignIn(e) {
+    e.preventDefault(); reset(); setLoading(true);
+    try {
+      const result = await auth.signInWithEmailAndPassword(email, password);
+      if (!result.user.emailVerified) {
+        await auth.signOut();
+        setError('請先驗證您的電子郵件，再登入。可重新查收驗證信。');
+        return;
+      }
+      setPage('shop');
+    } catch(err) { setError(fbError(err.code)); }
+    finally { setLoading(false); }
   }
+
+  // ── 註冊 ──
+  async function handleRegister(e) {
+    e.preventDefault(); reset();
+    if (password !== confirm) { setError('兩次密碼不一致'); return; }
+    setLoading(true);
+    try {
+      const result = await auth.createUserWithEmailAndPassword(email, password);
+      await result.user.sendEmailVerification();
+      await auth.signOut();
+      setSuccess('✓ 驗證信已發送！請查收 ' + email + ' 並點擊驗證連結後再登入。');
+      setView('login');
+    } catch(err) { setError(fbError(err.code)); }
+    finally { setLoading(false); }
+  }
+
+  // ── 忘記密碼 ──
+  async function handleForgot(e) {
+    e.preventDefault(); reset(); setLoading(true);
+    try {
+      await auth.sendPasswordResetEmail(email);
+      setSuccess('✓ 密碼重設信已發送至 ' + email + '，請查收信箱。');
+    } catch(err) { setError(fbError(err.code)); }
+    finally { setLoading(false); }
+  }
+
+  const inputStyle = { width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'9px 0', fontSize:15, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--dark)' };
 
   return (
     <div style={{ minHeight:'100vh', display:'flex' }}>
-      {/* Left visual — hidden on mobile via CSS */}
+      {/* Left visual */}
       <div className="login-visual" style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center', background:'var(--black)', padding:60, position:'relative', overflow:'hidden' }}>
         <img src="https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=900&q=85&fit=crop" alt="" style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.35 }} />
         <div style={{ position:'relative', zIndex:1, textAlign:'center' }}>
@@ -842,48 +916,120 @@ function LoginPage({ setUser, setPage }) {
       </div>
 
       {/* Right form */}
-      <div style={{ width:'100%', maxWidth:480, display:'flex', flexDirection:'column', justifyContent:'center', padding:'60px 32px', background:'var(--white)' }}>
-        <div style={{ marginBottom:32 }}>
+      <div style={{ width:'100%', maxWidth:480, display:'flex', flexDirection:'column', justifyContent:'center', padding:'60px 32px', background:'var(--white)', overflowY:'auto' }}>
+        <div style={{ marginBottom:28 }}>
           <div style={{ fontFamily:'var(--font-display)', fontSize:20, letterSpacing:'0.2em', color:'var(--black)', marginBottom:4 }}>ECLADO</div>
           <div style={{ fontSize:9, letterSpacing:'0.26em', color:'var(--gold)', textTransform:'uppercase' }}>Korean Cosmeceuticals</div>
         </div>
-        <div style={{ display:'flex', gap:0, marginBottom:36, borderBottom:'1px solid var(--light)' }}>
-          {['login','register'].map(m => (
-            <button key={m} onClick={() => setMode(m)} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:14, padding:'11px 0', marginRight:28, color: mode===m ? 'var(--black)' : 'var(--mid)', borderBottom: mode===m ? '1px solid var(--black)' : '1px solid transparent', letterSpacing:'0.04em', fontWeight: mode===m ? 500 : 300 }}>{m==='login' ? '登入' : '註冊會員'}</button>
-          ))}
-        </div>
-        <form style={{ display:'flex', flexDirection:'column', gap:22 }}>
-          {[['Email','email','email'],['密碼','password','password']].map(([label,key,type]) => (
-            <div key={key}>
-              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--mid)', textTransform:'uppercase', display:'block', marginBottom:9 }}>{label}</label>
-              <input type={type} value={key==='email'?email:password} onChange={e => key==='email'?setEmail(e.target.value):setPassword(e.target.value)}
-                style={{ width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'9px 0', fontSize:15, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--dark)' }}
-                onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
-                onBlur={e=>e.target.style.borderBottomColor='var(--light)'}
-              />
-            </div>
-          ))}
-          <button type="submit" onClick={e => handleLogin(e, false)} style={{ width:'100%', background:'var(--black)', color:'var(--white)', border:'none', padding:'15px', fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, marginTop:6 }}
-            onMouseEnter={e=>e.target.style.background='#333'}
-            onMouseLeave={e=>e.target.style.background='var(--black)'}
-          >{mode==='login' ? '登入' : '建立帳號'}</button>
-        </form>
-        <div style={{ display:'flex', alignItems:'center', gap:14, margin:'24px 0' }}>
-          <div style={{ flex:1, height:1, background:'var(--light)' }} />
-          <span style={{ fontSize:11, color:'var(--mid)', letterSpacing:'0.1em' }}>或</span>
-          <div style={{ flex:1, height:1, background:'var(--light)' }} />
-        </div>
-        <button onClick={e => handleLogin(e,false)} style={{ width:'100%', background:'#00B900', color:'var(--white)', border:'none', padding:'14px', fontSize:13, letterSpacing:'0.08em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="white"><path d="M10 2C5.6 2 2 5.1 2 8.8c0 2.5 1.6 4.7 4 5.9l-.5 2 2.3-1.2c.7.2 1.4.3 2.2.3 4.4 0 8-3.1 8-6.8C18 5.1 14.4 2 10 2z"/></svg>
-          使用 LINE 帳號登入
-        </button>
-        <div style={{ marginTop:20, padding:'14px 16px', background:'var(--off-white)', borderLeft:'2px solid var(--gold)' }}>
-          <p style={{ fontSize:11, letterSpacing:'0.1em', color:'var(--mid)', marginBottom:10, textTransform:'uppercase' }}>設計預覽 — 快速登入</p>
-          <div style={{ display:'flex', gap:10 }}>
-            <button onClick={e => handleLogin(e,false)} style={{ flex:1, background:'none', border:'1px solid var(--light)', padding:'9px', fontSize:12, cursor:'pointer', fontFamily:'var(--font-body)', color:'var(--dark)' }}>一般消費者</button>
-            <button onClick={e => handleLogin(e,true)} style={{ flex:1, background:'var(--dark)', border:'1px solid var(--dark)', padding:'9px', fontSize:12, cursor:'pointer', fontFamily:'var(--font-body)', color:'var(--white)' }}>美容師會員 PRO</button>
+
+        {/* Tabs — 登入 / 註冊 (hidden on forgot view) */}
+        {view !== 'forgot' && (
+          <div style={{ display:'flex', marginBottom:32, borderBottom:'1px solid var(--light)' }}>
+            {[['login','登入'],['register','註冊會員']].map(([v,label]) => (
+              <button key={v} onClick={() => { setView(v); reset(); }} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:14, padding:'11px 0', marginRight:28, color: view===v ? 'var(--black)' : 'var(--mid)', borderBottom: view===v ? '1px solid var(--black)' : '1px solid transparent', letterSpacing:'0.04em', fontWeight: view===v ? 500 : 300 }}>{label}</button>
+            ))}
           </div>
-        </div>
+        )}
+
+        {/* 忘記密碼 header */}
+        {view === 'forgot' && (
+          <div style={{ marginBottom:28 }}>
+            <button onClick={() => { setView('login'); reset(); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color:'var(--mid)', fontFamily:'var(--font-body)', letterSpacing:'0.06em', padding:0, marginBottom:16 }}>← 返回登入</button>
+            <h2 style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:300, color:'var(--black)' }}>忘記密碼</h2>
+            <p style={{ fontSize:13, color:'var(--mid)', marginTop:8, lineHeight:1.7 }}>輸入您的 Email，我們將發送密碼重設連結。</p>
+          </div>
+        )}
+
+        {/* 成功訊息 */}
+        {success && (
+          <div style={{ background:'#f0faf0', border:'1px solid #b7ddb7', padding:'14px 16px', marginBottom:20, fontSize:13, color:'#2d6a2d', lineHeight:1.7 }}>{success}</div>
+        )}
+
+        {/* 錯誤訊息 */}
+        {error && (
+          <div style={{ background:'#fff5f5', border:'1px solid #f5c0c0', padding:'14px 16px', marginBottom:20, fontSize:13, color:'#c0392b', lineHeight:1.7 }}>{error}</div>
+        )}
+
+        {/* 登入表單 */}
+        {view === 'login' && (
+          <form onSubmit={handleSignIn} style={{ display:'flex', flexDirection:'column', gap:22 }}>
+            <div>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--mid)', textTransform:'uppercase', display:'block', marginBottom:9 }}>Email</label>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required style={inputStyle}
+                onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
+                onBlur={e=>e.target.style.borderBottomColor='var(--light)'} />
+            </div>
+            <div>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:9 }}>
+                <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--mid)', textTransform:'uppercase' }}>密碼</label>
+                <button type="button" onClick={() => { setView('forgot'); reset(); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color:'var(--mid)', fontFamily:'var(--font-body)', letterSpacing:'0.04em', textDecoration:'underline', textUnderlineOffset:3 }}>忘記密碼？</button>
+              </div>
+              <input type="password" value={password} onChange={e=>setPassword(e.target.value)} required style={inputStyle}
+                onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
+                onBlur={e=>e.target.style.borderBottomColor='var(--light)'} />
+            </div>
+            <button type="submit" disabled={loading} style={{ width:'100%', background: loading ? 'var(--mid)' : 'var(--black)', color:'var(--white)', border:'none', padding:'15px', fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase', cursor: loading ? 'default' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, marginTop:4 }}>
+              {loading ? '登入中...' : '登入'}
+            </button>
+          </form>
+        )}
+
+        {/* 註冊表單 */}
+        {view === 'register' && (
+          <form onSubmit={handleRegister} style={{ display:'flex', flexDirection:'column', gap:22 }}>
+            <div>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--mid)', textTransform:'uppercase', display:'block', marginBottom:9 }}>Email</label>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required style={inputStyle}
+                onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
+                onBlur={e=>e.target.style.borderBottomColor='var(--light)'} />
+            </div>
+            <div>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--mid)', textTransform:'uppercase', display:'block', marginBottom:9 }}>密碼（至少 6 位）</label>
+              <input type="password" value={password} onChange={e=>setPassword(e.target.value)} required minLength={6} style={inputStyle}
+                onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
+                onBlur={e=>e.target.style.borderBottomColor='var(--light)'} />
+            </div>
+            <div>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--mid)', textTransform:'uppercase', display:'block', marginBottom:9 }}>確認密碼</label>
+              <input type="password" value={confirm} onChange={e=>setConfirm(e.target.value)} required style={inputStyle}
+                onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
+                onBlur={e=>e.target.style.borderBottomColor='var(--light)'} />
+            </div>
+            <button type="submit" disabled={loading} style={{ width:'100%', background: loading ? 'var(--mid)' : 'var(--black)', color:'var(--white)', border:'none', padding:'15px', fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase', cursor: loading ? 'default' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, marginTop:4 }}>
+              {loading ? '建立中...' : '建立帳號'}
+            </button>
+          </form>
+        )}
+
+        {/* 忘記密碼表單 */}
+        {view === 'forgot' && (
+          <form onSubmit={handleForgot} style={{ display:'flex', flexDirection:'column', gap:22 }}>
+            <div>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--mid)', textTransform:'uppercase', display:'block', marginBottom:9 }}>Email</label>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required style={inputStyle}
+                onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
+                onBlur={e=>e.target.style.borderBottomColor='var(--light)'} />
+            </div>
+            <button type="submit" disabled={loading} style={{ width:'100%', background: loading ? 'var(--mid)' : 'var(--black)', color:'var(--white)', border:'none', padding:'15px', fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase', cursor: loading ? 'default' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500 }}>
+              {loading ? '發送中...' : '發送重設密碼信'}
+            </button>
+          </form>
+        )}
+
+        {/* LINE 登入分隔線 */}
+        {view !== 'forgot' && (
+          <>
+            <div style={{ display:'flex', alignItems:'center', gap:14, margin:'24px 0' }}>
+              <div style={{ flex:1, height:1, background:'var(--light)' }} />
+              <span style={{ fontSize:11, color:'var(--mid)', letterSpacing:'0.1em' }}>或</span>
+              <div style={{ flex:1, height:1, background:'var(--light)' }} />
+            </div>
+            <button style={{ width:'100%', background:'#00B900', color:'var(--white)', border:'none', padding:'14px', fontSize:13, letterSpacing:'0.08em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, display:'flex', alignItems:'center', justifyContent:'center', gap:10, opacity:0.6 }} title="即將推出">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="white"><path d="M10 2C5.6 2 2 5.1 2 8.8c0 2.5 1.6 4.7 4 5.9l-.5 2 2.3-1.2c.7.2 1.4.3 2.2.3 4.4 0 8-3.1 8-6.8C18 5.1 14.4 2 10 2z"/></svg>
+              使用 LINE 帳號登入（即將推出）
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -990,13 +1136,30 @@ function App() {
   const [cart, setCart] = useState([]);
   const cartCount = cart.reduce((sum,i) => sum+i.qty, 0);
 
+  // 監聽 Firebase 登入狀態
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged(fbUser => {
+      if (fbUser && fbUser.emailVerified) {
+        setUser({ name: fbUser.email.split('@')[0], email: fbUser.email, isPro: false, uid: fbUser.uid });
+      } else {
+        setUser(null);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  function handleSignOut() {
+    auth.signOut();
+    setUser(null);
+  }
+
   function renderPage() {
     switch (page) {
       case 'home':     return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} />;
       case 'shop':     return <ShopPage user={user} cart={cart} setCart={setCart} />;
       case 'cart':     return <CartPage cart={cart} setCart={setCart} setPage={setPage} />;
       case 'checkout': return <CheckoutPage cart={cart} setCart={setCart} setPage={setPage} />;
-      case 'login':    return <LoginPage setUser={setUser} setPage={setPage} />;
+      case 'login':    return <LoginPage setPage={setPage} />;
       case 'about':    return <AboutPage />;
       case 'info':     return <InfoPage />;
       default:         return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} />;
@@ -1005,7 +1168,7 @@ function App() {
 
   return (
     <>
-      {page !== 'login' && <Nav setPage={setPage} cartCount={cartCount} user={user} setUser={setUser} />}
+      {page !== 'login' && <Nav setPage={setPage} cartCount={cartCount} user={user} setUser={handleSignOut} />}
       {renderPage()}
     </>
   );
