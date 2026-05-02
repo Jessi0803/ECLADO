@@ -355,7 +355,7 @@ function HomePage({ setPage, user, cart, setCart }) {
     const t = setInterval(() => {
       setAnimating(true);
       setTimeout(() => { setSlide(s => (s + 1) % HERO_SLIDES.length); setAnimating(false); }, 450);
-    }, 4000);
+    }, 5000);
     return () => clearInterval(t);
   }, []);
 
