@@ -159,7 +159,7 @@ const PRODUCTS = [
 const HERO_SLIDES = [
   { headline:'Glow\nBeyond Limits.', sub:'自1998年創立，深耕專業院線皮膚管理28年，足跡遍佈全球23個國家，以147支完整療程系列支援每一位皮膚管理師，台灣獨家代理。', cta:'探索系列', img:'https://images.unsplash.com/photo-1629732097571-b042b35aa3ed?w=1800&q=85&fit=crop', layout:'left', accent:'ECLADO LABORATORY' },
   { headline:'Human\nClinical Proven.', sub:'每一款產品皆通過人體臨床實驗，皮膚刺激指數達0.000，無一例外。韓國美容業中擁有最多人體研究數據，150所美容學院指定品牌。', cta:'查看臨床實證', img:'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=1800&q=85&fit=crop', layout:'center', accent:'人體實驗 · 無一例外' },
-  { headline:'Korea\'s\nNo.1 Pro Brand.', sub:'28年陪伴韓國8,000+皮膚管理中心成長，從問題肌修復、敏弱調理到抗老管理，147支系列打造完整院線療程邏輯，而非單一明星產品。', cta:'美容師專區', img:'https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=1800&q=85&fit=crop', layout:'split', accent:'28 Years · 23 Countries' },
+  { headline:'Korea\'s\nNo.1 Pro Brand.', sub:'28年陪伴韓國8,000+皮膚管理中心成長，從問題肌修復、敏弱調理到抗老管理，147支系列打造完整院線療程邏輯，而非單一明星產品。', cta:'探索系列', img:'https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=1800&q=85&fit=crop', layout:'split', accent:'28 Years · 23 Countries' },
 ];
 
 // ─── NAV ITEM (desktop dropdown) ─────────────────────────────────────────────
@@ -355,7 +355,7 @@ function HomePage({ setPage, user, cart, setCart }) {
     const t = setInterval(() => {
       setAnimating(true);
       setTimeout(() => { setSlide(s => (s + 1) % HERO_SLIDES.length); setAnimating(false); }, 450);
-    }, 6500);
+    }, 7500);
     return () => clearInterval(t);
   }, []);
 
@@ -395,10 +395,6 @@ function HomePage({ setPage, user, cart, setCart }) {
                   onMouseEnter={e=>{e.target.style.background='var(--gold)';e.target.style.color='var(--white)';}}
                   onMouseLeave={e=>{e.target.style.background='var(--white)';e.target.style.color='var(--black)';}}
                 >{HERO_SLIDES[slide].cta}</button>
-                <button onClick={() => setPage('login')} style={{ background:'transparent', color:'var(--white)', border:'1px solid rgba(255,255,255,0.35)', padding:'13px 28px', fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', whiteSpace:'nowrap' }}
-                  onMouseEnter={e=>e.target.style.borderColor='var(--white)'}
-                  onMouseLeave={e=>e.target.style.borderColor='rgba(255,255,255,0.35)'}
-                >美容師專區</button>
               </div>
             </div>
           </>
