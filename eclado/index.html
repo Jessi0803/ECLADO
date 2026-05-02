@@ -224,10 +224,11 @@ function NavItem({ item, scrolled, setPage }) {
 }
 
 // ─── NAV ─────────────────────────────────────────────────────────────────────
-function Nav({ setPage, cartCount, user, setUser }) {
+function Nav({ setPage, cartCount, user, setUser, page }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const isMobile = useIsMobile();
+  const darkMode = scrolled || page !== 'home';
 
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 40);
@@ -237,36 +238,36 @@ function Nav({ setPage, cartCount, user, setUser }) {
 
   useEffect(() => { if (!isMobile) setDrawerOpen(false); }, [isMobile]);
 
-  const iconCol = scrolled ? 'var(--dark)' : 'rgba(255,255,255,0.88)';
+  const iconCol = darkMode ? 'var(--dark)' : 'rgba(255,255,255,0.88)';
 
   return (
     <>
       <nav style={{
         position:'fixed', top:0, left:0, right:0, zIndex:100,
-        background: drawerOpen ? 'var(--white)' : scrolled ? 'rgba(250,250,249,0.96)' : 'transparent',
-        backdropFilter: scrolled && !drawerOpen ? 'blur(12px)' : 'none',
-        borderBottom: scrolled || drawerOpen ? '1px solid var(--light)' : '1px solid rgba(255,255,255,0.1)',
+        background: drawerOpen ? 'var(--white)' : darkMode ? 'rgba(250,250,249,0.96)' : 'transparent',
+        backdropFilter: darkMode && !drawerOpen ? 'blur(12px)' : 'none',
+        borderBottom: darkMode || drawerOpen ? '1px solid var(--light)' : '1px solid rgba(255,255,255,0.1)',
         transition:'background 0.4s, border-color 0.4s',
       }}>
         <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px', height:68, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           {/* Logo */}
           <div onClick={() => { setPage('home'); setDrawerOpen(false); }} style={{ cursor:'pointer', display:'flex', flexDirection:'column', gap:1, flexShrink:0 }}>
-            <span style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:400, letterSpacing:'0.22em', color: drawerOpen ? 'var(--black)' : scrolled ? 'var(--black)' : 'var(--white)' }}>ECLADO</span>
+            <span style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:400, letterSpacing:'0.22em', color: drawerOpen ? 'var(--black)' : darkMode ? 'var(--black)' : 'var(--white)' }}>ECLADO</span>
             <span style={{ fontSize:9, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase' }}>Korean Cosmeceuticals</span>
           </div>
 
           {/* Desktop nav */}
           <div className="nav-desktop">
-            {NAV_ITEMS.map(item => <NavItem key={item.label} item={item} scrolled={scrolled} setPage={setPage} />)}
+            {NAV_ITEMS.map(item => <NavItem key={item.label} item={item} scrolled={darkMode} setPage={setPage} />)}
           </div>
 
           {/* Desktop right */}
           <div className="nav-right">
             {user ? (
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                {user.isPro && <span style={{ fontSize:10, letterSpacing:'0.1em', background: scrolled ? 'var(--black)' : 'rgba(255,255,255,0.15)', color:'var(--white)', padding:'3px 8px', fontWeight:500 }}>PRO</span>}
+                {user.isPro && <span style={{ fontSize:10, letterSpacing:'0.1em', background: darkMode ? 'var(--black)' : 'rgba(255,255,255,0.15)', color:'var(--white)', padding:'3px 8px', fontWeight:500 }}>PRO</span>}
                 <button onClick={() => setPage('account')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)' }}>{user.name}</button>
-                <button onClick={() => setUser()} style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color: scrolled ? 'var(--mid)' : 'rgba(255,255,255,0.5)', fontFamily:'var(--font-body)' }}>登出</button>
+                <button onClick={() => setUser()} style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color: darkMode ? 'var(--mid)' : 'rgba(255,255,255,0.5)', fontFamily:'var(--font-body)' }}>登出</button>
               </div>
             ) : null}
             <button onClick={() => setPage('cart')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)', letterSpacing:'0.04em', position:'relative', padding:'4px 0', whiteSpace:'nowrap' }}>
@@ -286,9 +287,9 @@ function Nav({ setPage, cartCount, user, setUser }) {
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 4l12 12M16 4L4 16" stroke={drawerOpen ? 'var(--dark)' : iconCol} strokeWidth="1.5" strokeLinecap="round"/></svg>
               ) : (
                 <>
-                  <span style={{ display:'block', width:22, height:1.5, background: scrolled ? 'var(--dark)' : 'var(--white)' }}/>
-                  <span style={{ display:'block', width:16, height:1.5, background: scrolled ? 'var(--dark)' : 'var(--white)' }}/>
-                  <span style={{ display:'block', width:22, height:1.5, background: scrolled ? 'var(--dark)' : 'var(--white)' }}/>
+                  <span style={{ display:'block', width:22, height:1.5, background: darkMode ? 'var(--dark)' : 'var(--white)' }}/>
+                  <span style={{ display:'block', width:16, height:1.5, background: darkMode ? 'var(--dark)' : 'var(--white)' }}/>
+                  <span style={{ display:'block', width:22, height:1.5, background: darkMode ? 'var(--dark)' : 'var(--white)' }}/>
                 </>
               )}
             </button>
@@ -1021,16 +1022,15 @@ function AboutPage() {
   const isMobile = useIsMobile();
   return (
     <div style={{ paddingTop:68 }}>
-      <div style={{ background:'var(--off-white)', borderBottom:'1px solid var(--light)', padding: isMobile ? '40px 24px 36px' : '56px 32px 48px' }}>
-        <div style={{ maxWidth:1100, margin:'0 auto', display:'flex', alignItems:'flex-end', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
-          <div>
-            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
-              <div style={{ width:32, height:1, background:'var(--gold)' }} />
-              <p style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase', margin:0 }}>Our Story</p>
-            </div>
-            <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(26px,4vw,52px)', fontWeight:300, color:'var(--black)', lineHeight:1.1, margin:0 }}>品牌故事</h1>
+      <div style={{ position:'relative', height: isMobile ? 220 : 300, overflow:'hidden' }}>
+        <img src="https://images.unsplash.com/photo-1629732097571-b042b35aa3ed?w=1600&q=80&fit=crop" alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center' }} />
+        <div style={{ position:'absolute', inset:0, background:'rgba(12,12,10,0.62)' }} />
+        <div style={{ position:'relative', height:'100%', maxWidth:1100, margin:'0 auto', padding: isMobile ? '0 24px' : '0 32px', display:'flex', flexDirection:'column', justifyContent:'flex-end', paddingBottom: isMobile ? 32 : 48 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
+            <div style={{ width:28, height:1, background:'var(--gold)' }} />
+            <p style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase', margin:0 }}>Our Story</p>
           </div>
-          <p style={{ fontSize:13, color:'var(--mid)', letterSpacing:'0.06em', maxWidth:320, lineHeight:1.8, margin:0 }}>ECLADO LABORATORY — Glow Beyond Limits.</p>
+          <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(28px,4.5vw,56px)', fontWeight:300, color:'var(--white)', lineHeight:1.1, margin:0 }}>品牌故事</h1>
         </div>
       </div>
       <div style={{ maxWidth:1100, margin:'0 auto', padding: isMobile ? '48px 20px' : '80px 32px' }}>
@@ -1185,7 +1185,7 @@ function App() {
 
   return (
     <>
-      {page !== 'login' && <Nav setPage={setPage} cartCount={cartCount} user={user} setUser={handleSignOut} />}
+      {page !== 'login' && <Nav setPage={setPage} cartCount={cartCount} user={user} setUser={handleSignOut} page={page} />}
       {renderPage()}
     </>
   );
