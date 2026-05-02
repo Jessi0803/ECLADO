@@ -108,7 +108,7 @@
 <script>
   const SUPABASE_URL  = 'https://mtczcayumikaawefwnhm.supabase.co';
   const SUPABASE_ANON = 'sb_publishable_xhQF-6mwxbVYdGmHt1KAXA_MKPhkYhY';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
   function sbError(msg) {
     if (!msg) return '發生錯誤，請再試一次';
