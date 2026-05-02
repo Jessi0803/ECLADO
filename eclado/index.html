@@ -911,7 +911,7 @@ function LoginPage({ setPage }) {
         {view !== 'forgot' && (
           <div style={{ display:'flex', marginBottom:32, borderBottom:'1px solid var(--light)' }}>
             {[['login','登入'],['register','註冊會員']].map(([v,label]) => (
-              <button key={v} onClick={() => { setView(v); reset(); }} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:14, padding:'11px 0', marginRight:28, color: view===v ? 'var(--black)' : 'var(--mid)', borderBottom: view===v ? '1px solid var(--black)' : '1px solid transparent', letterSpacing:'0.04em', fontWeight: view===v ? 500 : 300 }}>{label}</button>
+              <button key={v} onClick={() => { setView(v); reset(); }} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:14, padding:'11px 0', marginRight:28, color: view===v ? 'var(--black)' : 'var(--dark)', borderBottom: view===v ? '1px solid var(--black)' : '1px solid transparent', letterSpacing:'0.04em', fontWeight: view===v ? 500 : 300 }}>{label}</button>
             ))}
           </div>
         )}
@@ -919,9 +919,9 @@ function LoginPage({ setPage }) {
         {/* 忘記密碼 header */}
         {view === 'forgot' && (
           <div style={{ marginBottom:28 }}>
-            <button onClick={() => { setView('login'); reset(); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color:'var(--mid)', fontFamily:'var(--font-body)', letterSpacing:'0.06em', padding:0, marginBottom:16 }}>← 返回登入</button>
+            <button onClick={() => { setView('login'); reset(); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color:'var(--dark)', fontFamily:'var(--font-body)', letterSpacing:'0.06em', padding:0, marginBottom:16 }}>← 返回登入</button>
             <h2 style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:300, color:'var(--black)' }}>忘記密碼</h2>
-            <p style={{ fontSize:13, color:'var(--mid)', marginTop:8, lineHeight:1.7 }}>輸入您的 Email，我們將發送密碼重設連結。</p>
+            <p style={{ fontSize:13, color:'var(--dark)', marginTop:8, lineHeight:1.7 }}>輸入您的 Email，我們將發送密碼重設連結。</p>
           </div>
         )}
 
@@ -939,15 +939,15 @@ function LoginPage({ setPage }) {
         {view === 'login' && (
           <form onSubmit={handleSignIn} style={{ display:'flex', flexDirection:'column', gap:22 }}>
             <div>
-              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--mid)', textTransform:'uppercase', display:'block', marginBottom:9 }}>Email</label>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:9 }}>Email</label>
               <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required style={inputStyle}
                 onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
                 onBlur={e=>e.target.style.borderBottomColor='var(--light)'} />
             </div>
             <div>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:9 }}>
-                <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--mid)', textTransform:'uppercase' }}>密碼</label>
-                <button type="button" onClick={() => { setView('forgot'); reset(); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color:'var(--mid)', fontFamily:'var(--font-body)', letterSpacing:'0.04em', textDecoration:'underline', textUnderlineOffset:3 }}>忘記密碼？</button>
+                <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase' }}>密碼</label>
+                <button type="button" onClick={() => { setView('forgot'); reset(); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color:'var(--dark)', fontFamily:'var(--font-body)', letterSpacing:'0.04em', textDecoration:'underline', textUnderlineOffset:3 }}>忘記密碼？</button>
               </div>
               <input type="password" value={password} onChange={e=>setPassword(e.target.value)} required style={inputStyle}
                 onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
@@ -963,19 +963,19 @@ function LoginPage({ setPage }) {
         {view === 'register' && (
           <form onSubmit={handleRegister} style={{ display:'flex', flexDirection:'column', gap:22 }}>
             <div>
-              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--mid)', textTransform:'uppercase', display:'block', marginBottom:9 }}>Email</label>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:9 }}>Email</label>
               <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required style={inputStyle}
                 onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
                 onBlur={e=>e.target.style.borderBottomColor='var(--light)'} />
             </div>
             <div>
-              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--mid)', textTransform:'uppercase', display:'block', marginBottom:9 }}>密碼（至少 6 位）</label>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:9 }}>密碼（至少 6 位）</label>
               <input type="password" value={password} onChange={e=>setPassword(e.target.value)} required minLength={6} style={inputStyle}
                 onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
                 onBlur={e=>e.target.style.borderBottomColor='var(--light)'} />
             </div>
             <div>
-              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--mid)', textTransform:'uppercase', display:'block', marginBottom:9 }}>確認密碼</label>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:9 }}>確認密碼</label>
               <input type="password" value={confirm} onChange={e=>setConfirm(e.target.value)} required style={inputStyle}
                 onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
                 onBlur={e=>e.target.style.borderBottomColor='var(--light)'} />
@@ -990,7 +990,7 @@ function LoginPage({ setPage }) {
         {view === 'forgot' && (
           <form onSubmit={handleForgot} style={{ display:'flex', flexDirection:'column', gap:22 }}>
             <div>
-              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--mid)', textTransform:'uppercase', display:'block', marginBottom:9 }}>Email</label>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:9 }}>Email</label>
               <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required style={inputStyle}
                 onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
                 onBlur={e=>e.target.style.borderBottomColor='var(--light)'} />
