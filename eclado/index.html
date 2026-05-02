@@ -157,9 +157,9 @@ const PRODUCTS = [
 ];
 
 const HERO_SLIDES = [
-  { headline:'Glow\nBeyond Limits.', sub:'創立28年 · 遍佈23國 · 台灣獨家代理', cta:'探索系列', img:'https://images.unsplash.com/photo-1629732097571-b042b35aa3ed?w=1800&q=85&fit=crop', layout:'left', accent:'ECLADO LABORATORY' },
-  { headline:'Human\nClinical Proven.', sub:'韓國美容業最多人體臨床研究，150所美容學院指定品牌', cta:'查看臨床實證', img:'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=1800&q=85&fit=crop', layout:'center', accent:'人體實驗 · 無一例外' },
-  { headline:'Korea\'s\nNo.1 Pro Brand.', sub:'韓國 8,000+ 皮膚管理中心御用 · 147支完整療程系列', cta:'美容師專區', img:'https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=1800&q=85&fit=crop', layout:'split', accent:'28 Years · 23 Countries' },
+  { headline:'Glow\nBeyond Limits.', sub:'創立28年 · 遍佈23國 · 台灣獨家代理', tags:['1998年創立','147支療程系列','皮膚科醫師驗證'], cta:'探索系列', img:'https://images.unsplash.com/photo-1629732097571-b042b35aa3ed?w=1800&q=85&fit=crop', layout:'left', accent:'ECLADO LABORATORY' },
+  { headline:'Human\nClinical Proven.', sub:'韓國美容業最多人體臨床研究，150所美容學院指定品牌', tags:['每款產品均通過人體測試','刺激指數 0.000','無一例外'], cta:'查看臨床實證', img:'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=1800&q=85&fit=crop', layout:'center', accent:'人體實驗 · 無一例外' },
+  { headline:'Korea\'s\nNo.1 Pro Brand.', sub:'韓國 8,000+ 皮膚管理中心御用 · 147支完整療程系列', tags:['遍佈23個國家','150所美容學院指定','28年專業院線經驗'], cta:'美容師專區', img:'https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=1800&q=85&fit=crop', layout:'split', accent:'28 Years · 23 Countries' },
 ];
 
 // ─── NAV ITEM (desktop dropdown) ─────────────────────────────────────────────
@@ -389,7 +389,12 @@ function HomePage({ setPage, user, cart, setCart }) {
                 <span style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase', fontFamily:'var(--font-body)' }}>{HERO_SLIDES[slide].accent}</span>
               </div>
               <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(40px,7.5vw,104px)', fontWeight:300, color:'var(--white)', lineHeight:1.0, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
-              <p style={{ fontSize:13, color:'rgba(255,255,255,0.55)', letterSpacing:'0.08em', marginBottom:36, fontWeight:300 }}>{HERO_SLIDES[slide].sub}</p>
+              <p style={{ fontSize:13, color:'rgba(255,255,255,0.55)', letterSpacing:'0.08em', marginBottom:20, fontWeight:300 }}>{HERO_SLIDES[slide].sub}</p>
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:28 }}>
+                {HERO_SLIDES[slide].tags.map((tag,i) => (
+                  <span key={i} style={{ fontSize:10, letterSpacing:'0.1em', color:'rgba(255,255,255,0.5)', border:'1px solid rgba(255,255,255,0.2)', padding:'5px 12px', whiteSpace:'nowrap' }}>{tag}</span>
+                ))}
+              </div>
               <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
                 <button onClick={() => setPage('shop')} style={{ background:'var(--white)', color:'var(--black)', border:'none', padding:'13px 28px', fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}
                   onMouseEnter={e=>{e.target.style.background='var(--gold)';e.target.style.color='var(--white)';}}
@@ -415,7 +420,12 @@ function HomePage({ setPage, user, cart, setCart }) {
                 <div style={{ width:20, height:1, background:'var(--gold)' }} />
               </div>
               <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(38px,8vw,112px)', fontWeight:300, color:'var(--white)', lineHeight:1.0, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
-              <p style={{ fontSize:13, color:'rgba(255,255,255,0.5)', letterSpacing:'0.1em', marginBottom:40, fontWeight:300, maxWidth:380 }}>{HERO_SLIDES[slide].sub}</p>
+              <p style={{ fontSize:13, color:'rgba(255,255,255,0.5)', letterSpacing:'0.1em', marginBottom:20, fontWeight:300, maxWidth:380 }}>{HERO_SLIDES[slide].sub}</p>
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent:'center', marginBottom:32 }}>
+                {HERO_SLIDES[slide].tags.map((tag,i) => (
+                  <span key={i} style={{ fontSize:10, letterSpacing:'0.1em', color:'rgba(255,255,255,0.5)', border:'1px solid rgba(255,255,255,0.2)', padding:'5px 12px', whiteSpace:'nowrap' }}>{tag}</span>
+                ))}
+              </div>
               <button onClick={() => setPage('shop')} style={{ background:'transparent', color:'var(--white)', border:'1px solid rgba(255,255,255,0.6)', padding:'14px 40px', fontSize:11, letterSpacing:'0.14em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', whiteSpace:'nowrap' }}
                 onMouseEnter={e=>{e.target.style.background='var(--white)';e.target.style.color='var(--black)';}}
                 onMouseLeave={e=>{e.target.style.background='transparent';e.target.style.color='var(--white)';}}
@@ -435,7 +445,12 @@ function HomePage({ setPage, user, cart, setCart }) {
                   <div style={{ width:28, height:1, background:'var(--gold)' }} />
                 </div>
                 <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(36px,6.5vw,92px)', fontWeight:300, color:'var(--white)', lineHeight:1.05, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
-                <p style={{ fontSize:13, color:'rgba(255,255,255,0.5)', letterSpacing:'0.08em', marginBottom:36, fontWeight:300 }}>{HERO_SLIDES[slide].sub}</p>
+                <p style={{ fontSize:13, color:'rgba(255,255,255,0.5)', letterSpacing:'0.08em', marginBottom:20, fontWeight:300 }}>{HERO_SLIDES[slide].sub}</p>
+                <div style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent: isMobile ? 'flex-start' : 'flex-end', marginBottom:28 }}>
+                  {HERO_SLIDES[slide].tags.map((tag,i) => (
+                    <span key={i} style={{ fontSize:10, letterSpacing:'0.1em', color:'rgba(255,255,255,0.5)', border:'1px solid rgba(255,255,255,0.2)', padding:'5px 12px', whiteSpace:'nowrap' }}>{tag}</span>
+                  ))}
+                </div>
                 <button onClick={() => setPage('login')} style={{ background:'var(--gold)', color:'var(--white)', border:'none', padding:'13px 28px', fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}
                   onMouseEnter={e=>e.target.style.opacity='0.85'}
                   onMouseLeave={e=>e.target.style.opacity='1'}
