@@ -631,28 +631,40 @@ function ShopPage({ user, cart, setCart }) {
 
   return (
     <div style={{ paddingTop:68 }}>
-      <div style={{ background:'var(--off-white)', padding: isMobile ? '48px 24px 36px' : '64px 32px 48px', textAlign:'center', borderBottom:'1px solid var(--light)' }}>
-        <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>Shop</p>
-        <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 32 : 44, fontWeight:300, color:'var(--black)', lineHeight:1.1 }}>全部商品</h1>
+      {/* 頂部 header */}
+      <div style={{ background:'var(--black)', padding: isMobile ? '40px 24px 36px' : '52px 32px 44px' }}>
+        <div style={{ maxWidth:1280, margin:'0 auto', display:'flex', alignItems:'flex-end', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
+          <div>
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
+              <div style={{ width:28, height:1, background:'var(--gold)' }} />
+              <p style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase', margin:0 }}>Shop</p>
+            </div>
+            <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 28 : 42, fontWeight:300, color:'var(--white)', lineHeight:1.1, margin:0 }}>全部商品</h1>
+          </div>
+          {user?.isPro && (
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <span style={{ fontSize:10, background:'var(--gold)', color:'var(--black)', padding:'3px 8px', letterSpacing:'0.12em', fontWeight:600 }}>PRO</span>
+              <span style={{ fontSize:12, color:'rgba(255,255,255,0.55)', letterSpacing:'0.04em' }}>美容師專業折扣已啟用</span>
+            </div>
+          )}
+        </div>
       </div>
-      <div className="filter-tabs" style={{ background:'var(--white)', borderBottom:'1px solid var(--light)', padding:'0 24px' }}>
-        {categories.map(cat => (
-          <button key={cat} onClick={() => setActiveCategory(cat)} style={{
-            background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:13,
-            color: activeCategory===cat ? 'var(--black)' : 'var(--mid)',
-            padding:'18px 20px', letterSpacing:'0.06em',
-            borderBottom: activeCategory===cat ? '1px solid var(--black)' : '1px solid transparent',
-            fontWeight: activeCategory===cat ? 500 : 300, transition:'all 0.2s',
-          }}>{cat}</button>
-        ))}
+      {/* 分類篩選列 */}
+      <div className="filter-tabs" style={{ background:'var(--off-white)', borderBottom:'1px solid var(--light)', padding: isMobile ? '0 16px' : '0 32px' }}>
+        <div style={{ maxWidth:1280, margin:'0 auto', display:'flex' }}>
+          {categories.map(cat => (
+            <button key={cat} onClick={() => setActiveCategory(cat)} style={{
+              background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12,
+              color: activeCategory===cat ? 'var(--black)' : 'var(--mid)',
+              padding:'16px 20px', letterSpacing:'0.08em', textTransform:'uppercase',
+              borderBottom: activeCategory===cat ? '2px solid var(--black)' : '2px solid transparent',
+              fontWeight: activeCategory===cat ? 500 : 300, transition:'all 0.2s',
+            }}>{cat}</button>
+          ))}
+        </div>
       </div>
       <div style={{ maxWidth:1280, margin:'0 auto', padding: isMobile ? '40px 20px' : '60px 32px' }}>
-        {user?.isPro && (
-          <div style={{ background:'var(--dark)', color:'var(--white)', padding:'12px 18px', marginBottom:32, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
-            <span style={{ fontSize:10, background:'var(--gold)', color:'var(--black)', padding:'2px 7px', letterSpacing:'0.1em', fontWeight:500 }}>PRO</span>
-            <span style={{ fontSize:13 }}>您已登入美容師帳號，可查看院線商品及專業折扣價格</span>
-          </div>
-        )}
+        {false && null /* pro banner moved to header */}
         <div className="g4lg">
           {filtered.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} />)}
         </div>
