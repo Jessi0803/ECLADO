@@ -146,14 +146,22 @@ const NAV_ITEMS = [
 ];
 
 const PRODUCTS = [
-  { id:1, name:'Deep Cleansing Foam',    nameZh:'深層清潔泡沫洗面乳', category:'清潔',   size:'200ml',   price:1280, proPrice:960,  isProOnly:false, tag:'暢銷', img:'https://images.unsplash.com/photo-1556228578-dd539282b964?w=600&q=80&fit=crop' },
-  { id:2, name:'Peptide Repair Serum',   nameZh:'胜肽修護精華液',     category:'精華液', size:'30ml',    price:3980, proPrice:2980, isProOnly:false, tag:'新品', img:'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&q=80&fit=crop' },
-  { id:3, name:'SOS Ampoule Set',        nameZh:'急救修護安瓶組',     category:'急救安瓶',size:'5ml×6',  price:4800, proPrice:3600, isProOnly:false, tag:'',     img:'https://images.unsplash.com/photo-1617897903246-719242758050?w=600&q=80&fit=crop' },
-  { id:4, name:'Intensive Hydra Mask',   nameZh:'密集保濕面膜',       category:'面膜',   size:'35ml×10', price:2200, proPrice:1650, isProOnly:false, tag:'',     img:'https://images.unsplash.com/photo-1629198688000-71f23e745b6e?w=600&q=80&fit=crop' },
-  { id:5, name:'Eye Contour Complex',    nameZh:'眼周緊緻精華',       category:'眼霜',   size:'30ml',    price:2800, proPrice:2100, isProOnly:false, tag:'',     img:'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=600&q=80&fit=crop' },
-  { id:6, name:'Cell Recovery Cream',    nameZh:'細胞修護乳霜',       category:'面霜',   size:'50g',     price:3600, proPrice:2700, isProOnly:false, tag:'暢銷', img:'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=600&q=80&fit=crop' },
-  { id:7, name:'NK Cell Activator',      nameZh:'NK細胞活化安瓶',     category:'急救安瓶',size:'3.5ml×10',price:8800,proPrice:6600, isProOnly:true,  tag:'院線', img:'https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=600&q=80&fit=crop' },
-  { id:8, name:'AHA/BHA Peeling Gel',   nameZh:'AHA·BHA·PHA 煥膚凝膠',category:'清潔', size:'120ml',   price:1980, proPrice:1485, isProOnly:false, tag:'',     img:'https://images.unsplash.com/photo-1631390737500-0d64c52c7aa4?w=600&q=80&fit=crop' },
+  { id:1, name:'Deep Cleansing Foam', nameZh:'深層清潔泡沫洗面乳', category:'清潔', size:'200ml', price:1280, proPrice:960, isProOnly:false, tag:'暢銷', img:'https://images.unsplash.com/photo-1556228578-dd539282b964?w=600&q=80&fit=crop',
+    desc:'輕柔起泡配方，能溶解彩妝與皮脂污垢，同時維持肌膚柔軟與水潤度。富含天然植萃成分，洗後清爽不刺激，不緊繃。', skinType:'全膚質、敏感肌', ingredients:'椰油兩性醋酸鈉、胺基酸系界面活性劑、綠茶萃取、甜菜鹼', features:['溫和低刺激配方','洗後保濕不緊繃','維持肌膚天然皮脂'] },
+  { id:2, name:'Peptide Repair Serum', nameZh:'胜肽修護精華液', category:'精華液', size:'30ml', price:3980, proPrice:2980, isProOnly:false, tag:'新品', img:'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&q=80&fit=crop',
+    desc:'結合多重胜肽與保濕修護成分，於肌膚表層形成持久保濕層，質地細緻清爽，協助改善因乾燥引起的細紋，長期使用可提升肌膚彈潤感。', skinType:'乾燥肌、熟齡肌、缺乏彈性肌', ingredients:'乙醯六胜肽-8、玻尿酸鈉、腺苷、積雪草萃取、水解膠原蛋白', features:['多重胜肽複合修護','深層長效補水','改善細紋外觀'] },
+  { id:3, name:'SOS Ampoule Set', nameZh:'急救修護安瓶組', category:'急救安瓶', size:'5ml×6', price:4800, proPrice:3600, isProOnly:false, tag:'', img:'https://images.unsplash.com/photo-1617897903246-719242758050?w=600&q=80&fit=crop',
+    desc:'專為膚況不穩定肌膚設計的集中護理方案，抑制造成肌膚不穩定的外在因素，幫助迅速恢復肌膚平衡，適合於專業護理中搭配使用。', skinType:'敏弱肌、膚況不穩定、易泛紅肌膚', ingredients:'積雪草萃取、玻尿酸鈉、穀胱甘肽、胺基酸複合成分、尿囊素', features:['即時鎮靜舒緩','修護肌膚屏障','集中密集護理'] },
+  { id:4, name:'Intensive Hydra Mask', nameZh:'密集保濕面膜', category:'面膜', size:'35ml×10', price:2200, proPrice:1650, isProOnly:false, tag:'', img:'https://images.unsplash.com/photo-1629198688000-71f23e745b6e?w=600&q=80&fit=crop',
+    desc:'採用ECLADO獨家紗布技術，帶來不同層次的彈力貼合感。源源不絕的水分供應，立即舒緩及帶來清涼感，獨家提拉技術即時呈現緊緻效果。', skinType:'全膚質、乾燥缺水肌', ingredients:'聚谷氨酸、β-葡聚糖、海藻糖、玻尿酸鈉、積雪草萃取', features:['長效肌膚保濕','立即舒緩清涼','獨家提拉緊緻技術'] },
+  { id:5, name:'Eye Contour Complex', nameZh:'眼周緊緻精華', category:'眼霜', size:'30ml', price:2800, proPrice:2100, isProOnly:false, tag:'', img:'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=600&q=80&fit=crop',
+    desc:'專為乾燥、粗糙的眼周與唇周肌膚設計的高保濕修護精華。質地滋潤但不厚重，協助改善因乾燥引起的細紋，使眼周肌膚維持柔嫩平滑觸感。', skinType:'眼周細紋初期保養、乾燥眼周肌膚', ingredients:'杏桃仁油、澳洲胡桃籽油、玻尿酸鈉、胜肽5、寡胜肽-1、植物性角鯊烷', features:['眼周深層滋養','改善細紋外觀','提升眼周彈潤'] },
+  { id:6, name:'Cell Recovery Cream', nameZh:'細胞修護乳霜', category:'面霜', size:'50g', price:3600, proPrice:2700, isProOnly:false, tag:'暢銷', img:'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=600&q=80&fit=crop',
+    desc:'添加植物來源培養萃取成分，協助強化肌膚保水力與自我防禦力，卓越效果特別適合受損肌膚修護。質地滋潤不厚重，使肌膚呈現柔嫩平滑的健康光澤。', skinType:'熟齡肌、乾燥肌、需加強保養者', ingredients:'綠豆分生組織培養萃取、Sodium DNA、sh-Oligopeptide-1、蘆薈葉萃取、維他命E、腺苷', features:['植物培養萃取活化','強化肌膚保水屏障','修護受損肌膚'] },
+  { id:7, name:'NK Cell Activator', nameZh:'NK細胞活化安瓶', category:'急救安瓶', size:'3.5ml×10', price:8800, proPrice:6600, isProOnly:true, tag:'院線', img:'https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=600&q=80&fit=crop',
+    desc:'結合多種植物來源培養萃取成分，為肌膚提供集中彈潤調理。質地細緻好吸收，適合用於彈性不足與膚況疲憊的專業護理，長期使用幫助肌膚維持柔嫩光澤。', skinType:'彈性不足肌、疲憊老化肌膚', ingredients:'綠豆分生組織培養萃取、Peption 5、sh-Oligopeptide-1、雪絨花癒傷組織培養萃取、番茄癒傷組織培養萃取', features:['院線專業集中護理','多重培養萃取技術','提升肌膚彈潤光澤'] },
+  { id:8, name:'AHA/BHA Peeling Gel', nameZh:'AHA·BHA·PHA 煥膚凝膠', category:'清潔', size:'120ml', price:1980, proPrice:1485, isProOnly:false, tag:'', img:'https://images.unsplash.com/photo-1631390737500-0d64c52c7aa4?w=600&q=80&fit=crop',
+    desc:'AHA、BHA、PHA三效合一，即時去除多餘角質，正常化肌膚更新週期。6種草本植萃成分，在溫和代謝老廢角質的同時，最小化酸類引起的肌膚刺激感。', skinType:'混合肌、毛孔堵塞肌、暗沉代謝慢膚況', ingredients:'乳酸、甘醇酸、葡萄糖酸內酯、馬齒莧萃取、積雪草萃取、蘆薈葉萃取', features:['三酸溫和煥膚','6種草本舒緩刺激','改善暗沉毛孔'] },
 ];
 
 const HERO_SLIDES = [
@@ -581,12 +589,112 @@ function HomePage({ setPage, user, cart, setCart }) {
   );
 }
 
+// ─── PRODUCT DETAIL PAGE ──────────────────────────────────────────────────────
+function ProductDetail({ product, user, onAdd, onBack }) {
+  const [qty, setQty] = useState(1);
+  const [added, setAdded] = useState(false);
+  const isMobile = useIsMobile();
+  const showPrice = user?.isPro ? product.proPrice : product.price;
+
+  function handleAdd() {
+    for (let i = 0; i < qty; i++) onAdd(product);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  }
+
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+
+  return (
+    <div style={{ paddingTop:68, minHeight:'100vh', background:'var(--white)' }}>
+      {/* 返回列 */}
+      <div style={{ borderBottom:'1px solid var(--light)', padding: isMobile ? '14px 20px' : '14px 32px' }}>
+        <div style={{ maxWidth:1200, margin:'0 auto' }}>
+          <button onClick={onBack} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12, letterSpacing:'0.1em', color:'var(--dark)', display:'flex', alignItems:'center', gap:8, padding:0 }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            返回商品列表
+          </button>
+        </div>
+      </div>
+
+      {/* 主體內容 */}
+      <div style={{ maxWidth:1200, margin:'0 auto', padding: isMobile ? '32px 20px' : '56px 32px' }}>
+        <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 36 : 72, alignItems:'start' }}>
+
+          {/* 左：圖片 */}
+          <div style={{ position: isMobile ? 'static' : 'sticky', top:90 }}>
+            <div style={{ position:'relative' }}>
+              {product.tag && (
+                <div style={{ position:'absolute', top:16, left:16, zIndex:2, background: product.tag==='院線'?'var(--dark)':'var(--gold)', color:'var(--white)', fontSize:10, padding:'4px 10px', letterSpacing:'0.12em' }}>{product.tag}</div>
+              )}
+              <img src={product.img.replace('w=600','w=900')} alt={product.nameZh} style={{ width:'100%', aspectRatio:'1', objectFit:'cover', display:'block' }} />
+            </div>
+          </div>
+
+          {/* 右：資訊 */}
+          <div>
+            <p style={{ fontSize:10, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>{product.category}</p>
+            <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 26 : 34, fontWeight:300, color:'var(--black)', lineHeight:1.2, marginBottom:6 }}>{product.nameZh}</h1>
+            <p style={{ fontSize:12, color:'var(--mid)', letterSpacing:'0.1em', marginBottom:28 }}>{product.name} · {product.size}</p>
+
+            {/* 價格 */}
+            <div style={{ borderTop:'1px solid var(--light)', borderBottom:'1px solid var(--light)', padding:'20px 0', marginBottom:28 }}>
+              <div style={{ display:'flex', alignItems:'baseline', gap:12, flexWrap:'wrap' }}>
+                <span style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, color:'var(--black)' }}>NT$ {showPrice.toLocaleString()}</span>
+                {user?.isPro && <>
+                  <span style={{ fontSize:13, color:'var(--mid)', textDecoration:'line-through' }}>NT$ {product.price.toLocaleString()}</span>
+                  <span style={{ fontSize:10, background:'var(--gold)', color:'var(--white)', padding:'3px 8px', letterSpacing:'0.1em', fontWeight:500 }}>專業價</span>
+                </>}
+              </div>
+            </div>
+
+            {/* 特點 */}
+            <div style={{ marginBottom:28 }}>
+              {product.features.map((f,i) => (
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
+                  <div style={{ width:4, height:4, background:'var(--gold)', flexShrink:0 }} />
+                  <span style={{ fontSize:13, color:'var(--dark)', letterSpacing:'0.04em' }}>{f}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* 數量 + 加入購物車 */}
+            <div style={{ display:'flex', gap:12, alignItems:'center', marginBottom:14, flexWrap:'wrap' }}>
+              <div style={{ display:'flex', alignItems:'center', border:'1px solid var(--light)' }}>
+                <button onClick={() => setQty(q => Math.max(1, q-1))} style={{ width:40, height:48, background:'none', border:'none', cursor:'pointer', fontSize:16, color:'var(--dark)', fontFamily:'var(--font-body)' }}>−</button>
+                <span style={{ width:36, textAlign:'center', fontSize:14, color:'var(--black)' }}>{qty}</span>
+                <button onClick={() => setQty(q => q+1)} style={{ width:40, height:48, background:'none', border:'none', cursor:'pointer', fontSize:16, color:'var(--dark)', fontFamily:'var(--font-body)' }}>+</button>
+              </div>
+              <button onClick={handleAdd} style={{ flex:1, minWidth:180, height:48, background: added ? 'var(--gold)' : 'var(--black)', color:'var(--white)', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12, letterSpacing:'0.16em', textTransform:'uppercase', transition:'background 0.3s' }}>
+                {added ? '✓ 已加入購物車' : '加入購物車'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 下方詳細資訊 */}
+        <div style={{ marginTop: isMobile ? 48 : 72, display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap:1, background:'var(--light)' }}>
+          {[
+            { label:'商品描述', content: product.desc },
+            { label:'主要成分', content: product.ingredients },
+            { label:'適合膚質', content: product.skinType },
+          ].map(({ label, content }) => (
+            <div key={label} style={{ background:'var(--white)', padding: isMobile ? '28px 20px' : '36px 32px' }}>
+              <p style={{ fontSize:10, letterSpacing:'0.24em', color:'var(--gold)', textTransform:'uppercase', marginBottom:14 }}>{label}</p>
+              <p style={{ fontSize:14, color:'#555', lineHeight:1.9 }}>{content}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── PRODUCT CARD ─────────────────────────────────────────────────────────────
-function ProductCard({ product, user, onAdd, setPage }) {
+function ProductCard({ product, user, onAdd, onSelect }) {
   const [hovered, setHovered] = useState(false);
   const showPrice = user?.isPro ? product.proPrice : product.price;
   return (
-    <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ cursor:'pointer', position:'relative' }}>
+    <div onClick={onSelect} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ cursor:'pointer', position:'relative' }}>
       {product.tag && (
         <div style={{ position:'absolute', top:10, left:10, zIndex:2, background: product.tag==='院線'?'var(--dark)':'var(--gold)', color:'var(--white)', fontSize:10, padding:'3px 9px', letterSpacing:'0.1em' }}>{product.tag}</div>
       )}
@@ -612,6 +720,7 @@ function ProductCard({ product, user, onAdd, setPage }) {
 // ─── SHOP PAGE ────────────────────────────────────────────────────────────────
 function ShopPage({ user, cart, setCart }) {
   const [activeCategory, setActiveCategory] = useState('全部');
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const categories = ['全部', ...NAV_LINKS];
   const isMobile = useIsMobile();
 
@@ -628,6 +737,10 @@ function ShopPage({ user, cart, setCart }) {
     if (activeCategory === '全部') return true;
     return p.category === activeCategory;
   });
+
+  if (selectedProduct) {
+    return <ProductDetail product={selectedProduct} user={user} onAdd={addToCart} onBack={() => setSelectedProduct(null)} />;
+  }
 
   return (
     <div style={{ paddingTop:68 }}>
@@ -668,7 +781,7 @@ function ShopPage({ user, cart, setCart }) {
       <div style={{ maxWidth:1280, margin:'0 auto', padding: isMobile ? '40px 20px' : '60px 32px' }}>
         {false && null /* pro banner moved to header */}
         <div className="g4lg">
-          {filtered.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} />)}
+          {filtered.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} />)}
         </div>
         {filtered.length === 0 && <div style={{ textAlign:'center', padding:'80px 0', color:'var(--mid)', fontSize:14 }}>此分類目前無商品</div>}
       </div>
