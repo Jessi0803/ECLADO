@@ -657,7 +657,7 @@ function ShopPage({ user, cart, setCart }) {
           {categories.map(cat => (
             <button key={cat} onClick={() => setActiveCategory(cat)} style={{
               background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12,
-              color: activeCategory===cat ? 'var(--black)' : 'var(--mid)',
+              color: activeCategory===cat ? 'var(--black)' : 'var(--dark)',
               padding:'16px 20px', letterSpacing:'0.08em', textTransform:'uppercase',
               borderBottom: activeCategory===cat ? '2px solid var(--black)' : '2px solid transparent',
               fontWeight: activeCategory===cat ? 500 : 300, transition:'all 0.2s',
