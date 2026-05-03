@@ -358,6 +358,7 @@ function MobileNavSection({ item, setPage, close }) {
 function HomePage({ setPage, user, cart, setCart }) {
   const [slide, setSlide] = useState(0);
   const [animating, setAnimating] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -379,6 +380,10 @@ function HomePage({ setPage, user, cart, setCart }) {
   }
 
   const heroPad = isMobile ? '0 6vw' : '0 10vw';
+
+  if (selectedProduct) {
+    return <ProductDetail product={selectedProduct} user={user} onAdd={addToCart} onBack={() => setSelectedProduct(null)} />;
+  }
 
   return (
     <div>
@@ -494,7 +499,7 @@ function HomePage({ setPage, user, cart, setCart }) {
             <button onClick={() => setPage('shop')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'var(--dark)', fontFamily:'var(--font-body)', borderBottom:'1px solid var(--dark)', paddingBottom:2, whiteSpace:'nowrap' }}>全部商品 →</button>
           </div>
           <div className="g4">
-            {featured.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} setPage={setPage} />)}
+            {featured.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} />)}
           </div>
         </div>
       </section>
