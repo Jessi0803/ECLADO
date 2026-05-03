@@ -807,7 +807,7 @@ function CartPage({ cart, setCart, setPage }) {
       <div style={{ maxWidth:900, margin:'0 auto', padding: isMobile ? '40px 20px' : '60px 32px' }}>
         <div style={{ display:'flex', alignItems:'baseline', gap:14, marginBottom:40 }}>
           <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 30 : 40, fontWeight:300 }}>購物車</h1>
-          <span style={{ fontSize:14, color:'var(--mid)' }}>{cart.length} 件商品</span>
+          <span style={{ fontSize:14, color:'var(--dark)' }}>{cart.length} 件商品</span>
         </div>
 
         {cart.length === 0 ? (
@@ -823,7 +823,7 @@ function CartPage({ cart, setCart, setPage }) {
                   <img src={item.img} alt={item.nameZh} style={{ width:72, height:72, objectFit:'cover', display:'block' }} />
                   <div>
                     <p style={{ fontFamily:'var(--font-display)', fontSize:14, fontWeight:400, marginBottom:3 }}>{item.name}</p>
-                    <p style={{ fontSize:12, color:'var(--mid)', marginBottom:10 }}>{item.nameZh} · {item.size}</p>
+                    <p style={{ fontSize:12, color:'var(--dark)', marginBottom:10 }}>{item.nameZh} · {item.size}</p>
                     <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                       <button onClick={() => updateQty(item.id,-1)} style={{ width:26, height:26, border:'1px solid var(--light)', background:'none', cursor:'pointer', fontSize:15, lineHeight:1 }}>−</button>
                       <span style={{ fontSize:14, minWidth:20, textAlign:'center' }}>{item.qty}</span>
@@ -832,7 +832,7 @@ function CartPage({ cart, setCart, setPage }) {
                   </div>
                   <div style={{ textAlign:'right' }}>
                     <p style={{ fontSize:14, fontWeight:500 }}>NT$ {(item.price*item.qty).toLocaleString()}</p>
-                    <button onClick={() => updateQty(item.id,-item.qty)} style={{ background:'none', border:'none', cursor:'pointer', fontSize:11, color:'var(--mid)', marginTop:6 }}>移除</button>
+                    <button onClick={() => updateQty(item.id,-item.qty)} style={{ background:'none', border:'none', cursor:'pointer', fontSize:11, color:'var(--dark)', marginTop:6 }}>移除</button>
                   </div>
                 </div>
               ))}
@@ -840,7 +840,7 @@ function CartPage({ cart, setCart, setPage }) {
             <div style={{ background:'var(--off-white)', padding:'28px', height:'fit-content' }}>
               <h3 style={{ fontFamily:'var(--font-display)', fontSize:18, fontWeight:400, marginBottom:20 }}>訂單摘要</h3>
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13 }}><span>小計</span><span>NT$ {total.toLocaleString()}</span></div>
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13 }}><span>運費</span><span style={{ color:'var(--mid)' }}>NT$ 150</span></div>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13 }}><span>運費</span><span>NT$ 150</span></div>
               <div style={{ height:1, background:'var(--light)', margin:'16px 0' }} />
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:24, fontWeight:500 }}>
                 <span style={{ fontSize:14 }}>合計</span>
@@ -855,6 +855,22 @@ function CartPage({ cart, setCart, setPage }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── CHECKOUT FIELD (must be outside CheckoutPage to avoid remount on every keystroke) ───
+function CheckoutField({ label, name, type, required, placeholder, value, onChange }) {
+  return (
+    <div>
+      <label style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:7 }}>
+        {label}{required !== false && <span style={{ color:'var(--gold)', marginLeft:3 }}>*</span>}
+      </label>
+      <input type={type||'text'} value={value} onChange={onChange} required={required !== false} placeholder={placeholder||''}
+        style={{ width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--black)', boxSizing:'border-box' }}
+        onFocus={e=>e.target.style.borderBottomColor='var(--black)'}
+        onBlur={e=>e.target.style.borderBottomColor='var(--light)'}
+      />
     </div>
   );
 }
@@ -875,18 +891,7 @@ function CheckoutPage({ cart, setCart, setPage, user }) {
 
   const STEPS = ['收件資訊', '確認訂單', '完成'];
 
-  function Field({ label, name, type='text', required=true, placeholder='' }) {
-    return (
-      <div>
-        <label style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:7 }}>{label}{required && <span style={{ color:'var(--gold)', marginLeft:3 }}>*</span>}</label>
-        <input type={type} value={form[name]} onChange={e => setForm(f=>({...f,[name]:e.target.value}))} required={required} placeholder={placeholder}
-          style={{ width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--black)', boxSizing:'border-box' }}
-          onFocus={e=>e.target.style.borderBottomColor='var(--black)'}
-          onBlur={e=>e.target.style.borderBottomColor='var(--light)'}
-        />
-      </div>
-    );
-  }
+  function setField(name) { return e => setForm(f => ({...f, [name]: e.target.value})); }
 
   function handleNext(e) {
     e.preventDefault();
@@ -944,7 +949,7 @@ function CheckoutPage({ cart, setCart, setPage, user }) {
           <span>運費 <span style={{ fontSize:10, color:'var(--mid)' }}>（宅配到府）</span></span>
           <span>{shipping === 0 ? <span style={{ color:'var(--gold)' }}>免運</span> : `NT$ ${shipping}`}</span>
         </div>
-        {subtotal < 3000 && <p style={{ fontSize:11, color:'var(--mid)', marginBottom:14, lineHeight:1.6 }}>消費滿 NT$ 3,000 享免運費，還差 NT$ {(3000-subtotal).toLocaleString()}</p>}
+        {subtotal < 3000 && <p style={{ fontSize:11, color:'var(--dark)', marginBottom:14, lineHeight:1.6 }}>消費滿 NT$ 3,000 享免運費，還差 NT$ {(3000-subtotal).toLocaleString()}</p>}
         <div style={{ height:1, background:'var(--light)', marginBottom:14 }} />
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
           <span style={{ fontSize:13, fontWeight:500 }}>合計</span>
@@ -1021,15 +1026,15 @@ function CheckoutPage({ cart, setCart, setPage, user }) {
                     </div>
                     <div>
                       <p style={{ fontSize:12, fontWeight:500, color:'var(--black)', marginBottom:2 }}>宅配到府</p>
-                      <p style={{ fontSize:11, color:'var(--mid)' }}>黑貓宅急便 · 運費 NT$ 150（滿 NT$ 3,000 免運）</p>
+                      <p style={{ fontSize:11, color:'var(--dark)' }}>黑貓宅急便 · 運費 NT$ 150（滿 NT$ 3,000 免運）</p>
                     </div>
                   </div>
 
                   <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:20 }}>
-                    <Field label="收件人姓名" name="name" />
-                    <Field label="手機號碼" name="phone" type="tel" placeholder="09xx-xxx-xxx" />
+                    <CheckoutField label="收件人姓名" name="name" value={form.name} onChange={setField('name')} />
+                    <CheckoutField label="手機號碼" name="phone" type="tel" placeholder="09xx-xxx-xxx" value={form.phone} onChange={setField('phone')} />
                   </div>
-                  <Field label="電子信箱" name="email" type="email" />
+                  <CheckoutField label="電子信箱" name="email" type="email" value={form.email} onChange={setField('email')} />
 
                   <div>
                     <label style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:7 }}>收件地址 <span style={{ color:'var(--gold)' }}>*</span></label>
