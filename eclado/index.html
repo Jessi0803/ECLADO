@@ -1148,19 +1148,29 @@ function App() {
   const [cart, setCart] = useState([]);
   const cartCount = cart.reduce((sum,i) => sum+i.qty, 0);
 
+  // 從 profiles 表讀取角色
+  async function loadUser(supabaseUser) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', supabaseUser.id)
+      .single();
+    setUser({
+      name: supabaseUser.email.split('@')[0],
+      email: supabaseUser.email,
+      isPro: data?.role === 'pro',
+      uid: supabaseUser.id,
+    });
+  }
+
   // 監聽 Supabase 登入狀態
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser({ name: session.user.email.split('@')[0], email: session.user.email, isPro: false, uid: session.user.id });
-      }
+      if (session?.user) loadUser(session.user);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        setUser({ name: session.user.email.split('@')[0], email: session.user.email, isPro: false, uid: session.user.id });
-      } else {
-        setUser(null);
-      }
+      if (session?.user) loadUser(session.user);
+      else setUser(null);
     });
     return () => subscription.unsubscribe();
   }, []);
