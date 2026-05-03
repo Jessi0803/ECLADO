@@ -639,7 +639,7 @@ function ProductDetail({ product, user, onAdd, onBack }) {
           <div>
             <p style={{ fontSize:10, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>{product.category}</p>
             <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 26 : 34, fontWeight:300, color:'var(--black)', lineHeight:1.2, marginBottom:6 }}>{product.nameZh}</h1>
-            <p style={{ fontSize:12, color:'var(--mid)', letterSpacing:'0.1em', marginBottom:28 }}>{product.name} · {product.size}</p>
+            <p style={{ fontSize:12, color:'var(--dark)', letterSpacing:'0.1em', marginBottom:28 }}>{product.name} · {product.size}</p>
 
             {/* 價格 */}
             <div style={{ borderTop:'1px solid var(--light)', borderBottom:'1px solid var(--light)', padding:'20px 0', marginBottom:28 }}>
@@ -684,7 +684,7 @@ function ProductDetail({ product, user, onAdd, onBack }) {
             { label:'適合膚質', content: product.skinType },
           ].map(({ label, content }) => (
             <div key={label} style={{ background:'var(--white)', padding: isMobile ? '28px 20px' : '36px 32px' }}>
-              <p style={{ fontSize:10, letterSpacing:'0.24em', color:'var(--gold)', textTransform:'uppercase', marginBottom:14 }}>{label}</p>
+              <p style={{ fontSize:10, letterSpacing:'0.24em', color:'var(--dark)', textTransform:'uppercase', marginBottom:14 }}>{label}</p>
               <p style={{ fontSize:14, color:'#555', lineHeight:1.9 }}>{content}</p>
             </div>
           ))}
