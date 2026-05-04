@@ -108,11 +108,6 @@
 <script>
   const SUPABASE_URL  = 'https://mtczcayumikaawefwnhm.supabase.co';
   const SUPABASE_ANON = 'sb_publishable_xhQF-6mwxbVYdGmHt1KAXA_MKPhkYhY';
-
-  // 在 Supabase 清掉 hash 之前先捕捉 recovery 狀態
-  const _isPasswordRecovery = window.location.hash.includes('type=recovery')
-    || window.location.search.includes('type=recovery');
-
   // UMD：全域為 { createClient }，建立實例後覆寫為 client（與官方範例一致）
   (function () {
     const lib = window.supabase;
@@ -1781,8 +1776,8 @@ function InfoPage() {
 }
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
-/** 首頁／商店頂部：載入失敗或「有資料但沒進行中」時給人看得懂的提示 */
-function PromoDiagnosticBar({ status, errorText, promotions }) {
+/** 首頁／商店頂部：載入中與載入失敗時的提示 */
+function PromoDiagnosticBar({ status, errorText }) {
   if (status === 'loading') {
     return (
       <div role="status" style={{ marginTop:68, background:'#f4f3f1', borderBottom:'1px solid var(--light)', padding:'10px 20px', textAlign:'center', fontSize:12, color:'var(--dark)', letterSpacing:'0.04em' }}>
@@ -1801,21 +1796,11 @@ function PromoDiagnosticBar({ status, errorText, promotions }) {
       </div>
     );
   }
-  const total = promotions.length;
-  const live = promotions.filter(isPromotionLive);
-  if (total > 0 && live.length === 0) {
-    return (
-      <div role="status" style={{ marginTop:68, background:'#fffbeb', borderBottom:'1px solid #fde68a', padding:'12px 20px', fontSize:13, color:'#92400e', lineHeight:1.65, textAlign:'center' }}>
-        <strong>已載入 {total} 個活動，但目前沒有任何一檔在「進行中」</strong>，所以首頁不會出現限時優惠區、購物車也不會折抵。<br />
-        <span style={{ fontSize:12 }}>請到後台「活動管理」檢查：① <strong>啟用</strong> 已勾選 ② 已勾選 <strong>參與商品</strong>。</span>
-      </div>
-    );
-  }
   return null;
 }
 
 function App() {
-  const [page, setPage] = useState(_isPasswordRecovery ? 'reset-password' : 'home');
+  const [page, setPage] = useState('home');
   const [user, setUser] = useState(null);
   const [cart, setCart] = useState([]);
   const [promotions, setPromotions] = useState([]);
@@ -1926,7 +1911,7 @@ function App() {
     <>
       {page !== 'login' && <Nav setPage={setPage} cartCount={cartCount} user={user} setUser={handleSignOut} page={page} />}
       {showPromoBar && (
-        <PromoDiagnosticBar status={promoFetchStatus} errorText={promoFetchError} promotions={promotions} />
+        <PromoDiagnosticBar status={promoFetchStatus} errorText={promoFetchError} />
       )}
       {renderPage()}
     </>
