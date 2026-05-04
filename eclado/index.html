@@ -108,6 +108,11 @@
 <script>
   const SUPABASE_URL  = 'https://mtczcayumikaawefwnhm.supabase.co';
   const SUPABASE_ANON = 'sb_publishable_xhQF-6mwxbVYdGmHt1KAXA_MKPhkYhY';
+
+  // 在 Supabase 清掉 hash 之前先捕捉 recovery 狀態
+  const _isPasswordRecovery = window.location.hash.includes('type=recovery')
+    || window.location.search.includes('type=recovery');
+
   // UMD：全域為 { createClient }，建立實例後覆寫為 client（與官方範例一致）
   (function () {
     const lib = window.supabase;
@@ -1810,7 +1815,7 @@ function PromoDiagnosticBar({ status, errorText, promotions }) {
 }
 
 function App() {
-  const [page, setPage] = useState('home');
+  const [page, setPage] = useState(_isPasswordRecovery ? 'reset-password' : 'home');
   const [user, setUser] = useState(null);
   const [cart, setCart] = useState([]);
   const [promotions, setPromotions] = useState([]);
