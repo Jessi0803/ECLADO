@@ -127,14 +127,28 @@ function TypeBadge({ type }) {
 }
 
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
-const MENU = [
-  { id: 'dashboard', icon: '▦', label: '儀表板' },
-  { id: 'orders', icon: '◫', label: '訂單管理' },
-  { id: 'products', icon: '◈', label: '商品管理' },
-  { id: 'inventory', icon: '◉', label: '庫存管理' },
-  { id: 'members', icon: '◎', label: '會員管理' },
-  { id: 'analytics', icon: '◐', label: '營業分析' },
-  { id: 'ai', icon: '✦', label: 'AI 補貨建議' },
+const MENU_GROUPS = [
+  {
+    title: '營運',
+    items: [
+      { id: 'dashboard', icon: '▦', label: '儀表板' },
+      { id: 'orders', icon: '◫', label: '訂單管理' },
+    ],
+  },
+  {
+    title: '商品',
+    items: [
+      { id: 'catalog', icon: '◈', label: '商品 & 庫存' },
+      { id: 'ai', icon: '✦', label: 'AI 補貨建議' },
+    ],
+  },
+  {
+    title: '其他',
+    items: [
+      { id: 'members', icon: '◎', label: '會員管理' },
+      { id: 'analytics', icon: '◐', label: '營業分析' },
+    ],
+  },
 ];
 
 function Sidebar({ page, setPage }) {
@@ -147,23 +161,35 @@ function Sidebar({ page, setPage }) {
       </div>
 
       {/* Menu */}
-      <nav style={{ flex: 1, padding: '16px 0', overflowY: 'auto' }}>
-        {MENU.map(item => (
-          <button key={item.id} onClick={() => setPage(item.id)} style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            width: '100%', padding: '13px 24px', border: 'none',
-            background: page === item.id ? 'rgba(255,255,255,0.08)' : 'transparent',
-            color: page === item.id ? '#fff' : 'rgba(255,255,255,0.45)',
-            fontSize: 13, letterSpacing: '0.04em', textAlign: 'left',
-            borderLeft: page === item.id ? '2px solid var(--gold)' : '2px solid transparent',
-            transition: 'all 0.15s',
-          }}
-          onMouseEnter={e => { if (page !== item.id) e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; }}
-          onMouseLeave={e => { if (page !== item.id) e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; }}
-          >
-            <span style={{ fontSize: 14, opacity: 0.8 }}>{item.icon}</span>
-            {item.label}
-          </button>
+      <nav style={{ flex: 1, padding: '12px 0', overflowY: 'auto' }}>
+        {MENU_GROUPS.map((group, gi) => (
+          <div key={group.title} style={{ marginBottom: 8, paddingTop: gi === 0 ? 4 : 12 }}>
+            <div style={{
+              padding: '8px 24px 6px',
+              fontSize: 9,
+              letterSpacing: '0.22em',
+              color: 'rgba(255,255,255,0.3)',
+              textTransform: 'uppercase',
+              fontWeight: 500,
+            }}>{group.title}</div>
+            {group.items.map(item => (
+              <button key={item.id} onClick={() => setPage(item.id)} style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                width: '100%', padding: '11px 24px', border: 'none',
+                background: page === item.id ? 'rgba(255,255,255,0.08)' : 'transparent',
+                color: page === item.id ? '#fff' : 'rgba(255,255,255,0.45)',
+                fontSize: 13, letterSpacing: '0.04em', textAlign: 'left',
+                borderLeft: page === item.id ? '2px solid var(--gold)' : '2px solid transparent',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { if (page !== item.id) e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; }}
+              onMouseLeave={e => { if (page !== item.id) e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; }}
+              >
+                <span style={{ fontSize: 14, opacity: 0.8 }}>{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
+          </div>
         ))}
       </nav>
 
@@ -500,7 +526,7 @@ function Orders({ orders, setOrders }) {
 }
 
 // ─── INVENTORY ────────────────────────────────────────────────────────────────
-function Inventory({ products, setProducts }) {
+function Inventory({ products, setProducts, hideHeader }) {
   const [editId, setEditId] = useState(null);
   const [editVal, setEditVal] = useState('');
 
@@ -516,19 +542,21 @@ function Inventory({ products, setProducts }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>庫存管理</h1>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <div style={{ padding: '8px 16px', background: 'var(--white)', border: '1px solid var(--border)', fontSize: 12, color: 'var(--mid)' }}>
-            共 {products.length} 件商品
-          </div>
-          {lowStock.length > 0 && (
-            <div style={{ padding: '8px 16px', background: 'oklch(0.60 0.18 25 / 0.08)', border: '1px solid oklch(0.60 0.18 25 / 0.3)', fontSize: 12, color: 'var(--red)', fontWeight: 500 }}>
-              ⚠ {lowStock.length} 件庫存不足
+      {!hideHeader && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>庫存管理</h1>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ padding: '8px 16px', background: 'var(--white)', border: '1px solid var(--border)', fontSize: 12, color: 'var(--mid)' }}>
+              共 {products.length} 件商品
             </div>
-          )}
+            {lowStock.length > 0 && (
+              <div style={{ padding: '8px 16px', background: 'oklch(0.60 0.18 25 / 0.08)', border: '1px solid oklch(0.60 0.18 25 / 0.3)', fontSize: 12, color: 'var(--red)', fontWeight: 500 }}>
+                ⚠ {lowStock.length} 件庫存不足
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {lowStock.length > 0 && (
         <div style={{ background: 'oklch(0.60 0.18 25 / 0.05)', border: '1px solid oklch(0.60 0.18 25 / 0.2)', padding: '16px 20px', marginBottom: 20 }}>
@@ -957,7 +985,7 @@ ${productData}
 }
 
 // ─── PRODUCTS PAGE ────────────────────────────────────────────────────────────
-function ProductsPage({ products, setProducts }) {
+function ProductsPage({ products, setProducts, hideHeader }) {
   const [editing, setEditing] = useState(null);
 
   function saveEdit(id, field, val) {
@@ -966,10 +994,16 @@ function ProductsPage({ products, setProducts }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>商品管理</h1>
-        <button style={{ padding: '10px 24px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>+ 新增商品</button>
-      </div>
+      {!hideHeader ? (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>商品管理</h1>
+          <button style={{ padding: '10px 24px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>+ 新增商品</button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+          <button style={{ padding: '10px 24px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>+ 新增商品</button>
+        </div>
+      )}
       <div style={{ background: 'var(--white)', border: '1px solid var(--border)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -1007,6 +1041,48 @@ function ProductsPage({ products, setProducts }) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+// ─── CATALOG (商品 + 庫存 合頁) ────────────────────────────────────────────────
+function Catalog({ products, setProducts }) {
+  const [tab, setTab] = useState('products'); // products | inventory
+  const lowStock = products.filter(p => p.stock <= p.minStock);
+
+  return (
+    <div>
+      {/* Tab bar */}
+      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
+        {[
+          { id: 'products', label: '商品列表', sub: `${products.length} 件商品` },
+          { id: 'inventory', label: '庫存管理', sub: lowStock.length > 0 ? `${lowStock.length} 件庫存不足` : '庫存充足' },
+        ].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '14px 28px 14px 0', marginRight: 24,
+            borderBottom: tab === t.id ? '2px solid var(--dark)' : '2px solid transparent',
+            color: tab === t.id ? 'var(--dark)' : 'var(--mid)',
+            fontFamily: 'var(--font-d)', fontSize: 22, fontWeight: 400,
+            letterSpacing: '0.02em', display: 'flex', alignItems: 'baseline', gap: 12,
+            transition: 'all 0.15s',
+          }}>
+            {t.label}
+            <span style={{
+              fontSize: 11, fontFamily: 'var(--font)', letterSpacing: '0.04em',
+              color: tab === t.id
+                ? (t.id === 'inventory' && lowStock.length > 0 ? 'var(--red)' : 'var(--mid)')
+                : 'var(--light)',
+              fontWeight: 400,
+            }}>{t.sub}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      {tab === 'products'
+        ? <ProductsPage products={products} setProducts={setProducts} hideHeader />
+        : <Inventory products={products} setProducts={setProducts} hideHeader />}
     </div>
   );
 }
@@ -1172,8 +1248,10 @@ function App() {
     switch (page) {
       case 'dashboard': return <Dashboard orders={orders} products={products} members={members} />;
       case 'orders': return <Orders orders={orders} setOrders={setOrdersWithSync} />;
-      case 'products': return <ProductsPage products={products} setProducts={setProducts} />;
-      case 'inventory': return <Inventory products={products} setProducts={setProducts} />;
+      case 'catalog': return <Catalog products={products} setProducts={setProducts} />;
+      // 舊路徑相容，避免有人記住 /admin#products 之類的
+      case 'products':
+      case 'inventory': return <Catalog products={products} setProducts={setProducts} />;
       case 'members': return <Members members={members} setMembers={setMembersWithSync} orders={orders} />;
       case 'analytics': return <Analytics />;
       case 'ai': return <AIReorder products={products} />;
