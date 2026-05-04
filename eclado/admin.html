@@ -131,7 +131,7 @@ const INIT_ORDERS = [
   { id: 'ECL-20260501-0042', member: '林小美', type: 'consumer', items: [{ name: '深層清潔泡沫洗面乳', qty: 2, price: 1280 }, { name: '密集保濕面膜', qty: 1, price: 2200 }], total: 4910, status: 'paid', date: '2026-05-01', address: '台北市信義區信義路五段7號' },
   { id: 'ECL-20260430-0041', member: '陳美容師', type: 'pro', items: [{ name: 'NK細胞活化安瓶', qty: 3, price: 6600 }, { name: '胜肽修護精華液', qty: 2, price: 2980 }], total: 25760, status: 'shipped', date: '2026-04-30', address: '台北市大安區忠孝東路四段1號', tracking: 'BN123456789TW' },
   { id: 'ECL-20260429-0040', member: '張美師傅', type: 'pro', items: [{ name: '急救修護安瓶組', qty: 4, price: 3600 }], total: 14550, status: 'delivered', date: '2026-04-29', address: '新北市板橋區文化路一段100號' },
-  { id: 'ECL-20260428-0039', member: '王大明', type: 'consumer', items: [{ name: '密集保濕面膜', qty: 1, price: 2200 }], total: 2350, status: 'pending', date: '2026-04-28', address: '台中市西屯區台灣大道三段99號' },
+  { id: 'ECL-20260428-0039', member: '王大明', type: 'consumer', items: [{ name: '密集保濕面膜', qty: 1, price: 2200 }], total: 2350, status: 'preparing', date: '2026-04-28', address: '台中市西屯區台灣大道三段99號', phone: '0911-555-666', transferLast5: '12345' },
   { id: 'ECL-20260427-0038', member: '劉芳芳', type: 'consumer', items: [{ name: '眼周緊緻精華', qty: 1, price: 2800 }, { name: 'AHA·BHA·PHA 煥膚凝膠', qty: 1, price: 1485 }], total: 4435, status: 'shipped', date: '2026-04-27', address: '高雄市前金區中正四路211號', tracking: 'BN987654321TW' },
   { id: 'ECL-20260426-0037', member: '吳雅婷', type: 'pro', items: [{ name: '細胞修護乳霜', qty: 3, price: 2700 }, { name: '胜肽修護精華液', qty: 2, price: 2980 }], total: 14110, status: 'delivered', date: '2026-04-26', address: '台南市東區東門路一段3號' },
   { id: 'ECL-20260425-0036', member: '鄭淑惠', type: 'consumer', items: [{ name: '深層清潔泡沫洗面乳', qty: 1, price: 1280 }], total: 1430, status: 'cancelled', date: '2026-04-25', address: '桃園市桃園區中正路123號' },
@@ -155,18 +155,56 @@ const PRODUCT_MONTHLY = {
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 const STATUS_MAP = {
-  pending: { label: '待付款', color: 'var(--yellow)' },
   awaiting_confirm: { label: '轉帳待確認', color: 'var(--red)' },
   paid: { label: '已付款', color: 'var(--blue)' },
+  preparing: { label: '備貨中', color: 'var(--yellow)' },
   shipped: { label: '已出貨', color: 'var(--gold)' },
   delivered: { label: '已到貨', color: 'var(--green)' },
   cancelled: { label: '已取消', color: 'var(--mid)' },
 };
 
+// 老闆可以從下拉選單變更的狀態（不含 awaiting_confirm，只有顧客填末五碼後系統會帶入）
+const STATUS_OPTIONS = ['awaiting_confirm', 'paid', 'preparing', 'shipped', 'delivered', 'cancelled'];
+
 function Badge({ status }) {
   const s = STATUS_MAP[status] || { label: status, color: 'var(--mid)' };
   return (
     <span style={{ display: 'inline-block', padding: '3px 10px', fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', background: s.color + '18', color: s.color, borderRadius: 2 }}>{s.label}</span>
+  );
+}
+
+// 訂單狀態下拉選單：外觀類似 Badge，整個變成可點選的 select
+function StatusSelect({ status, onChange, size = 'sm' }) {
+  const s = STATUS_MAP[status] || { label: status, color: 'var(--mid)' };
+  const padding = size === 'lg' ? '8px 32px 8px 12px' : '4px 24px 4px 10px';
+  const fontSize = size === 'lg' ? 13 : 11;
+  return (
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <select
+        value={status}
+        onChange={e => onChange(e.target.value)}
+        onClick={e => e.stopPropagation()}
+        style={{
+          appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
+          padding, fontSize, fontWeight: 500, letterSpacing: '0.06em',
+          background: s.color + '18', color: s.color,
+          border: `1px solid ${s.color}40`, borderRadius: 2,
+          cursor: 'pointer', fontFamily: 'inherit',
+          minWidth: size === 'lg' ? 160 : 110,
+        }}
+      >
+        {STATUS_OPTIONS.map(opt => (
+          <option key={opt} value={opt} style={{ background: '#fff', color: 'var(--dark)' }}>
+            {STATUS_MAP[opt].label}
+          </option>
+        ))}
+      </select>
+      <span style={{
+        position: 'absolute', right: size === 'lg' ? 12 : 8, top: '50%',
+        transform: 'translateY(-50%)', pointerEvents: 'none',
+        fontSize: 9, color: s.color,
+      }}>▼</span>
+    </div>
   );
 }
 
@@ -301,7 +339,7 @@ function Dashboard({ orders, products, members }) {
   const lastMonth = MONTHLY_REVENUE[MONTHLY_REVENUE.length - 2];
   const growth = (((thisMonth.revenue - lastMonth.revenue) / lastMonth.revenue) * 100).toFixed(1);
   const lowStock = products.filter(p => p.stock <= p.minStock);
-  const pendingOrders = orders.filter(o => o.status === 'pending' || o.status === 'paid' || o.status === 'awaiting_confirm');
+  const pendingOrders = orders.filter(o => ['awaiting_confirm', 'paid', 'preparing'].includes(o.status));
   const awaitingConfirm = orders.filter(o => o.status === 'awaiting_confirm');
   const proMembers = members.filter(m => m.type === 'pro');
 
@@ -417,7 +455,7 @@ function Orders({ orders, setOrders }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
           <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>訂單管理</h1>
           <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
-            {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['pending','待付款'], ['paid','已付款'], ['shipped','已出貨'], ['delivered','已到貨']].map(([val, label]) => (
+            {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['paid','已付款'], ['preparing','備貨中'], ['shipped','已出貨'], ['delivered','已到貨']].map(([val, label]) => (
               <button key={val} onClick={() => setFilter(val)} style={{
                 padding: '8px 16px', border: 'none', fontSize: 12, letterSpacing: '0.04em',
                 background: filter === val ? 'var(--dark)' : 'transparent',
@@ -450,7 +488,7 @@ function Orders({ orders, setOrders }) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
-                {['訂單編號', '會員', '類型', '金額', '末五碼', '狀態', '日期', '操作'].map(h => (
+                {['訂單編號', '會員', '類型', '金額', '末五碼', '狀態', '日期'].map(h => (
                   <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -458,7 +496,7 @@ function Orders({ orders, setOrders }) {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: 'var(--mid)', fontSize: 13 }}>目前沒有訂單</td>
+                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--mid)', fontSize: 13 }}>目前沒有訂單</td>
                 </tr>
               )}
               {filtered.map(o => (
@@ -472,19 +510,10 @@ function Orders({ orders, setOrders }) {
                   <td style={{ padding: '13px 14px', fontSize: 13, fontFamily: 'var(--font-d)', letterSpacing: '0.15em', color: o.transferLast5 ? 'var(--dark)' : 'var(--light)', fontWeight: 600 }}>
                     {o.transferLast5 || '—'}
                   </td>
-                  <td style={{ padding: '13px 14px' }}><Badge status={o.status} /></td>
-                  <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)', whiteSpace: 'nowrap' }}>{o.date}</td>
                   <td style={{ padding: '13px 14px' }}>
-                    {o.status === 'awaiting_confirm' && (
-                      <button onClick={e => { e.stopPropagation(); updateStatus(o.id, 'paid'); }} style={{ padding: '5px 12px', fontSize: 11, background: 'var(--blue)', color: '#fff', border: 'none', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>確認入帳</button>
-                    )}
-                    {o.status === 'paid' && (
-                      <button onClick={e => { e.stopPropagation(); updateStatus(o.id, 'shipped'); }} style={{ padding: '5px 12px', fontSize: 11, background: 'var(--dark)', color: '#fff', border: 'none', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>出貨</button>
-                    )}
-                    {o.status === 'shipped' && (
-                      <button onClick={e => { e.stopPropagation(); updateStatus(o.id, 'delivered'); }} style={{ padding: '5px 12px', fontSize: 11, background: 'var(--green)', color: '#fff', border: 'none', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>確認到貨</button>
-                    )}
+                    <StatusSelect status={o.status} onChange={ns => updateStatus(o.id, ns)} />
                   </td>
+                  <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)', whiteSpace: 'nowrap' }}>{o.date}</td>
                 </tr>
               ))}
             </tbody>
@@ -504,8 +533,13 @@ function Orders({ orders, setOrders }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>會員</div><div style={{ fontSize: 13 }}>{selected.member}</div></div>
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>日期</div><div style={{ fontSize: 13 }}>{selected.date}</div></div>
-            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>狀態</div><Badge status={selected.status} /></div>
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>類型</div><TypeBadge type={selected.type} /></div>
+          </div>
+
+          {/* 狀態下拉 */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 6 }}>訂單狀態</div>
+            <StatusSelect status={selected.status} onChange={ns => updateStatus(selected.id, ns)} size="lg" />
           </div>
 
           {/* 轉帳資訊區塊 */}
@@ -563,23 +597,14 @@ function Orders({ orders, setOrders }) {
               <span>合計</span><span>NT$ {selected.total.toLocaleString()}</span>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {selected.status === 'awaiting_confirm' && (
-              <>
-                <button onClick={() => updateStatus(selected.id, 'paid')} style={{ flex: 1, minWidth: 140, padding: '10px', background: 'var(--blue)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer', fontWeight: 500 }}>✓ 確認入帳</button>
-                <button onClick={() => { if (confirm('確認要拒絕此轉帳並取消訂單嗎？')) updateStatus(selected.id, 'cancelled'); }} style={{ padding: '10px 14px', background: 'none', color: 'var(--mid)', border: '1px solid var(--border)', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>取消訂單</button>
-              </>
-            )}
-            {selected.status === 'paid' && (
-              <button onClick={() => updateStatus(selected.id, 'shipped')} style={{ flex: 1, padding: '10px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>出貨 (LINE通知)</button>
-            )}
-            {selected.status === 'pending' && (
-              <button onClick={() => updateStatus(selected.id, 'paid')} style={{ flex: 1, padding: '10px', background: 'var(--blue)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>確認付款</button>
-            )}
-            {selected.status === 'shipped' && (
-              <button onClick={() => updateStatus(selected.id, 'delivered')} style={{ flex: 1, padding: '10px', background: 'var(--green)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>確認到貨</button>
-            )}
-          </div>
+          {selected.status !== 'cancelled' && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                onClick={() => { if (confirm('確認要取消此訂單嗎？')) updateStatus(selected.id, 'cancelled'); }}
+                style={{ flex: 1, padding: '10px', background: 'none', color: 'var(--mid)', border: '1px solid var(--border)', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}
+              >取消訂單</button>
+            </div>
+          )}
         </div>
       )}
     </div>
