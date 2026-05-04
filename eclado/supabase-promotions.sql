@@ -29,7 +29,10 @@ create trigger trg_promotions_updated_at
   before update on public.promotions
   for each row execute function public.set_updated_at();
 
--- 2) RLS：所有人可讀（顧客端要看），只有登入者能寫（你之後加 admin 角色就在這加 USING）
+-- 2) RLS：所有人可讀可寫
+--    注意：這個策略假設後台入口用密碼閘保護，
+--    且一般人不知道 /admin 這個網址。如果要更嚴格，
+--    之後可改為 service_role 或正規 Supabase 登入。
 alter table public.promotions enable row level security;
 
 drop policy if exists "promotions_select_all" on public.promotions;
@@ -38,19 +41,22 @@ create policy "promotions_select_all"
   using (true);
 
 drop policy if exists "promotions_insert_auth" on public.promotions;
-create policy "promotions_insert_auth"
+drop policy if exists "promotions_insert_all" on public.promotions;
+create policy "promotions_insert_all"
   on public.promotions for insert
-  with check (auth.role() = 'authenticated');
+  with check (true);
 
 drop policy if exists "promotions_update_auth" on public.promotions;
-create policy "promotions_update_auth"
+drop policy if exists "promotions_update_all" on public.promotions;
+create policy "promotions_update_all"
   on public.promotions for update
-  using (auth.role() = 'authenticated');
+  using (true) with check (true);
 
 drop policy if exists "promotions_delete_auth" on public.promotions;
-create policy "promotions_delete_auth"
+drop policy if exists "promotions_delete_all" on public.promotions;
+create policy "promotions_delete_all"
   on public.promotions for delete
-  using (auth.role() = 'authenticated');
+  using (true);
 
 -- 3) 開啟 realtime
 alter publication supabase_realtime add table public.promotions;
