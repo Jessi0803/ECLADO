@@ -175,7 +175,7 @@ const STATUS_MAP = {
 const STATUS_OPTIONS = ['awaiting_confirm', 'paid', 'preparing', 'shipped', 'delivered', 'cancelled'];
 
 // ─── PROMOTION HELPERS ────────────────────────────────────────────────────────
-// 判斷活動是否「進行中」（active=true 且在起訖區間內）
+// 判斷活動是否「進行中」（僅依 active）
 function normProductIds(p) {
   const raw = p?.product_ids;
   if (!raw) return [];
@@ -189,52 +189,21 @@ function normProductIds(p) {
   return [];
 }
 
-/** 以 Asia/Taipei 的日曆日 YYYY-MM-DD（與前台一致） */
-function ymdTaipei(d) {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
-}
-
-function isTaipeiMidnight(d) {
-  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).formatToParts(d);
-  const h = +parts.find(x => x.type === 'hour').value;
-  const m = +parts.find(x => x.type === 'minute').value;
-  const s = +parts.find(x => x.type === 'second').value;
-  return h === 0 && m === 0 && s === 0;
-}
-
-function isPromotionLive(p, now = new Date()) {
+function isPromotionLive(p) {
   if (p && p.active === false) return false;
   if (String(p?.active).toLowerCase() === 'false') return false;
-  if (p.start_at && new Date(p.start_at) > now) return false;
-  if (p.end_at) {
-    const endD = new Date(p.end_at);
-    if (Number.isNaN(endD.getTime())) return true;
-    if (isTaipeiMidnight(endD)) {
-      if (ymdTaipei(now) > ymdTaipei(endD)) return false;
-    } else if (endD < now) return false;
-  }
   return true;
 }
 
-// 活動排程狀態（給 admin 列表用）
-function getPromotionPhase(p, now = new Date()) {
+// 活動狀態（僅依「啟用」；資料庫若仍有舊的 start/end 欄位，前台已不再使用）
+function getPromotionPhase(p) {
   if (p && p.active === false) return 'disabled';
   if (String(p?.active).toLowerCase() === 'false') return 'disabled';
-  if (p.start_at && new Date(p.start_at) > now) return 'scheduled';
-  if (p.end_at) {
-    const endD = new Date(p.end_at);
-    if (Number.isNaN(endD.getTime())) return 'live';
-    if (isTaipeiMidnight(endD)) {
-      if (ymdTaipei(now) > ymdTaipei(endD)) return 'expired';
-    } else if (endD < now) return 'expired';
-  }
   return 'live';
 }
 
 const PROMO_PHASE_MAP = {
   live: { label: '進行中', color: 'var(--green)' },
-  scheduled: { label: '排程中', color: 'var(--blue)' },
-  expired: { label: '已結束', color: 'var(--mid)' },
   disabled: { label: '已停用', color: 'var(--light)' },
 };
 
@@ -1306,23 +1275,6 @@ function Catalog({ products, setProducts }) {
 }
 
 // ─── PROMOTIONS ───────────────────────────────────────────────────────────────
-function toLocalDateTimeInput(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const pad = n => String(n).padStart(2, '0');
-  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d);
-  const y = parts.find(x => x.type === 'year').value;
-  const m = pad(parts.find(x => x.type === 'month').value);
-  const day = pad(parts.find(x => x.type === 'day').value);
-  const h = pad(parts.find(x => x.type === 'hour').value);
-  const min = pad(parts.find(x => x.type === 'minute').value);
-  return `${y}-${m}-${day}T${h}:${min}`;
-}
-
-function fromLocalDateTimeInput(s) {
-  return s ? new Date(s).toISOString() : null;
-}
-
 function Promotions({ products }) {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1418,12 +1370,6 @@ function Promotions({ products }) {
                   )}
                 </div>
 
-                <div style={{ fontSize: 11, color: 'var(--mid)', lineHeight: 1.6 }}>
-                  {p.start_at ? `${new Date(p.start_at).toLocaleString('zh-TW', { hour12: false }).slice(0, 16)}` : '立即開始'}
-                  {' → '}
-                  {p.end_at ? `${new Date(p.end_at).toLocaleString('zh-TW', { hour12: false }).slice(0, 16)}` : '無結束日'}
-                </div>
-
                 <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                   <button onClick={() => setEditing(p)} style={{
                     flex: 1, padding: '8px', background: 'var(--off)', color: 'var(--dark)',
@@ -1449,8 +1395,6 @@ function PromotionForm({ promo, products, onClose }) {
   const [productIds, setProductIds] = useState(new Set((promo?.product_ids || []).map(Number)));
   const [rate, setRate] = useState(promo?.discount_rate ?? 0.95);
   const [amount, setAmount] = useState(promo?.discount_amount ?? 1000);
-  const [startAt, setStartAt] = useState(toLocalDateTimeInput(promo?.start_at));
-  const [endAt, setEndAt] = useState(toLocalDateTimeInput(promo?.end_at));
   const [active, setActive] = useState(promo?.active ?? true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -1476,8 +1420,8 @@ function PromotionForm({ promo, products, onClose }) {
       product_ids: Array.from(productIds),
       discount_rate: Number(rate),
       discount_amount: Number(amount),
-      start_at: fromLocalDateTimeInput(startAt),
-      end_at: fromLocalDateTimeInput(endAt),
+      start_at: null,
+      end_at: null,
       active,
     };
 
@@ -1542,26 +1486,10 @@ function PromotionForm({ promo, products, onClose }) {
           計算公式：活動商品小計 × <b>{rate}</b> − <b>NT$ {Number(amount).toLocaleString()}</b>
         </div>
 
-        {/* 起訖時間 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
-          <div>
-            <label style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>開始時間</label>
-            <input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)}
-              style={{ width: '100%', border: '1px solid var(--border)', padding: '10px 12px', fontSize: 13, outline: 'none', background: 'var(--off)' }} />
-            <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 4 }}>留白 = 立即生效</p>
-          </div>
-          <div>
-            <label style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>結束時間</label>
-            <input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)}
-              style={{ width: '100%', border: '1px solid var(--border)', padding: '10px 12px', fontSize: 13, outline: 'none', background: 'var(--off)' }} />
-            <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 4 }}>留白 = 不自動結束</p>
-          </div>
-        </div>
-
         {/* 啟用 */}
         <label style={{ display: 'inline-flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--dark)' }}>
           <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />
-          啟用此活動（停用後即使在期間內也不會生效）
+          啟用此活動（停用後前台與購物車皆不套用）
         </label>
 
         {/* 商品選擇 */}

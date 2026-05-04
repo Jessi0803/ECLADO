@@ -188,34 +188,10 @@ function normProductIds(p) {
   return [];
 }
 
-/** 以 Asia/Taipei 的日曆日 YYYY-MM-DD */
-function ymdTaipei(d) {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
-}
-
-/** 該瞬時在台北是否為 00:00:00（常見「只選日期」導致誤判已過期） */
-function isTaipeiMidnight(d) {
-  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).formatToParts(d);
-  const h = +parts.find(x => x.type === 'hour').value;
-  const m = +parts.find(x => x.type === 'minute').value;
-  const s = +parts.find(x => x.type === 'second').value;
-  return h === 0 && m === 0 && s === 0;
-}
-
-function isPromotionLive(p, now = new Date()) {
-  // 僅在明確為 false 時停用（避免 API 漏欄位被當成不生效）
+function isPromotionLive(p) {
+  // 僅在明確為 false 時停用（避免 API 漏欄位被當成不生效）；不再使用起訖時間
   if (p && p.active === false) return false;
   if (String(p?.active).toLowerCase() === 'false') return false;
-  // 開始仍以「實際瞬時」為準（可排程到某日某時才開跑）
-  if (p.start_at && new Date(p.start_at) > now) return false;
-  if (p.end_at) {
-    const endD = new Date(p.end_at);
-    if (Number.isNaN(endD.getTime())) return true;
-    // 結束在台北為當天 00:00：視為「結束日曆日含當天」，避免中午就被當成已過期
-    if (isTaipeiMidnight(endD)) {
-      if (ymdTaipei(now) > ymdTaipei(endD)) return false;
-    } else if (endD < now) return false;
-  }
   return true;
 }
 
@@ -241,24 +217,6 @@ function calculateDiscount(cart, promotions, user) {
     return { subtotal, discount, finalSubtotal: subtotal - discount, promotion: p };
   }
   return { subtotal, discount: 0, finalSubtotal: subtotal, promotion: null };
-}
-
-// 倒數計時 hook（每秒更新）
-function useCountdown(targetISO) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!targetISO) return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [targetISO]);
-  if (!targetISO) return null;
-  const diff = new Date(targetISO).getTime() - now;
-  if (diff <= 0) return { ended: true, days: 0, hours: 0, minutes: 0, seconds: 0 };
-  const days = Math.floor(diff / 86400000);
-  const hours = Math.floor((diff % 86400000) / 3600000);
-  const minutes = Math.floor((diff % 3600000) / 60000);
-  const seconds = Math.floor((diff % 60000) / 1000);
-  return { ended: false, days, hours, minutes, seconds };
 }
 
 const HERO_SLIDES = [
@@ -884,7 +842,6 @@ function ProductCard({ product, user, onAdd, onSelect, promotions = [] }) {
 
 // ─── PROMO SECTION (homepage) ────────────────────────────────────────────────
 function PromoSection({ promo, user, addToCart, onSelect, isMobile, promotions = [] }) {
-  const cd = useCountdown(promo.end_at);
   const ids = normProductIds(promo);
   const items = ids
     .map(id => PRODUCTS.find(p => p.id === id))
@@ -921,26 +878,6 @@ function PromoSection({ promo, user, addToCart, onSelect, isMobile, promotions =
             )}
             <p style={{ fontSize:12, color:'var(--gold)', letterSpacing:'0.1em', marginTop:6 }}>結帳自動套用：{formula}</p>
           </div>
-
-          {/* 倒數 */}
-          {cd && !cd.ended && (
-            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)', letterSpacing:'0.16em', textTransform:'uppercase' }}>距離結束</span>
-              <div style={{ display:'flex', gap:6 }}>
-                {[
-                  { v: cd.days, l: '日' },
-                  { v: cd.hours, l: '時' },
-                  { v: cd.minutes, l: '分' },
-                  { v: cd.seconds, l: '秒' },
-                ].map((u, i) => (
-                  <div key={i} style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', minWidth:42, padding:'8px 6px', textAlign:'center' }}>
-                    <div style={{ fontFamily:'var(--font-display)', fontSize:18, color:'var(--white)', lineHeight:1 }}>{String(u.v).padStart(2,'0')}</div>
-                    <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)', marginTop:3 }}>{u.l}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="g4">
@@ -1902,7 +1839,7 @@ function PromoDiagnosticBar({ status, errorText, promotions }) {
     return (
       <div role="status" style={{ marginTop:68, background:'#fffbeb', borderBottom:'1px solid #fde68a', padding:'12px 20px', fontSize:13, color:'#92400e', lineHeight:1.65, textAlign:'center' }}>
         <strong>已載入 {total} 個活動，但目前沒有任何一檔在「進行中」</strong>，所以首頁不會出現限時優惠區、購物車也不會折抵。<br />
-        <span style={{ fontSize:12 }}>請到後台「活動管理」檢查：① <strong>啟用</strong> 已勾選 ② <strong>開始時間</strong> 已到（或留空＝立即）③ <strong>結束時間</strong> 未到（或留空＝不結束）④ 已勾選 <strong>參與商品</strong>。</span>
+        <span style={{ fontSize:12 }}>請到後台「活動管理」檢查：① <strong>啟用</strong> 已勾選 ② 已勾選 <strong>參與商品</strong>。</span>
       </div>
     );
   }
