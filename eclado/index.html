@@ -235,13 +235,22 @@ function NavItem({ item, scrolled, setPage }) {
 function Nav({ setPage, cartCount, user, setUser, page }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [productDetailOpen, setProductDetailOpen] = useState(false);
   const isMobile = useIsMobile();
-  const darkMode = scrolled || page !== 'home';
+  const darkMode = scrolled || page !== 'home' || productDetailOpen;
 
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 40);
     window.addEventListener('scroll', h);
     return () => window.removeEventListener('scroll', h);
+  }, []);
+
+  // ProductDetail 開關時同步深色模式
+  useEffect(() => {
+    const sync = () => setProductDetailOpen(!!window.__productDetailOpen);
+    sync();
+    window.addEventListener('product-detail-toggle', sync);
+    return () => window.removeEventListener('product-detail-toggle', sync);
   }, []);
 
   useEffect(() => { if (!isMobile) setDrawerOpen(false); }, [isMobile]);
@@ -255,7 +264,7 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
         background: drawerOpen || darkMode ? 'var(--white)' : 'transparent',
         backdropFilter: 'none',
         borderBottom: darkMode || drawerOpen ? '1px solid var(--light)' : '1px solid rgba(255,255,255,0.1)',
-        transition: darkMode ? 'none' : 'background 0.4s, border-color 0.4s',
+        transition:'background 0.4s, border-color 0.4s',
       }}>
         <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px', height:68, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           {/* Logo */}
@@ -608,6 +617,16 @@ function ProductDetail({ product, user, onAdd, onBack }) {
   }
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
+
+  // 通知 Nav 切換到深色模式（避免 navbar 在商品詳情頁還顯示透明白字）
+  useEffect(() => {
+    window.__productDetailOpen = true;
+    window.dispatchEvent(new Event('product-detail-toggle'));
+    return () => {
+      window.__productDetailOpen = false;
+      window.dispatchEvent(new Event('product-detail-toggle'));
+    };
+  }, []);
 
   return (
     <div style={{ paddingTop:68, minHeight:'100vh', background:'var(--white)' }}>
