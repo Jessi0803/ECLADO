@@ -14,7 +14,15 @@
 <script>
   const SUPABASE_URL  = 'https://mtczcayumikaawefwnhm.supabase.co';
   const SUPABASE_ANON = 'sb_publishable_xhQF-6mwxbVYdGmHt1KAXA_MKPhkYhY';
-  window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  (function () {
+    const lib = window.supabase;
+    if (!lib || typeof lib.createClient !== 'function') {
+      console.error('[ECLADO Admin] Supabase JS 未正確載入');
+      window.supabase = null;
+      return;
+    }
+    window.supabase = lib.createClient(SUPABASE_URL, SUPABASE_ANON);
+  })();
 </script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

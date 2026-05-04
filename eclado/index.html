@@ -108,7 +108,16 @@
 <script>
   const SUPABASE_URL  = 'https://mtczcayumikaawefwnhm.supabase.co';
   const SUPABASE_ANON = 'sb_publishable_xhQF-6mwxbVYdGmHt1KAXA_MKPhkYhY';
-  window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  // UMD：全域為 { createClient }，建立實例後覆寫為 client（與官方範例一致）
+  (function () {
+    const lib = window.supabase;
+    if (!lib || typeof lib.createClient !== 'function') {
+      console.error('[ECLADO] Supabase JS 未正確載入，請檢查 CDN script');
+      window.supabase = null;
+      return;
+    }
+    window.supabase = lib.createClient(SUPABASE_URL, SUPABASE_ANON);
+  })();
 
   function sbError(msg) {
     if (!msg) return '發生錯誤，請再試一次';
@@ -1844,11 +1853,46 @@ function InfoPage() {
 }
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
+/** 首頁／商店頂部：載入失敗或「有資料但沒進行中」時給人看得懂的提示 */
+function PromoDiagnosticBar({ status, errorText, promotions }) {
+  if (status === 'loading') {
+    return (
+      <div role="status" style={{ marginTop:68, background:'#f4f3f1', borderBottom:'1px solid var(--light)', padding:'10px 20px', textAlign:'center', fontSize:12, color:'var(--dark)', letterSpacing:'0.04em' }}>
+        正在載入優惠活動…
+      </div>
+    );
+  }
+  if (status === 'error') {
+    return (
+      <div role="alert" style={{ marginTop:68, background:'#fef2f2', borderBottom:'1px solid #fecaca', padding:'12px 20px', fontSize:13, color:'#991b1b', lineHeight:1.65, textAlign:'center' }}>
+        <strong>優惠活動無法載入</strong>（網站其餘功能仍可使用）。<br />
+        <span style={{ fontSize:12, opacity:0.95 }}>{errorText || '未知錯誤'}</span><br />
+        <span style={{ fontSize:11, color:'#7f1d1d', marginTop:6, display:'inline-block' }}>
+          請到 Supabase 確認已執行 <code style={{ background:'#fee2e2', padding:'1px 6px' }}>eclado/supabase-promotions.sql</code>，且 <strong>public.promotions</strong> 的 RLS 允許 <strong>anon 讀取（SELECT）</strong>。
+        </span>
+      </div>
+    );
+  }
+  const total = promotions.length;
+  const live = promotions.filter(isPromotionLive);
+  if (total > 0 && live.length === 0) {
+    return (
+      <div role="status" style={{ marginTop:68, background:'#fffbeb', borderBottom:'1px solid #fde68a', padding:'12px 20px', fontSize:13, color:'#92400e', lineHeight:1.65, textAlign:'center' }}>
+        <strong>已載入 {total} 個活動，但目前沒有任何一檔在「進行中」</strong>，所以首頁不會出現限時優惠區、購物車也不會折抵。<br />
+        <span style={{ fontSize:12 }}>請到後台「活動管理」檢查：① <strong>啟用</strong> 已勾選 ② <strong>開始時間</strong> 已到（或留空＝立即）③ <strong>結束時間</strong> 未到（或留空＝不結束）④ 已勾選 <strong>參與商品</strong>。</span>
+      </div>
+    );
+  }
+  return null;
+}
+
 function App() {
   const [page, setPage] = useState('home');
   const [user, setUser] = useState(null);
   const [cart, setCart] = useState([]);
   const [promotions, setPromotions] = useState([]);
+  const [promoFetchStatus, setPromoFetchStatus] = useState('loading'); // 先顯示載入中，避免空白誤判
+  const [promoFetchError, setPromoFetchError] = useState('');
   const cartCount = cart.reduce((sum,i) => sum+i.qty, 0);
 
   // 從 profiles 表讀取角色
@@ -1880,24 +1924,45 @@ function App() {
 
   // 載入進行中的活動（含 realtime 同步）
   useEffect(() => {
+    if (!window.supabase || typeof window.supabase.from !== 'function') {
+      setPromoFetchStatus('error');
+      setPromoFetchError('Supabase 未初始化（請重新整理或檢查 script 是否被擋）');
+      setPromotions([]);
+      return;
+    }
+    const sb = window.supabase;
+
     async function loadPromotions() {
-      const { data, error } = await supabase
-        .from('promotions')
-        .select('*')
-        .order('created_at', { ascending: false });
+      setPromoFetchStatus('loading');
+      setPromoFetchError('');
+      let { data, error } = await sb.from('promotions').select('*').order('created_at', { ascending: false });
+      // 若資料表沒有 created_at 或排序失敗，改不排序再試一次
+      if (error) {
+        const r2 = await sb.from('promotions').select('*');
+        data = r2.data;
+        error = r2.error;
+      }
       if (error) {
         console.error('[ECLADO] 無法載入 promotions：', error.message, error);
         setPromotions([]);
+        setPromoFetchStatus('error');
+        setPromoFetchError(error.message || String(error.code || ''));
         return;
       }
       setPromotions(data || []);
+      setPromoFetchStatus('ok');
     }
     loadPromotions();
-    const ch = supabase
-      .channel('promotions-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'promotions' }, loadPromotions)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    let ch = null;
+    try {
+      ch = sb
+        .channel('promotions-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'promotions' }, loadPromotions)
+        .subscribe();
+    } catch (e) {
+      console.warn('[ECLADO] Realtime 訂閱失敗（不影響讀取）', e);
+    }
+    return () => { if (ch) sb.removeChannel(ch); };
   }, []);
 
   // 網址列 #eclado-promotions 時捲到活動區（例如從商店頁「回首頁看活動」）
@@ -1927,9 +1992,14 @@ function App() {
     }
   }
 
+  const showPromoBar = page !== 'login';
+
   return (
     <>
       {page !== 'login' && <Nav setPage={setPage} cartCount={cartCount} user={user} setUser={handleSignOut} page={page} />}
+      {showPromoBar && (
+        <PromoDiagnosticBar status={promoFetchStatus} errorText={promoFetchError} promotions={promotions} />
+      )}
       {renderPage()}
     </>
   );
