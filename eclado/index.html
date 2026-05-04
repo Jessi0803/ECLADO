@@ -116,9 +116,7 @@
       window.supabase = null;
       return;
     }
-    window.supabase = lib.createClient(SUPABASE_URL, SUPABASE_ANON, {
-      auth: { flowType: 'implicit' },
-    });
+    window.supabase = lib.createClient(SUPABASE_URL, SUPABASE_ANON);
   })();
 
   function sbError(msg) {
@@ -732,12 +730,7 @@ function ProductDetail({ product, user, onAdd, onBack, promotions = [] }) {
             {primaryPromo && (
               <div style={{ background:'var(--off-white)', border:'1px solid var(--gold)', padding:'14px 18px', marginBottom:20 }}>
                 <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--gold)', textTransform:'uppercase', marginBottom:6 }}>限時優惠</p>
-                <p style={{ fontSize:14, color:'var(--black)', fontWeight:500, marginBottom:6 }}>{primaryPromo.name}</p>
-                <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.65 }}>
-                  結帳時此商品金額將套用：<strong>× {primaryPromo.discount_rate}</strong>
-                  {Number(primaryPromo.discount_amount) > 0 && <> 再減 <strong>NT$ {Number(primaryPromo.discount_amount).toLocaleString()}</strong></>}
-                  （與購物車內其他活動商品合併計算，以結帳頁金額為準）
-                </p>
+                <p style={{ fontSize:14, color:'var(--black)', fontWeight:500, marginBottom:0 }}>{primaryPromo.name}</p>
               </div>
             )}
 
@@ -848,8 +841,6 @@ function PromoSection({ promo, user, addToCart, onSelect, isMobile, promotions =
     );
   }
 
-  const formula = `原價 × ${promo.discount_rate}` + (Number(promo.discount_amount) > 0 ? ` − NT$ ${Number(promo.discount_amount).toLocaleString()}` : '');
-
   return (
     <section style={{ background:'var(--white)', padding: isMobile ? '60px 0' : '100px 0', borderTop:'1px solid var(--light)', borderBottom:'1px solid var(--light)' }}>
       <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
@@ -857,9 +848,8 @@ function PromoSection({ promo, user, addToCart, onSelect, isMobile, promotions =
           <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', marginBottom:10 }}>限時優惠</p>
           <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(26px,4vw,52px)', fontWeight:300, lineHeight:1.1, color:'var(--black)', marginBottom:12 }}>{promo.name}</h2>
           {promo.description && (
-            <p style={{ fontSize:14, color:'#555', lineHeight:1.75, maxWidth:560, marginBottom:10 }}>{promo.description}</p>
+            <p style={{ fontSize:14, color:'#555', lineHeight:1.75, maxWidth:560, marginBottom:0 }}>{promo.description}</p>
           )}
-          <p style={{ fontSize:12, color:'var(--dark)', letterSpacing:'0.06em' }}>結帳自動套用：{formula}</p>
         </div>
 
         <div className="g4">
@@ -1507,9 +1497,7 @@ function LoginPage({ setPage }) {
   async function handleForgot(e) {
     e.preventDefault(); reset(); setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://ecladotaiwan.com',
-      });
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
       if (error) { setError(sbError(error.message)); return; }
       setSuccess('✓ 密碼重設信已發送至 ' + email + '，請查收信箱。');
     } catch(err) { setError('網路異常，請確認連線'); }
