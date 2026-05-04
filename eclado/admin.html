@@ -189,18 +189,45 @@ function normProductIds(p) {
   return [];
 }
 
+/** 以 Asia/Taipei 的日曆日 YYYY-MM-DD（與前台一致） */
+function ymdTaipei(d) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+}
+
+function isTaipeiMidnight(d) {
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).formatToParts(d);
+  const h = +parts.find(x => x.type === 'hour').value;
+  const m = +parts.find(x => x.type === 'minute').value;
+  const s = +parts.find(x => x.type === 'second').value;
+  return h === 0 && m === 0 && s === 0;
+}
+
 function isPromotionLive(p, now = new Date()) {
   if (p && p.active === false) return false;
+  if (String(p?.active).toLowerCase() === 'false') return false;
   if (p.start_at && new Date(p.start_at) > now) return false;
-  if (p.end_at && new Date(p.end_at) < now) return false;
+  if (p.end_at) {
+    const endD = new Date(p.end_at);
+    if (Number.isNaN(endD.getTime())) return true;
+    if (isTaipeiMidnight(endD)) {
+      if (ymdTaipei(now) > ymdTaipei(endD)) return false;
+    } else if (endD < now) return false;
+  }
   return true;
 }
 
 // 活動排程狀態（給 admin 列表用）
 function getPromotionPhase(p, now = new Date()) {
   if (p && p.active === false) return 'disabled';
+  if (String(p?.active).toLowerCase() === 'false') return 'disabled';
   if (p.start_at && new Date(p.start_at) > now) return 'scheduled';
-  if (p.end_at && new Date(p.end_at) < now) return 'expired';
+  if (p.end_at) {
+    const endD = new Date(p.end_at);
+    if (Number.isNaN(endD.getTime())) return 'live';
+    if (isTaipeiMidnight(endD)) {
+      if (ymdTaipei(now) > ymdTaipei(endD)) return 'expired';
+    } else if (endD < now) return 'expired';
+  }
   return 'live';
 }
 
@@ -1283,7 +1310,13 @@ function toLocalDateTimeInput(iso) {
   if (!iso) return '';
   const d = new Date(iso);
   const pad = n => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d);
+  const y = parts.find(x => x.type === 'year').value;
+  const m = pad(parts.find(x => x.type === 'month').value);
+  const day = pad(parts.find(x => x.type === 'day').value);
+  const h = pad(parts.find(x => x.type === 'hour').value);
+  const min = pad(parts.find(x => x.type === 'minute').value);
+  return `${y}-${m}-${day}T${h}:${min}`;
 }
 
 function fromLocalDateTimeInput(s) {

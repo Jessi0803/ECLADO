@@ -188,11 +188,34 @@ function normProductIds(p) {
   return [];
 }
 
+/** 以 Asia/Taipei 的日曆日 YYYY-MM-DD */
+function ymdTaipei(d) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+}
+
+/** 該瞬時在台北是否為 00:00:00（常見「只選日期」導致誤判已過期） */
+function isTaipeiMidnight(d) {
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).formatToParts(d);
+  const h = +parts.find(x => x.type === 'hour').value;
+  const m = +parts.find(x => x.type === 'minute').value;
+  const s = +parts.find(x => x.type === 'second').value;
+  return h === 0 && m === 0 && s === 0;
+}
+
 function isPromotionLive(p, now = new Date()) {
   // 僅在明確為 false 時停用（避免 API 漏欄位被當成不生效）
   if (p && p.active === false) return false;
+  if (String(p?.active).toLowerCase() === 'false') return false;
+  // 開始仍以「實際瞬時」為準（可排程到某日某時才開跑）
   if (p.start_at && new Date(p.start_at) > now) return false;
-  if (p.end_at && new Date(p.end_at) < now) return false;
+  if (p.end_at) {
+    const endD = new Date(p.end_at);
+    if (Number.isNaN(endD.getTime())) return true;
+    // 結束在台北為當天 00:00：視為「結束日曆日含當天」，避免中午就被當成已過期
+    if (isTaipeiMidnight(endD)) {
+      if (ymdTaipei(now) > ymdTaipei(endD)) return false;
+    } else if (endD < now) return false;
+  }
   return true;
 }
 
