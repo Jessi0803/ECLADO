@@ -1452,6 +1452,13 @@ function getPasswordResetRedirectUrl() {
   return url.toString();
 }
 
+function getAuthRedirectUrl() {
+  const url = new URL(window.location.href);
+  url.search = '';
+  url.hash = '';
+  return url.toString();
+}
+
 function isPasswordRecoveryUrl() {
   const search = new URLSearchParams(window.location.search);
   const hashText = window.location.hash || '';
@@ -1490,7 +1497,10 @@ function LoginPage({ setPage }) {
     try {
       const { data, error } = await supabase.auth.signUp({
         email, password,
-        options: { data: { name, phone, role: 'consumer' } }
+        options: {
+          data: { name, phone, role: 'consumer' },
+          emailRedirectTo: getAuthRedirectUrl(),
+        }
       });
       if (error) { setError(sbError(error.message)); return; }
       // 補一筆 profiles 資料（trigger 也會做，但這裡明確帶上 phone）
@@ -1500,7 +1510,11 @@ function LoginPage({ setPage }) {
           email, name, phone, role: 'consumer',
         });
       }
-      setSuccess('✓ 驗證信已發送！請查收 ' + email + ' 並點擊驗證連結後再登入。');
+      if (data?.session) {
+        setSuccess('✓ 會員已建立完成，請直接登入。');
+      } else {
+        setSuccess('✓ 驗證信已發送！請查收 ' + email + ' 並點擊驗證連結後再登入。若未收到，請檢查垃圾郵件或稍後再試一次。');
+      }
       setView('login');
     } catch(err) { setError('網路異常，請確認連線'); }
     finally { setLoading(false); }
