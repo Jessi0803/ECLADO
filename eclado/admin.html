@@ -599,11 +599,16 @@ function Inventory({ products, setProducts }) {
 }
 
 // ─── MEMBERS ─────────────────────────────────────────────────────────────────
-function Members({ members, setMembers }) {
+function Members({ members, setMembers, orders = [] }) {
   const [filter, setFilter] = useState('all');
   const [selected, setSelected] = useState(null);
 
   const filtered = filter === 'all' ? members : members.filter(m => m.type === filter);
+
+  // 找該會員的歷史訂單
+  const memberOrders = selected
+    ? orders.filter(o => o.user_id === selected.id || o.email === selected.email)
+    : [];
 
   function changeType(id, type) {
     setMembers(prev => prev.map(m => m.id === id ? { ...m, type } : m));
@@ -696,6 +701,31 @@ function Members({ members, setMembers }) {
               <button onClick={() => changeType(selected.id, 'consumer')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'consumer' ? 'var(--dark)' : 'none', color: selected.type === 'consumer' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: 'pointer' }}>一般會員</button>
               <button onClick={() => changeType(selected.id, 'pro')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'pro' ? 'var(--dark)' : 'none', color: selected.type === 'pro' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: 'pointer' }}>PRO 美容師</button>
             </div>
+          </div>
+
+          {/* 歷史訂單 */}
+          <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 12, letterSpacing: '0.08em' }}>
+              歷史訂單（{memberOrders.length}）
+            </div>
+            {memberOrders.length === 0 ? (
+              <div style={{ fontSize: 12, color: 'var(--mid)', padding: '16px 0', textAlign: 'center' }}>尚無訂單</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 280, overflowY: 'auto' }}>
+                {memberOrders.map(o => (
+                  <div key={o.id} style={{ padding: '10px 12px', border: '1px solid var(--border)', background: 'var(--off)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--dark)' }}>{o.id}</span>
+                      <Badge status={o.status} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--mid)' }}>
+                      <span>{o.date}</span>
+                      <span style={{ color: 'var(--dark)', fontWeight: 500 }}>NT$ {o.total.toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1040,6 +1070,23 @@ function normalizeOrder(row) {
     note: row.note,
     transferLast5: row.transfer_last5,
     tracking: row.tracking,
+    user_id: row.user_id,
+  };
+}
+
+// profiles → 會員顯示用格式
+function normalizeMember(row, allOrders) {
+  const myOrders = allOrders.filter(o => o.user_id === row.id || o.email === row.email);
+  return {
+    id: row.id,
+    name: row.name || (row.email ? row.email.split('@')[0] : '未命名'),
+    email: row.email || '',
+    phone: row.phone || '',
+    type: row.role || 'consumer',
+    cert: row.cert || '',
+    joined: row.created_at ? row.created_at.slice(0, 10) : '',
+    orders: myOrders.length,
+    total: myOrders.reduce((s, o) => s + (o.total || 0), 0),
   };
 }
 
@@ -1050,43 +1097,46 @@ function App() {
   const [orders, setOrders] = useState(INIT_ORDERS);
   const [loadError, setLoadError] = useState('');
 
-  // 從 Supabase 載入訂單
-  async function fetchOrders() {
+  // 從 Supabase 載入訂單 + 會員
+  async function fetchAll() {
     try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      const real = (data || []).map(normalizeOrder);
-      // 把 Supabase 真實訂單放最前，mock 訂單補在後面（id 不重複才補）
-      const ids = new Set(real.map(o => o.id));
+      const [ordersRes, profilesRes] = await Promise.all([
+        supabase.from('orders').select('*').order('created_at', { ascending: false }),
+        supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+      ]);
+      if (ordersRes.error) throw ordersRes.error;
+      if (profilesRes.error) throw profilesRes.error;
+
+      const realOrders = (ordersRes.data || []).map(normalizeOrder);
+      const ids = new Set(realOrders.map(o => o.id));
       const mockExtras = INIT_ORDERS.filter(o => !ids.has(o.id));
-      setOrders([...real, ...mockExtras]);
+      const allOrders = [...realOrders, ...mockExtras];
+      setOrders(allOrders);
+
+      const realMembers = (profilesRes.data || []).map(p => normalizeMember(p, allOrders));
+      setMembers(realMembers.length > 0 ? realMembers : INIT_MEMBERS);
+
       setLoadError('');
     } catch (err) {
-      console.error('fetch orders failed', err);
+      console.error('fetch failed', err);
       setLoadError('無法連接 Supabase（' + (err.message || '') + '），目前顯示本機示範資料。');
     }
   }
 
   useEffect(() => {
-    fetchOrders();
-    // 啟用 realtime：顧客新下單會即時通知後台
+    fetchAll();
     const channel = supabase
-      .channel('orders-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-        fetchOrders();
-      })
+      .channel('admin-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchAll())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // 包一層 setOrders，更新狀態時也寫回 Supabase
+  // 訂單狀態變動時同步到 Supabase
   async function setOrdersWithSync(updater) {
     setOrders(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      // 找出狀態有變的訂單，逐一推到 Supabase
       next.forEach(o => {
         const old = prev.find(p => p.id === o.id);
         if (old && old.status !== o.status) {
@@ -1099,13 +1149,32 @@ function App() {
     });
   }
 
+  // 會員角色變動時同步到 Supabase
+  async function setMembersWithSync(updater) {
+    setMembers(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      next.forEach(m => {
+        const old = prev.find(p => p.id === m.id);
+        if (old && old.type !== m.type) {
+          // 只有真實 Supabase 會員（id 是 uuid）才更新
+          if (typeof m.id === 'string' && m.id.length > 20) {
+            supabase.from('profiles').update({ role: m.type }).eq('id', m.id).then(({ error }) => {
+              if (error) console.error('update role failed', error);
+            });
+          }
+        }
+      });
+      return next;
+    });
+  }
+
   function renderPage() {
     switch (page) {
       case 'dashboard': return <Dashboard orders={orders} products={products} members={members} />;
       case 'orders': return <Orders orders={orders} setOrders={setOrdersWithSync} />;
       case 'products': return <ProductsPage products={products} setProducts={setProducts} />;
       case 'inventory': return <Inventory products={products} setProducts={setProducts} />;
-      case 'members': return <Members members={members} setMembers={setMembers} />;
+      case 'members': return <Members members={members} setMembers={setMembersWithSync} orders={orders} />;
       case 'analytics': return <Analytics />;
       case 'ai': return <AIReorder products={products} />;
       default: return <Dashboard orders={orders} products={products} members={members} />;
