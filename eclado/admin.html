@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECLADO 後台管理系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gilda+Display&family=Jost:wght@200;300;400;500;600&family=Noto+Serif+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f5f5f3;
+  --sidebar: #141412;
+  --sidebar-w: 240px;
+  --white: #ffffff;
+  --off: #f9f9f8;
+  --border: #e8e8e6;
+  --dark: #1a1a18;
+  --mid: #888886;
+  --light: #d4d4d2;
+  --gold: #b8a98a;
+  --green: oklch(0.65 0.15 145);
+  --red: oklch(0.60 0.18 25);
+  --yellow: oklch(0.78 0.14 80);
+  --blue: oklch(0.60 0.12 240);
+  --font: 'Jost', 'Noto Serif TC', sans-serif;
+  --font-d: 'Gilda Display', serif;
+}
+html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--dark); -webkit-font-smoothing: antialiased; }
+#root { height: 100%; }
+button { font-family: var(--font); cursor: pointer; }
+input, select, textarea { font-family: var(--font); }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--light); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo } = React;
+
+// ─── MOCK DATA ────────────────────────────────────────────────────────────────
+const INIT_PRODUCTS = [
+  { id: 1, name: 'Deep Cleansing Foam', nameZh: '深層清潔泡沫洗面乳', category: '清潔', size: '200ml', price: 1280, proPrice: 960, stock: 48, minStock: 3, isProOnly: false },
+  { id: 2, name: 'Peptide Repair Serum', nameZh: '胜肽修護精華液', category: '精華液', size: '30ml', price: 3980, proPrice: 2980, stock: 2, minStock: 3, isProOnly: false },
+  { id: 3, name: 'SOS Ampoule Set', nameZh: '急救修護安瓶組', category: '急救安瓶', size: '5ml×6', price: 4800, proPrice: 3600, stock: 15, minStock: 3, isProOnly: false },
+  { id: 4, name: 'Intensive Hydra Mask', nameZh: '密集保濕面膜', category: '面膜', size: '35ml×10', price: 2200, proPrice: 1650, stock: 1, minStock: 3, isProOnly: false },
+  { id: 5, name: 'Eye Contour Complex', nameZh: '眼周緊緻精華', category: '眼霜', size: '30ml', price: 2800, proPrice: 2100, stock: 22, minStock: 3, isProOnly: false },
+  { id: 6, name: 'Cell Recovery Cream', nameZh: '細胞修護乳霜', category: '面霜', size: '50g', price: 3600, proPrice: 2700, stock: 8, minStock: 3, isProOnly: false },
+  { id: 7, name: 'NK Cell Activator', nameZh: 'NK細胞活化安瓶', category: '急救安瓶', size: '3.5ml×10', price: 8800, proPrice: 6600, stock: 0, minStock: 3, isProOnly: true },
+  { id: 8, name: 'AHA/BHA Peeling Gel', nameZh: 'AHA·BHA·PHA 煥膚凝膠', category: '清潔', size: '120ml', price: 1980, proPrice: 1485, stock: 31, minStock: 3, isProOnly: false },
+];
+
+const INIT_MEMBERS = [
+  { id: 1, name: '林小美', email: 'mei@gmail.com', type: 'consumer', joined: '2026-01-15', orders: 3, total: 8640, phone: '0912-345-678' },
+  { id: 2, name: '陳美容師', email: 'chen@beauty.com', type: 'pro', joined: '2026-01-20', orders: 12, total: 68400, phone: '0923-456-789', cert: '美容乙級 #20240312' },
+  { id: 3, name: '王大明', email: 'wang@email.com', type: 'consumer', joined: '2026-02-03', orders: 1, total: 2200, phone: '0934-567-890' },
+  { id: 4, name: '張美師傅', email: 'chang@salon.com', type: 'pro', joined: '2026-02-10', orders: 8, total: 42000, phone: '0945-678-901', cert: '美容丙級 #20230118' },
+  { id: 5, name: '劉芳芳', email: 'liu@gmail.com', type: 'consumer', joined: '2026-02-18', orders: 2, total: 5980, phone: '0956-789-012' },
+  { id: 6, name: '黃小玲', email: 'huang@beauty.tw', type: 'pending', joined: '2026-03-01', orders: 0, total: 0, phone: '0967-890-123', cert: '申請審核中' },
+  { id: 7, name: '吳雅婷', email: 'wu@spa.com', type: 'pro', joined: '2026-03-05', orders: 5, total: 28500, phone: '0978-901-234', cert: '美容乙級 #20250607' },
+  { id: 8, name: '鄭淑惠', email: 'cheng@gmail.com', type: 'consumer', joined: '2026-03-12', orders: 4, total: 11200, phone: '0989-012-345' },
+];
+
+const INIT_ORDERS = [
+  { id: 'ECL-20260504-0044', member: '黃美玲', type: 'consumer', items: [{ name: '胜肽修護精華液', qty: 1, price: 3980 }], total: 4130, status: 'awaiting_confirm', date: '2026-05-04', address: '台北市中山區南京東路二段80號', phone: '0922-111-333', transferLast5: '38201' },
+  { id: 'ECL-20260503-0043', member: '蘇佳琪', type: 'pro', items: [{ name: '急救修護安瓶組', qty: 2, price: 3600 }], total: 7350, status: 'awaiting_confirm', date: '2026-05-03', address: '新北市新莊區中正路100號', phone: '0933-222-444', transferLast5: '76549' },
+  { id: 'ECL-20260501-0042', member: '林小美', type: 'consumer', items: [{ name: '深層清潔泡沫洗面乳', qty: 2, price: 1280 }, { name: '密集保濕面膜', qty: 1, price: 2200 }], total: 4910, status: 'paid', date: '2026-05-01', address: '台北市信義區信義路五段7號' },
+  { id: 'ECL-20260430-0041', member: '陳美容師', type: 'pro', items: [{ name: 'NK細胞活化安瓶', qty: 3, price: 6600 }, { name: '胜肽修護精華液', qty: 2, price: 2980 }], total: 25760, status: 'shipped', date: '2026-04-30', address: '台北市大安區忠孝東路四段1號', tracking: 'BN123456789TW' },
+  { id: 'ECL-20260429-0040', member: '張美師傅', type: 'pro', items: [{ name: '急救修護安瓶組', qty: 4, price: 3600 }], total: 14550, status: 'delivered', date: '2026-04-29', address: '新北市板橋區文化路一段100號' },
+  { id: 'ECL-20260428-0039', member: '王大明', type: 'consumer', items: [{ name: '密集保濕面膜', qty: 1, price: 2200 }], total: 2350, status: 'pending', date: '2026-04-28', address: '台中市西屯區台灣大道三段99號' },
+  { id: 'ECL-20260427-0038', member: '劉芳芳', type: 'consumer', items: [{ name: '眼周緊緻精華', qty: 1, price: 2800 }, { name: 'AHA·BHA·PHA 煥膚凝膠', qty: 1, price: 1485 }], total: 4435, status: 'shipped', date: '2026-04-27', address: '高雄市前金區中正四路211號', tracking: 'BN987654321TW' },
+  { id: 'ECL-20260426-0037', member: '吳雅婷', type: 'pro', items: [{ name: '細胞修護乳霜', qty: 3, price: 2700 }, { name: '胜肽修護精華液', qty: 2, price: 2980 }], total: 14110, status: 'delivered', date: '2026-04-26', address: '台南市東區東門路一段3號' },
+  { id: 'ECL-20260425-0036', member: '鄭淑惠', type: 'consumer', items: [{ name: '深層清潔泡沫洗面乳', qty: 1, price: 1280 }], total: 1430, status: 'cancelled', date: '2026-04-25', address: '桃園市桃園區中正路123號' },
+];
+
+const MONTHLY_REVENUE = [
+  { month: '11月', revenue: 68400, orders: 18, proRevenue: 42000 },
+  { month: '12月', revenue: 95200, orders: 26, proRevenue: 61000 },
+  { month: '1月', revenue: 72600, orders: 20, proRevenue: 48000 },
+  { month: '2月', revenue: 58300, orders: 15, proRevenue: 36000 },
+  { month: '3月', revenue: 112400, orders: 31, proRevenue: 78000 },
+  { month: '4月', revenue: 98700, orders: 27, proRevenue: 65000 },
+];
+
+const PRODUCT_MONTHLY = {
+  1: [12, 18, 14, 9, 22, 19],
+  2: [5, 8, 6, 4, 11, 9],
+  3: [8, 12, 10, 7, 15, 13],
+  7: [3, 5, 4, 2, 6, 5],
+};
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+const STATUS_MAP = {
+  pending: { label: '待付款', color: 'var(--yellow)' },
+  awaiting_confirm: { label: '轉帳待確認', color: 'var(--red)' },
+  paid: { label: '已付款', color: 'var(--blue)' },
+  shipped: { label: '已出貨', color: 'var(--gold)' },
+  delivered: { label: '已到貨', color: 'var(--green)' },
+  cancelled: { label: '已取消', color: 'var(--mid)' },
+};
+
+function Badge({ status }) {
+  const s = STATUS_MAP[status] || { label: status, color: 'var(--mid)' };
+  return (
+    <span style={{ display: 'inline-block', padding: '3px 10px', fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', background: s.color + '18', color: s.color, borderRadius: 2 }}>{s.label}</span>
+  );
+}
+
+function TypeBadge({ type }) {
+  const map = { pro: { label: 'PRO 美容師', color: 'var(--dark)' }, consumer: { label: '一般會員', color: 'var(--mid)' }, pending: { label: '審核中', color: 'var(--yellow)' } };
+  const t = map[type] || { label: type, color: 'var(--mid)' };
+  return (
+    <span style={{ display: 'inline-block', padding: '3px 10px', fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', background: t.color + '18', color: t.color, borderRadius: 2 }}>{t.label}</span>
+  );
+}
+
+// ─── SIDEBAR ──────────────────────────────────────────────────────────────────
+const MENU = [
+  { id: 'dashboard', icon: '▦', label: '儀表板' },
+  { id: 'orders', icon: '◫', label: '訂單管理' },
+  { id: 'products', icon: '◈', label: '商品管理' },
+  { id: 'inventory', icon: '◉', label: '庫存管理' },
+  { id: 'members', icon: '◎', label: '會員管理' },
+  { id: 'analytics', icon: '◐', label: '營業分析' },
+  { id: 'ai', icon: '✦', label: 'AI 補貨建議' },
+];
+
+function Sidebar({ page, setPage }) {
+  return (
+    <div style={{ width: 'var(--sidebar-w)', background: 'var(--sidebar)', height: '100vh', position: 'fixed', left: 0, top: 0, display: 'flex', flexDirection: 'column', zIndex: 50 }}>
+      {/* Logo */}
+      <div style={{ padding: '28px 24px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ fontFamily: 'var(--font-d)', fontSize: 18, letterSpacing: '0.2em', color: '#fff', marginBottom: 4 }}>ECLADO</div>
+        <div style={{ fontSize: 9, letterSpacing: '0.24em', color: 'var(--gold)', textTransform: 'uppercase' }}>管理後台</div>
+      </div>
+
+      {/* Menu */}
+      <nav style={{ flex: 1, padding: '16px 0', overflowY: 'auto' }}>
+        {MENU.map(item => (
+          <button key={item.id} onClick={() => setPage(item.id)} style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            width: '100%', padding: '13px 24px', border: 'none',
+            background: page === item.id ? 'rgba(255,255,255,0.08)' : 'transparent',
+            color: page === item.id ? '#fff' : 'rgba(255,255,255,0.45)',
+            fontSize: 13, letterSpacing: '0.04em', textAlign: 'left',
+            borderLeft: page === item.id ? '2px solid var(--gold)' : '2px solid transparent',
+            transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => { if (page !== item.id) e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; }}
+          onMouseLeave={e => { if (page !== item.id) e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; }}
+          >
+            <span style={{ fontSize: 14, opacity: 0.8 }}>{item.icon}</span>
+            {item.label}
+          </button>
+        ))}
+      </nav>
+
+      {/* Footer */}
+      <div style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 32, height: 32, background: 'rgba(255,255,255,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#fff' }}>Y</div>
+          <div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', fontWeight: 500 }}>Yoyo Chiu</div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.06em' }}>管理員</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── STAT CARD ────────────────────────────────────────────────────────────────
+function StatCard({ label, value, sub, accent, icon }) {
+  return (
+    <div style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '24px 28px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+        <span style={{ fontSize: 11, letterSpacing: '0.1em', color: 'var(--mid)', textTransform: 'uppercase' }}>{label}</span>
+        <span style={{ fontSize: 18, opacity: 0.4 }}>{icon}</span>
+      </div>
+      <div style={{ fontFamily: 'var(--font-d)', fontSize: 32, fontWeight: 400, color: accent || 'var(--dark)', lineHeight: 1, marginBottom: 8 }}>{value}</div>
+      <div style={{ fontSize: 12, color: 'var(--mid)' }}>{sub}</div>
+    </div>
+  );
+}
+
+// ─── MINI BAR CHART ──────────────────────────────────────────────────────────
+function MiniBarChart({ data, color = 'var(--dark)', height = 80 }) {
+  const max = Math.max(...data.map(d => d.revenue));
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height }}>
+      {data.map((d, i) => (
+        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <div style={{ width: '100%', background: i === data.length - 1 ? color : color + '40', borderRadius: 2, height: Math.max(4, (d.revenue / max) * (height - 20)), transition: 'height 0.5s ease' }} />
+          <span style={{ fontSize: 9, color: 'var(--mid)', letterSpacing: '0.04em' }}>{d.month}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── DASHBOARD ───────────────────────────────────────────────────────────────
+function Dashboard({ orders, products, members }) {
+  const thisMonth = MONTHLY_REVENUE[MONTHLY_REVENUE.length - 1];
+  const lastMonth = MONTHLY_REVENUE[MONTHLY_REVENUE.length - 2];
+  const growth = (((thisMonth.revenue - lastMonth.revenue) / lastMonth.revenue) * 100).toFixed(1);
+  const lowStock = products.filter(p => p.stock <= p.minStock);
+  const pendingOrders = orders.filter(o => o.status === 'pending' || o.status === 'paid' || o.status === 'awaiting_confirm');
+  const awaitingConfirm = orders.filter(o => o.status === 'awaiting_confirm');
+  const proMembers = members.filter(m => m.type === 'pro');
+
+  return (
+    <div>
+      <div style={{ marginBottom: 32 }}>
+        <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400, color: 'var(--dark)', marginBottom: 4 }}>儀表板</h1>
+        <p style={{ fontSize: 13, color: 'var(--mid)' }}>2026年5月1日 — 歡迎回來，Yoyo</p>
+      </div>
+
+      {/* Stats grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
+        <StatCard label="本月營業額" value={`NT$ ${thisMonth.revenue.toLocaleString()}`} sub={`較上月 ${growth > 0 ? '+' : ''}${growth}%`} accent="var(--dark)" icon="◐" />
+        <StatCard label="轉帳待確認" value={awaitingConfirm.length} sub={awaitingConfirm.length > 0 ? '請儘快對帳確認' : '目前無待確認'} accent={awaitingConfirm.length > 0 ? 'var(--red)' : 'var(--green)'} icon="◫" />
+        <StatCard label="美容師會員" value={proMembers.length} sub={`共 ${members.length} 位會員`} accent="var(--dark)" icon="◎" />
+        <StatCard label="庫存警示" value={lowStock.length} sub="件商品庫存不足" accent={lowStock.length > 0 ? 'var(--red)' : 'var(--green)'} icon="◉" />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 20 }}>
+        {/* Revenue chart */}
+        <div style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '28px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+            <div>
+              <h3 style={{ fontSize: 14, fontWeight: 500, color: 'var(--dark)', marginBottom: 2 }}>近6個月營業額</h3>
+              <p style={{ fontSize: 12, color: 'var(--mid)' }}>月份 / 萬元</p>
+            </div>
+            <div style={{ display: 'flex', gap: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 8, height: 8, background: 'var(--dark)' }} />
+                <span style={{ fontSize: 11, color: 'var(--mid)' }}>本月</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 8, height: 8, background: 'var(--dark)', opacity: 0.25 }} />
+                <span style={{ fontSize: 11, color: 'var(--mid)' }}>歷史</span>
+              </div>
+            </div>
+          </div>
+          <MiniBarChart data={MONTHLY_REVENUE} color="var(--dark)" height={120} />
+        </div>
+
+        {/* Low stock alert */}
+        <div style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '28px' }}>
+          <h3 style={{ fontSize: 14, fontWeight: 500, color: 'var(--dark)', marginBottom: 4 }}>庫存警示</h3>
+          <p style={{ fontSize: 12, color: 'var(--mid)', marginBottom: 20 }}>低於 3 件需補貨</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {lowStock.length === 0 ? (
+              <p style={{ fontSize: 13, color: 'var(--mid)', textAlign: 'center', padding: '20px 0' }}>✓ 庫存充足</p>
+            ) : lowStock.map(p => (
+              <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: p.stock === 0 ? 'oklch(0.60 0.18 25 / 0.06)' : 'oklch(0.78 0.14 80 / 0.06)', border: `1px solid ${p.stock === 0 ? 'oklch(0.60 0.18 25 / 0.2)' : 'oklch(0.78 0.14 80 / 0.2)'}` }}>
+                <div>
+                  <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--dark)', marginBottom: 2 }}>{p.nameZh}</p>
+                  <p style={{ fontSize: 11, color: 'var(--mid)' }}>{p.size}</p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ fontSize: 16, fontWeight: 600, color: p.stock === 0 ? 'var(--red)' : 'var(--yellow)' }}>{p.stock}</p>
+                  <p style={{ fontSize: 10, color: 'var(--mid)' }}>件</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent orders */}
+      <div style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '28px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 500 }}>最新訂單</h3>
+          <span style={{ fontSize: 12, color: 'var(--gold)', cursor: 'pointer', letterSpacing: '0.06em' }}>查看全部 →</span>
+        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+              {['訂單編號', '會員', '金額', '狀態', '日期'].map(h => (
+                <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {orders.slice(0, 5).map(o => (
+              <tr key={o.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                <td style={{ padding: '12px', fontSize: 12, color: 'var(--dark)', fontWeight: 500 }}>{o.id}</td>
+                <td style={{ padding: '12px', fontSize: 13 }}>{o.member}</td>
+                <td style={{ padding: '12px', fontSize: 13, fontWeight: 500 }}>NT$ {o.total.toLocaleString()}</td>
+                <td style={{ padding: '12px' }}><Badge status={o.status} /></td>
+                <td style={{ padding: '12px', fontSize: 12, color: 'var(--mid)' }}>{o.date}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── ORDERS ───────────────────────────────────────────────────────────────────
+function Orders({ orders, setOrders }) {
+  const [selected, setSelected] = useState(null);
+  const [filter, setFilter] = useState('awaiting_confirm');
+
+  const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter);
+  const awaitingCount = orders.filter(o => o.status === 'awaiting_confirm').length;
+
+  function updateStatus(id, status) {
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+    if (selected?.id === id) setSelected(s => ({ ...s, status }));
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 380px' : '1fr', gap: 20 }}>
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+          <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>訂單管理</h1>
+          <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
+            {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['pending','待付款'], ['paid','已付款'], ['shipped','已出貨'], ['delivered','已到貨']].map(([val, label]) => (
+              <button key={val} onClick={() => setFilter(val)} style={{
+                padding: '8px 16px', border: 'none', fontSize: 12, letterSpacing: '0.04em',
+                background: filter === val ? 'var(--dark)' : 'transparent',
+                color: filter === val ? '#fff' : 'var(--mid)',
+                cursor: 'pointer', transition: 'all 0.15s', position: 'relative',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+                {label}
+                {val === 'awaiting_confirm' && awaitingCount > 0 && (
+                  <span style={{
+                    background: 'var(--red)', color: '#fff', fontSize: 10, fontWeight: 600,
+                    minWidth: 18, height: 18, borderRadius: 9, padding: '0 6px',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+                  }}>{awaitingCount}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 轉帳待確認提示 */}
+        {filter === 'awaiting_confirm' && awaitingCount > 0 && (
+          <div style={{ background: 'oklch(0.60 0.18 25 / 0.05)', border: '1px solid oklch(0.60 0.18 25 / 0.2)', padding: '14px 20px', marginBottom: 16, fontSize: 13, color: 'var(--red)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 16 }}>⚠</span>
+            <span>有 <strong>{awaitingCount}</strong> 筆顧客已填寫轉帳末五碼，請對帳後點選「確認入帳」</span>
+          </div>
+        )}
+
+        <div style={{ background: 'var(--white)', border: '1px solid var(--border)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
+                {['訂單編號', '會員', '類型', '金額', '末五碼', '狀態', '日期', '操作'].map(h => (
+                  <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: 'var(--mid)', fontSize: 13 }}>目前沒有訂單</td>
+                </tr>
+              )}
+              {filtered.map(o => (
+                <tr key={o.id} onClick={() => setSelected(o)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: selected?.id === o.id ? 'var(--off)' : 'transparent', transition: 'background 0.1s' }}
+                onMouseEnter={e => { if (selected?.id !== o.id) e.currentTarget.style.background = 'var(--off)'; }}
+                onMouseLeave={e => { if (selected?.id !== o.id) e.currentTarget.style.background = 'transparent'; }}>
+                  <td style={{ padding: '13px 14px', fontSize: 12, fontWeight: 500, color: 'var(--dark)', whiteSpace: 'nowrap' }}>{o.id}</td>
+                  <td style={{ padding: '13px 14px', fontSize: 13 }}>{o.member}</td>
+                  <td style={{ padding: '13px 14px' }}><TypeBadge type={o.type} /></td>
+                  <td style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>NT$ {o.total.toLocaleString()}</td>
+                  <td style={{ padding: '13px 14px', fontSize: 13, fontFamily: 'var(--font-d)', letterSpacing: '0.15em', color: o.transferLast5 ? 'var(--dark)' : 'var(--light)', fontWeight: 600 }}>
+                    {o.transferLast5 || '—'}
+                  </td>
+                  <td style={{ padding: '13px 14px' }}><Badge status={o.status} /></td>
+                  <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)', whiteSpace: 'nowrap' }}>{o.date}</td>
+                  <td style={{ padding: '13px 14px' }}>
+                    {o.status === 'awaiting_confirm' && (
+                      <button onClick={e => { e.stopPropagation(); updateStatus(o.id, 'paid'); }} style={{ padding: '5px 12px', fontSize: 11, background: 'var(--blue)', color: '#fff', border: 'none', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>確認入帳</button>
+                    )}
+                    {o.status === 'paid' && (
+                      <button onClick={e => { e.stopPropagation(); updateStatus(o.id, 'shipped'); }} style={{ padding: '5px 12px', fontSize: 11, background: 'var(--dark)', color: '#fff', border: 'none', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>出貨</button>
+                    )}
+                    {o.status === 'shipped' && (
+                      <button onClick={e => { e.stopPropagation(); updateStatus(o.id, 'delivered'); }} style={{ padding: '5px 12px', fontSize: 11, background: 'var(--green)', color: '#fff', border: 'none', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>確認到貨</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Order detail panel */}
+      {selected && (
+        <div style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '24px', height: 'fit-content', position: 'sticky', top: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 500 }}>訂單詳情</h3>
+            <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--mid)', cursor: 'pointer', lineHeight: 1 }}>×</button>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--mid)', marginBottom: 4 }}>訂單編號</div>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, color: 'var(--dark)' }}>{selected.id}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>會員</div><div style={{ fontSize: 13 }}>{selected.member}</div></div>
+            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>日期</div><div style={{ fontSize: 13 }}>{selected.date}</div></div>
+            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>狀態</div><Badge status={selected.status} /></div>
+            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>類型</div><TypeBadge type={selected.type} /></div>
+          </div>
+
+          {/* 轉帳資訊區塊 */}
+          {selected.transferLast5 && (
+            <div style={{
+              border: `1px solid ${selected.status === 'awaiting_confirm' ? 'oklch(0.60 0.18 25 / 0.4)' : 'var(--border)'}`,
+              background: selected.status === 'awaiting_confirm' ? 'oklch(0.60 0.18 25 / 0.04)' : 'var(--off)',
+              padding: '14px 16px', marginBottom: 20,
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: 11, color: 'var(--mid)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>轉帳末五碼</span>
+                {selected.status === 'awaiting_confirm' && (
+                  <span style={{ fontSize: 10, color: 'var(--red)', fontWeight: 500 }}>● 待對帳確認</span>
+                )}
+              </div>
+              <div style={{ fontFamily: 'var(--font-d)', fontSize: 26, fontWeight: 500, letterSpacing: '0.3em', color: 'var(--dark)' }}>
+                {selected.transferLast5}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--mid)', marginTop: 6 }}>應收金額：NT$ {selected.total.toLocaleString()}</div>
+            </div>
+          )}
+
+          {selected.phone && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>聯絡電話</div>
+              <div style={{ fontSize: 13, color: 'var(--dark)' }}>{selected.phone}</div>
+            </div>
+          )}
+          <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 8 }}>收件地址</div>
+          <div style={{ fontSize: 12, lineHeight: 1.7, marginBottom: 20, color: 'var(--dark)' }}>{selected.address}</div>
+          {selected.note && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>備註</div>
+              <div style={{ fontSize: 12, color: 'var(--dark)', lineHeight: 1.7 }}>{selected.note}</div>
+            </div>
+          )}
+          {selected.tracking && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>物流追蹤</div>
+              <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 500 }}>{selected.tracking}</div>
+            </div>
+          )}
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginBottom: 16 }}>
+            <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 12 }}>商品明細</div>
+            {selected.items.map((item, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 12 }}>
+                <span>{item.name} × {item.qty}</span>
+                <span style={{ fontWeight: 500 }}>NT$ {(item.price * item.qty).toLocaleString()}</span>
+              </div>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 8 }}>
+              <span style={{ color: 'var(--mid)' }}>運費</span><span>NT$ 150</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, marginTop: 8 }}>
+              <span>合計</span><span>NT$ {selected.total.toLocaleString()}</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {selected.status === 'awaiting_confirm' && (
+              <>
+                <button onClick={() => updateStatus(selected.id, 'paid')} style={{ flex: 1, minWidth: 140, padding: '10px', background: 'var(--blue)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer', fontWeight: 500 }}>✓ 確認入帳</button>
+                <button onClick={() => { if (confirm('確認要拒絕此轉帳並取消訂單嗎？')) updateStatus(selected.id, 'cancelled'); }} style={{ padding: '10px 14px', background: 'none', color: 'var(--mid)', border: '1px solid var(--border)', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>取消訂單</button>
+              </>
+            )}
+            {selected.status === 'paid' && (
+              <button onClick={() => updateStatus(selected.id, 'shipped')} style={{ flex: 1, padding: '10px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>出貨 (LINE通知)</button>
+            )}
+            {selected.status === 'pending' && (
+              <button onClick={() => updateStatus(selected.id, 'paid')} style={{ flex: 1, padding: '10px', background: 'var(--blue)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>確認付款</button>
+            )}
+            {selected.status === 'shipped' && (
+              <button onClick={() => updateStatus(selected.id, 'delivered')} style={{ flex: 1, padding: '10px', background: 'var(--green)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>確認到貨</button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── INVENTORY ────────────────────────────────────────────────────────────────
+function Inventory({ products, setProducts }) {
+  const [editId, setEditId] = useState(null);
+  const [editVal, setEditVal] = useState('');
+
+  function saveStock(id) {
+    const val = parseInt(editVal);
+    if (!isNaN(val) && val >= 0) {
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, stock: val } : p));
+    }
+    setEditId(null);
+  }
+
+  const lowStock = products.filter(p => p.stock <= p.minStock);
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>庫存管理</h1>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ padding: '8px 16px', background: 'var(--white)', border: '1px solid var(--border)', fontSize: 12, color: 'var(--mid)' }}>
+            共 {products.length} 件商品
+          </div>
+          {lowStock.length > 0 && (
+            <div style={{ padding: '8px 16px', background: 'oklch(0.60 0.18 25 / 0.08)', border: '1px solid oklch(0.60 0.18 25 / 0.3)', fontSize: 12, color: 'var(--red)', fontWeight: 500 }}>
+              ⚠ {lowStock.length} 件庫存不足
+            </div>
+          )}
+        </div>
+      </div>
+
+      {lowStock.length > 0 && (
+        <div style={{ background: 'oklch(0.60 0.18 25 / 0.05)', border: '1px solid oklch(0.60 0.18 25 / 0.2)', padding: '16px 20px', marginBottom: 20 }}>
+          <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--red)', marginBottom: 10 }}>⚠ 庫存不足警示 — 以下商品需要補貨</div>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {lowStock.map(p => (
+              <div key={p.id} style={{ fontSize: 12, background: 'var(--white)', border: '1px solid var(--border)', padding: '6px 12px', display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span style={{ color: 'var(--dark)' }}>{p.nameZh}</span>
+                <span style={{ fontWeight: 700, color: p.stock === 0 ? 'var(--red)' : 'var(--yellow)' }}>{p.stock} 件</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ background: 'var(--white)', border: '1px solid var(--border)' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
+              {['商品名稱', '分類', '規格', '售價', '專業價', '庫存數量', '狀態', '操作'].map(h => (
+                <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {products.map(p => {
+              const isLow = p.stock <= p.minStock;
+              return (
+                <tr key={p.id} style={{ borderBottom: '1px solid var(--border)', background: isLow && p.stock === 0 ? 'oklch(0.60 0.18 25 / 0.03)' : 'transparent' }}>
+                  <td style={{ padding: '13px 14px' }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--dark)' }}>{p.nameZh}</div>
+                    <div style={{ fontSize: 11, color: 'var(--mid)' }}>{p.name}</div>
+                  </td>
+                  <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{p.category}</td>
+                  <td style={{ padding: '13px 14px', fontSize: 12 }}>{p.size}</td>
+                  <td style={{ padding: '13px 14px', fontSize: 12 }}>NT$ {p.price.toLocaleString()}</td>
+                  <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--gold)' }}>NT$ {p.proPrice.toLocaleString()}</td>
+                  <td style={{ padding: '13px 14px' }}>
+                    {editId === p.id ? (
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <input type="number" value={editVal} onChange={e => setEditVal(e.target.value)} style={{ width: 64, padding: '4px 8px', border: '1px solid var(--dark)', fontSize: 13, outline: 'none' }} autoFocus onKeyDown={e => { if (e.key === 'Enter') saveStock(p.id); if (e.key === 'Escape') setEditId(null); }} />
+                        <button onClick={() => saveStock(p.id)} style={{ padding: '4px 10px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 11, cursor: 'pointer' }}>✓</button>
+                        <button onClick={() => setEditId(null)} style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--border)', fontSize: 11, cursor: 'pointer', color: 'var(--mid)' }}>✗</button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 16, fontWeight: 600, color: p.stock === 0 ? 'var(--red)' : isLow ? 'var(--yellow)' : 'var(--dark)' }}>{p.stock}</span>
+                        <span style={{ fontSize: 11, color: 'var(--mid)' }}>件</span>
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ padding: '13px 14px' }}>
+                    {p.stock === 0 ? <span style={{ fontSize: 11, color: 'var(--red)', fontWeight: 500 }}>缺貨</span>
+                    : isLow ? <span style={{ fontSize: 11, color: 'var(--yellow)', fontWeight: 500 }}>低庫存</span>
+                    : <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 500 }}>正常</span>}
+                  </td>
+                  <td style={{ padding: '13px 14px' }}>
+                    <button onClick={() => { setEditId(p.id); setEditVal(String(p.stock)); }} style={{ padding: '5px 14px', fontSize: 11, background: 'none', border: '1px solid var(--border)', color: 'var(--dark)', cursor: 'pointer', letterSpacing: '0.04em' }}>修改庫存</button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── MEMBERS ─────────────────────────────────────────────────────────────────
+function Members({ members, setMembers }) {
+  const [filter, setFilter] = useState('all');
+  const [selected, setSelected] = useState(null);
+
+  const filtered = filter === 'all' ? members : members.filter(m => m.type === filter);
+
+  function changeType(id, type) {
+    setMembers(prev => prev.map(m => m.id === id ? { ...m, type } : m));
+    if (selected?.id === id) setSelected(s => ({ ...s, type }));
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 320px' : '1fr', gap: 20 }}>
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>會員管理</h1>
+          <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)' }}>
+            {[['all','全部'], ['pro','美容師'], ['consumer','一般'], ['pending','審核中']].map(([val, label]) => (
+              <button key={val} onClick={() => setFilter(val)} style={{
+                padding: '8px 16px', border: 'none', fontSize: 12,
+                background: filter === val ? 'var(--dark)' : 'transparent',
+                color: filter === val ? '#fff' : 'var(--mid)',
+                cursor: 'pointer', transition: 'all 0.15s',
+              }}>{label}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ background: 'var(--white)', border: '1px solid var(--border)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
+                {['姓名', 'Email', '電話', '類型', '訂單數', '消費總額', '加入日期', '操作'].map(h => (
+                  <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(m => (
+                <tr key={m.id} onClick={() => setSelected(m)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: selected?.id === m.id ? 'var(--off)' : 'transparent', transition: 'background 0.1s' }}
+                onMouseEnter={e => { if (selected?.id !== m.id) e.currentTarget.style.background = 'var(--off)'; }}
+                onMouseLeave={e => { if (selected?.id !== m.id) e.currentTarget.style.background = 'transparent'; }}>
+                  <td style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>{m.name}</td>
+                  <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{m.email}</td>
+                  <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{m.phone}</td>
+                  <td style={{ padding: '13px 14px' }}><TypeBadge type={m.type} /></td>
+                  <td style={{ padding: '13px 14px', fontSize: 13 }}>{m.orders}</td>
+                  <td style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>NT$ {m.total.toLocaleString()}</td>
+                  <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)', whiteSpace: 'nowrap' }}>{m.joined}</td>
+                  <td style={{ padding: '13px 14px' }}>
+                    <select value={m.type} onChange={e => { e.stopPropagation(); changeType(m.id, e.target.value); }} onClick={e => e.stopPropagation()} style={{ padding: '5px 8px', fontSize: 11, border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--dark)', cursor: 'pointer', outline: 'none' }}>
+                      <option value="consumer">一般會員</option>
+                      <option value="pro">美容師 PRO</option>
+                      <option value="pending">審核中</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Member detail */}
+      {selected && (
+        <div style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '24px', height: 'fit-content', position: 'sticky', top: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 500 }}>會員詳情</h3>
+            <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--mid)', cursor: 'pointer' }}>×</button>
+          </div>
+          <div style={{ display: 'flex', align: 'center', gap: 14, marginBottom: 24 }}>
+            <div style={{ width: 48, height: 48, background: 'var(--off)', border: '1px solid var(--border)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 400, fontFamily: 'var(--font-d)' }}>
+              {selected.name[0]}
+            </div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 4 }}>{selected.name}</div>
+              <TypeBadge type={selected.type} />
+            </div>
+          </div>
+          {[['Email', selected.email], ['電話', selected.phone], ['加入日期', selected.joined], ['訂單數', `${selected.orders} 筆`], ['消費總額', `NT$ ${selected.total.toLocaleString()}`]].map(([label, val]) => (
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+              <span style={{ color: 'var(--mid)', fontSize: 12 }}>{label}</span>
+              <span style={{ fontWeight: 400 }}>{val}</span>
+            </div>
+          ))}
+          {selected.cert && (
+            <div style={{ marginTop: 16, padding: '12px', background: 'var(--off)', border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4, letterSpacing: '0.08em' }}>證書資料</div>
+              <div style={{ fontSize: 13, color: 'var(--dark)' }}>{selected.cert}</div>
+            </div>
+          )}
+          <div style={{ marginTop: 20 }}>
+            <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 10, letterSpacing: '0.08em' }}>變更會員類型</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => changeType(selected.id, 'consumer')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'consumer' ? 'var(--dark)' : 'none', color: selected.type === 'consumer' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: 'pointer' }}>一般會員</button>
+              <button onClick={() => changeType(selected.id, 'pro')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'pro' ? 'var(--dark)' : 'none', color: selected.type === 'pro' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: 'pointer' }}>PRO 美容師</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── ANALYTICS ───────────────────────────────────────────────────────────────
+function Analytics() {
+  const maxRev = Math.max(...MONTHLY_REVENUE.map(d => d.revenue));
+  const totalRevenue = MONTHLY_REVENUE.reduce((s, d) => s + d.revenue, 0);
+  const totalOrders = MONTHLY_REVENUE.reduce((s, d) => s + d.orders, 0);
+  const avgOrder = Math.round(totalRevenue / totalOrders);
+
+  return (
+    <div>
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400, marginBottom: 4 }}>營業分析</h1>
+        <p style={{ fontSize: 13, color: 'var(--mid)' }}>2025年11月 — 2026年4月</p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
+        <StatCard label="6個月總營業額" value={`NT$ ${(totalRevenue/10000).toFixed(1)}萬`} sub="近半年累計" icon="◐" />
+        <StatCard label="6個月總訂單" value={totalOrders} sub={`平均每月 ${Math.round(totalOrders/6)} 筆`} icon="◫" />
+        <StatCard label="平均客單價" value={`NT$ ${avgOrder.toLocaleString()}`} sub="含運費" icon="◈" />
+      </div>
+
+      {/* Bar chart full */}
+      <div style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '32px', marginBottom: 20 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 500, marginBottom: 24 }}>月營業額趨勢</h3>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', height: 200 }}>
+          {MONTHLY_REVENUE.map((d, i) => (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <div style={{ fontSize: 11, color: 'var(--mid)' }}>NT${(d.revenue/1000).toFixed(0)}k</div>
+              <div style={{ width: '100%', position: 'relative' }}>
+                <div style={{ width: '100%', background: i === MONTHLY_REVENUE.length - 1 ? 'var(--dark)' : 'var(--light)', height: Math.max(8, (d.revenue / maxRev) * 150), transition: 'height 0.6s ease', borderRadius: '2px 2px 0 0', position: 'relative' }}>
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'var(--gold)', opacity: 0.5, height: (d.proRevenue / d.revenue) * Math.max(8, (d.revenue / maxRev) * 150), borderRadius: '2px 2px 0 0' }} />
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--mid)' }}>{d.month}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 20, marginTop: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ width: 12, height: 12, background: 'var(--dark)', borderRadius: 2 }} /><span style={{ fontSize: 11, color: 'var(--mid)' }}>總營業額</span></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ width: 12, height: 12, background: 'var(--gold)', borderRadius: 2 }} /><span style={{ fontSize: 11, color: 'var(--mid)' }}>院線（PRO）佔比</span></div>
+        </div>
+      </div>
+
+      {/* Monthly table */}
+      <div style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '28px' }}>
+        <h3 style={{ fontSize: 14, fontWeight: 500, marginBottom: 20 }}>月份明細</h3>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
+              {['月份', '總營業額', '院線營業額', '一般消費', '訂單數', '平均客單'].map(h => (
+                <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {MONTHLY_REVENUE.map((d, i) => (
+              <tr key={i} style={{ borderBottom: '1px solid var(--border)', background: i === MONTHLY_REVENUE.length - 1 ? 'var(--off)' : 'transparent' }}>
+                <td style={{ padding: '13px 14px', fontSize: 13, fontWeight: i === MONTHLY_REVENUE.length - 1 ? 600 : 400 }}>{d.month}</td>
+                <td style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>NT$ {d.revenue.toLocaleString()}</td>
+                <td style={{ padding: '13px 14px', fontSize: 13, color: 'var(--gold)' }}>NT$ {d.proRevenue.toLocaleString()}</td>
+                <td style={{ padding: '13px 14px', fontSize: 13, color: 'var(--mid)' }}>NT$ {(d.revenue - d.proRevenue).toLocaleString()}</td>
+                <td style={{ padding: '13px 14px', fontSize: 13 }}>{d.orders}</td>
+                <td style={{ padding: '13px 14px', fontSize: 13 }}>NT$ {Math.round(d.revenue / d.orders).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── AI REORDER ───────────────────────────────────────────────────────────────
+function AIReorder({ products }) {
+  const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState(null);
+  const [expanded, setExpanded] = useState(null);
+
+  async function runAI() {
+    setLoading(true);
+    setSuggestions(null);
+
+    const productData = products.map(p => {
+      const monthly = PRODUCT_MONTHLY[p.id] || [3,4,3,2,5,4];
+      const avg = (monthly.reduce((a,b) => a+b, 0) / monthly.length).toFixed(1);
+      const trend = monthly[monthly.length-1] > monthly[monthly.length-2] ? '上升' : '持平或下降';
+      return `- ${p.nameZh}（${p.size}）：庫存 ${p.stock} 件，近6月平均銷量 ${avg} 件/月，趨勢${trend}`;
+    }).join('\n');
+
+    const prompt = `你是一個台灣保養品電商的庫存分析顧問。以下是 ECLADO 韓國醫美院線保養品的庫存與銷售數據：
+
+${productData}
+
+請針對每一件商品，分析並給出：
+1. 補貨建議數量（考慮安全庫存與銷售趨勢）
+2. 補貨緊急程度（緊急/一般/暫不需要）
+3. 簡短理由（1-2句話）
+
+請以 JSON 格式回應，格式如下：
+[{"name":"商品名稱","qty":建議數量,"urgency":"緊急/一般/暫不需要","reason":"理由"}]
+
+只回應 JSON，不要其他文字。`;
+
+    try {
+      const text = await window.claude.complete(prompt);
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const data = JSON.parse(jsonMatch[0]);
+        setSuggestions(data);
+      }
+    } catch (e) {
+      setSuggestions([{ name: '分析失敗', qty: 0, urgency: '錯誤', reason: '請稍後再試' }]);
+    }
+    setLoading(false);
+  }
+
+  const urgencyColor = { '緊急': 'var(--red)', '一般': 'var(--yellow)', '暫不需要': 'var(--green)' };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 28 }}>
+        <div>
+          <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400, marginBottom: 4 }}>AI 補貨建議</h1>
+          <p style={{ fontSize: 13, color: 'var(--mid)' }}>根據銷售趨勢與庫存數量，自動分析補貨需求</p>
+        </div>
+        <button onClick={runAI} disabled={loading} style={{
+          padding: '12px 28px', background: loading ? 'var(--mid)' : 'var(--dark)', color: '#fff', border: 'none',
+          fontSize: 13, letterSpacing: '0.1em', cursor: loading ? 'not-allowed' : 'pointer',
+          display: 'flex', alignItems: 'center', gap: 10, transition: 'background 0.2s',
+        }}>
+          {loading ? (
+            <>
+              <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              AI 分析中...
+            </>
+          ) : (
+            <><span>✦</span> 開始 AI 分析</>
+          )}
+        </button>
+      </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      {/* Current stock overview */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 28 }}>
+        {products.map(p => {
+          const monthly = PRODUCT_MONTHLY[p.id] || [3,4,3,2,5,4];
+          const avg = (monthly.reduce((a,b) => a+b, 0) / monthly.length).toFixed(1);
+          const daysLeft = avg > 0 ? Math.round((p.stock / avg) * 30) : 999;
+          return (
+            <div key={p.id} style={{ background: 'var(--white)', border: `1px solid ${p.stock <= p.minStock ? 'oklch(0.60 0.18 25 / 0.3)' : 'var(--border)'}`, padding: '16px' }}>
+              <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--dark)', marginBottom: 4, lineHeight: 1.4 }}>{p.nameZh}</div>
+              <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 10 }}>{p.size}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div>
+                  <div style={{ fontSize: 22, fontFamily: 'var(--font-d)', fontWeight: 400, color: p.stock === 0 ? 'var(--red)' : p.stock <= p.minStock ? 'var(--yellow)' : 'var(--dark)' }}>{p.stock}</div>
+                  <div style={{ fontSize: 10, color: 'var(--mid)' }}>件庫存</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 12, color: 'var(--dark)' }}>{avg}</div>
+                  <div style={{ fontSize: 10, color: 'var(--mid)' }}>件/月均</div>
+                </div>
+              </div>
+              <div style={{ marginTop: 10, fontSize: 11, color: daysLeft < 30 ? 'var(--red)' : 'var(--mid)' }}>
+                {daysLeft >= 999 ? '庫存充足' : `約剩 ${daysLeft} 天`}
+              </div>
+              {/* Mini sparkline */}
+              <div style={{ display: 'flex', gap: 2, marginTop: 8, alignItems: 'flex-end', height: 24 }}>
+                {monthly.map((v, i) => (
+                  <div key={i} style={{ flex: 1, background: i === monthly.length-1 ? 'var(--dark)' : 'var(--light)', height: Math.max(3, (v / Math.max(...monthly)) * 24), borderRadius: 1 }} />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* AI suggestions */}
+      {!suggestions && !loading && (
+        <div style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '60px', textAlign: 'center' }}>
+          <div style={{ fontSize: 40, marginBottom: 16, opacity: 0.3 }}>✦</div>
+          <p style={{ fontFamily: 'var(--font-d)', fontSize: 22, fontWeight: 300, color: 'var(--dark)', marginBottom: 8 }}>AI 補貨分析</p>
+          <p style={{ fontSize: 13, color: 'var(--mid)', marginBottom: 28, lineHeight: 1.7 }}>點擊「開始 AI 分析」，系統將根據您的銷售趨勢<br />與庫存數量，自動生成補貨建議報告</p>
+          <button onClick={runAI} style={{ padding: '12px 36px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.12em', cursor: 'pointer' }}>✦ 開始分析</button>
+        </div>
+      )}
+
+      {loading && (
+        <div style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '60px', textAlign: 'center' }}>
+          <div style={{ width: 32, height: 32, border: '2px solid var(--light)', borderTopColor: 'var(--dark)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 20px' }} />
+          <p style={{ fontSize: 13, color: 'var(--mid)' }}>AI 正在分析銷售數據與庫存狀態...</p>
+        </div>
+      )}
+
+      {suggestions && (
+        <div style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '28px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 500 }}>AI 分析結果</h3>
+            <button onClick={runAI} style={{ padding: '7px 18px', background: 'none', border: '1px solid var(--border)', fontSize: 12, color: 'var(--mid)', cursor: 'pointer', letterSpacing: '0.06em' }}>重新分析</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {suggestions.map((s, i) => (
+              <div key={i} style={{ border: '1px solid var(--border)', padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 20, alignItems: 'center', cursor: 'pointer', transition: 'background 0.1s', background: expanded === i ? 'var(--off)' : 'transparent' }}
+              onClick={() => setExpanded(expanded === i ? null : i)}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>{s.name}</div>
+                  {expanded === i && <div style={{ fontSize: 12, color: 'var(--mid)', lineHeight: 1.7, marginTop: 8 }}>{s.reason}</div>}
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'var(--font-d)', fontSize: 24, fontWeight: 400, color: 'var(--dark)' }}>{s.qty}</div>
+                  <div style={{ fontSize: 10, color: 'var(--mid)' }}>建議補貨件數</div>
+                </div>
+                <div>
+                  <span style={{ display: 'inline-block', padding: '4px 12px', fontSize: 11, fontWeight: 500, background: (urgencyColor[s.urgency] || 'var(--mid)') + '18', color: urgencyColor[s.urgency] || 'var(--mid)', borderRadius: 2, whiteSpace: 'nowrap' }}>{s.urgency}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PRODUCTS PAGE ────────────────────────────────────────────────────────────
+function ProductsPage({ products, setProducts }) {
+  const [editing, setEditing] = useState(null);
+
+  function saveEdit(id, field, val) {
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, [field]: isNaN(Number(val)) ? val : Number(val) } : p));
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>商品管理</h1>
+        <button style={{ padding: '10px 24px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>+ 新增商品</button>
+      </div>
+      <div style={{ background: 'var(--white)', border: '1px solid var(--border)' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
+              {['商品名稱', '分類', '規格', '售價', '專業價', '庫存', '院線限定', '操作'].map(h => (
+                <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {products.map(p => (
+              <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                <td style={{ padding: '13px 14px' }}>
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>{p.nameZh}</div>
+                  <div style={{ fontSize: 11, color: 'var(--mid)' }}>{p.name}</div>
+                </td>
+                <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{p.category}</td>
+                <td style={{ padding: '13px 14px', fontSize: 12 }}>{p.size}</td>
+                <td style={{ padding: '13px 14px', fontSize: 12, fontWeight: 500 }}>NT$ {p.price.toLocaleString()}</td>
+                <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--gold)' }}>NT$ {p.proPrice.toLocaleString()}</td>
+                <td style={{ padding: '13px 14px', fontSize: 13, fontWeight: 600, color: p.stock === 0 ? 'var(--red)' : p.stock <= 3 ? 'var(--yellow)' : 'var(--dark)' }}>{p.stock}</td>
+                <td style={{ padding: '13px 14px' }}>
+                  <span style={{ fontSize: 11, color: p.isProOnly ? 'var(--dark)' : 'var(--mid)', fontWeight: p.isProOnly ? 600 : 400 }}>
+                    {p.isProOnly ? '● 院線專用' : '○ 一般'}
+                  </span>
+                </td>
+                <td style={{ padding: '13px 14px' }}>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button style={{ padding: '5px 12px', fontSize: 11, background: 'none', border: '1px solid var(--border)', color: 'var(--dark)', cursor: 'pointer' }}>編輯</button>
+                    <button style={{ padding: '5px 12px', fontSize: 11, background: 'none', border: '1px solid var(--border)', color: 'var(--mid)', cursor: 'pointer' }}>下架</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'eclado_orders';
+
+// 合併 localStorage 訂單與 mock 訂單（依 id 去重，新訂單在前）
+function loadOrders() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return INIT_ORDERS;
+    const stored = JSON.parse(raw);
+    const ids = new Set(stored.map(o => o.id));
+    const mockExtras = INIT_ORDERS.filter(o => !ids.has(o.id));
+    return [...stored, ...mockExtras];
+  } catch (e) {
+    return INIT_ORDERS;
+  }
+}
+
+function App() {
+  const [page, setPage] = useState('dashboard');
+  const [products, setProducts] = useState(INIT_PRODUCTS);
+  const [members, setMembers] = useState(INIT_MEMBERS);
+  const [orders, setOrders] = useState(loadOrders);
+
+  // 訂單變動 → 寫回 localStorage（顧客端也讀取這個 key）
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+    } catch (e) {
+      console.error('save orders failed', e);
+    }
+  }, [orders]);
+
+  // 監聽其他分頁（顧客端）寫入新訂單時自動同步
+  useEffect(() => {
+    function onStorage(e) {
+      if (e.key === STORAGE_KEY) {
+        setOrders(loadOrders());
+      }
+    }
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  // 同分頁定期偵測（避免顧客在不同瀏覽器分頁送單時不更新）
+  useEffect(() => {
+    const t = setInterval(() => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const stored = JSON.parse(raw);
+        if (stored.length !== orders.length) {
+          setOrders(loadOrders());
+        }
+      } catch (e) {}
+    }, 3000);
+    return () => clearInterval(t);
+  }, [orders.length]);
+
+  function renderPage() {
+    switch (page) {
+      case 'dashboard': return <Dashboard orders={orders} products={products} members={members} />;
+      case 'orders': return <Orders orders={orders} setOrders={setOrders} />;
+      case 'products': return <ProductsPage products={products} setProducts={setProducts} />;
+      case 'inventory': return <Inventory products={products} setProducts={setProducts} />;
+      case 'members': return <Members members={members} setMembers={setMembers} />;
+      case 'analytics': return <Analytics />;
+      case 'ai': return <AIReorder products={products} />;
+      default: return <Dashboard orders={orders} products={products} members={members} />;
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+      <Sidebar page={page} setPage={setPage} />
+      <main style={{ marginLeft: 'var(--sidebar-w)', flex: 1, overflowY: 'auto', padding: '36px 40px', background: 'var(--bg)' }}>
+        {renderPage()}
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
