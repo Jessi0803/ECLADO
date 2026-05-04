@@ -165,8 +165,23 @@ const PRODUCTS = [
 ];
 
 // ─── PROMOTION HELPERS ────────────────────────────────────────────────────────
+// Supabase integer[] 有時是數字、有時是字串，統一成數字 id
+function normProductIds(p) {
+  const raw = p?.product_ids;
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.map(x => Number(x)).filter(n => !Number.isNaN(n));
+  if (typeof raw === 'string') {
+    try {
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.map(x => Number(x)).filter(n => !Number.isNaN(n)) : [];
+    } catch { return []; }
+  }
+  return [];
+}
+
 function isPromotionLive(p, now = new Date()) {
-  if (!p.active) return false;
+  // 僅在明確為 false 時停用（避免 API 漏欄位被當成不生效）
+  if (p && p.active === false) return false;
   if (p.start_at && new Date(p.start_at) > now) return false;
   if (p.end_at && new Date(p.end_at) < now) return false;
   return true;
@@ -183,7 +198,7 @@ function calculateDiscount(cart, promotions, user) {
   }
   const live = promotions.filter(p => isPromotionLive(p));
   for (const p of live) {
-    const ids = new Set((p.product_ids || []).map(Number));
+    const ids = new Set(normProductIds(p));
     const promoItems = cart.filter(i => ids.has(Number(i.id)));
     if (promoItems.length === 0) continue;
     const promoSubtotal = promoItems.reduce((s, i) => s + unit(i) * i.qty, 0);
@@ -442,7 +457,7 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
   const heroPad = isMobile ? '0 6vw' : '0 10vw';
 
   if (selectedProduct) {
-    return <ProductDetail product={selectedProduct} user={user} onAdd={addToCart} onBack={() => setSelectedProduct(null)} />;
+    return <ProductDetail product={selectedProduct} user={user} onAdd={addToCart} onBack={() => setSelectedProduct(null)} promotions={promotions} />;
   }
 
   return (
@@ -534,6 +549,23 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
             <div style={{ width:1, height:40, background:'rgba(255,255,255,0.18)' }} />
           </div>
         )}
+
+        {/* 限時優惠：固定在首屏可見（多數人沒往下捲會看不到活動區） */}
+        {livePromos.length > 0 && (
+          <div style={{ position:'absolute', bottom: isMobile ? 88 : 96, left:'50%', transform:'translateX(-50%)', zIndex:12, width:'min(92vw, 420px)', textAlign:'center' }}>
+            <button
+              type="button"
+              onClick={() => document.getElementById('eclado-promotions')?.scrollIntoView({ behavior:'smooth', block:'start' })}
+              style={{
+                width:'100%', background:'rgba(184,169,138,0.95)', color:'var(--black)', border:'none',
+                padding:'12px 20px', fontSize:12, letterSpacing:'0.14em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500,
+                boxShadow:'0 8px 32px rgba(0,0,0,0.25)',
+              }}
+            >
+              限時優惠進行中 · 點此前往活動專區
+            </button>
+          </div>
+        )}
       </section>
 
       {/* BRAND STRIP */}
@@ -549,9 +581,11 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
       </section>
 
       {/* LIVE PROMOTIONS */}
-      {livePromos.map(promo => (
-        <PromoSection key={promo.id} promo={promo} user={user} addToCart={addToCart} onSelect={setSelectedProduct} isMobile={isMobile} promotions={promotions} />
-      ))}
+      <div id="eclado-promotions">
+        {livePromos.map(promo => (
+          <PromoSection key={promo.id} promo={promo} user={user} addToCart={addToCart} onSelect={setSelectedProduct} isMobile={isMobile} promotions={promotions} />
+        ))}
+      </div>
 
       {/* FEATURED PRODUCTS */}
       <section style={{ padding: isMobile ? '60px 0' : '100px 0', background:'var(--white)' }}>
@@ -660,11 +694,14 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
 }
 
 // ─── PRODUCT DETAIL PAGE ──────────────────────────────────────────────────────
-function ProductDetail({ product, user, onAdd, onBack }) {
+function ProductDetail({ product, user, onAdd, onBack, promotions = [] }) {
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const isMobile = useIsMobile();
   const showPrice = user?.isPro ? product.proPrice : product.price;
+
+  const livePromosForProduct = (promotions || []).filter(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));
+  const primaryPromo = livePromosForProduct[0];
 
   function handleAdd() {
     for (let i = 0; i < qty; i++) onAdd(product);
@@ -715,6 +752,18 @@ function ProductDetail({ product, user, onAdd, onBack }) {
             <p style={{ fontSize:10, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>{product.category}</p>
             <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 26 : 34, fontWeight:300, color:'var(--black)', lineHeight:1.2, marginBottom:6 }}>{product.nameZh}</h1>
             <p style={{ fontSize:12, color:'var(--dark)', letterSpacing:'0.1em', marginBottom:28 }}>{product.name} · {product.size}</p>
+
+            {primaryPromo && (
+              <div style={{ background:'var(--off-white)', border:'1px solid var(--gold)', padding:'14px 18px', marginBottom:20 }}>
+                <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--gold)', textTransform:'uppercase', marginBottom:6 }}>限時優惠</p>
+                <p style={{ fontSize:14, color:'var(--black)', fontWeight:500, marginBottom:6 }}>{primaryPromo.name}</p>
+                <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.65 }}>
+                  結帳時此商品金額將套用：<strong>× {primaryPromo.discount_rate}</strong>
+                  {Number(primaryPromo.discount_amount) > 0 && <> 再減 <strong>NT$ {Number(primaryPromo.discount_amount).toLocaleString()}</strong></>}
+                  （與購物車內其他活動商品合併計算，以結帳頁金額為準）
+                </p>
+              </div>
+            )}
 
             {/* 價格 */}
             <div style={{ borderTop:'1px solid var(--light)', borderBottom:'1px solid var(--light)', padding:'20px 0', marginBottom:28 }}>
@@ -773,7 +822,7 @@ function ProductDetail({ product, user, onAdd, onBack }) {
 function ProductCard({ product, user, onAdd, onSelect, promotions = [] }) {
   const [hovered, setHovered] = useState(false);
   const showPrice = user?.isPro ? product.proPrice : product.price;
-  const onPromo = promotions.some(p => isPromotionLive(p) && (p.product_ids || []).map(Number).includes(Number(product.id)));
+  const onPromo = promotions.some(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));
   return (
     <div onClick={onSelect} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ cursor:'pointer', position:'relative' }}>
       {onPromo && (
@@ -804,11 +853,24 @@ function ProductCard({ product, user, onAdd, onSelect, promotions = [] }) {
 // ─── PROMO SECTION (homepage) ────────────────────────────────────────────────
 function PromoSection({ promo, user, addToCart, onSelect, isMobile, promotions = [] }) {
   const cd = useCountdown(promo.end_at);
-  const items = (promo.product_ids || [])
-    .map(id => PRODUCTS.find(p => p.id === Number(id)))
+  const ids = normProductIds(promo);
+  const items = ids
+    .map(id => PRODUCTS.find(p => p.id === id))
     .filter(Boolean)
     .filter(p => !p.isProOnly || user?.isPro);
-  if (items.length === 0) return null;
+  if (items.length === 0) {
+    return (
+      <section style={{ background:'linear-gradient(135deg, #1a1a18 0%, #2a2520 100%)', padding: isMobile ? '40px 0' : '56px 0', color:'var(--white)' }}>
+        <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
+          <p style={{ fontSize:13, color:'rgba(255,255,255,0.75)', lineHeight:1.7 }}>
+            活動「<strong>{promo.name}</strong>」已建立，但目前<strong>沒有可顯示的商品</strong>。
+            請到後台確認已勾選商品，且商品編號需與官網一致（一般為 1～8）。
+            {ids.length === 0 && '（目前 product_ids 為空）'}
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   const formula = `原價 × ${promo.discount_rate}` + (Number(promo.discount_amount) > 0 ? ` − NT$ ${Number(promo.discount_amount).toLocaleString()}` : '');
 
@@ -883,11 +945,31 @@ function ShopPage({ user, cart, setCart, promotions = [] }) {
   });
 
   if (selectedProduct) {
-    return <ProductDetail product={selectedProduct} user={user} onAdd={addToCart} onBack={() => setSelectedProduct(null)} />;
+    return <ProductDetail product={selectedProduct} user={user} onAdd={addToCart} onBack={() => setSelectedProduct(null)} promotions={promotions} />;
   }
+
+  const livePromosShop = promotions.filter(isPromotionLive);
 
   return (
     <div style={{ paddingTop:68 }}>
+      {livePromosShop.length > 0 && (
+        <div style={{
+          background:'linear-gradient(90deg, #2a2318, #1a1a18)', borderBottom:'1px solid rgba(184,169,138,0.45)',
+          padding:'12px 20px', textAlign:'center',
+        }}>
+          <span style={{ fontSize:13, color:'rgba(255,255,255,0.88)', letterSpacing:'0.04em' }}>
+            限時優惠進行中：購物車內含活動商品時會自動折抵。
+          </span>
+          <button
+            type="button"
+            onClick={() => { window.location.href = '/#eclado-promotions'; }}
+            style={{
+              marginLeft:14, background:'var(--gold)', color:'var(--black)', border:'none',
+              padding:'6px 14px', fontSize:11, letterSpacing:'0.1em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500,
+            }}
+          >回首頁看活動</button>
+        </div>
+      )}
       {/* 頂部 header */}
       <div style={{ position:'relative', height: isMobile ? 180 : 240, overflow:'hidden' }}>
         <img src="https://images.unsplash.com/photo-1631730359585-38a4935cbec4?w=1600&q=80&fit=crop" alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 60%' }} />
@@ -950,6 +1032,13 @@ function CartPage({ cart, setCart, setPage, user, promotions = [] }) {
           <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 30 : 40, fontWeight:300 }}>購物車</h1>
           <span style={{ fontSize:14, color:'var(--dark)' }}>{cart.length} 件商品</span>
         </div>
+
+        {cart.length > 0 && promotions.some(isPromotionLive) && discount === 0 && (
+          <div style={{ background:'var(--off-white)', border:'1px solid var(--gold)', padding:'14px 18px', marginBottom:24, fontSize:13, color:'var(--dark)', lineHeight:1.65 }}>
+            目前有<strong>限時優惠</strong>，但購物車內還沒有「活動指定商品」，所以尚無折抵。
+            <button type="button" onClick={() => setPage('home')} style={{ marginLeft:10, background:'var(--black)', color:'var(--white)', border:'none', padding:'6px 14px', fontSize:11, letterSpacing:'0.08em', cursor:'pointer' }}>回首頁看活動</button>
+          </div>
+        )}
 
         {cart.length === 0 ? (
           <div style={{ textAlign:'center', padding:'80px 0' }}>
@@ -1476,9 +1565,7 @@ function LoginPage({ setPage }) {
   async function handleForgot(e) {
     e.preventDefault(); reset(); setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + window.location.pathname,
-      });
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
       if (error) { setError(sbError(error.message)); return; }
       setSuccess('✓ 密碼重設信已發送至 ' + email + '，請查收信箱。');
     } catch(err) { setError('網路異常，請確認連線'); }
@@ -1794,10 +1881,15 @@ function App() {
   // 載入進行中的活動（含 realtime 同步）
   useEffect(() => {
     async function loadPromotions() {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('promotions')
         .select('*')
         .order('created_at', { ascending: false });
+      if (error) {
+        console.error('[ECLADO] 無法載入 promotions：', error.message, error);
+        setPromotions([]);
+        return;
+      }
       setPromotions(data || []);
     }
     loadPromotions();
@@ -1807,6 +1899,15 @@ function App() {
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
+
+  // 網址列 #eclado-promotions 時捲到活動區（例如從商店頁「回首頁看活動」）
+  useEffect(() => {
+    if (window.location.hash !== '#eclado-promotions') return;
+    const t = setTimeout(() => {
+      document.getElementById('eclado-promotions')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [promotions]);
 
   function handleSignOut() {
     supabase.auth.signOut();

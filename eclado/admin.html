@@ -168,8 +168,21 @@ const STATUS_OPTIONS = ['awaiting_confirm', 'paid', 'preparing', 'shipped', 'del
 
 // ─── PROMOTION HELPERS ────────────────────────────────────────────────────────
 // 判斷活動是否「進行中」（active=true 且在起訖區間內）
+function normProductIds(p) {
+  const raw = p?.product_ids;
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.map(x => Number(x)).filter(n => !Number.isNaN(n));
+  if (typeof raw === 'string') {
+    try {
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.map(x => Number(x)).filter(n => !Number.isNaN(n)) : [];
+    } catch { return []; }
+  }
+  return [];
+}
+
 function isPromotionLive(p, now = new Date()) {
-  if (!p.active) return false;
+  if (p && p.active === false) return false;
   if (p.start_at && new Date(p.start_at) > now) return false;
   if (p.end_at && new Date(p.end_at) < now) return false;
   return true;
@@ -177,7 +190,7 @@ function isPromotionLive(p, now = new Date()) {
 
 // 活動排程狀態（給 admin 列表用）
 function getPromotionPhase(p, now = new Date()) {
-  if (!p.active) return 'disabled';
+  if (p && p.active === false) return 'disabled';
   if (p.start_at && new Date(p.start_at) > now) return 'scheduled';
   if (p.end_at && new Date(p.end_at) < now) return 'expired';
   return 'live';
@@ -215,7 +228,7 @@ function calculateDiscount(cart, promotions, user) {
   // 取第一個生效中、且購物車裡有它的指定商品的活動（規則：一次只套一個）
   const live = promotions.filter(p => isPromotionLive(p));
   for (const p of live) {
-    const ids = new Set((p.product_ids || []).map(Number));
+    const ids = new Set(normProductIds(p));
     const promoItems = cart.filter(i => ids.has(Number(i.id)));
     if (promoItems.length === 0) continue;
 
@@ -1334,7 +1347,7 @@ function Promotions({ products }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
           {list.map(p => {
             const phase = getPromotionPhase(p);
-            const productNames = (p.product_ids || [])
+            const productNames = normProductIds(p)
               .map(id => products.find(x => x.id === id)?.nameZh)
               .filter(Boolean);
             return (
