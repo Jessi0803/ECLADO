@@ -1615,9 +1615,15 @@ function App() {
     }
   }
 
+  function navigate(newPage) {
+    setSelectedProduct(null);
+    setPage(newPage);
+    window.scrollTo(0, 0);
+  }
+
   return (
     <>
-      {page !== 'login' && <Nav setPage={setPage} cartCount={cartCount} user={user} setUser={handleSignOut} page={selectedProduct ? 'product' : page} />}
+      {page !== 'login' && <Nav setPage={navigate} cartCount={cartCount} user={user} setUser={handleSignOut} page={selectedProduct ? 'product' : page} />}
       {renderPage()}
     </>
   );
