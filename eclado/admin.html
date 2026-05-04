@@ -10,6 +10,12 @@
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL  = 'https://mtczcayumikaawefwnhm.supabase.co';
+  const SUPABASE_ANON = 'sb_publishable_xhQF-6mwxbVYdGmHt1KAXA_MKPhkYhY';
+  window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+</script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -975,68 +981,128 @@ function ProductsPage({ products, setProducts }) {
   );
 }
 
-// ─── MAIN APP ─────────────────────────────────────────────────────────────────
-const STORAGE_KEY = 'eclado_orders';
+// ─── PASSWORD GATE ────────────────────────────────────────────────────────────
+const ADMIN_PASSWORD = 'eclado2026';
+const AUTH_KEY = 'eclado_admin_auth';
 
-// 合併 localStorage 訂單與 mock 訂單（依 id 去重，新訂單在前）
-function loadOrders() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return INIT_ORDERS;
-    const stored = JSON.parse(raw);
-    const ids = new Set(stored.map(o => o.id));
-    const mockExtras = INIT_ORDERS.filter(o => !ids.has(o.id));
-    return [...stored, ...mockExtras];
-  } catch (e) {
-    return INIT_ORDERS;
+function PasswordGate({ children }) {
+  const [authed, setAuthed] = useState(() => sessionStorage.getItem(AUTH_KEY) === 'ok');
+  const [pwd, setPwd] = useState('');
+  const [error, setError] = useState('');
+
+  function submit(e) {
+    e.preventDefault();
+    if (pwd === ADMIN_PASSWORD) {
+      sessionStorage.setItem(AUTH_KEY, 'ok');
+      setAuthed(true);
+    } else {
+      setError('密碼錯誤');
+      setPwd('');
+    }
   }
+
+  if (authed) return children;
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--sidebar)' }}>
+      <form onSubmit={submit} style={{ background: 'var(--white)', padding: '48px 56px', minWidth: 360, boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{ fontFamily: 'var(--font-d)', fontSize: 22, letterSpacing: '0.22em', color: 'var(--dark)', marginBottom: 6 }}>ECLADO</div>
+          <div style={{ fontSize: 10, letterSpacing: '0.24em', color: 'var(--gold)', textTransform: 'uppercase' }}>管理後台 · 請登入</div>
+        </div>
+        <label style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>密碼</label>
+        <input type="password" value={pwd} onChange={e => { setPwd(e.target.value); setError(''); }} autoFocus
+          style={{ width: '100%', border: 'none', borderBottom: '1px solid var(--border)', padding: '10px 0', fontSize: 16, outline: 'none', background: 'none', color: 'var(--dark)', marginBottom: 8 }}
+          onFocus={e => e.target.style.borderBottomColor = 'var(--dark)'}
+          onBlur={e => e.target.style.borderBottomColor = 'var(--border)'}
+        />
+        {error && <p style={{ fontSize: 12, color: 'var(--red)', marginBottom: 8 }}>{error}</p>}
+        <button type="submit" style={{ width: '100%', background: 'var(--dark)', color: '#fff', border: 'none', padding: '14px', fontSize: 12, letterSpacing: '0.18em', cursor: 'pointer', marginTop: 16 }}>進入後台</button>
+      </form>
+    </div>
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+// 把 Supabase 欄位（snake_case）轉換為前端用的格式
+function normalizeOrder(row) {
+  return {
+    id: row.id,
+    member: row.member,
+    type: row.type,
+    items: row.items || [],
+    total: row.total,
+    status: row.status,
+    date: row.date,
+    address: row.address,
+    phone: row.phone,
+    email: row.email,
+    note: row.note,
+    transferLast5: row.transfer_last5,
+    tracking: row.tracking,
+  };
 }
 
 function App() {
   const [page, setPage] = useState('dashboard');
   const [products, setProducts] = useState(INIT_PRODUCTS);
   const [members, setMembers] = useState(INIT_MEMBERS);
-  const [orders, setOrders] = useState(loadOrders);
+  const [orders, setOrders] = useState(INIT_ORDERS);
+  const [loadError, setLoadError] = useState('');
 
-  // 訂單變動 → 寫回 localStorage（顧客端也讀取這個 key）
-  useEffect(() => {
+  // 從 Supabase 載入訂單
+  async function fetchOrders() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
-    } catch (e) {
-      console.error('save orders failed', e);
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      const real = (data || []).map(normalizeOrder);
+      // 把 Supabase 真實訂單放最前，mock 訂單補在後面（id 不重複才補）
+      const ids = new Set(real.map(o => o.id));
+      const mockExtras = INIT_ORDERS.filter(o => !ids.has(o.id));
+      setOrders([...real, ...mockExtras]);
+      setLoadError('');
+    } catch (err) {
+      console.error('fetch orders failed', err);
+      setLoadError('無法連接 Supabase（' + (err.message || '') + '），目前顯示本機示範資料。');
     }
-  }, [orders]);
+  }
 
-  // 監聽其他分頁（顧客端）寫入新訂單時自動同步
   useEffect(() => {
-    function onStorage(e) {
-      if (e.key === STORAGE_KEY) {
-        setOrders(loadOrders());
-      }
-    }
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    fetchOrders();
+    // 啟用 realtime：顧客新下單會即時通知後台
+    const channel = supabase
+      .channel('orders-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+        fetchOrders();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // 同分頁定期偵測（避免顧客在不同瀏覽器分頁送單時不更新）
-  useEffect(() => {
-    const t = setInterval(() => {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return;
-        const stored = JSON.parse(raw);
-        if (stored.length !== orders.length) {
-          setOrders(loadOrders());
+  // 包一層 setOrders，更新狀態時也寫回 Supabase
+  async function setOrdersWithSync(updater) {
+    setOrders(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      // 找出狀態有變的訂單，逐一推到 Supabase
+      next.forEach(o => {
+        const old = prev.find(p => p.id === o.id);
+        if (old && old.status !== o.status) {
+          supabase.from('orders').update({ status: o.status }).eq('id', o.id).then(({ error }) => {
+            if (error) console.error('update status failed', error);
+          });
         }
-      } catch (e) {}
-    }, 3000);
-    return () => clearInterval(t);
-  }, [orders.length]);
+      });
+      return next;
+    });
+  }
 
   function renderPage() {
     switch (page) {
       case 'dashboard': return <Dashboard orders={orders} products={products} members={members} />;
-      case 'orders': return <Orders orders={orders} setOrders={setOrders} />;
+      case 'orders': return <Orders orders={orders} setOrders={setOrdersWithSync} />;
       case 'products': return <ProductsPage products={products} setProducts={setProducts} />;
       case 'inventory': return <Inventory products={products} setProducts={setProducts} />;
       case 'members': return <Members members={members} setMembers={setMembers} />;
@@ -1050,13 +1116,20 @@ function App() {
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <Sidebar page={page} setPage={setPage} />
       <main style={{ marginLeft: 'var(--sidebar-w)', flex: 1, overflowY: 'auto', padding: '36px 40px', background: 'var(--bg)' }}>
+        {loadError && (
+          <div style={{ background: 'oklch(0.60 0.18 25 / 0.08)', border: '1px solid oklch(0.60 0.18 25 / 0.3)', padding: '10px 16px', marginBottom: 20, fontSize: 12, color: 'var(--red)' }}>
+            ⚠ {loadError}
+          </div>
+        )}
         {renderPage()}
       </main>
     </div>
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <PasswordGate><App /></PasswordGate>
+);
 </script>
 </body>
 </html>

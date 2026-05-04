@@ -355,9 +355,10 @@ function MobileNavSection({ item, setPage, close }) {
 }
 
 // ─── HOME PAGE ────────────────────────────────────────────────────────────────
-function HomePage({ setPage, user, cart, setCart, onSelectProduct }) {
+function HomePage({ setPage, user, cart, setCart }) {
   const [slide, setSlide] = useState(0);
   const [animating, setAnimating] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -379,6 +380,10 @@ function HomePage({ setPage, user, cart, setCart, onSelectProduct }) {
   }
 
   const heroPad = isMobile ? '0 6vw' : '0 10vw';
+
+  if (selectedProduct) {
+    return <ProductDetail product={selectedProduct} user={user} onAdd={addToCart} onBack={() => setSelectedProduct(null)} />;
+  }
 
   return (
     <div>
@@ -494,7 +499,7 @@ function HomePage({ setPage, user, cart, setCart, onSelectProduct }) {
             <button onClick={() => setPage('shop')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'var(--dark)', fontFamily:'var(--font-body)', borderBottom:'1px solid var(--dark)', paddingBottom:2, whiteSpace:'nowrap' }}>全部商品 →</button>
           </div>
           <div className="g4">
-            {featured.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => onSelectProduct(p)} />)}
+            {featured.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} />)}
           </div>
         </div>
       </section>
@@ -718,8 +723,9 @@ function ProductCard({ product, user, onAdd, onSelect }) {
 }
 
 // ─── SHOP PAGE ────────────────────────────────────────────────────────────────
-function ShopPage({ user, cart, setCart, onSelectProduct }) {
+function ShopPage({ user, cart, setCart }) {
   const [activeCategory, setActiveCategory] = useState('全部');
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const categories = ['全部', ...NAV_LINKS];
   const isMobile = useIsMobile();
 
@@ -736,6 +742,10 @@ function ShopPage({ user, cart, setCart, onSelectProduct }) {
     if (activeCategory === '全部') return true;
     return p.category === activeCategory;
   });
+
+  if (selectedProduct) {
+    return <ProductDetail product={selectedProduct} user={user} onAdd={addToCart} onBack={() => setSelectedProduct(null)} />;
+  }
 
   return (
     <div style={{ paddingTop:68 }}>
@@ -776,7 +786,7 @@ function ShopPage({ user, cart, setCart, onSelectProduct }) {
       <div style={{ maxWidth:1280, margin:'0 auto', padding: isMobile ? '40px 20px' : '60px 32px' }}>
         {false && null /* pro banner moved to header */}
         <div className="g4lg">
-          {filtered.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => onSelectProduct(p)} />)}
+          {filtered.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} />)}
         </div>
         {filtered.length === 0 && <div style={{ textAlign:'center', padding:'80px 0', color:'var(--dark)', fontSize:14 }}>此分類目前無商品</div>}
       </div>
@@ -885,31 +895,29 @@ function CheckoutPage({ cart, setCart, setPage, user }) {
 
   function setField(name) { return e => setForm(f => ({...f, [name]: e.target.value})); }
 
-  // 將訂單寫入 localStorage，後台會讀取
-  function saveOrderToStorage() {
-    try {
-      const today = new Date();
-      const dateStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
-      const order = {
-        id: orderNo,
-        member: form.name || user?.name || '訪客',
-        type: user?.isPro ? 'pro' : 'consumer',
-        items: cart.map(i => ({ name: i.nameZh, qty: i.qty, price: user?.isPro ? i.proPrice : i.price })),
-        total: total,
-        status: 'awaiting_confirm',
-        date: dateStr,
-        address: `${form.city}${form.district}${form.address}`,
-        phone: form.phone,
-        email: form.email,
-        note: form.note,
-        transferLast5: transferLast5,
-        submittedAt: today.toISOString(),
-      };
-      const raw = localStorage.getItem('eclado_orders');
-      const list = raw ? JSON.parse(raw) : [];
-      list.unshift(order);
-      localStorage.setItem('eclado_orders', JSON.stringify(list));
-    } catch (err) { console.error('save order failed', err); }
+  const [submitting, setSubmitting] = useState(false);
+
+  // 將訂單寫入 Supabase（雲端，跨裝置同步）
+  async function saveOrderToSupabase() {
+    const today = new Date();
+    const dateStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+    const order = {
+      id: orderNo,
+      member: form.name || user?.name || '訪客',
+      type: user?.isPro ? 'pro' : 'consumer',
+      items: cart.map(i => ({ name: i.nameZh, qty: i.qty, price: user?.isPro ? i.proPrice : i.price })),
+      total: total,
+      status: 'awaiting_confirm',
+      date: dateStr,
+      address: `${form.city}${form.district}${form.address}`,
+      phone: form.phone,
+      email: form.email,
+      note: form.note,
+      transfer_last5: transferLast5,
+      user_id: user?.uid || null,
+    };
+    const { error } = await supabase.from('orders').insert(order);
+    if (error) throw error;
   }
 
   function handleNext(e) {
@@ -918,17 +926,25 @@ function CheckoutPage({ cart, setCart, setPage, user }) {
     else if (step === 2) { window.scrollTo(0,0); setStep(3); }
   }
 
-  function handleTransferSubmit(e) {
+  async function handleTransferSubmit(e) {
     e.preventDefault();
     if (!/^\d{5}$/.test(transferLast5)) {
       setTransferError('請輸入正確的 5 碼數字');
       return;
     }
     setTransferError('');
-    saveOrderToStorage();
-    setCart([]);
-    window.scrollTo(0,0);
-    setStep(4);
+    setSubmitting(true);
+    try {
+      await saveOrderToSupabase();
+      setCart([]);
+      window.scrollTo(0,0);
+      setStep(4);
+    } catch (err) {
+      console.error(err);
+      setTransferError('訂單送出失敗，請稍後再試或聯繫客服。' + (err?.message ? '（' + err.message + '）' : ''));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   /* ── Step indicator ── */
@@ -1052,8 +1068,8 @@ function CheckoutPage({ cart, setCart, setPage, user }) {
                 </p>
               </div>
 
-              <button type="submit" style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8 }}>
-                送出匯款資訊
+              <button type="submit" disabled={submitting} style={{ background: submitting ? 'var(--dark)' : 'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: submitting ? 'wait' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8, opacity: submitting ? 0.7 : 1 }}>
+                {submitting ? '送出中...' : '送出匯款資訊'}
               </button>
             </div>
 
@@ -1556,15 +1572,6 @@ function App() {
   const [page, setPage] = useState('home');
   const [user, setUser] = useState(null);
   const [cart, setCart] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-
-  function addToCart(product) {
-    setCart(prev => {
-      const ex = prev.find(i => i.id === product.id);
-      if (ex) return prev.map(i => i.id === product.id ? {...i, qty: i.qty+1} : i);
-      return [...prev, {...product, qty:1}];
-    });
-  }
   const cartCount = cart.reduce((sum,i) => sum+i.qty, 0);
 
   // 從 profiles 表讀取角色
@@ -1600,30 +1607,21 @@ function App() {
   }
 
   function renderPage() {
-    if (selectedProduct) {
-      return <ProductDetail product={selectedProduct} user={user} onAdd={addToCart} onBack={() => { setSelectedProduct(null); window.scrollTo(0,0); }} />;
-    }
     switch (page) {
-      case 'home':     return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} onSelectProduct={setSelectedProduct} />;
-      case 'shop':     return <ShopPage user={user} cart={cart} setCart={setCart} onSelectProduct={setSelectedProduct} />;
+      case 'home':     return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} />;
+      case 'shop':     return <ShopPage user={user} cart={cart} setCart={setCart} />;
       case 'cart':     return <CartPage cart={cart} setCart={setCart} setPage={setPage} />;
       case 'checkout': return <CheckoutPage cart={cart} setCart={setCart} setPage={setPage} user={user} />;
       case 'login':    return <LoginPage setPage={setPage} />;
       case 'about':    return <AboutPage />;
       case 'info':     return <InfoPage />;
-      default:         return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} onSelectProduct={setSelectedProduct} />;
+      default:         return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} />;
     }
-  }
-
-  function navigate(newPage) {
-    setSelectedProduct(null);
-    setPage(newPage);
-    window.scrollTo(0, 0);
   }
 
   return (
     <>
-      {page !== 'login' && <Nav setPage={navigate} cartCount={cartCount} user={user} setUser={handleSignOut} page={selectedProduct ? 'product' : page} />}
+      {page !== 'login' && <Nav setPage={setPage} cartCount={cartCount} user={user} setUser={handleSignOut} page={page} />}
       {renderPage()}
     </>
   );
