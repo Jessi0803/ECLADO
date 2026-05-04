@@ -1872,10 +1872,16 @@ function App() {
 
   // 監聽 Supabase 登入狀態
   useEffect(() => {
+    // 直接檢查 URL hash，處理密碼重設連結（PASSWORD_RECOVERY 可能在 listener 建立前觸發）
+    if (window.location.hash.includes('type=recovery')) {
+      setPage('reset-password');
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) loadUser(session.user);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') { setPage('reset-password'); return; }
       if (session?.user) loadUser(session.user);
       else setUser(null);
     });
