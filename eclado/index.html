@@ -173,6 +173,32 @@ const PRODUCTS = [
     desc:'AHA、BHA、PHA三效合一，即時去除多餘角質，正常化肌膚更新週期。6種草本植萃成分，在溫和代謝老廢角質的同時，最小化酸類引起的肌膚刺激感。', skinType:'混合肌、毛孔堵塞肌、暗沉代謝慢膚況', ingredients:'乳酸、甘醇酸、葡萄糖酸內酯、馬齒莧萃取、積雪草萃取、蘆薈葉萃取', features:['三酸溫和煥膚','6種草本舒緩刺激','改善暗沉毛孔'] },
 ];
 
+const MEMBER_TIERS = {
+  consumer:    { label:'一般會員', badge:'MEMBER', priceLabel:'一般價', multiplier:null },
+  pro:         { label:'美容師', badge:'PRO', priceLabel:'專業價', multiplier:1 },
+  instructor:  { label:'師資', badge:'師資', priceLabel:'師資價・專業價7折', multiplier:0.7 },
+  distributor: { label:'經銷商', badge:'經銷', priceLabel:'經銷價・專業價65折', multiplier:0.65 },
+  pending:     { label:'審核中', badge:'審核中', priceLabel:'一般價', multiplier:null },
+};
+
+function getMemberRole(user) {
+  return user?.role || (user?.isPro ? 'pro' : 'consumer');
+}
+
+function isProfessionalMember(user) {
+  return ['pro', 'instructor', 'distributor'].includes(getMemberRole(user));
+}
+
+function getMemberTier(user) {
+  return MEMBER_TIERS[getMemberRole(user)] || MEMBER_TIERS.consumer;
+}
+
+function getMemberPrice(product, user) {
+  const tier = getMemberTier(user);
+  if (!tier.multiplier) return product.price;
+  return Math.round(product.proPrice * tier.multiplier);
+}
+
 // ─── PROMOTION HELPERS ────────────────────────────────────────────────────────
 // Supabase integer[] 有時是數字、有時是字串，統一成數字 id
 function normProductIds(p) {
@@ -197,8 +223,7 @@ function isPromotionLive(p) {
 
 // 用購物車與目前生效的活動，回傳折扣計算結果
 function calculateDiscount(cart, promotions, user) {
-  const isPro = !!user?.isPro;
-  const unit = item => isPro ? item.proPrice : item.price;
+  const unit = item => getMemberPrice(item, user);
   const subtotal = cart.reduce((s, i) => s + unit(i) * i.qty, 0);
 
   if (!Array.isArray(promotions) || promotions.length === 0) {
@@ -337,7 +362,7 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
           <div className="nav-right">
             {user ? (
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                {user.isPro && <span style={{ fontSize:10, letterSpacing:'0.1em', background: darkMode ? 'var(--black)' : 'rgba(255,255,255,0.15)', color:'var(--white)', padding:'3px 8px', fontWeight:500 }}>PRO</span>}
+                {isProfessionalMember(user) && <span style={{ fontSize:10, letterSpacing:'0.1em', background: darkMode ? 'var(--black)' : 'rgba(255,255,255,0.15)', color:'var(--white)', padding:'3px 8px', fontWeight:500 }}>{getMemberTier(user).badge}</span>}
                 <button onClick={() => setPage('account')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)' }}>{user.name}</button>
                 <button onClick={() => setUser()} style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color: darkMode ? 'var(--mid)' : 'rgba(255,255,255,0.5)', fontFamily:'var(--font-body)' }}>登出</button>
               </div>
@@ -378,7 +403,7 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
           <div style={{ borderTop:'1px solid var(--light)', paddingTop:24, marginTop:8, display:'flex', flexDirection:'column', gap:16 }}>
             {user ? (
               <>
-                <span style={{ fontSize:14, color:'var(--dark)' }}>{user.isPro && <span style={{ fontSize:10, background:'var(--black)', color:'var(--white)', padding:'2px 7px', marginRight:8 }}>PRO</span>}{user.name}</span>
+                <span style={{ fontSize:14, color:'var(--dark)' }}>{isProfessionalMember(user) && <span style={{ fontSize:10, background:'var(--black)', color:'var(--white)', padding:'2px 7px', marginRight:8 }}>{getMemberTier(user).badge}</span>}{user.name}</span>
                 <button onClick={() => { setUser(); setDrawerOpen(false); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'var(--dark)', textAlign:'left', padding:0 }}>登出</button>
               </>
             ) : null}
@@ -672,7 +697,9 @@ function ProductDetail({ product, user, onAdd, onBack, promotions = [] }) {
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const isMobile = useIsMobile();
-  const showPrice = user?.isPro ? product.proPrice : product.price;
+  const showPrice = getMemberPrice(product, user);
+  const priceTier = getMemberTier(user);
+  const hasTierPrice = isProfessionalMember(user);
 
   const livePromosForProduct = (promotions || []).filter(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));
   const primaryPromo = livePromosForProduct[0];
@@ -738,9 +765,9 @@ function ProductDetail({ product, user, onAdd, onBack, promotions = [] }) {
             <div style={{ borderTop:'1px solid var(--light)', borderBottom:'1px solid var(--light)', padding:'20px 0', marginBottom:28 }}>
               <div style={{ display:'flex', alignItems:'baseline', gap:12, flexWrap:'wrap' }}>
                 <span style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, color:'var(--black)' }}>NT$ {showPrice.toLocaleString()}</span>
-                {user?.isPro && <>
+                {hasTierPrice && <>
                   <span style={{ fontSize:13, color:'var(--dark)', textDecoration:'line-through' }}>NT$ {product.price.toLocaleString()}</span>
-                  <span style={{ fontSize:10, background:'var(--gold)', color:'var(--white)', padding:'3px 8px', letterSpacing:'0.1em', fontWeight:500 }}>專業價</span>
+                  <span style={{ fontSize:10, background:'var(--gold)', color:'var(--white)', padding:'3px 8px', letterSpacing:'0.1em', fontWeight:500 }}>{priceTier.priceLabel}</span>
                 </>}
               </div>
             </div>
@@ -790,7 +817,9 @@ function ProductDetail({ product, user, onAdd, onBack, promotions = [] }) {
 // ─── PRODUCT CARD ─────────────────────────────────────────────────────────────
 function ProductCard({ product, user, onAdd, onSelect, promotions = [] }) {
   const [hovered, setHovered] = useState(false);
-  const showPrice = user?.isPro ? product.proPrice : product.price;
+  const showPrice = getMemberPrice(product, user);
+  const priceTier = getMemberTier(user);
+  const hasTierPrice = isProfessionalMember(user);
   const onPromo = promotions.some(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));
   return (
     <div onClick={onSelect} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ cursor:'pointer', position:'relative' }}>
@@ -811,8 +840,8 @@ function ProductCard({ product, user, onAdd, onSelect, promotions = [] }) {
         <p style={{ fontSize:12, color:'var(--dark)', marginBottom:8 }}>{product.nameZh} · {product.size}</p>
         <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
           <span style={{ fontSize:15, fontWeight:500, color:'var(--black)' }}>NT$ {showPrice.toLocaleString()}</span>
-          {user?.isPro && <span style={{ fontSize:11, color:'var(--dark)', textDecoration:'line-through' }}>NT$ {product.price.toLocaleString()}</span>}
-          {user?.isPro && <span style={{ fontSize:10, background:'var(--off-white)', color:'var(--dark)', padding:'2px 6px' }}>專業價</span>}
+          {hasTierPrice && <span style={{ fontSize:11, color:'var(--dark)', textDecoration:'line-through' }}>NT$ {product.price.toLocaleString()}</span>}
+          {hasTierPrice && <span style={{ fontSize:10, background:'var(--off-white)', color:'var(--dark)', padding:'2px 6px' }}>{priceTier.priceLabel}</span>}
         </div>
       </div>
     </div>
@@ -825,7 +854,7 @@ function PromoSection({ promo, user, addToCart, onSelect, isMobile, promotions =
   const items = ids
     .map(id => PRODUCTS.find(p => p.id === id))
     .filter(Boolean)
-    .filter(p => !p.isProOnly || user?.isPro);
+    .filter(p => !p.isProOnly || isProfessionalMember(user));
   if (items.length === 0) {
     return (
       <section style={{ background:'var(--white)', padding: isMobile ? '48px 0' : '72px 0', borderTop:'1px solid var(--light)', borderBottom:'1px solid var(--light)' }}>
@@ -880,7 +909,7 @@ function ShopPage({ user, cart, setCart, promotions = [] }) {
   }
 
   const filtered = PRODUCTS.filter(p => {
-    if (p.isProOnly && !user?.isPro) return false;
+    if (p.isProOnly && !isProfessionalMember(user)) return false;
     if (activeCategory === '全部') return true;
     return p.category === activeCategory;
   });
@@ -915,10 +944,10 @@ function ShopPage({ user, cart, setCart, promotions = [] }) {
             </div>
             <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 28 : 42, fontWeight:300, color:'var(--white)', lineHeight:1.1, margin:0 }}>全部商品</h1>
           </div>
-          {user?.isPro && (
+          {isProfessionalMember(user) && (
             <div style={{ display:'flex', alignItems:'center', gap:8, paddingBottom:4 }}>
-              <span style={{ fontSize:10, background:'var(--gold)', color:'var(--black)', padding:'3px 8px', letterSpacing:'0.12em', fontWeight:600 }}>PRO</span>
-              <span style={{ fontSize:12, color:'rgba(255,255,255,0.6)', letterSpacing:'0.04em' }}>美容師專業折扣已啟用</span>
+              <span style={{ fontSize:10, background:'var(--gold)', color:'var(--black)', padding:'3px 8px', letterSpacing:'0.12em', fontWeight:600 }}>{getMemberTier(user).badge}</span>
+              <span style={{ fontSize:12, color:'rgba(255,255,255,0.6)', letterSpacing:'0.04em' }}>{getMemberTier(user).priceLabel}已啟用</span>
             </div>
           )}
         </div>
@@ -993,7 +1022,7 @@ function CartPage({ cart, setCart, setPage, user, promotions = [] }) {
                     </div>
                   </div>
                   <div style={{ textAlign:'right' }}>
-                    <p style={{ fontSize:14, fontWeight:500 }}>NT$ {((user?.isPro ? item.proPrice : item.price)*item.qty).toLocaleString()}</p>
+                    <p style={{ fontSize:14, fontWeight:500 }}>NT$ {(getMemberPrice(item, user)*item.qty).toLocaleString()}</p>
                     <button onClick={() => updateQty(item.id,-item.qty)} style={{ background:'none', border:'none', cursor:'pointer', fontSize:11, color:'var(--dark)', marginTop:6 }}>移除</button>
                   </div>
                 </div>
@@ -1075,8 +1104,8 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
     const order = {
       id: orderNo,
       member: form.name || user?.name || '訪客',
-      type: user?.isPro ? 'pro' : 'consumer',
-      items: cart.map(i => ({ name: i.nameZh, qty: i.qty, price: user?.isPro ? i.proPrice : i.price })),
+      type: getMemberRole(user),
+      items: cart.map(i => ({ name: i.nameZh, qty: i.qty, price: getMemberPrice(i, user) })),
       total: total,
       subtotal: subtotal,
       discount: discount,
@@ -1148,7 +1177,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
         <h3 style={{ fontFamily:'var(--font-display)', fontSize:16, fontWeight:400, marginBottom:20, letterSpacing:'0.04em' }}>訂單明細</h3>
         <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:18 }}>
           {cart.map(item => {
-            const unitPrice = user?.isPro ? item.proPrice : item.price;
+            const unitPrice = getMemberPrice(item, user);
             return (
               <div key={item.id} style={{ display:'flex', gap:12, alignItems:'center' }}>
                 <div style={{ width:48, height:48, flexShrink:0, position:'relative' }}>
@@ -1951,6 +1980,7 @@ function App() {
     setUser({
       name: supabaseUser.email.split('@')[0],
       email: supabaseUser.email,
+      role: data?.role || 'consumer',
       isPro: data?.role === 'pro',
       uid: supabaseUser.id,
     });

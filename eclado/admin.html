@@ -131,6 +131,8 @@ const INIT_MEMBERS = [
   { id: 6, name: '黃小玲', email: 'huang@beauty.tw', type: 'pending', joined: '2026-03-01', orders: 0, total: 0, phone: '0967-890-123', cert: '申請審核中' },
   { id: 7, name: '吳雅婷', email: 'wu@spa.com', type: 'pro', joined: '2026-03-05', orders: 5, total: 28500, phone: '0978-901-234', cert: '美容乙級 #20250607' },
   { id: 8, name: '鄭淑惠', email: 'cheng@gmail.com', type: 'consumer', joined: '2026-03-12', orders: 4, total: 11200, phone: '0989-012-345' },
+  { id: 9, name: '許講師', email: 'instructor@beauty.tw', type: 'instructor', joined: '2026-04-02', orders: 6, total: 33600, phone: '0900-111-222', cert: '品牌教育師' },
+  { id: 10, name: '台中經銷', email: 'dealer@beauty.tw', type: 'distributor', joined: '2026-04-12', orders: 9, total: 92000, phone: '0900-333-444', cert: '中區經銷商' },
 ];
 
 const INIT_ORDERS = [
@@ -216,13 +218,14 @@ function PromoBadge({ phase }) {
 
 // 以 cart 與目前生效的 promotions 計算折扣
 // 回傳 { subtotal, discount, finalSubtotal, promotion }
-//   subtotal: 商品原小計（依 user 是否 PRO 取對應價）
+//   subtotal: 商品原小計（依會員角色取對應價）
 //   discount: 折抵金額（>=0）
 //   finalSubtotal: 商品折扣後小計（不含運費）
 //   promotion: 命中的活動物件（沒命中則為 null）
 function calculateDiscount(cart, promotions, user) {
-  const isPro = !!user?.isPro;
-  const unit = item => isPro ? item.proPrice : item.price;
+  const role = user?.role || (user?.isPro ? 'pro' : 'consumer');
+  const multipliers = { pro: 1, instructor: 0.7, distributor: 0.65 };
+  const unit = item => multipliers[role] ? Math.round(item.proPrice * multipliers[role]) : item.price;
   const subtotal = cart.reduce((s, i) => s + unit(i) * i.qty, 0);
 
   if (!Array.isArray(promotions) || promotions.length === 0) {
@@ -295,7 +298,13 @@ function StatusSelect({ status, onChange, size = 'sm' }) {
 }
 
 function TypeBadge({ type }) {
-  const map = { pro: { label: 'PRO 美容師', color: 'var(--dark)' }, consumer: { label: '一般會員', color: 'var(--mid)' }, pending: { label: '審核中', color: 'var(--yellow)' } };
+  const map = {
+    pro: { label: '美容師', color: 'var(--dark)' },
+    instructor: { label: '師資', color: 'var(--gold)' },
+    distributor: { label: '經銷商', color: 'var(--green)' },
+    consumer: { label: '一般會員', color: 'var(--mid)' },
+    pending: { label: '審核中', color: 'var(--yellow)' },
+  };
   const t = map[type] || { label: type, color: 'var(--mid)' };
   return (
     <span style={{ display: 'inline-block', padding: '3px 10px', fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', background: t.color + '18', color: t.color, borderRadius: 2 }}>{t.label}</span>
@@ -428,7 +437,7 @@ function Dashboard({ orders, products, members }) {
   const lowStock = products.filter(p => p.stock <= p.minStock);
   const pendingOrders = orders.filter(o => ['awaiting_confirm', 'paid', 'preparing'].includes(o.status));
   const awaitingConfirm = orders.filter(o => o.status === 'awaiting_confirm');
-  const proMembers = members.filter(m => m.type === 'pro');
+  const proMembers = members.filter(m => ['pro', 'instructor', 'distributor'].includes(m.type));
 
   return (
     <div>
@@ -441,7 +450,7 @@ function Dashboard({ orders, products, members }) {
       <div className="stat-grid-4" style={{ marginBottom: 32 }}>
         <StatCard label="本月營業額" value={`NT$ ${thisMonth.revenue.toLocaleString()}`} sub={`較上月 ${growth > 0 ? '+' : ''}${growth}%`} accent="var(--dark)" icon="◐" />
         <StatCard label="轉帳待確認" value={awaitingConfirm.length} sub={awaitingConfirm.length > 0 ? '請儘快對帳確認' : '目前無待確認'} accent={awaitingConfirm.length > 0 ? 'var(--red)' : 'var(--green)'} icon="◫" />
-        <StatCard label="美容師會員" value={proMembers.length} sub={`共 ${members.length} 位會員`} accent="var(--dark)" icon="◎" />
+        <StatCard label="專業會員" value={proMembers.length} sub={`共 ${members.length} 位會員`} accent="var(--dark)" icon="◎" />
         <StatCard label="庫存警示" value={lowStock.length} sub="件商品庫存不足" accent={lowStock.length > 0 ? 'var(--red)' : 'var(--green)'} icon="◉" />
       </div>
 
@@ -833,8 +842,8 @@ function Members({ members, setMembers, orders = [] }) {
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>會員管理</h1>
-          <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)' }}>
-            {[['all','全部'], ['pro','美容師'], ['consumer','一般'], ['pending','審核中']].map(([val, label]) => (
+          <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
+            {[['all','全部'], ['consumer','一般'], ['pro','美容師'], ['instructor','師資'], ['distributor','經銷商'], ['pending','審核中']].map(([val, label]) => (
               <button key={val} onClick={() => setFilter(val)} style={{
                 padding: '8px 16px', border: 'none', fontSize: 12,
                 background: filter === val ? 'var(--dark)' : 'transparent',
@@ -869,7 +878,9 @@ function Members({ members, setMembers, orders = [] }) {
                   <td style={{ padding: '13px 14px' }}>
                     <select value={m.type} onChange={e => { e.stopPropagation(); changeType(m.id, e.target.value); }} onClick={e => e.stopPropagation()} style={{ padding: '5px 8px', fontSize: 11, border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--dark)', cursor: 'pointer', outline: 'none' }}>
                       <option value="consumer">一般會員</option>
-                      <option value="pro">美容師 PRO</option>
+                      <option value="pro">美容師</option>
+                      <option value="instructor">師資</option>
+                      <option value="distributor">經銷商</option>
                       <option value="pending">審核中</option>
                     </select>
                   </td>
@@ -910,9 +921,11 @@ function Members({ members, setMembers, orders = [] }) {
           )}
           <div style={{ marginTop: 20 }}>
             <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 10, letterSpacing: '0.08em' }}>變更會員類型</div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button onClick={() => changeType(selected.id, 'consumer')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'consumer' ? 'var(--dark)' : 'none', color: selected.type === 'consumer' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: 'pointer' }}>一般會員</button>
-              <button onClick={() => changeType(selected.id, 'pro')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'pro' ? 'var(--dark)' : 'none', color: selected.type === 'pro' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: 'pointer' }}>PRO 美容師</button>
+              <button onClick={() => changeType(selected.id, 'pro')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'pro' ? 'var(--dark)' : 'none', color: selected.type === 'pro' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: 'pointer' }}>美容師</button>
+              <button onClick={() => changeType(selected.id, 'instructor')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'instructor' ? 'var(--dark)' : 'none', color: selected.type === 'instructor' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: 'pointer' }}>師資</button>
+              <button onClick={() => changeType(selected.id, 'distributor')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'distributor' ? 'var(--dark)' : 'none', color: selected.type === 'distributor' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: 'pointer' }}>經銷商</button>
             </div>
           </div>
 
