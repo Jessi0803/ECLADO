@@ -116,7 +116,9 @@
       window.supabase = null;
       return;
     }
-    window.supabase = lib.createClient(SUPABASE_URL, SUPABASE_ANON);
+    window.supabase = lib.createClient(SUPABASE_URL, SUPABASE_ANON, {
+      auth: { flowType: 'implicit' },
+    });
   })();
 
   function sbError(msg) {
@@ -1505,7 +1507,9 @@ function LoginPage({ setPage }) {
   async function handleForgot(e) {
     e.preventDefault(); reset(); setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://ecladotaiwan.com',
+      });
       if (error) { setError(sbError(error.message)); return; }
       setSuccess('✓ 密碼重設信已發送至 ' + email + '，請查收信箱。');
     } catch(err) { setError('網路異常，請確認連線'); }
