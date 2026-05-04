@@ -355,10 +355,9 @@ function MobileNavSection({ item, setPage, close }) {
 }
 
 // ─── HOME PAGE ────────────────────────────────────────────────────────────────
-function HomePage({ setPage, user, cart, setCart }) {
+function HomePage({ setPage, user, cart, setCart, onSelectProduct }) {
   const [slide, setSlide] = useState(0);
   const [animating, setAnimating] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -380,10 +379,6 @@ function HomePage({ setPage, user, cart, setCart }) {
   }
 
   const heroPad = isMobile ? '0 6vw' : '0 10vw';
-
-  if (selectedProduct) {
-    return <ProductDetail product={selectedProduct} user={user} onAdd={addToCart} onBack={() => setSelectedProduct(null)} />;
-  }
 
   return (
     <div>
@@ -499,7 +494,7 @@ function HomePage({ setPage, user, cart, setCart }) {
             <button onClick={() => setPage('shop')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'var(--dark)', fontFamily:'var(--font-body)', borderBottom:'1px solid var(--dark)', paddingBottom:2, whiteSpace:'nowrap' }}>全部商品 →</button>
           </div>
           <div className="g4">
-            {featured.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} />)}
+            {featured.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => onSelectProduct(p)} />)}
           </div>
         </div>
       </section>
@@ -723,9 +718,8 @@ function ProductCard({ product, user, onAdd, onSelect }) {
 }
 
 // ─── SHOP PAGE ────────────────────────────────────────────────────────────────
-function ShopPage({ user, cart, setCart }) {
+function ShopPage({ user, cart, setCart, onSelectProduct }) {
   const [activeCategory, setActiveCategory] = useState('全部');
-  const [selectedProduct, setSelectedProduct] = useState(null);
   const categories = ['全部', ...NAV_LINKS];
   const isMobile = useIsMobile();
 
@@ -742,10 +736,6 @@ function ShopPage({ user, cart, setCart }) {
     if (activeCategory === '全部') return true;
     return p.category === activeCategory;
   });
-
-  if (selectedProduct) {
-    return <ProductDetail product={selectedProduct} user={user} onAdd={addToCart} onBack={() => setSelectedProduct(null)} />;
-  }
 
   return (
     <div style={{ paddingTop:68 }}>
@@ -786,7 +776,7 @@ function ShopPage({ user, cart, setCart }) {
       <div style={{ maxWidth:1280, margin:'0 auto', padding: isMobile ? '40px 20px' : '60px 32px' }}>
         {false && null /* pro banner moved to header */}
         <div className="g4lg">
-          {filtered.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} />)}
+          {filtered.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => onSelectProduct(p)} />)}
         </div>
         {filtered.length === 0 && <div style={{ textAlign:'center', padding:'80px 0', color:'var(--dark)', fontSize:14 }}>此分類目前無商品</div>}
       </div>
@@ -1566,6 +1556,15 @@ function App() {
   const [page, setPage] = useState('home');
   const [user, setUser] = useState(null);
   const [cart, setCart] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
+  function addToCart(product) {
+    setCart(prev => {
+      const ex = prev.find(i => i.id === product.id);
+      if (ex) return prev.map(i => i.id === product.id ? {...i, qty: i.qty+1} : i);
+      return [...prev, {...product, qty:1}];
+    });
+  }
   const cartCount = cart.reduce((sum,i) => sum+i.qty, 0);
 
   // 從 profiles 表讀取角色
@@ -1601,21 +1600,24 @@ function App() {
   }
 
   function renderPage() {
+    if (selectedProduct) {
+      return <ProductDetail product={selectedProduct} user={user} onAdd={addToCart} onBack={() => { setSelectedProduct(null); window.scrollTo(0,0); }} />;
+    }
     switch (page) {
-      case 'home':     return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} />;
-      case 'shop':     return <ShopPage user={user} cart={cart} setCart={setCart} />;
+      case 'home':     return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} onSelectProduct={setSelectedProduct} />;
+      case 'shop':     return <ShopPage user={user} cart={cart} setCart={setCart} onSelectProduct={setSelectedProduct} />;
       case 'cart':     return <CartPage cart={cart} setCart={setCart} setPage={setPage} />;
       case 'checkout': return <CheckoutPage cart={cart} setCart={setCart} setPage={setPage} user={user} />;
       case 'login':    return <LoginPage setPage={setPage} />;
       case 'about':    return <AboutPage />;
       case 'info':     return <InfoPage />;
-      default:         return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} />;
+      default:         return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} onSelectProduct={setSelectedProduct} />;
     }
   }
 
   return (
     <>
-      {page !== 'login' && <Nav setPage={setPage} cartCount={cartCount} user={user} setUser={handleSignOut} page={page} />}
+      {page !== 'login' && <Nav setPage={setPage} cartCount={cartCount} user={user} setUser={handleSignOut} page={selectedProduct ? 'product' : page} />}
       {renderPage()}
     </>
   );
