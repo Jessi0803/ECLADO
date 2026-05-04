@@ -1495,8 +1495,22 @@ function LoginPage({ setPage }) {
     if (password !== confirm) { setError('兩次密碼不一致'); return; }
     setLoading(true);
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+      const { data: existingProfile, error: profileCheckError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', normalizedEmail)
+        .maybeSingle();
+      if (profileCheckError) {
+        console.warn('[ECLADO] 檢查會員是否存在失敗：', profileCheckError.message);
+      }
+      if (existingProfile) {
+        setError('此 Email 已註冊會員，請直接登入或使用忘記密碼。');
+        return;
+      }
+
       const { data, error } = await supabase.auth.signUp({
-        email, password,
+        email: normalizedEmail, password,
         options: {
           data: { name, phone, role: 'consumer' },
           emailRedirectTo: getAuthRedirectUrl(),
@@ -1507,13 +1521,13 @@ function LoginPage({ setPage }) {
       if (data?.user?.id) {
         await supabase.from('profiles').upsert({
           id: data.user.id,
-          email, name, phone, role: 'consumer',
+          email: normalizedEmail, name, phone, role: 'consumer',
         });
       }
       if (data?.session) {
         setSuccess('✓ 會員已建立完成，請直接登入。');
       } else {
-        setSuccess('✓ 驗證信已發送！請查收 ' + email + ' 並點擊驗證連結後再登入。若未收到，請檢查垃圾郵件或稍後再試一次。');
+        setSuccess('✓ 驗證信已發送！請查收 ' + normalizedEmail + ' 並點擊驗證連結後再登入。若未收到，請檢查垃圾郵件或稍後再試一次。');
       }
       setView('login');
     } catch(err) { setError('網路異常，請確認連線'); }
