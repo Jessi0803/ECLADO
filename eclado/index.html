@@ -540,22 +540,6 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
           </div>
         )}
 
-        {/* 限時優惠：固定在首屏可見（多數人沒往下捲會看不到活動區） */}
-        {livePromos.length > 0 && (
-          <div style={{ position:'absolute', bottom: isMobile ? 88 : 96, left:'50%', transform:'translateX(-50%)', zIndex:12, width:'min(92vw, 420px)', textAlign:'center' }}>
-            <button
-              type="button"
-              onClick={() => document.getElementById('eclado-promotions')?.scrollIntoView({ behavior:'smooth', block:'start' })}
-              style={{
-                width:'100%', background:'rgba(184,169,138,0.95)', color:'var(--black)', border:'none',
-                padding:'12px 20px', fontSize:12, letterSpacing:'0.14em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500,
-                boxShadow:'0 8px 32px rgba(0,0,0,0.25)',
-              }}
-            >
-              限時優惠進行中 · 點此前往活動專區
-            </button>
-          </div>
-        )}
       </section>
 
       {/* BRAND STRIP */}
@@ -849,10 +833,11 @@ function PromoSection({ promo, user, addToCart, onSelect, isMobile, promotions =
     .filter(p => !p.isProOnly || user?.isPro);
   if (items.length === 0) {
     return (
-      <section style={{ background:'linear-gradient(135deg, #1a1a18 0%, #2a2520 100%)', padding: isMobile ? '40px 0' : '56px 0', color:'var(--white)' }}>
+      <section style={{ background:'var(--white)', padding: isMobile ? '48px 0' : '72px 0', borderTop:'1px solid var(--light)', borderBottom:'1px solid var(--light)' }}>
         <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
-          <p style={{ fontSize:13, color:'rgba(255,255,255,0.75)', lineHeight:1.7 }}>
-            活動「<strong>{promo.name}</strong>」已建立，但目前<strong>沒有可顯示的商品</strong>。
+          <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', marginBottom:10 }}>限時優惠</p>
+          <p style={{ fontSize:14, color:'#555', lineHeight:1.75 }}>
+            活動「<strong style={{ color:'var(--black)' }}>{promo.name}</strong>」已建立，但目前<strong>沒有可顯示的商品</strong>。
             請到後台確認已勾選商品，且商品編號需與官網一致（一般為 1～8）。
             {ids.length === 0 && '（目前 product_ids 為空）'}
           </p>
@@ -864,25 +849,20 @@ function PromoSection({ promo, user, addToCart, onSelect, isMobile, promotions =
   const formula = `原價 × ${promo.discount_rate}` + (Number(promo.discount_amount) > 0 ? ` − NT$ ${Number(promo.discount_amount).toLocaleString()}` : '');
 
   return (
-    <section style={{ background:'linear-gradient(135deg, #1a1a18 0%, #2a2520 100%)', padding: isMobile ? '60px 0' : '90px 0', color:'var(--white)' }}>
+    <section style={{ background:'var(--white)', padding: isMobile ? '60px 0' : '100px 0', borderTop:'1px solid var(--light)', borderBottom:'1px solid var(--light)' }}>
       <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom: isMobile ? 28 : 40, flexWrap:'wrap', gap:20 }}>
-          <div style={{ flex:1, minWidth:240 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
-              <span style={{ background:'var(--gold)', color:'var(--white)', fontSize:10, padding:'3px 10px', letterSpacing:'0.16em', textTransform:'uppercase', fontWeight:500 }}>限時優惠</span>
-              <span style={{ fontSize:11, color:'rgba(255,255,255,0.55)', letterSpacing:'0.18em', textTransform:'uppercase' }}>Limited Offer</span>
-            </div>
-            <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(26px,4vw,46px)', fontWeight:300, lineHeight:1.15, marginBottom:12 }}>{promo.name}</h2>
-            {promo.description && (
-              <p style={{ fontSize:14, color:'rgba(255,255,255,0.7)', lineHeight:1.7, maxWidth:560, marginBottom:8 }}>{promo.description}</p>
-            )}
-            <p style={{ fontSize:12, color:'var(--gold)', letterSpacing:'0.1em', marginTop:6 }}>結帳自動套用：{formula}</p>
-          </div>
+        <div style={{ marginBottom: isMobile ? 36 : 56 }}>
+          <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', marginBottom:10 }}>限時優惠</p>
+          <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(26px,4vw,52px)', fontWeight:300, lineHeight:1.1, color:'var(--black)', marginBottom:12 }}>{promo.name}</h2>
+          {promo.description && (
+            <p style={{ fontSize:14, color:'#555', lineHeight:1.75, maxWidth:560, marginBottom:10 }}>{promo.description}</p>
+          )}
+          <p style={{ fontSize:12, color:'var(--dark)', letterSpacing:'0.06em' }}>結帳自動套用：{formula}</p>
         </div>
 
         <div className="g4">
           {items.map(p => (
-            <div key={p.id} style={{ background:'var(--white)', color:'var(--black)', padding:14 }}>
+            <div key={p.id} style={{ background:'var(--off-white)', color:'var(--black)', padding:14, border:'1px solid var(--light)' }}>
               <ProductCard product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => onSelect(p)} promotions={promotions} />
             </div>
           ))}
@@ -923,20 +903,12 @@ function ShopPage({ user, cart, setCart, promotions = [] }) {
     <div style={{ paddingTop:68 }}>
       {livePromosShop.length > 0 && (
         <div style={{
-          background:'linear-gradient(90deg, #2a2318, #1a1a18)', borderBottom:'1px solid rgba(184,169,138,0.45)',
-          padding:'12px 20px', textAlign:'center',
+          background:'var(--off-white)', borderBottom:'1px solid var(--light)',
+          padding:'14px 20px', textAlign:'center',
         }}>
-          <span style={{ fontSize:13, color:'rgba(255,255,255,0.88)', letterSpacing:'0.04em' }}>
+          <span style={{ fontSize:13, color:'var(--dark)', letterSpacing:'0.04em', lineHeight:1.6 }}>
             限時優惠進行中：購物車內含活動商品時會自動折抵。
           </span>
-          <button
-            type="button"
-            onClick={() => { window.location.href = '/#eclado-promotions'; }}
-            style={{
-              marginLeft:14, background:'var(--gold)', color:'var(--black)', border:'none',
-              padding:'6px 14px', fontSize:11, letterSpacing:'0.1em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500,
-            }}
-          >回首頁看活動</button>
         </div>
       )}
       {/* 頂部 header */}
@@ -1005,7 +977,6 @@ function CartPage({ cart, setCart, setPage, user, promotions = [] }) {
         {cart.length > 0 && promotions.some(isPromotionLive) && discount === 0 && (
           <div style={{ background:'var(--off-white)', border:'1px solid var(--gold)', padding:'14px 18px', marginBottom:24, fontSize:13, color:'var(--dark)', lineHeight:1.65 }}>
             目前有<strong>限時優惠</strong>，但購物車內還沒有「活動指定商品」，所以尚無折抵。
-            <button type="button" onClick={() => setPage('home')} style={{ marginLeft:10, background:'var(--black)', color:'var(--white)', border:'none', padding:'6px 14px', fontSize:11, letterSpacing:'0.08em', cursor:'pointer' }}>回首頁看活動</button>
           </div>
         )}
 
@@ -1872,16 +1843,10 @@ function App() {
 
   // 監聽 Supabase 登入狀態
   useEffect(() => {
-    // 直接檢查 URL hash，處理密碼重設連結（PASSWORD_RECOVERY 可能在 listener 建立前觸發）
-    if (window.location.hash.includes('type=recovery')) {
-      setPage('reset-password');
-    }
-
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) loadUser(session.user);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') { setPage('reset-password'); return; }
       if (session?.user) loadUser(session.user);
       else setUser(null);
     });
@@ -1931,7 +1896,7 @@ function App() {
     return () => { if (ch) sb.removeChannel(ch); };
   }, []);
 
-  // 網址列 #eclado-promotions 時捲到活動區（例如從商店頁「回首頁看活動」）
+  // 網址列 #eclado-promotions 時捲到活動區
   useEffect(() => {
     if (window.location.hash !== '#eclado-promotions') return;
     const t = setTimeout(() => {
