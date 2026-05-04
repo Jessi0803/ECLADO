@@ -164,6 +164,56 @@ const PRODUCTS = [
     desc:'AHA、BHA、PHA三效合一，即時去除多餘角質，正常化肌膚更新週期。6種草本植萃成分，在溫和代謝老廢角質的同時，最小化酸類引起的肌膚刺激感。', skinType:'混合肌、毛孔堵塞肌、暗沉代謝慢膚況', ingredients:'乳酸、甘醇酸、葡萄糖酸內酯、馬齒莧萃取、積雪草萃取、蘆薈葉萃取', features:['三酸溫和煥膚','6種草本舒緩刺激','改善暗沉毛孔'] },
 ];
 
+// ─── PROMOTION HELPERS ────────────────────────────────────────────────────────
+function isPromotionLive(p, now = new Date()) {
+  if (!p.active) return false;
+  if (p.start_at && new Date(p.start_at) > now) return false;
+  if (p.end_at && new Date(p.end_at) < now) return false;
+  return true;
+}
+
+// 用購物車與目前生效的活動，回傳折扣計算結果
+function calculateDiscount(cart, promotions, user) {
+  const isPro = !!user?.isPro;
+  const unit = item => isPro ? item.proPrice : item.price;
+  const subtotal = cart.reduce((s, i) => s + unit(i) * i.qty, 0);
+
+  if (!Array.isArray(promotions) || promotions.length === 0) {
+    return { subtotal, discount: 0, finalSubtotal: subtotal, promotion: null };
+  }
+  const live = promotions.filter(p => isPromotionLive(p));
+  for (const p of live) {
+    const ids = new Set((p.product_ids || []).map(Number));
+    const promoItems = cart.filter(i => ids.has(Number(i.id)));
+    if (promoItems.length === 0) continue;
+    const promoSubtotal = promoItems.reduce((s, i) => s + unit(i) * i.qty, 0);
+    const rate = Number(p.discount_rate) || 1;
+    const amount = Number(p.discount_amount) || 0;
+    const afterPromo = Math.max(0, promoSubtotal * rate - amount);
+    const discount = Math.round(promoSubtotal - afterPromo);
+    return { subtotal, discount, finalSubtotal: subtotal - discount, promotion: p };
+  }
+  return { subtotal, discount: 0, finalSubtotal: subtotal, promotion: null };
+}
+
+// 倒數計時 hook（每秒更新）
+function useCountdown(targetISO) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!targetISO) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [targetISO]);
+  if (!targetISO) return null;
+  const diff = new Date(targetISO).getTime() - now;
+  if (diff <= 0) return { ended: true, days: 0, hours: 0, minutes: 0, seconds: 0 };
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const minutes = Math.floor((diff % 3600000) / 60000);
+  const seconds = Math.floor((diff % 60000) / 1000);
+  return { ended: false, days, hours, minutes, seconds };
+}
+
 const HERO_SLIDES = [
   { headline:'Glow\nBeyond Limits.', sub:'自1998年創立，深耕專業院線皮膚管理28年，足跡遍佈全球23個國家，以147支完整療程系列支援每一位皮膚管理師，台灣獨家代理。', cta:'探索系列', img:'https://images.unsplash.com/photo-1629732097571-b042b35aa3ed?w=1800&q=85&fit=crop', layout:'left', accent:'ECLADO LABORATORY' },
   { headline:'Human\nClinical Proven.', sub:'每一款產品皆通過人體臨床實驗，皮膚刺激指數達0.000，無一例外。韓國美容業中擁有最多人體研究數據，150所美容學院指定品牌。', cta:'查看臨床實證', img:'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=1800&q=85&fit=crop', layout:'center', accent:'人體實驗 · 無一例外' },
@@ -364,11 +414,12 @@ function MobileNavSection({ item, setPage, close }) {
 }
 
 // ─── HOME PAGE ────────────────────────────────────────────────────────────────
-function HomePage({ setPage, user, cart, setCart }) {
+function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
   const [slide, setSlide] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const isMobile = useIsMobile();
+  const livePromos = promotions.filter(isPromotionLive);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -497,6 +548,11 @@ function HomePage({ setPage, user, cart, setCart }) {
         </div>
       </section>
 
+      {/* LIVE PROMOTIONS */}
+      {livePromos.map(promo => (
+        <PromoSection key={promo.id} promo={promo} user={user} addToCart={addToCart} onSelect={setSelectedProduct} isMobile={isMobile} promotions={promotions} />
+      ))}
+
       {/* FEATURED PRODUCTS */}
       <section style={{ padding: isMobile ? '60px 0' : '100px 0', background:'var(--white)' }}>
         <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
@@ -508,7 +564,7 @@ function HomePage({ setPage, user, cart, setCart }) {
             <button onClick={() => setPage('shop')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'var(--dark)', fontFamily:'var(--font-body)', borderBottom:'1px solid var(--dark)', paddingBottom:2, whiteSpace:'nowrap' }}>全部商品 →</button>
           </div>
           <div className="g4">
-            {featured.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} />)}
+            {featured.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} promotions={promotions} />)}
           </div>
         </div>
       </section>
@@ -714,11 +770,15 @@ function ProductDetail({ product, user, onAdd, onBack }) {
 }
 
 // ─── PRODUCT CARD ─────────────────────────────────────────────────────────────
-function ProductCard({ product, user, onAdd, onSelect }) {
+function ProductCard({ product, user, onAdd, onSelect, promotions = [] }) {
   const [hovered, setHovered] = useState(false);
   const showPrice = user?.isPro ? product.proPrice : product.price;
+  const onPromo = promotions.some(p => isPromotionLive(p) && (p.product_ids || []).map(Number).includes(Number(product.id)));
   return (
     <div onClick={onSelect} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ cursor:'pointer', position:'relative' }}>
+      {onPromo && (
+        <div style={{ position:'absolute', top:10, right:10, zIndex:3, background:'var(--gold)', color:'var(--white)', fontSize:10, padding:'3px 9px', letterSpacing:'0.1em', fontWeight:500 }}>活動中</div>
+      )}
       {product.tag && (
         <div style={{ position:'absolute', top:10, left:10, zIndex:2, background: product.tag==='院線'?'var(--dark)':'var(--gold)', color:'var(--white)', fontSize:10, padding:'3px 9px', letterSpacing:'0.1em' }}>{product.tag}</div>
       )}
@@ -741,8 +801,68 @@ function ProductCard({ product, user, onAdd, onSelect }) {
   );
 }
 
+// ─── PROMO SECTION (homepage) ────────────────────────────────────────────────
+function PromoSection({ promo, user, addToCart, onSelect, isMobile, promotions = [] }) {
+  const cd = useCountdown(promo.end_at);
+  const items = (promo.product_ids || [])
+    .map(id => PRODUCTS.find(p => p.id === Number(id)))
+    .filter(Boolean)
+    .filter(p => !p.isProOnly || user?.isPro);
+  if (items.length === 0) return null;
+
+  const formula = `原價 × ${promo.discount_rate}` + (Number(promo.discount_amount) > 0 ? ` − NT$ ${Number(promo.discount_amount).toLocaleString()}` : '');
+
+  return (
+    <section style={{ background:'linear-gradient(135deg, #1a1a18 0%, #2a2520 100%)', padding: isMobile ? '60px 0' : '90px 0', color:'var(--white)' }}>
+      <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom: isMobile ? 28 : 40, flexWrap:'wrap', gap:20 }}>
+          <div style={{ flex:1, minWidth:240 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
+              <span style={{ background:'var(--gold)', color:'var(--white)', fontSize:10, padding:'3px 10px', letterSpacing:'0.16em', textTransform:'uppercase', fontWeight:500 }}>限時優惠</span>
+              <span style={{ fontSize:11, color:'rgba(255,255,255,0.55)', letterSpacing:'0.18em', textTransform:'uppercase' }}>Limited Offer</span>
+            </div>
+            <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(26px,4vw,46px)', fontWeight:300, lineHeight:1.15, marginBottom:12 }}>{promo.name}</h2>
+            {promo.description && (
+              <p style={{ fontSize:14, color:'rgba(255,255,255,0.7)', lineHeight:1.7, maxWidth:560, marginBottom:8 }}>{promo.description}</p>
+            )}
+            <p style={{ fontSize:12, color:'var(--gold)', letterSpacing:'0.1em', marginTop:6 }}>結帳自動套用：{formula}</p>
+          </div>
+
+          {/* 倒數 */}
+          {cd && !cd.ended && (
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)', letterSpacing:'0.16em', textTransform:'uppercase' }}>距離結束</span>
+              <div style={{ display:'flex', gap:6 }}>
+                {[
+                  { v: cd.days, l: '日' },
+                  { v: cd.hours, l: '時' },
+                  { v: cd.minutes, l: '分' },
+                  { v: cd.seconds, l: '秒' },
+                ].map((u, i) => (
+                  <div key={i} style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', minWidth:42, padding:'8px 6px', textAlign:'center' }}>
+                    <div style={{ fontFamily:'var(--font-display)', fontSize:18, color:'var(--white)', lineHeight:1 }}>{String(u.v).padStart(2,'0')}</div>
+                    <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)', marginTop:3 }}>{u.l}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="g4">
+          {items.map(p => (
+            <div key={p.id} style={{ background:'var(--white)', color:'var(--black)', padding:14 }}>
+              <ProductCard product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => onSelect(p)} promotions={promotions} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ─── SHOP PAGE ────────────────────────────────────────────────────────────────
-function ShopPage({ user, cart, setCart }) {
+function ShopPage({ user, cart, setCart, promotions = [] }) {
   const [activeCategory, setActiveCategory] = useState('全部');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const categories = ['全部', ...NAV_LINKS];
@@ -805,7 +925,7 @@ function ShopPage({ user, cart, setCart }) {
       <div style={{ maxWidth:1280, margin:'0 auto', padding: isMobile ? '40px 20px' : '60px 32px' }}>
         {false && null /* pro banner moved to header */}
         <div className="g4lg">
-          {filtered.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} />)}
+          {filtered.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} promotions={promotions} />)}
         </div>
         {filtered.length === 0 && <div style={{ textAlign:'center', padding:'80px 0', color:'var(--dark)', fontSize:14 }}>此分類目前無商品</div>}
       </div>
@@ -814,12 +934,14 @@ function ShopPage({ user, cart, setCart }) {
 }
 
 // ─── CART PAGE ────────────────────────────────────────────────────────────────
-function CartPage({ cart, setCart, setPage }) {
+function CartPage({ cart, setCart, setPage, user, promotions = [] }) {
   const isMobile = useIsMobile();
   function updateQty(id, delta) {
     setCart(prev => prev.map(i => i.id===id ? { ...i, qty: Math.max(0, i.qty+delta) } : i).filter(i => i.qty>0));
   }
-  const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+  const { subtotal, discount, finalSubtotal, promotion } = calculateDiscount(cart, promotions, user);
+  const shipping = finalSubtotal >= 3000 ? 0 : 150;
+  const grandTotal = finalSubtotal + shipping;
 
   return (
     <div style={{ paddingTop:68, minHeight:'80vh' }}>
@@ -850,7 +972,7 @@ function CartPage({ cart, setCart, setPage }) {
                     </div>
                   </div>
                   <div style={{ textAlign:'right' }}>
-                    <p style={{ fontSize:14, fontWeight:500 }}>NT$ {(item.price*item.qty).toLocaleString()}</p>
+                    <p style={{ fontSize:14, fontWeight:500 }}>NT$ {((user?.isPro ? item.proPrice : item.price)*item.qty).toLocaleString()}</p>
                     <button onClick={() => updateQty(item.id,-item.qty)} style={{ background:'none', border:'none', cursor:'pointer', fontSize:11, color:'var(--dark)', marginTop:6 }}>移除</button>
                   </div>
                 </div>
@@ -858,12 +980,21 @@ function CartPage({ cart, setCart, setPage }) {
             </div>
             <div style={{ background:'var(--off-white)', padding:'28px', height:'fit-content' }}>
               <h3 style={{ fontFamily:'var(--font-display)', fontSize:18, fontWeight:400, marginBottom:20 }}>訂單摘要</h3>
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13 }}><span>小計</span><span>NT$ {total.toLocaleString()}</span></div>
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13 }}><span>運費</span><span>NT$ 150</span></div>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13 }}><span>小計</span><span>NT$ {subtotal.toLocaleString()}</span></div>
+              {discount > 0 && promotion && (
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13, color:'var(--gold)' }}>
+                  <span>{promotion.name}</span>
+                  <span>−NT$ {discount.toLocaleString()}</span>
+                </div>
+              )}
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13 }}>
+                <span>運費</span>
+                <span>{shipping === 0 ? <span style={{ color:'var(--gold)' }}>免運</span> : `NT$ ${shipping}`}</span>
+              </div>
               <div style={{ height:1, background:'var(--light)', margin:'16px 0' }} />
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:24, fontWeight:500 }}>
                 <span style={{ fontSize:14 }}>合計</span>
-                <span style={{ fontFamily:'var(--font-display)', fontSize:18 }}>NT$ {(total+150).toLocaleString()}</span>
+                <span style={{ fontFamily:'var(--font-display)', fontSize:18 }}>NT$ {grandTotal.toLocaleString()}</span>
               </div>
               <button onClick={() => setPage('checkout')} style={{ width:'100%', background:'var(--black)', color:'var(--white)', border:'none', padding:'15px', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500 }}
                 onMouseEnter={e=>e.target.style.background='#333'}
@@ -895,7 +1026,7 @@ function CheckoutField({ label, name, type, required, placeholder, value, onChan
 }
 
 // ─── CHECKOUT PAGE ────────────────────────────────────────────────────────────
-function CheckoutPage({ cart, setCart, setPage, user }) {
+function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     name: user?.name || '', phone:'', email: user?.email || '',
@@ -906,9 +1037,9 @@ function CheckoutPage({ cart, setCart, setPage, user }) {
   const [transferError, setTransferError] = useState('');
   const isMobile = useIsMobile();
 
-  const subtotal = cart.reduce((sum, i) => sum + (user?.isPro ? i.proPrice : i.price) * i.qty, 0);
-  const shipping = subtotal >= 3000 ? 0 : 150;
-  const total = subtotal + shipping;
+  const { subtotal, discount, finalSubtotal, promotion } = calculateDiscount(cart, promotions, user);
+  const shipping = finalSubtotal >= 3000 ? 0 : 150;
+  const total = finalSubtotal + shipping;
 
   const STEPS = ['收件資訊', '確認訂單', '填寫匯款末五碼', '完成'];
 
@@ -926,6 +1057,10 @@ function CheckoutPage({ cart, setCart, setPage, user }) {
       type: user?.isPro ? 'pro' : 'consumer',
       items: cart.map(i => ({ name: i.nameZh, qty: i.qty, price: user?.isPro ? i.proPrice : i.price })),
       total: total,
+      subtotal: subtotal,
+      discount: discount,
+      promotion_id: promotion?.id || null,
+      promotion_name: promotion?.name || null,
       status: 'awaiting_confirm',
       date: dateStr,
       address: `${form.city}${form.district}${form.address}`,
@@ -1012,11 +1147,20 @@ function CheckoutPage({ cart, setCart, setPage, user }) {
         <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--dark)', marginBottom:8 }}>
           <span>小計</span><span>NT$ {subtotal.toLocaleString()}</span>
         </div>
+        {discount > 0 && promotion && (
+          <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--gold)', marginBottom:8 }}>
+            <span style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <span style={{ background:'var(--gold)', color:'var(--white)', fontSize:9, padding:'1px 5px', letterSpacing:'0.06em' }}>活動</span>
+              {promotion.name}
+            </span>
+            <span>−NT$ {discount.toLocaleString()}</span>
+          </div>
+        )}
         <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--dark)', marginBottom:14, alignItems:'center' }}>
           <span>運費 <span style={{ fontSize:10, color:'var(--dark)' }}>（宅配到府）</span></span>
           <span>{shipping === 0 ? <span style={{ color:'var(--gold)' }}>免運</span> : `NT$ ${shipping}`}</span>
         </div>
-        {subtotal < 3000 && <p style={{ fontSize:11, color:'var(--dark)', marginBottom:14, lineHeight:1.6 }}>消費滿 NT$ 3,000 享免運費，還差 NT$ {(3000-subtotal).toLocaleString()}</p>}
+        {finalSubtotal < 3000 && <p style={{ fontSize:11, color:'var(--dark)', marginBottom:14, lineHeight:1.6 }}>消費滿 NT$ 3,000 享免運費，還差 NT$ {(3000-finalSubtotal).toLocaleString()}</p>}
         <div style={{ height:1, background:'var(--light)', marginBottom:14 }} />
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
           <span style={{ fontSize:13, fontWeight:500 }}>合計</span>
@@ -1274,59 +1418,6 @@ function CheckoutPage({ cart, setCart, setPage, user }) {
             <OrderSummary />
           </div>
         </form>
-      </div>
-    </div>
-  );
-}
-
-// ─── RESET PASSWORD PAGE ──────────────────────────────────────────────────────
-function ResetPasswordPage({ setPage }) {
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm]   = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
-  const [done, setDone]         = useState(false);
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (password !== confirm) { setError('兩次密碼不一致'); return; }
-    if (password.length < 6)  { setError('密碼至少 6 個字元'); return; }
-    setLoading(true); setError('');
-    const { error: err } = await supabase.auth.updateUser({ password });
-    setLoading(false);
-    if (err) { setError(err.message); return; }
-    setDone(true);
-    setTimeout(() => setPage('home'), 2500);
-  }
-
-  return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--off-white)', padding:'40px 20px' }}>
-      <div style={{ width:'100%', maxWidth:400, background:'var(--white)', padding:'48px 40px' }}>
-        <p style={{ fontSize:10, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>ECLADO</p>
-        <h2 style={{ fontFamily:'var(--font-display)', fontSize:24, fontWeight:300, color:'var(--black)', marginBottom:28 }}>設定新密碼</h2>
-        {done ? (
-          <div style={{ textAlign:'center', padding:'20px 0' }}>
-            <div style={{ width:44, height:44, border:'1px solid var(--black)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px', fontSize:18 }}>✓</div>
-            <p style={{ fontSize:14, color:'var(--dark)' }}>密碼已更新，正在跳轉…</p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:20 }}>
-            {[['新密碼', password, setPassword], ['確認新密碼', confirm, setConfirm]].map(([label, val, set]) => (
-              <div key={label}>
-                <label style={{ fontSize:11, letterSpacing:'0.1em', color:'var(--dark)', display:'block', marginBottom:7 }}>{label}</label>
-                <input type="password" value={val} onChange={e => set(e.target.value)} required minLength={6}
-                  style={{ width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'9px 0', fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--black)', boxSizing:'border-box' }}
-                  onFocus={e=>e.target.style.borderBottomColor='var(--black)'}
-                  onBlur={e=>e.target.style.borderBottomColor='var(--light)'}
-                />
-              </div>
-            ))}
-            {error && <p style={{ fontSize:12, color:'#c0392b' }}>{error}</p>}
-            <button type="submit" disabled={loading} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'14px', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, opacity: loading ? 0.6 : 1 }}>
-              {loading ? '更新中…' : '確認更新密碼'}
-            </button>
-          </form>
-        )}
       </div>
     </div>
   );
@@ -1668,6 +1759,7 @@ function App() {
   const [page, setPage] = useState('home');
   const [user, setUser] = useState(null);
   const [cart, setCart] = useState([]);
+  const [promotions, setPromotions] = useState([]);
   const cartCount = cart.reduce((sum,i) => sum+i.qty, 0);
 
   // 從 profiles 表讀取角色
@@ -1691,11 +1783,27 @@ function App() {
       if (session?.user) loadUser(session.user);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') { setPage('reset-password'); return; }
       if (session?.user) loadUser(session.user);
       else setUser(null);
     });
     return () => subscription.unsubscribe();
+  }, []);
+
+  // 載入進行中的活動（含 realtime 同步）
+  useEffect(() => {
+    async function loadPromotions() {
+      const { data } = await supabase
+        .from('promotions')
+        .select('*')
+        .order('created_at', { ascending: false });
+      setPromotions(data || []);
+    }
+    loadPromotions();
+    const ch = supabase
+      .channel('promotions-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'promotions' }, loadPromotions)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, []);
 
   function handleSignOut() {
@@ -1705,15 +1813,14 @@ function App() {
 
   function renderPage() {
     switch (page) {
-      case 'home':     return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} />;
-      case 'shop':     return <ShopPage user={user} cart={cart} setCart={setCart} />;
-      case 'cart':     return <CartPage cart={cart} setCart={setCart} setPage={setPage} />;
-      case 'checkout': return <CheckoutPage cart={cart} setCart={setCart} setPage={setPage} user={user} />;
-      case 'login':          return <LoginPage setPage={setPage} />;
-      case 'reset-password': return <ResetPasswordPage setPage={setPage} />;
+      case 'home':     return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} promotions={promotions} />;
+      case 'shop':     return <ShopPage user={user} cart={cart} setCart={setCart} promotions={promotions} />;
+      case 'cart':     return <CartPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
+      case 'checkout': return <CheckoutPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
+      case 'login':    return <LoginPage setPage={setPage} />;
       case 'about':    return <AboutPage />;
       case 'info':     return <InfoPage />;
-      default:         return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} />;
+      default:         return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} promotions={promotions} />;
     }
   }
 

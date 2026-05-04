@@ -166,6 +166,75 @@ const STATUS_MAP = {
 // 老闆可以從下拉選單變更的狀態（不含 awaiting_confirm，只有顧客填末五碼後系統會帶入）
 const STATUS_OPTIONS = ['awaiting_confirm', 'paid', 'preparing', 'shipped', 'delivered', 'cancelled'];
 
+// ─── PROMOTION HELPERS ────────────────────────────────────────────────────────
+// 判斷活動是否「進行中」（active=true 且在起訖區間內）
+function isPromotionLive(p, now = new Date()) {
+  if (!p.active) return false;
+  if (p.start_at && new Date(p.start_at) > now) return false;
+  if (p.end_at && new Date(p.end_at) < now) return false;
+  return true;
+}
+
+// 活動排程狀態（給 admin 列表用）
+function getPromotionPhase(p, now = new Date()) {
+  if (!p.active) return 'disabled';
+  if (p.start_at && new Date(p.start_at) > now) return 'scheduled';
+  if (p.end_at && new Date(p.end_at) < now) return 'expired';
+  return 'live';
+}
+
+const PROMO_PHASE_MAP = {
+  live: { label: '進行中', color: 'var(--green)' },
+  scheduled: { label: '排程中', color: 'var(--blue)' },
+  expired: { label: '已結束', color: 'var(--mid)' },
+  disabled: { label: '已停用', color: 'var(--light)' },
+};
+
+function PromoBadge({ phase }) {
+  const m = PROMO_PHASE_MAP[phase] || PROMO_PHASE_MAP.disabled;
+  return (
+    <span style={{ display: 'inline-block', padding: '3px 10px', fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', background: m.color + '18', color: m.color, borderRadius: 2 }}>{m.label}</span>
+  );
+}
+
+// 以 cart 與目前生效的 promotions 計算折扣
+// 回傳 { subtotal, discount, finalSubtotal, promotion }
+//   subtotal: 商品原小計（依 user 是否 PRO 取對應價）
+//   discount: 折抵金額（>=0）
+//   finalSubtotal: 商品折扣後小計（不含運費）
+//   promotion: 命中的活動物件（沒命中則為 null）
+function calculateDiscount(cart, promotions, user) {
+  const isPro = !!user?.isPro;
+  const unit = item => isPro ? item.proPrice : item.price;
+  const subtotal = cart.reduce((s, i) => s + unit(i) * i.qty, 0);
+
+  if (!Array.isArray(promotions) || promotions.length === 0) {
+    return { subtotal, discount: 0, finalSubtotal: subtotal, promotion: null };
+  }
+
+  // 取第一個生效中、且購物車裡有它的指定商品的活動（規則：一次只套一個）
+  const live = promotions.filter(p => isPromotionLive(p));
+  for (const p of live) {
+    const ids = new Set((p.product_ids || []).map(Number));
+    const promoItems = cart.filter(i => ids.has(Number(i.id)));
+    if (promoItems.length === 0) continue;
+
+    const promoSubtotal = promoItems.reduce((s, i) => s + unit(i) * i.qty, 0);
+    const rate = Number(p.discount_rate) || 1;
+    const amount = Number(p.discount_amount) || 0;
+    const afterPromo = Math.max(0, promoSubtotal * rate - amount);
+    const discount = Math.round(promoSubtotal - afterPromo);
+    return {
+      subtotal,
+      discount,
+      finalSubtotal: subtotal - discount,
+      promotion: p,
+    };
+  }
+
+  return { subtotal, discount: 0, finalSubtotal: subtotal, promotion: null };
+}
+
 function Badge({ status }) {
   const s = STATUS_MAP[status] || { label: status, color: 'var(--mid)' };
   return (
@@ -229,6 +298,7 @@ const MENU_GROUPS = [
     title: '商品',
     items: [
       { id: 'catalog', icon: '◈', label: '商品 & 庫存' },
+      { id: 'promotions', icon: '◆', label: '活動管理' },
       { id: 'ai', icon: '✦', label: 'AI 補貨建議' },
     ],
   },
@@ -590,10 +660,22 @@ function Orders({ orders, setOrders }) {
                 <span style={{ fontWeight: 500 }}>NT$ {(item.price * item.qty).toLocaleString()}</span>
               </div>
             ))}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 8 }}>
-              <span style={{ color: 'var(--mid)' }}>運費</span><span>NT$ 150</span>
+            {selected.subtotal != null && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 8, color: 'var(--mid)' }}>
+                <span>商品小計</span><span>NT$ {Number(selected.subtotal).toLocaleString()}</span>
+              </div>
+            )}
+            {selected.discount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 6, color: 'var(--red)' }}>
+                <span>活動折抵{selected.promotionName ? `（${selected.promotionName}）` : ''}</span>
+                <span style={{ fontWeight: 500 }}>−NT$ {Number(selected.discount).toLocaleString()}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 6, color: 'var(--mid)' }}>
+              <span>運費</span>
+              <span>{(selected.subtotal != null && selected.subtotal - (selected.discount || 0) >= 3000) ? '免運' : 'NT$ 150'}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, marginTop: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, marginTop: 8, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
               <span>合計</span><span>NT$ {selected.total.toLocaleString()}</span>
             </div>
           </div>
@@ -1175,6 +1257,305 @@ function Catalog({ products, setProducts }) {
   );
 }
 
+// ─── PROMOTIONS ───────────────────────────────────────────────────────────────
+function toLocalDateTimeInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fromLocalDateTimeInput(s) {
+  return s ? new Date(s).toISOString() : null;
+}
+
+function Promotions({ products }) {
+  const [list, setList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(null); // null | { ...promo } | 'new'
+
+  async function load() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('promotions')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (!error) setList(data || []);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    load();
+    const ch = supabase
+      .channel('promotions-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'promotions' }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+
+  async function toggleActive(p) {
+    await supabase.from('promotions').update({ active: !p.active }).eq('id', p.id);
+  }
+
+  async function remove(p) {
+    if (!confirm(`確定要刪除活動「${p.name}」嗎？此操作無法還原。`)) return;
+    await supabase.from('promotions').delete().eq('id', p.id);
+  }
+
+  if (editing) {
+    return <PromotionForm
+      promo={editing === 'new' ? null : editing}
+      products={products}
+      onClose={() => setEditing(null)}
+    />;
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+        <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>活動管理</h1>
+        <button onClick={() => setEditing('new')} style={{
+          padding: '10px 22px', background: 'var(--dark)', color: '#fff',
+          border: 'none', fontSize: 12, letterSpacing: '0.12em', cursor: 'pointer',
+        }}>+ 新增活動</button>
+      </div>
+
+      {loading ? (
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--mid)', fontSize: 13 }}>載入中…</div>
+      ) : list.length === 0 ? (
+        <div style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '60px 40px', textAlign: 'center' }}>
+          <p style={{ fontSize: 14, color: 'var(--mid)', marginBottom: 16 }}>目前還沒有活動</p>
+          <button onClick={() => setEditing('new')} style={{
+            padding: '10px 24px', background: 'var(--dark)', color: '#fff',
+            border: 'none', fontSize: 12, letterSpacing: '0.12em', cursor: 'pointer',
+          }}>建立第一個活動</button>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+          {list.map(p => {
+            const phase = getPromotionPhase(p);
+            const productNames = (p.product_ids || [])
+              .map(id => products.find(x => x.id === id)?.nameZh)
+              .filter(Boolean);
+            return (
+              <div key={p.id} style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 500, color: 'var(--dark)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</h3>
+                    <PromoBadge phase={phase} />
+                  </div>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 11, color: 'var(--mid)' }}>
+                    <input type="checkbox" checked={!!p.active} onChange={() => toggleActive(p)} style={{ cursor: 'pointer' }} />
+                    啟用
+                  </label>
+                </div>
+
+                <div style={{ background: 'var(--off)', padding: '10px 12px', fontSize: 12, color: 'var(--dark)', borderLeft: '2px solid var(--gold)' }}>
+                  原價 × <b>{p.discount_rate}</b>
+                  {Number(p.discount_amount) > 0 && <> − <b>NT$ {Number(p.discount_amount).toLocaleString()}</b></>}
+                </div>
+
+                <div style={{ fontSize: 12, color: 'var(--mid)', lineHeight: 1.6 }}>
+                  <div style={{ marginBottom: 4 }}><b style={{ color: 'var(--dark)' }}>{productNames.length}</b> 件參與商品</div>
+                  {productNames.length > 0 && (
+                    <div style={{ fontSize: 11, color: 'var(--mid)' }}>
+                      {productNames.slice(0, 3).join('、')}{productNames.length > 3 ? `…等 ${productNames.length} 件` : ''}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ fontSize: 11, color: 'var(--mid)', lineHeight: 1.6 }}>
+                  {p.start_at ? `${new Date(p.start_at).toLocaleString('zh-TW', { hour12: false }).slice(0, 16)}` : '立即開始'}
+                  {' → '}
+                  {p.end_at ? `${new Date(p.end_at).toLocaleString('zh-TW', { hour12: false }).slice(0, 16)}` : '無結束日'}
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                  <button onClick={() => setEditing(p)} style={{
+                    flex: 1, padding: '8px', background: 'var(--off)', color: 'var(--dark)',
+                    border: '1px solid var(--border)', fontSize: 12, letterSpacing: '0.06em', cursor: 'pointer',
+                  }}>編輯</button>
+                  <button onClick={() => remove(p)} style={{
+                    padding: '8px 14px', background: 'none', color: 'var(--red)',
+                    border: '1px solid var(--border)', fontSize: 12, letterSpacing: '0.06em', cursor: 'pointer',
+                  }}>刪除</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PromotionForm({ promo, products, onClose }) {
+  const [name, setName] = useState(promo?.name || '');
+  const [description, setDescription] = useState(promo?.description || '');
+  const [productIds, setProductIds] = useState(new Set((promo?.product_ids || []).map(Number)));
+  const [rate, setRate] = useState(promo?.discount_rate ?? 0.95);
+  const [amount, setAmount] = useState(promo?.discount_amount ?? 1000);
+  const [startAt, setStartAt] = useState(toLocalDateTimeInput(promo?.start_at));
+  const [endAt, setEndAt] = useState(toLocalDateTimeInput(promo?.end_at));
+  const [active, setActive] = useState(promo?.active ?? true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  function toggleProduct(id) {
+    setProductIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function save(e) {
+    e.preventDefault();
+    setError('');
+    if (!name.trim()) { setError('請輸入活動名稱'); return; }
+    if (productIds.size === 0) { setError('請至少選擇一個參與商品'); return; }
+
+    const payload = {
+      name: name.trim(),
+      description: description.trim() || null,
+      product_ids: Array.from(productIds),
+      discount_rate: Number(rate),
+      discount_amount: Number(amount),
+      start_at: fromLocalDateTimeInput(startAt),
+      end_at: fromLocalDateTimeInput(endAt),
+      active,
+    };
+
+    setSaving(true);
+    const { error } = promo
+      ? await supabase.from('promotions').update(payload).eq('id', promo.id)
+      : await supabase.from('promotions').insert(payload);
+    setSaving(false);
+
+    if (error) {
+      setError('儲存失敗：' + error.message);
+      return;
+    }
+    onClose();
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--mid)', fontSize: 12, cursor: 'pointer', marginBottom: 6, padding: 0 }}>← 返回活動列表</button>
+          <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>{promo ? '編輯活動' : '新增活動'}</h1>
+        </div>
+      </div>
+
+      {error && (
+        <div style={{ background: 'oklch(0.60 0.18 25 / 0.08)', border: '1px solid oklch(0.60 0.18 25 / 0.3)', padding: '10px 16px', marginBottom: 20, fontSize: 13, color: 'var(--red)' }}>{error}</div>
+      )}
+
+      <form onSubmit={save} style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: 'clamp(20px, 4vw, 32px)', display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 880 }}>
+        {/* 活動名稱 */}
+        <div>
+          <label style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>活動名稱 *</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="例：五月慶 95折再折千"
+            style={{ width: '100%', border: 'none', borderBottom: '1px solid var(--border)', padding: '10px 0', fontSize: 15, outline: 'none', background: 'none' }} />
+        </div>
+
+        {/* 活動說明 */}
+        <div>
+          <label style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>活動說明（選填）</label>
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="顯示給顧客看的說明文字"
+            style={{ width: '100%', border: '1px solid var(--border)', padding: '10px 12px', fontSize: 13, outline: 'none', background: 'var(--off)', resize: 'vertical', fontFamily: 'inherit' }} />
+        </div>
+
+        {/* 折扣 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
+          <div>
+            <label style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>折扣率（乘）</label>
+            <input type="number" step="0.01" min="0" max="1" value={rate} onChange={e => setRate(e.target.value)}
+              style={{ width: '100%', border: 'none', borderBottom: '1px solid var(--border)', padding: '10px 0', fontSize: 15, outline: 'none', background: 'none' }} />
+            <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 4 }}>0.95 = 95 折，1 = 不打折</p>
+          </div>
+          <div>
+            <label style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>再減金額（NT$）</label>
+            <input type="number" step="1" min="0" value={amount} onChange={e => setAmount(e.target.value)}
+              style={{ width: '100%', border: 'none', borderBottom: '1px solid var(--border)', padding: '10px 0', fontSize: 15, outline: 'none', background: 'none' }} />
+            <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 4 }}>0 = 不額外減</p>
+          </div>
+        </div>
+
+        <div style={{ background: 'var(--off)', padding: '12px 16px', fontSize: 13, color: 'var(--dark)', borderLeft: '2px solid var(--gold)' }}>
+          計算公式：活動商品小計 × <b>{rate}</b> − <b>NT$ {Number(amount).toLocaleString()}</b>
+        </div>
+
+        {/* 起訖時間 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
+          <div>
+            <label style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>開始時間</label>
+            <input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)}
+              style={{ width: '100%', border: '1px solid var(--border)', padding: '10px 12px', fontSize: 13, outline: 'none', background: 'var(--off)' }} />
+            <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 4 }}>留白 = 立即生效</p>
+          </div>
+          <div>
+            <label style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>結束時間</label>
+            <input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)}
+              style={{ width: '100%', border: '1px solid var(--border)', padding: '10px 12px', fontSize: 13, outline: 'none', background: 'var(--off)' }} />
+            <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 4 }}>留白 = 不自動結束</p>
+          </div>
+        </div>
+
+        {/* 啟用 */}
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--dark)' }}>
+          <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />
+          啟用此活動（停用後即使在期間內也不會生效）
+        </label>
+
+        {/* 商品選擇 */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+            <label style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--mid)', textTransform: 'uppercase' }}>參與商品 * <span style={{ color: 'var(--dark)', fontWeight: 500 }}>（已選 {productIds.size} 件）</span></label>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button type="button" onClick={() => setProductIds(new Set(products.map(p => p.id)))} style={{ background: 'none', border: 'none', color: 'var(--gold)', fontSize: 11, letterSpacing: '0.06em', cursor: 'pointer', padding: 0 }}>全選</button>
+              <button type="button" onClick={() => setProductIds(new Set())} style={{ background: 'none', border: 'none', color: 'var(--mid)', fontSize: 11, letterSpacing: '0.06em', cursor: 'pointer', padding: 0 }}>清除</button>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 8, border: '1px solid var(--border)', padding: 12, background: 'var(--off)' }}>
+            {products.map(p => {
+              const checked = productIds.has(p.id);
+              return (
+                <label key={p.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', cursor: 'pointer',
+                  background: checked ? 'var(--white)' : 'transparent',
+                  border: `1px solid ${checked ? 'var(--gold)' : 'transparent'}`,
+                  fontSize: 12, color: 'var(--dark)',
+                }}>
+                  <input type="checkbox" checked={checked} onChange={() => toggleProduct(p.id)} style={{ cursor: 'pointer' }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nameZh}</div>
+                    <div style={{ fontSize: 10, color: 'var(--mid)', marginTop: 2 }}>NT$ {p.price.toLocaleString()}</div>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 動作 */}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap', marginTop: 8 }}>
+          <button type="button" onClick={onClose} style={{
+            padding: '12px 24px', background: 'none', color: 'var(--mid)',
+            border: '1px solid var(--border)', fontSize: 12, letterSpacing: '0.12em', cursor: 'pointer',
+          }}>取消</button>
+          <button type="submit" disabled={saving} style={{
+            padding: '12px 28px', background: saving ? 'var(--mid)' : 'var(--dark)', color: '#fff',
+            border: 'none', fontSize: 12, letterSpacing: '0.12em', cursor: saving ? 'wait' : 'pointer',
+          }}>{saving ? '儲存中…' : (promo ? '儲存變更' : '建立活動')}</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 // ─── PASSWORD GATE ────────────────────────────────────────────────────────────
 const ADMIN_PASSWORD = 'eclado2026';
 const AUTH_KEY = 'eclado_admin_auth';
@@ -1235,6 +1616,9 @@ function normalizeOrder(row) {
     transferLast5: row.transfer_last5,
     tracking: row.tracking,
     user_id: row.user_id,
+    subtotal: row.subtotal,
+    discount: row.discount || 0,
+    promotionName: row.promotion_name,
   };
 }
 
@@ -1340,6 +1724,7 @@ function App() {
       // 舊路徑相容，避免有人記住 /admin#products 之類的
       case 'products':
       case 'inventory': return <Catalog products={products} setProducts={setProducts} />;
+      case 'promotions': return <Promotions products={products} />;
       case 'members': return <Members members={members} setMembers={setMembersWithSync} orders={orders} />;
       case 'analytics': return <Analytics />;
       case 'ai': return <AIReorder products={products} />;
