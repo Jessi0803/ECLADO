@@ -645,7 +645,7 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
               </div>
             ))}
           </div>
-          <button onClick={() => setPage('login')} style={{ background:'transparent', border:'1px solid var(--gold)', color:'var(--gold)', padding:'13px 40px', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', transition:'all 0.25s' }}
+          <button onClick={() => setPage('professional-apply')} style={{ background:'transparent', border:'1px solid var(--gold)', color:'var(--gold)', padding:'13px 40px', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', transition:'all 0.25s' }}
             onMouseEnter={e=>{e.target.style.background='var(--gold)';e.target.style.color='var(--black)';}}
             onMouseLeave={e=>{e.target.style.background='transparent';e.target.style.color='var(--gold)';}}
           >申請美容師會員</button>
@@ -1726,6 +1726,13 @@ function LoginPage({ setPage }) {
               <span style={{ fontSize:11, color:'var(--dark)', letterSpacing:'0.1em' }}>或</span>
               <div style={{ flex:1, height:1, background:'var(--light)' }} />
             </div>
+            <button
+              type="button"
+              onClick={() => setPage('professional-apply')}
+              style={{ width:'100%', background:'var(--off-white)', color:'var(--black)', border:'1px solid var(--light)', padding:'14px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, marginBottom:12 }}
+            >
+              申請成為專業會員
+            </button>
             <button style={{ width:'100%', background:'#00B900', color:'var(--white)', border:'none', padding:'14px', fontSize:13, letterSpacing:'0.08em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, display:'flex', alignItems:'center', justifyContent:'center', gap:10, opacity:0.6 }} title="即將推出">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="white"><path d="M10 2C5.6 2 2 5.1 2 8.8c0 2.5 1.6 4.7 4 5.9l-.5 2 2.3-1.2c.7.2 1.4.3 2.2.3 4.4 0 8-3.1 8-6.8C18 5.1 14.4 2 10 2z"/></svg>
               使用 LINE 帳號登入（即將推出）
@@ -1823,6 +1830,90 @@ function ResetPasswordPage({ setPage }) {
           <button onClick={() => setPage('login')} style={{ width:'100%', background:'var(--black)', color:'var(--white)', border:'none', padding:'15px', fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500 }}>
             前往登入
           </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── PROFESSIONAL APPLICATION PAGE ────────────────────────────────────────────
+function ProfessionalApplicationPage({ setPage, user }) {
+  const [form, setForm] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: '',
+    currentRole: '美容師',
+    studioName: '',
+    city: '',
+    note: '',
+  });
+  const [submitted, setSubmitted] = useState(false);
+  const inputStyle = { width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--black)', boxSizing:'border-box' };
+  const field = key => e => setForm(prev => ({ ...prev, [key]: e.target.value }));
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    setSubmitted(true);
+    window.scrollTo(0, 0);
+  }
+
+  return (
+    <div style={{ paddingTop:68, minHeight:'100vh', background:'var(--white)' }}>
+      <div style={{ background:'var(--black)', padding:'52px 24px', color:'var(--white)' }}>
+        <div style={{ maxWidth:900, margin:'0 auto' }}>
+          <button onClick={() => setPage('home')} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.68)', cursor:'pointer', fontSize:12, letterSpacing:'0.08em', fontFamily:'var(--font-body)', padding:0, marginBottom:24 }}>← 返回首頁</button>
+          <p style={{ fontSize:10, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:12 }}>Professional Membership</p>
+          <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(30px,5vw,52px)', fontWeight:300, lineHeight:1.12, marginBottom:14 }}>申請成為專業會員</h1>
+          <p style={{ fontSize:14, color:'rgba(255,255,255,0.62)', lineHeight:1.8, maxWidth:560 }}>請先留下基本資料，後續審核問題與證明文件欄位將依需求再補上。</p>
+        </div>
+      </div>
+
+      <div style={{ maxWidth:900, margin:'0 auto', padding:'48px 24px 72px' }}>
+        {submitted ? (
+          <div style={{ border:'1px solid #b7ddb7', background:'#f0faf0', padding:'28px', color:'#2d6a2d' }}>
+            <h2 style={{ fontFamily:'var(--font-display)', fontSize:24, fontWeight:300, color:'#1f5f1f', marginBottom:10 }}>申請資料已送出</h2>
+            <p style={{ fontSize:14, lineHeight:1.8, marginBottom:20 }}>我們已收到您的專業會員申請資料。待問題欄位補齊後，這裡可以再串接正式審核流程。</p>
+            <button onClick={() => setPage('home')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'13px 28px', fontSize:12, letterSpacing:'0.14em', cursor:'pointer', fontFamily:'var(--font-body)' }}>返回首頁</button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={{ display:'grid', gridTemplateColumns:'repeat(2, minmax(0, 1fr))', gap:'28px 32px' }} className="g2">
+            <div>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:8 }}>姓名</label>
+              <input type="text" value={form.name} onChange={field('name')} required style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:8 }}>手機</label>
+              <input type="tel" value={form.phone} onChange={field('phone')} required placeholder="09xx-xxx-xxx" style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:8 }}>Email</label>
+              <input type="email" value={form.email} onChange={field('email')} required style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:8 }}>申請身份</label>
+              <select value={form.currentRole} onChange={field('currentRole')} style={{ ...inputStyle, cursor:'pointer' }}>
+                <option value="美容師">美容師</option>
+                <option value="師資">師資</option>
+                <option value="經銷商">經銷商</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:8 }}>店名 / 工作室名稱</label>
+              <input type="text" value={form.studioName} onChange={field('studioName')} style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:8 }}>所在縣市</label>
+              <input type="text" value={form.city} onChange={field('city')} style={inputStyle} />
+            </div>
+            <div style={{ gridColumn:'1 / -1' }}>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:8 }}>備註</label>
+              <textarea value={form.note} onChange={field('note')} rows="4" placeholder="之後要新增的問題可以放在這裡或改成獨立欄位" style={{ ...inputStyle, resize:'vertical', border:'1px solid var(--light)', padding:'14px', lineHeight:1.7 }} />
+            </div>
+            <div style={{ gridColumn:'1 / -1', display:'flex', gap:12, flexWrap:'wrap' }}>
+              <button type="submit" style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'15px 40px', fontSize:12, letterSpacing:'0.18em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500 }}>送出申請</button>
+              <button type="button" onClick={() => setPage('login')} style={{ background:'none', color:'var(--dark)', border:'1px solid var(--light)', padding:'15px 32px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>返回會員登入</button>
+            </div>
+          </form>
         )}
       </div>
     </div>
@@ -2081,6 +2172,7 @@ function App() {
       case 'checkout': return <CheckoutPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
       case 'login':    return <LoginPage setPage={setPage} />;
       case 'reset-password': return <ResetPasswordPage setPage={setPage} />;
+      case 'professional-apply': return <ProfessionalApplicationPage setPage={setPage} user={user} />;
       case 'about':    return <AboutPage />;
       case 'info':     return <InfoPage />;
       default:         return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} promotions={promotions} />;
