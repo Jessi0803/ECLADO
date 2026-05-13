@@ -2002,13 +2002,12 @@ function ResetPasswordPage({ setPage }) {
 // ─── PROFESSIONAL APPLICATION PAGE ────────────────────────────────────────────
 function ProfessionalApplicationPage({ setPage, user }) {
   const [form, setForm] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: '',
-    currentRole: '美容師',
     studioName: '',
-    city: '',
-    note: '',
+    contactName: user?.name || '',
+    phone: '',
+    address: '',
+    socialMedia: '',
+    certificate: '',
   });
   const [submitted, setSubmitted] = useState(false);
   const inputStyle = { width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--black)', boxSizing:'border-box' };
@@ -2020,6 +2019,8 @@ function ProfessionalApplicationPage({ setPage, user }) {
     window.scrollTo(0, 0);
   }
 
+  const labelStyle = { fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', display:'block', marginBottom:8 };
+
   return (
     <div style={{ paddingTop:68, minHeight:'100vh', background:'var(--white)' }}>
       <div style={{ background:'var(--black)', padding:'52px 24px', color:'var(--white)' }}>
@@ -2030,52 +2031,70 @@ function ProfessionalApplicationPage({ setPage, user }) {
           </div>
           <p style={{ fontSize:10, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:12 }}>Professional Membership</p>
           <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(30px,5vw,52px)', fontWeight:300, lineHeight:1.12, marginBottom:14 }}>申請成為專業會員</h1>
-          <p style={{ fontSize:14, color:'rgba(255,255,255,0.62)', lineHeight:1.8, maxWidth:560 }}>請先留下基本資料，後續審核問題與證明文件欄位將依需求再補上。</p>
+          <p style={{ fontSize:14, color:'rgba(255,255,255,0.62)', lineHeight:1.8, maxWidth:560 }}>請填寫以下基本資料，完成後我們將盡快與您聯繫，協助開立客戶資料、提供產品目錄與報價內容。</p>
         </div>
       </div>
 
-      <div style={{ maxWidth:900, margin:'0 auto', padding:'48px 24px 72px' }}>
+      <div style={{ maxWidth:700, margin:'0 auto', padding:'48px 24px 72px' }}>
         {submitted ? (
           <div style={{ border:'1px solid #b7ddb7', background:'#f0faf0', padding:'28px', color:'#2d6a2d' }}>
             <h2 style={{ fontFamily:'var(--font-display)', fontSize:24, fontWeight:300, color:'#1f5f1f', marginBottom:10 }}>申請資料已送出</h2>
-            <p style={{ fontSize:14, lineHeight:1.8, marginBottom:20 }}>我們已收到您的專業會員申請資料。待問題欄位補齊後，這裡可以再串接正式審核流程。</p>
+            <p style={{ fontSize:14, lineHeight:1.8, marginBottom:20 }}>我們已收到您的專業會員申請資料，將盡快與您聯繫並協助開立客戶資料。</p>
             <button onClick={() => setPage('home')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'13px 28px', fontSize:12, letterSpacing:'0.14em', cursor:'pointer', fontFamily:'var(--font-body)' }}>返回首頁</button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} style={{ display:'grid', gridTemplateColumns:'repeat(2, minmax(0, 1fr))', gap:'28px 32px' }} className="g2">
+          <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:28 }}>
+
             <div>
-              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:8 }}>姓名</label>
-              <input type="text" value={form.name} onChange={field('name')} required style={inputStyle} />
+              <label style={labelStyle}>① 皮膚管理院 / 工作室名稱</label>
+              <input type="text" value={form.studioName} onChange={field('studioName')} required
+                onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
+                onBlur={e=>e.target.style.borderBottomColor='var(--light)'}
+                style={inputStyle} />
             </div>
+
             <div>
-              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:8 }}>手機</label>
-              <input type="tel" value={form.phone} onChange={field('phone')} required placeholder="09xx-xxx-xxx" style={inputStyle} />
+              <label style={labelStyle}>② 聯絡人姓名</label>
+              <input type="text" value={form.contactName} onChange={field('contactName')} required
+                onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
+                onBlur={e=>e.target.style.borderBottomColor='var(--light)'}
+                style={inputStyle} />
             </div>
+
             <div>
-              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:8 }}>Email</label>
-              <input type="email" value={form.email} onChange={field('email')} required style={inputStyle} />
+              <label style={labelStyle}>③ 聯絡電話</label>
+              <input type="tel" value={form.phone} onChange={field('phone')} required placeholder="09xx-xxx-xxx"
+                onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
+                onBlur={e=>e.target.style.borderBottomColor='var(--light)'}
+                style={inputStyle} />
             </div>
+
             <div>
-              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:8 }}>申請身份</label>
-              <select value={form.currentRole} onChange={field('currentRole')} style={{ ...inputStyle, cursor:'pointer' }}>
-                <option value="美容師">美容師</option>
-                <option value="師資">師資</option>
-                <option value="經銷商">經銷商</option>
-              </select>
+              <label style={labelStyle}>④ 收件地址</label>
+              <input type="text" value={form.address} onChange={field('address')} required
+                onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
+                onBlur={e=>e.target.style.borderBottomColor='var(--light)'}
+                style={inputStyle} />
             </div>
+
             <div>
-              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:8 }}>店名 / 工作室名稱</label>
-              <input type="text" value={form.studioName} onChange={field('studioName')} style={inputStyle} />
+              <label style={labelStyle}>⑤ 店家社群帳號 IG 或 Facebook（任一即可）</label>
+              <input type="text" value={form.socialMedia} onChange={field('socialMedia')} required placeholder="@帳號名稱 或 https://..."
+                onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
+                onBlur={e=>e.target.style.borderBottomColor='var(--light)'}
+                style={inputStyle} />
             </div>
+
             <div>
-              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:8 }}>所在縣市</label>
-              <input type="text" value={form.city} onChange={field('city')} style={inputStyle} />
+              <label style={labelStyle}>⑥ 美容相關證書（請填寫證書名稱或描述）</label>
+              <textarea value={form.certificate} onChange={field('certificate')} required rows="3"
+                placeholder="例：美容丙級技術士證照、美容師執照..."
+                onFocus={e=>e.target.style.borderColor='var(--dark)'}
+                onBlur={e=>e.target.style.borderColor='var(--light)'}
+                style={{ ...inputStyle, resize:'vertical', border:'1px solid var(--light)', padding:'12px', lineHeight:1.7, borderBottom:'1px solid var(--light)' }} />
             </div>
-            <div style={{ gridColumn:'1 / -1' }}>
-              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:8 }}>備註</label>
-              <textarea value={form.note} onChange={field('note')} rows="4" placeholder="之後要新增的問題可以放在這裡或改成獨立欄位" style={{ ...inputStyle, resize:'vertical', border:'1px solid var(--light)', padding:'14px', lineHeight:1.7 }} />
-            </div>
-            <div style={{ gridColumn:'1 / -1', display:'flex', gap:12, flexWrap:'wrap' }}>
+
+            <div style={{ display:'flex', gap:12, flexWrap:'wrap', paddingTop:8 }}>
               <button type="submit" style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'15px 40px', fontSize:12, letterSpacing:'0.18em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500 }}>送出申請</button>
               <button type="button" onClick={() => setPage('login')} style={{ background:'none', color:'var(--dark)', border:'1px solid var(--light)', padding:'15px 32px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>返回會員登入</button>
             </div>
