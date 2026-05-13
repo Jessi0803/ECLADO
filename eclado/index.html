@@ -2429,7 +2429,13 @@ function PromoDiagnosticBar({ status, errorText }) {
 }
 
 function App() {
-  const [page, setPage] = useState(() => isPasswordRecoveryUrl() ? 'reset-password' : 'home');
+  const [page, setPage] = useState(() => {
+    if (isPasswordRecoveryUrl()) {
+      window.history.replaceState(null, '', window.location.pathname || '/');
+      return 'reset-password';
+    }
+    return 'home';
+  });
   const [user, setUser] = useState(null);
   const [cart, setCart] = useState([]);
   const [promotions, setPromotions] = useState([]);
@@ -2456,11 +2462,17 @@ function App() {
   // 監聽 Supabase 登入狀態
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (isPasswordRecoveryUrl()) setPage('reset-password');
+      if (isPasswordRecoveryUrl()) {
+        window.history.replaceState(null, '', window.location.pathname || '/');
+        setPage('reset-password');
+      }
       if (session?.user) loadUser(session.user);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || isPasswordRecoveryUrl()) setPage('reset-password');
+      if (event === 'PASSWORD_RECOVERY' || isPasswordRecoveryUrl()) {
+        window.history.replaceState(null, '', window.location.pathname || '/');
+        setPage('reset-password');
+      }
       if (session?.user) loadUser(session.user);
       else setUser(null);
     });
