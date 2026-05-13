@@ -527,7 +527,6 @@ function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPag
           <div style={{ maxWidth:680 }}>
             <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>Popular</p>
             <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(26px,4vw,52px)', fontWeight:300, lineHeight:1.1, color:'var(--black)', marginBottom:14 }}>熱門商品</h2>
-            <p style={{ fontSize:14, lineHeight:1.85, color:'var(--dark)', maxWidth:620 }}>以輪播的方式快速瀏覽近期熱門商品，從日常清潔、保濕修護到院線集中護理一次查看。</p>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             <button aria-label="上一組熱門商品" onClick={() => move(-1)} style={{ width:44, height:44, border:'1px solid var(--light)', background:'var(--white)', color:'var(--black)', cursor:'pointer', fontSize:18 }}>←</button>
@@ -2055,7 +2054,7 @@ function ProfessionalApplicationPage({ setPage, user }) {
 
   return (
     <div style={{ paddingTop:68, minHeight:'100vh', background:'var(--white)' }}>
-      <div style={{ background:'var(--black)', padding:'52px 24px', color:'var(--white)' }}>
+      <div style={{ background:'var(--black)', padding:'52px 32px', color:'var(--white)' }} className="px-page">
         <div style={{ maxWidth:900, margin:'0 auto' }}>
           <div style={{ display:'flex', gap:18, flexWrap:'wrap', marginBottom:24 }}>
             <button onClick={() => setPage('pro-login')} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.78)', cursor:'pointer', fontSize:12, letterSpacing:'0.08em', fontFamily:'var(--font-body)', padding:0 }}>← 返回專業會員登入</button>
@@ -2067,7 +2066,7 @@ function ProfessionalApplicationPage({ setPage, user }) {
         </div>
       </div>
 
-      <div style={{ maxWidth:700, margin:'0 auto', padding:'48px 24px 72px' }}>
+      <div style={{ maxWidth:900, margin:'0 auto', padding:'48px 32px 72px' }} className="px-page">
         {submitted ? (
           <div style={{ border:'1px solid #b7ddb7', background:'#f0faf0', padding:'28px', color:'#2d6a2d' }}>
             <h2 style={{ fontFamily:'var(--font-display)', fontSize:24, fontWeight:300, color:'#1f5f1f', marginBottom:10 }}>申請資料已送出</h2>
@@ -2075,9 +2074,9 @@ function ProfessionalApplicationPage({ setPage, user }) {
             <button onClick={() => setPage('home')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'13px 28px', fontSize:12, letterSpacing:'0.14em', cursor:'pointer', fontFamily:'var(--font-body)' }}>返回首頁</button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:28 }}>
+          <form onSubmit={handleSubmit} style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:'28px 40px' }} className="g2">
 
-            <div>
+            <div style={{ gridColumn:'1 / -1' }}>
               <label style={labelStyle}>① 皮膚管理院 / 工作室名稱</label>
               <input type="text" value={form.studioName} onChange={field('studioName')} required
                 onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
@@ -2101,7 +2100,7 @@ function ProfessionalApplicationPage({ setPage, user }) {
                 style={inputStyle} />
             </div>
 
-            <div>
+            <div style={{ gridColumn:'1 / -1' }}>
               <label style={labelStyle}>④ 收件地址</label>
               <input type="text" value={form.address} onChange={field('address')} required
                 onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
@@ -2109,7 +2108,7 @@ function ProfessionalApplicationPage({ setPage, user }) {
                 style={inputStyle} />
             </div>
 
-            <div>
+            <div style={{ gridColumn:'1 / -1' }}>
               <label style={labelStyle}>⑤ 店家社群帳號 IG 或 Facebook（任一即可）</label>
               <input type="text" value={form.socialMedia} onChange={field('socialMedia')} required placeholder="@帳號名稱 或 https://..."
                 onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
@@ -2117,7 +2116,7 @@ function ProfessionalApplicationPage({ setPage, user }) {
                 style={inputStyle} />
             </div>
 
-            <div>
+            <div style={{ gridColumn:'1 / -1' }}>
               <label style={labelStyle}>⑥ 美容相關證書（請填寫證書名稱或描述）</label>
               <textarea value={form.certificate} onChange={field('certificate')} required rows="3"
                 placeholder="例：美容丙級技術士證照、美容師執照..."
@@ -2126,7 +2125,7 @@ function ProfessionalApplicationPage({ setPage, user }) {
                 style={{ ...inputStyle, resize:'vertical', border:'1px solid var(--light)', padding:'12px', lineHeight:1.7, borderBottom:'1px solid var(--light)' }} />
             </div>
 
-            <div style={{ display:'flex', gap:12, flexWrap:'wrap', paddingTop:8 }}>
+            <div style={{ gridColumn:'1 / -1', display:'flex', gap:12, flexWrap:'wrap', paddingTop:8 }}>
               <button type="submit" style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'15px 40px', fontSize:12, letterSpacing:'0.18em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500 }}>送出申請</button>
               <button type="button" onClick={() => setPage('login')} style={{ background:'none', color:'var(--dark)', border:'1px solid var(--light)', padding:'15px 32px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>返回會員登入</button>
             </div>
