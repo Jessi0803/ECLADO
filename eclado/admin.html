@@ -576,7 +576,7 @@ function Orders({ orders, setOrders }) {
         {filter === 'awaiting_confirm' && awaitingCount > 0 && (
           <div style={{ background: 'oklch(0.60 0.18 25 / 0.05)', border: '1px solid oklch(0.60 0.18 25 / 0.2)', padding: '14px 20px', marginBottom: 16, fontSize: 13, color: 'var(--red)', display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 16 }}>⚠</span>
-            <span>有 <strong>{awaitingCount}</strong> 筆顧客已填寫轉帳末五碼，請對帳後點選「確認入帳」</span>
+            <span>有 <strong>{awaitingCount}</strong> 筆顧客待確認付款，請對帳後點選「確認入帳」</span>
           </div>
         )}
 
@@ -584,7 +584,7 @@ function Orders({ orders, setOrders }) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
-                {['訂單編號', '會員', '類型', '金額', '末五碼', '狀態', '日期'].map(h => (
+                {['訂單編號', '會員', '類型', '金額', '付款碼', '狀態', '日期'].map(h => (
                   <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -638,7 +638,7 @@ function Orders({ orders, setOrders }) {
             <StatusSelect status={selected.status} onChange={ns => updateStatus(selected.id, ns)} size="lg" />
           </div>
 
-          {/* 轉帳資訊區塊 */}
+          {/* 付款資訊區塊 */}
           {selected.transferLast5 && (
             <div style={{
               border: `1px solid ${selected.status === 'awaiting_confirm' ? 'oklch(0.60 0.18 25 / 0.4)' : 'var(--border)'}`,
@@ -646,7 +646,7 @@ function Orders({ orders, setOrders }) {
               padding: '14px 16px', marginBottom: 20,
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <span style={{ fontSize: 11, color: 'var(--mid)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>轉帳末五碼</span>
+                <span style={{ fontSize: 11, color: 'var(--mid)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>付款末五碼</span>
                 {selected.status === 'awaiting_confirm' && (
                   <span style={{ fontSize: 10, color: 'var(--red)', fontWeight: 500 }}>● 待對帳確認</span>
                 )}

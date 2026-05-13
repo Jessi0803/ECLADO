@@ -244,6 +244,80 @@ function calculateDiscount(cart, promotions, user) {
   return { subtotal, discount: 0, finalSubtotal: subtotal, promotion: null };
 }
 
+const SINOPAC_PAYMENT_API = 'https://pay.ecladotaiwan.com';
+
+const PAYMENT_METHODS = {
+  atm: {
+    label: '虛擬帳號匯款',
+    payType: 'A',
+    description: '由永豐產生虛擬帳號，付款後由系統通知店家。',
+  },
+  card: {
+    label: '信用卡',
+    payType: 'C',
+    description: '完成授權後即進入付款流程。',
+  },
+  apple: {
+    label: 'Apple Pay',
+    payType: 'M',
+    choosePay: 'A',
+    description: '以 Apple Pay 完成付款。',
+  },
+  google: {
+    label: 'Google Pay',
+    payType: 'M',
+    choosePay: 'G',
+    description: '以 Google Pay 完成付款。',
+  },
+};
+
+function formatDateCompact(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}${m}${d}`;
+}
+
+function addDays(date, days) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function safeTrim(value) {
+  return String(value || '').trim();
+}
+
+function extractPaymentLink(response) {
+  if (!response || typeof response !== 'object') return '';
+  const candidates = [
+    response.PayURL,
+    response.RedirectURL,
+    response.PaymentURL,
+    response.WebAtmURL,
+    response?.ATMParam?.WebAtmURL,
+    response?.ATMParam?.QRCodeURL,
+    response?.QRCodeURL,
+    response?.CardParam?.CardURL,
+    response?.MobileParam?.MobileURL,
+    response?.WalletParam?.WalletURL,
+  ];
+  return candidates.find(url => typeof url === 'string' && url.startsWith('http')) || '';
+}
+
+function buildPaymentNotes(methodLabel, response) {
+  const lines = [
+    `付款方式：${methodLabel}`,
+    response?.Status ? `永豐狀態：${response.Status}` : '',
+    response?.Description ? `永豐說明：${response.Description}` : '',
+    response?.TSNo ? `交易編號：${response.TSNo}` : '',
+    response?.ATMParam?.AtmPayNo ? `虛擬帳號：${response.ATMParam.AtmPayNo}` : '',
+    response?.ATMParam?.WebAtmURL ? `WebATM：${response.ATMParam.WebAtmURL}` : '',
+    response?.QRCodeURL ? `QR Code：${response.QRCodeURL}` : '',
+  ].filter(Boolean);
+  return lines.join('\n');
+}
+
 const HERO_SLIDES = [
   { headline:'Glow\nBeyond Limits.', sub:'自1998年創立，深耕專業院線皮膚管理28年，足跡遍佈全球23個國家，以147支完整療程系列支援每一位皮膚管理師，台灣獨家代理。', cta:'探索系列', img:'https://images.unsplash.com/photo-1629732097571-b042b35aa3ed?w=1800&q=85&fit=crop', layout:'left', accent:'ECLADO LABORATORY' },
   { headline:'Human\nClinical Proven.', sub:'每一款產品皆通過人體臨床實驗，皮膚刺激指數達0.000，無一例外。韓國美容業中擁有最多人體研究數據，150所美容學院指定品牌。', cta:'查看臨床實證', img:'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=1800&q=85&fit=crop', layout:'center', accent:'人體實驗 · 無一例外' },
@@ -1248,7 +1322,7 @@ function CartPage({ cart, setCart, setPage, user, promotions = [] }) {
                 onMouseEnter={e=>e.target.style.background='#333'}
                 onMouseLeave={e=>e.target.style.background='var(--black)'}
               >前往結帳</button>
-              <p style={{ textAlign:'center', fontSize:11, color:'var(--dark)', marginTop:14 }}>支援：銀行轉帳</p>
+              <p style={{ textAlign:'center', fontSize:11, color:'var(--dark)', marginTop:14 }}>支援：虛擬帳號匯款 / 信用卡 / Apple Pay / Google Pay</p>
             </div>
           </div>
         )}
@@ -1277,104 +1351,65 @@ function CheckoutField({ label, name, type, required, placeholder, value, onChan
 function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
-    name: user?.name || '', phone:'', email: user?.email || '',
-    city:'', district:'', address:'', note:''
+    name: user?.name || '',
+    phone: '',
+    email: user?.email || '',
+    city: '',
+    district: '',
+    address: '',
+    note: '',
   });
-  const [orderNo] = useState(() => 'ECL-' + Date.now().toString().slice(-8));
-  const [transferLast5, setTransferLast5] = useState('');
-  const [transferError, setTransferError] = useState('');
+  const [orderNo] = useState(() => `ECL-${Date.now().toString().slice(-8)}`);
+  const [paymentMethod, setPaymentMethod] = useState('atm');
+  const [paymentResult, setPaymentResult] = useState(null);
+  const [paymentSnapshot, setPaymentSnapshot] = useState(null);
+  const [paymentSummary, setPaymentSummary] = useState(null);
+  const [paymentError, setPaymentError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const isMobile = useIsMobile();
 
   const { subtotal, discount, finalSubtotal, promotion } = calculateDiscount(cart, promotions, user);
   const shipping = finalSubtotal >= 3000 ? 0 : 150;
   const total = finalSubtotal + shipping;
 
-  const STEPS = ['收件資訊', '確認訂單', '填寫匯款末五碼', '完成'];
+  const STEPS = ['收件資訊', '確認付款', '完成'];
 
-  function setField(name) { return e => setForm(f => ({...f, [name]: e.target.value})); }
-
-  const [submitting, setSubmitting] = useState(false);
-
-  // 將訂單寫入 Supabase（雲端，跨裝置同步）
-  async function saveOrderToSupabase() {
-    const today = new Date();
-    const dateStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
-    const order = {
-      id: orderNo,
-      member: form.name || user?.name || '訪客',
-      type: getMemberRole(user),
-      items: cart.map(i => ({ name: i.nameZh, qty: i.qty, price: getMemberPrice(i, user) })),
-      total: total,
-      subtotal: subtotal,
-      discount: discount,
-      promotion_id: promotion?.id || null,
-      promotion_name: promotion?.name || null,
-      status: 'awaiting_confirm',
-      date: dateStr,
-      address: `${form.city}${form.district}${form.address}`,
-      phone: form.phone,
-      email: form.email,
-      note: form.note,
-      transfer_last5: transferLast5,
-      user_id: user?.uid || null,
-    };
-    const { error } = await supabase.from('orders').insert(order);
-    if (error) throw error;
+  function setField(name) {
+    return e => setForm(f => ({ ...f, [name]: e.target.value }));
   }
 
-  function handleNext(e) {
-    e.preventDefault();
-    if (step === 1) { window.scrollTo(0,0); setStep(2); }
-    else if (step === 2) { window.scrollTo(0,0); setStep(3); }
+  function productNameForPayment() {
+    if (!cart.length) return 'ECLADO訂單';
+    if (cart.length === 1) return cart[0].nameZh;
+    return `${cart[0].nameZh} 等 ${cart.length} 項商品`;
   }
 
-  async function handleTransferSubmit(e) {
-    e.preventDefault();
-    if (!/^\d{5}$/.test(transferLast5)) {
-      setTransferError('請輸入正確的 5 碼數字');
-      return;
-    }
-    setTransferError('');
-    setSubmitting(true);
-    try {
-      await saveOrderToSupabase();
-      setCart([]);
-      window.scrollTo(0,0);
-      setStep(4);
-    } catch (err) {
-      console.error(err);
-      setTransferError('訂單送出失敗，請稍後再試或聯繫客服。' + (err?.message ? '（' + err.message + '）' : ''));
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  /* ── Step indicator ── */
   function StepBar() {
     return (
       <div style={{ display:'flex', alignItems:'center', marginBottom:40 }}>
         {STEPS.map((s, i) => (
           <React.Fragment key={s}>
             <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
-              <div style={{ width:28, height:28, borderRadius:'50%', background: step > i ? 'var(--black)' : step === i+1 ? 'var(--black)' : 'var(--light)', color: step >= i+1 ? 'var(--white)' : 'var(--mid)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:500 }}>
-                {step > i+1 ? '✓' : i+1}
+              <div style={{ width:28, height:28, borderRadius:'50%', background: step >= i + 1 ? 'var(--black)' : 'var(--light)', color: step >= i + 1 ? 'var(--white)' : 'var(--mid)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:500 }}>
+                {step > i + 1 ? '✓' : i + 1}
               </div>
-              <span style={{ fontSize:10, letterSpacing:'0.08em', color: step === i+1 ? 'var(--black)' : 'var(--mid)', whiteSpace:'nowrap' }}>{s}</span>
+              <span style={{ fontSize:10, letterSpacing:'0.08em', color: step === i + 1 ? 'var(--black)' : 'var(--mid)', whiteSpace:'nowrap' }}>{s}</span>
             </div>
-            {i < STEPS.length-1 && <div style={{ flex:1, height:1, background: step > i+1 ? 'var(--black)' : 'var(--light)', margin:'0 8px', marginBottom:18 }} />}
+            {i < STEPS.length - 1 && <div style={{ flex:1, height:1, background: step > i + 1 ? 'var(--black)' : 'var(--light)', margin:'0 8px', marginBottom:18 }} />}
           </React.Fragment>
         ))}
       </div>
     );
   }
 
-  /* ── Order summary sidebar ── */
   function OrderSummary() {
+    const summary = paymentSummary || { subtotal, discount, finalSubtotal, promotion, shipping, total };
+    const summaryItems = paymentSnapshot?.items || cart;
     return (
       <div style={{ background:'var(--off-white)', padding:'28px 24px', height:'fit-content' }}>
         <h3 style={{ fontFamily:'var(--font-display)', fontSize:16, fontWeight:400, marginBottom:20, letterSpacing:'0.04em' }}>訂單明細</h3>
         <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:18 }}>
-          {cart.map(item => {
+          {summaryItems.map(item => {
             const unitPrice = getMemberPrice(item, user);
             return (
               <div key={item.id} style={{ display:'flex', gap:12, alignItems:'center' }}>
@@ -1386,153 +1421,216 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
                   <p style={{ fontSize:12, color:'var(--black)', marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.nameZh}</p>
                   <p style={{ fontSize:11, color:'var(--dark)' }}>{item.size}</p>
                 </div>
-                <span style={{ fontSize:13, color:'var(--black)', flexShrink:0 }}>NT$ {(unitPrice*item.qty).toLocaleString()}</span>
+                <span style={{ fontSize:13, color:'var(--black)', flexShrink:0 }}>NT$ {(unitPrice * item.qty).toLocaleString()}</span>
               </div>
             );
           })}
         </div>
         <div style={{ height:1, background:'var(--light)', marginBottom:14 }} />
         <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--dark)', marginBottom:8 }}>
-          <span>小計</span><span>NT$ {subtotal.toLocaleString()}</span>
+          <span>小計</span><span>NT$ {summary.subtotal.toLocaleString()}</span>
         </div>
-        {discount > 0 && promotion && (
+        {summary.discount > 0 && summary.promotion && (
           <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--gold)', marginBottom:8 }}>
             <span style={{ display:'flex', alignItems:'center', gap:6 }}>
               <span style={{ background:'var(--gold)', color:'var(--white)', fontSize:9, padding:'1px 5px', letterSpacing:'0.06em' }}>活動</span>
-              {promotion.name}
+              {summary.promotion.name}
             </span>
-            <span>−NT$ {discount.toLocaleString()}</span>
+            <span>−NT$ {summary.discount.toLocaleString()}</span>
           </div>
         )}
         <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--dark)', marginBottom:14, alignItems:'center' }}>
           <span>運費 <span style={{ fontSize:10, color:'var(--dark)' }}>（宅配到府）</span></span>
-          <span>{shipping === 0 ? <span style={{ color:'var(--gold)' }}>免運</span> : `NT$ ${shipping}`}</span>
+          <span>{summary.shipping === 0 ? <span style={{ color:'var(--gold)' }}>免運</span> : `NT$ ${summary.shipping}`}</span>
         </div>
-        {finalSubtotal < 3000 && <p style={{ fontSize:11, color:'var(--dark)', marginBottom:14, lineHeight:1.6 }}>消費滿 NT$ 3,000 享免運費，還差 NT$ {(3000-finalSubtotal).toLocaleString()}</p>}
+        {summary.finalSubtotal < 3000 && <p style={{ fontSize:11, color:'var(--dark)', marginBottom:14, lineHeight:1.6 }}>消費滿 NT$ 3,000 享免運費，還差 NT$ {(3000 - summary.finalSubtotal).toLocaleString()}</p>}
         <div style={{ height:1, background:'var(--light)', marginBottom:14 }} />
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
           <span style={{ fontSize:13, fontWeight:500 }}>合計</span>
-          <span style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:300 }}>NT$ {total.toLocaleString()}</span>
+          <span style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:300 }}>NT$ {summary.total.toLocaleString()}</span>
         </div>
       </div>
     );
   }
 
-  /* ── Step 3: 填寫匯款末五碼 ── */
+  async function insertOrder(paymentData, methodLabel) {
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const noteParts = [safeTrim(form.note), buildPaymentNotes(methodLabel, paymentData)].filter(Boolean);
+    const order = {
+      id: orderNo,
+      member: form.name || user?.name || '訪客',
+      type: getMemberRole(user),
+      items: cart.map(i => ({ name: i.nameZh, qty: i.qty, price: getMemberPrice(i, user) })),
+      total,
+      subtotal,
+      discount,
+      promotion_id: promotion?.id || null,
+      promotion_name: promotion?.name || null,
+      status: 'awaiting_confirm',
+      date: dateStr,
+      address: `${form.city}${form.district}${form.address}`,
+      phone: form.phone,
+      email: form.email,
+      note: noteParts.join('\n\n'),
+      transfer_last5: paymentData?.ATMParam?.AtmPayNo ? paymentData.ATMParam.AtmPayNo.slice(-5) : '',
+      user_id: user?.uid || null,
+    };
+    const { error } = await supabase.from('orders').insert(order);
+    return error;
+  }
+
+  async function handleNext(e) {
+    e.preventDefault();
+    if (step === 1) {
+      window.scrollTo(0, 0);
+      setStep(2);
+      return;
+    }
+    if (step !== 2) return;
+
+    const method = PAYMENT_METHODS[paymentMethod] || PAYMENT_METHODS.atm;
+    const expireDate = formatDateCompact(addDays(new Date(), 7));
+    const payload = {
+      orderNo,
+      amount: total,
+      prdtName: productNameForPayment(),
+      payType: method.payType,
+      expireDate,
+      expireTime: '2359',
+      returnUrl: `${window.location.origin}${window.location.pathname}?payment=success&orderNo=${encodeURIComponent(orderNo)}`,
+      backendUrl: `${SINOPAC_PAYMENT_API}/api/sinopac/notify`,
+      qrCodeStatus: 'Y',
+      memo: safeTrim(form.note),
+    };
+    if (method.choosePay) payload.choosePay = method.choosePay;
+
+    setPaymentError('');
+    setSubmitting(true);
+    try {
+      const response = await fetch(`${SINOPAC_PAYMENT_API}/api/sinopac/create-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.ok === false) {
+        throw new Error(data.error || `金流建立失敗（HTTP ${response.status}）`);
+      }
+
+      const apiResponse = data.response || {};
+      setPaymentSnapshot(cart.map(item => ({ ...item })));
+      setPaymentSummary({ subtotal, discount, finalSubtotal, promotion, shipping, total, items: cart.map(item => ({ ...item })) });
+      const insertError = await insertOrder(apiResponse, method.label);
+      if (insertError) console.error(insertError);
+
+      const paymentLink = extractPaymentLink(apiResponse);
+      setPaymentResult({
+        method: paymentMethod,
+        methodLabel: method.label,
+        request: payload,
+        response: apiResponse,
+        paymentLink,
+        insertError: insertError ? (insertError.message || String(insertError)) : '',
+      });
+      setCart([]);
+      window.scrollTo(0, 0);
+      setStep(3);
+    } catch (err) {
+      console.error(err);
+      setPaymentError('付款單建立失敗，請稍後再試或聯繫客服。' + (err?.message ? `（${err.message}）` : ''));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function PaymentInfo() {
+    if (!paymentResult) return null;
+    const resp = paymentResult.response || {};
+    const atmNo = resp?.ATMParam?.AtmPayNo || '';
+    const paymentLink = paymentResult.paymentLink || '';
+    return (
+      <div style={{ background:'var(--off-white)', padding:'24px 28px', marginBottom:20 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14, gap:12 }}>
+          <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase' }}>付款資訊</p>
+          <span style={{ fontSize:10, background:'var(--gold)', color:'var(--white)', padding:'3px 10px', letterSpacing:'0.1em' }}>{paymentResult.methodLabel}</span>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'8px 20px', fontSize:13 }}>
+          <span style={{ color:'var(--dark)' }}>訂單編號</span>
+          <span style={{ color:'var(--black)', letterSpacing:'0.08em' }}>{orderNo}</span>
+          {resp?.TSNo && <>
+            <span style={{ color:'var(--dark)' }}>交易編號</span>
+            <span style={{ color:'var(--black)', letterSpacing:'0.08em' }}>{resp.TSNo}</span>
+          </>}
+          {atmNo && <>
+            <span style={{ color:'var(--dark)' }}>虛擬帳號</span>
+            <span style={{ color:'var(--black)', fontFamily:'monospace', letterSpacing:'0.12em', fontWeight:500 }}>{atmNo}</span>
+          </>}
+          <span style={{ color:'var(--dark)' }}>金額</span>
+          <span style={{ color:'var(--black)', fontWeight:500 }}>NT$ {total.toLocaleString()}</span>
+        </div>
+        {resp?.Description && <p style={{ fontSize:12, color:'var(--dark)', marginTop:12, lineHeight:1.7 }}>{resp.Description}</p>}
+        {paymentResult.insertError && <p style={{ fontSize:12, color:'#b45309', marginTop:12, lineHeight:1.7 }}>付款單已建立，但本站訂單寫入失敗：{paymentResult.insertError}</p>}
+        {paymentLink && (
+          <div style={{ display:'flex', gap:10, marginTop:16, flexWrap:'wrap' }}>
+            <a href={paymentLink} target="_blank" rel="noreferrer" style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', padding:'11px 16px', border:'1px solid var(--black)', color:'var(--black)', textDecoration:'none', fontSize:12, letterSpacing:'0.12em' }}>
+              前往付款頁
+            </a>
+            <button type="button" onClick={() => navigator.clipboard?.writeText(paymentLink)} style={{ background:'none', border:'1px solid var(--light)', color:'var(--dark)', padding:'11px 16px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>
+              複製付款連結
+            </button>
+          </div>
+        )}
+        {resp?.QRCodeURL && (
+          <div style={{ marginTop:18, padding:'14px', background:'var(--white)', border:'1px solid var(--light)' }}>
+            <div style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', marginBottom:10 }}>QR Code</div>
+            <img src={resp.QRCodeURL} alt="付款 QR Code" style={{ display:'block', width:'100%', maxWidth:240, height:'auto', margin:'0 auto' }} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (step === 3) return (
-    <div style={{ paddingTop:68 }}>
+    <div style={{ paddingTop:68, minHeight:'80vh' }}>
       <div style={{ maxWidth:960, margin:'0 auto', padding: isMobile ? '40px 20px' : '60px 40px' }}>
         <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 28 : 36, fontWeight:300, marginBottom:36 }}>結帳</h1>
         <StepBar />
 
-        <form onSubmit={handleTransferSubmit}>
-          <div className="gcheckout">
-            <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+        <div style={{ maxWidth:520, margin:'0 auto', textAlign:'center' }}>
+          <div style={{ width:56, height:56, border:'1px solid var(--black)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', fontSize:22 }}>✓</div>
+          <h2 style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, marginBottom:10 }}>付款單已建立</h2>
+          <p style={{ fontSize:13, color:'var(--dark)', marginBottom:26 }}>訂單編號：<strong style={{ color:'var(--dark)', letterSpacing:'0.06em' }}>{orderNo}</strong></p>
+        </div>
 
-              {/* 訂單編號提示 */}
-              <div style={{ background:'var(--off-white)', border:'1px solid var(--light)', padding:'16px 20px' }}>
-                <p style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', marginBottom:4 }}>訂單編號</p>
-                <p style={{ fontSize:16, fontWeight:500, color:'var(--black)', letterSpacing:'0.06em' }}>{orderNo}</p>
+        <div className="gcheckout">
+          <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+            <PaymentInfo />
+
+            <div style={{ background:'var(--off-white)', padding:'24px 28px' }}>
+              <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase', marginBottom:16 }}>配送資訊</p>
+              <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'8px 20px', fontSize:13 }}>
+                {[['收件人', form.name], ['手機', form.phone], ['地址', `${form.city}${form.district}${form.address}`], ['物流','宅配到府（黑貓宅急便）']].map(([k, v]) => (
+                  <React.Fragment key={k}>
+                    <span style={{ color:'var(--dark)', whiteSpace:'nowrap' }}>{k}</span>
+                    <span style={{ color:'var(--black)' }}>{v}</span>
+                  </React.Fragment>
+                ))}
               </div>
-
-              {/* 匯款資訊 */}
-              <div style={{ border:'1px solid var(--light)', padding:'20px 24px' }}>
-                <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase', marginBottom:14 }}>請匯款至以下帳戶</p>
-                <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'10px 20px', fontSize:13 }}>
-                  {[['銀行','國泰世華 (013)'],['帳號','123-456-789000'],['戶名','ECLADO 保養品有限公司'],['金額',`NT$ ${total.toLocaleString()}`]].map(([k,v]) => (
-                    <React.Fragment key={k}>
-                      <span style={{ color:'var(--dark)', whiteSpace:'nowrap' }}>{k}</span>
-                      <span style={{ color:'var(--black)', fontFamily: k==='帳號' ? 'monospace' : 'inherit', letterSpacing: k==='帳號' ? '0.06em' : 0, fontWeight: k==='金額' ? 600 : 400 }}>{v}</span>
-                    </React.Fragment>
-                  ))}
-                </div>
-              </div>
-
-              {/* 末五碼輸入 */}
-              <div style={{ border:'2px solid var(--black)', padding:'24px 28px' }}>
-                <label style={{ fontSize:11, letterSpacing:'0.16em', color:'var(--black)', textTransform:'uppercase', display:'block', marginBottom:14, fontWeight:500 }}>
-                  匯款帳號末五碼 <span style={{ color:'var(--gold)' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="\d{5}"
-                  maxLength={5}
-                  value={transferLast5}
-                  onChange={e => { setTransferLast5(e.target.value.replace(/\D/g,'').slice(0,5)); setTransferError(''); }}
-                  placeholder="• • • • •"
-                  required
-                  autoFocus
-                  style={{
-                    width:'100%', border:'none', borderBottom:'2px solid var(--black)',
-                    padding:'12px 0', fontSize:32, letterSpacing:'0.4em',
-                    fontFamily:'var(--font-body)', outline:'none',
-                    background:'none', color:'var(--black)', textAlign:'center', fontWeight:500,
-                  }}
-                />
-                {transferError && (
-                  <p style={{ fontSize:12, color:'#c0392b', marginTop:12 }}>{transferError}</p>
-                )}
-                <p style={{ fontSize:12, color:'var(--dark)', marginTop:14, lineHeight:1.7 }}>
-                  ※ 請填入您匯款帳戶的後 5 碼，方便店家對帳<br />
-                  ※ 店家確認入帳後，訂單將進入出貨流程
-                </p>
-              </div>
-
-              <button type="submit" disabled={submitting} style={{ background: submitting ? 'var(--dark)' : 'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: submitting ? 'wait' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8, opacity: submitting ? 0.7 : 1 }}>
-                {submitting ? '送出中...' : '送出匯款資訊'}
-              </button>
             </div>
 
-            {/* 右側：訂單摘要 */}
-            <OrderSummary />
-          </div>
-        </form>
-      </div>
-    </div>
-  );
+            <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.8, textAlign:'center' }}>
+              請依付款頁或虛擬帳號完成付款。系統會在永豐通知後更新訂單狀態。<br />
+              如有疑問請透過官方 LINE 聯繫客服。
+            </p>
 
-  /* ── Step 4: 完成 ── */
-  if (step === 4) return (
-    <div style={{ paddingTop:68, minHeight:'80vh', display:'flex', alignItems:'center', justifyContent:'center', padding:'60px 20px' }}>
-      <div style={{ maxWidth:520, width:'100%' }}>
-        <div style={{ textAlign:'center', marginBottom:40 }}>
-          <div style={{ width:56, height:56, border:'1px solid var(--black)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', fontSize:22 }}>✓</div>
-          <h2 style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, marginBottom:10 }}>訂單已送出</h2>
-          <p style={{ fontSize:13, color:'var(--dark)' }}>訂單編號：<strong style={{ color:'var(--dark)', letterSpacing:'0.06em' }}>{orderNo}</strong></p>
-        </div>
-
-        <div style={{ background:'var(--off-white)', padding:'24px 28px', marginBottom:20 }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
-            <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase' }}>匯款資訊</p>
-            <span style={{ fontSize:10, background:'var(--gold)', color:'var(--white)', padding:'3px 10px', letterSpacing:'0.1em' }}>待店家確認</span>
+            <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
+              <button onClick={() => setPage('shop')} style={{ flex:1, background:'none', border:'1px solid var(--black)', color:'var(--black)', padding:'13px 0', fontSize:12, letterSpacing:'0.14em', cursor:'pointer', fontFamily:'var(--font-body)' }}>繼續購物</button>
+              <button onClick={() => setPage('home')} style={{ flex:1, background:'var(--black)', color:'var(--white)', border:'none', padding:'13px 0', fontSize:12, letterSpacing:'0.14em', cursor:'pointer', fontFamily:'var(--font-body)' }}>返回首頁</button>
+            </div>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'8px 20px', fontSize:13 }}>
-            <span style={{ color:'var(--dark)' }}>末五碼</span>
-            <span style={{ color:'var(--black)', fontWeight:600, letterSpacing:'0.2em' }}>{transferLast5}</span>
-            <span style={{ color:'var(--dark)' }}>金額</span>
-            <span style={{ color:'var(--black)', fontWeight:500 }}>NT$ {total.toLocaleString()}</span>
-          </div>
-        </div>
 
-        <div style={{ background:'var(--off-white)', padding:'24px 28px', marginBottom:32 }}>
-          <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase', marginBottom:16 }}>配送資訊</p>
-          <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'8px 20px', fontSize:13 }}>
-            {[['收件人',form.name],['手機',form.phone],['地址',`${form.city}${form.district}${form.address}`],['物流','宅配到府（黑貓宅急便）']].map(([k,v]) => (
-              <React.Fragment key={k}>
-                <span style={{ color:'var(--dark)', whiteSpace:'nowrap' }}>{k}</span>
-                <span style={{ color:'var(--black)' }}>{v}</span>
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-
-        <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.8, marginBottom:28, textAlign:'center' }}>
-          您的轉帳末五碼已送出，店家確認入帳後將為您安排出貨。<br />如有疑問請透過官方 LINE 聯繫客服。
-        </p>
-        <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
-          <button onClick={() => setPage('shop')} style={{ flex:1, background:'none', border:'1px solid var(--black)', color:'var(--black)', padding:'13px 0', fontSize:12, letterSpacing:'0.14em', cursor:'pointer', fontFamily:'var(--font-body)' }}>繼續購物</button>
-          <button onClick={() => setPage('home')} style={{ flex:1, background:'var(--black)', color:'var(--white)', border:'none', padding:'13px 0', fontSize:12, letterSpacing:'0.14em', cursor:'pointer', fontFamily:'var(--font-body)' }}>返回首頁</button>
+          <OrderSummary />
         </div>
       </div>
     </div>
@@ -1546,13 +1644,9 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
 
         <form onSubmit={handleNext}>
           <div className="gcheckout">
-            {/* 左側：表單 */}
             <div>
-
-              {/* Step 1: 收件資訊 */}
               {step === 1 && (
                 <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
-
                   <div style={{ background:'var(--off-white)', border:'1px solid var(--light)', padding:'16px 20px', display:'flex', alignItems:'center', gap:14 }}>
                     <div style={{ width:36, height:36, background:'var(--black)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -1573,47 +1667,44 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
                     <label style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:7 }}>收件地址 <span style={{ color:'var(--gold)' }}>*</span></label>
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
                       {[['city','縣市'],['district','區域']].map(([k,ph]) => (
-                        <input key={k} type="text" value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} required placeholder={ph}
+                        <input key={k} type="text" value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} required placeholder={ph}
                           style={{ border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--black)' }}
-                          onFocus={e=>e.target.style.borderBottomColor='var(--black)'}
-                          onBlur={e=>e.target.style.borderBottomColor='var(--light)'}
+                          onFocus={e => e.target.style.borderBottomColor='var(--black)'}
+                          onBlur={e => e.target.style.borderBottomColor='var(--light)'}
                         />
                       ))}
                     </div>
-                    <input type="text" value={form.address} onChange={e=>setForm(f=>({...f,address:e.target.value}))} required placeholder="路/街/巷/弄/號/樓"
+                    <input type="text" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} required placeholder="路/街/巷/弄/號/樓"
                       style={{ width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--black)', boxSizing:'border-box' }}
-                      onFocus={e=>e.target.style.borderBottomColor='var(--black)'}
-                      onBlur={e=>e.target.style.borderBottomColor='var(--light)'}
+                      onFocus={e => e.target.style.borderBottomColor='var(--black)'}
+                      onBlur={e => e.target.style.borderBottomColor='var(--light)'}
                     />
                   </div>
 
                   <div>
                     <label style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:7 }}>備註（選填）</label>
-                    <textarea value={form.note} onChange={e=>setForm(f=>({...f,note:e.target.value}))} rows={3} placeholder="如有特殊需求請於此備註"
+                    <textarea value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} rows={3} placeholder="如有特殊需求請於此備註"
                       style={{ width:'100%', border:'1px solid var(--light)', padding:'10px 12px', fontSize:13, fontFamily:'var(--font-body)', outline:'none', resize:'none', background:'none', color:'var(--black)', boxSizing:'border-box', lineHeight:1.7 }}
-                      onFocus={e=>e.target.style.borderColor='var(--black)'}
-                      onBlur={e=>e.target.style.borderColor='var(--light)'}
+                      onFocus={e => e.target.style.borderColor='var(--black)'}
+                      onBlur={e => e.target.style.borderColor='var(--light)'}
                     />
                   </div>
 
                   <button type="submit" style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'15px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8 }}>
-                    繼續確認訂單
+                    繼續確認付款
                   </button>
                 </div>
               )}
 
-              {/* Step 2: 確認訂單 */}
               {step === 2 && (
                 <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
-
-                  {/* 收件資訊摘要 */}
                   <div style={{ border:'1px solid var(--light)', padding:'20px 24px' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
                       <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase' }}>收件資訊</p>
                       <button type="button" onClick={() => setStep(1)} style={{ background:'none', border:'none', fontSize:11, color:'var(--dark)', cursor:'pointer', textDecoration:'underline', fontFamily:'var(--font-body)', padding:0 }}>修改</button>
                     </div>
                     <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'8px 20px', fontSize:13 }}>
-                      {[['收件人',form.name],['手機',form.phone],['Email',form.email],['地址',`${form.city}${form.district}${form.address}`],['物流','宅配到府（黑貓宅急便）']].map(([k,v]) => (
+                      {[['收件人', form.name], ['手機', form.phone], ['Email', form.email], ['地址', `${form.city}${form.district}${form.address}`], ['物流','宅配到府（黑貓宅急便）']].map(([k, v]) => (
                         <React.Fragment key={k}>
                           <span style={{ color:'var(--dark)', whiteSpace:'nowrap' }}>{k}</span>
                           <span style={{ color:'var(--black)' }}>{v}</span>
@@ -1622,39 +1713,47 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
                     </div>
                   </div>
 
-                  {/* 付款方式 */}
                   <div>
                     <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase', marginBottom:14 }}>付款方式</p>
-                    <div style={{ border:'2px solid var(--black)', padding:'20px 24px' }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                          <div style={{ width:18, height:18, borderRadius:'50%', border:'2px solid var(--black)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                            <div style={{ width:8, height:8, borderRadius:'50%', background:'var(--black)' }} />
-                          </div>
-                          <span style={{ fontSize:14, fontWeight:500, color:'var(--black)' }}>銀行轉帳</span>
-                        </div>
-                      </div>
-                      <div style={{ background:'var(--off-white)', padding:'16px 20px' }}>
-                        <p style={{ fontSize:10, letterSpacing:'0.16em', color:'var(--dark)', textTransform:'uppercase', marginBottom:12 }}>匯款帳號</p>
-                        <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'8px 20px', fontSize:13 }}>
-                          {[['銀行','國泰世華 (013)'],['帳號','123-456-789000'],['戶名','ECLADO 保養品有限公司']].map(([k,v]) => (
-                            <React.Fragment key={k}>
-                              <span style={{ color:'var(--dark)' }}>{k}</span>
-                              <span style={{ color:'var(--black)', fontFamily: k==='帳號' ? 'monospace' : 'inherit', letterSpacing: k==='帳號' ? '0.06em' : 0 }}>{v}</span>
-                            </React.Fragment>
-                          ))}
-                        </div>
-                      </div>
-                      <p style={{ fontSize:12, color:'var(--black)', marginTop:14, lineHeight:1.8 }}>
-                        ※ 請於下單後 <strong>十分鐘內</strong> 完成匯款<br />
-                        ※ 匯款後請保留收據，確認入帳後將安排出貨
-                      </p>
+                    <div style={{ display:'grid', gap:12 }}>
+                      {Object.entries(PAYMENT_METHODS).map(([key, method]) => {
+                        const active = paymentMethod === key;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => setPaymentMethod(key)}
+                            style={{
+                              width:'100%',
+                              textAlign:'left',
+                              border: active ? '2px solid var(--black)' : '1px solid var(--light)',
+                              background: active ? 'var(--off-white)' : 'var(--white)',
+                              padding:'16px 18px',
+                              cursor:'pointer',
+                            }}
+                          >
+                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12 }}>
+                              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                                <div style={{ width:18, height:18, borderRadius:'50%', border:`2px solid ${active ? 'var(--black)' : 'var(--mid)'}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                  {active && <div style={{ width:8, height:8, borderRadius:'50%', background:'var(--black)' }} />}
+                                </div>
+                                <div>
+                                  <div style={{ fontSize:14, fontWeight:500, color:'var(--black)' }}>{method.label}</div>
+                                  <div style={{ fontSize:11, color:'var(--dark)', marginTop:2 }}>{method.description}</div>
+                                </div>
+                              </div>
+                              <div style={{ fontSize:11, letterSpacing:'0.08em', color:'var(--dark)' }}>{method.payType}</div>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  <button type="submit" style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8 }}>
-                    下一步：填寫匯款末五碼
+                  <button type="submit" disabled={submitting} style={{ background: submitting ? 'var(--dark)' : 'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: submitting ? 'wait' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8, opacity: submitting ? 0.7 : 1 }}>
+                    {submitting ? '建立付款單中...' : '建立付款單'}
                   </button>
+                  {paymentError && <p style={{ fontSize:12, color:'#c0392b', textAlign:'center', lineHeight:1.6 }}>{paymentError}</p>}
                   <p style={{ fontSize:11, color:'var(--dark)', textAlign:'center', lineHeight:1.6 }}>
                     送出即表示您同意本公司退換貨及隱私權政策
                   </p>
@@ -1662,7 +1761,6 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
               )}
             </div>
 
-            {/* 右側：訂單摘要 */}
             <OrderSummary />
           </div>
         </form>
@@ -2239,10 +2337,10 @@ function InfoPage() {
       { q:'出貨通知', a:'商品出貨後系統將自動透過 LINE 發送出貨通知，內含物流追蹤連結。' },
     ]},
     '付款說明': { title:'付款說明', content:[
-      { q:'付款方式', a:'目前僅接受銀行轉帳（ATM 匯款）付款。' },
-      { q:'匯款資訊', a:'銀行：國泰世華銀行（013）\n帳號：123-456-789000\n戶名：ECLADO 保養品有限公司' },
-      { q:'付款期限', a:'請於下單後 3 個工作天內完成匯款，逾期訂單將自動取消。' },
-      { q:'匯款確認', a:'匯款完成後請保留收據，我們會在 1 個工作天內確認並安排出貨。' },
+      { q:'付款方式', a:'目前提供虛擬帳號匯款、信用卡、Apple Pay 與 Google Pay，由永豐豐收款處理。' },
+      { q:'付款確認', a:'完成付款後系統會自動接收通知並更新訂單狀態，無須另外上傳轉帳末五碼。' },
+      { q:'付款期限', a:'若選擇虛擬帳號匯款，請依付款頁顯示的期限完成付款，逾期訂單將自動失效。' },
+      { q:'匯款 / 付款說明', a:'如為虛擬帳號匯款，付款完成後請保留收據；信用卡與行動支付則依永豐付款頁面流程完成即可。' },
     ]},
     '常見問題': { title:'常見問題', content:[
       { q:'如何成為美容師會員？', a:'請先完成一般會員註冊，再透過 LINE 聯繫客服提供美容師執照或相關證明，審核通過後即可升級為美容師會員。' },
