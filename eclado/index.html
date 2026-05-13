@@ -1335,11 +1335,11 @@ function CartPage({ cart, setCart, setPage, user, promotions = [] }) {
 function CheckoutField({ label, name, type, required, placeholder, value, onChange }) {
   return (
     <div>
-      <label style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:7 }}>
+      <label style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:7, fontFamily:'var(--font-body)' }}>
         {label}{required !== false && <span style={{ color:'var(--gold)', marginLeft:3 }}>*</span>}
       </label>
       <input type={type||'text'} value={value} onChange={onChange} required={required !== false} placeholder={placeholder||''}
-        style={{ width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--black)', boxSizing:'border-box' }}
+        style={{ width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', fontVariantNumeric:'tabular-nums', outline:'none', background:'none', color:'var(--black)', boxSizing:'border-box' }}
         onFocus={e=>e.target.style.borderBottomColor='var(--black)'}
         onBlur={e=>e.target.style.borderBottomColor='var(--light)'}
       />
@@ -1557,14 +1557,14 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'8px 20px', fontSize:13 }}>
           <span style={{ color:'var(--dark)' }}>訂單編號</span>
-          <span style={{ color:'var(--black)', letterSpacing:'0.08em' }}>{orderNo}</span>
+          <span style={{ color:'var(--black)', letterSpacing:'0.08em', fontFamily:'var(--font-body)', fontVariantNumeric:'tabular-nums' }}>{orderNo}</span>
           {resp?.TSNo && <>
             <span style={{ color:'var(--dark)' }}>交易編號</span>
-            <span style={{ color:'var(--black)', letterSpacing:'0.08em' }}>{resp.TSNo}</span>
+            <span style={{ color:'var(--black)', letterSpacing:'0.08em', fontFamily:'var(--font-body)', fontVariantNumeric:'tabular-nums' }}>{resp.TSNo}</span>
           </>}
           {atmNo && <>
             <span style={{ color:'var(--dark)' }}>虛擬帳號</span>
-            <span style={{ color:'var(--black)', fontFamily:'monospace', letterSpacing:'0.12em', fontWeight:500 }}>{atmNo}</span>
+            <span style={{ color:'var(--black)', fontFamily:'var(--font-body)', letterSpacing:'0.12em', fontWeight:500, fontVariantNumeric:'tabular-nums' }}>{atmNo}</span>
           </>}
           <span style={{ color:'var(--dark)' }}>金額</span>
           <span style={{ color:'var(--black)', fontWeight:500 }}>NT$ {total.toLocaleString()}</span>
@@ -1573,7 +1573,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
         {paymentResult.insertError && <p style={{ fontSize:12, color:'#b45309', marginTop:12, lineHeight:1.7 }}>付款單已建立，但本站訂單寫入失敗：{paymentResult.insertError}</p>}
         {paymentLink && (
           <div style={{ display:'flex', gap:10, marginTop:16, flexWrap:'wrap' }}>
-            <a href={paymentLink} target="_blank" rel="noreferrer" style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', padding:'11px 16px', border:'1px solid var(--black)', color:'var(--black)', textDecoration:'none', fontSize:12, letterSpacing:'0.12em' }}>
+            <a href={paymentLink} target="_blank" rel="noreferrer" style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', padding:'11px 16px', border:'1px solid var(--black)', color:'var(--black)', textDecoration:'none', fontSize:12, letterSpacing:'0.12em', fontFamily:'var(--font-body)' }}>
               前往付款頁
             </a>
             <button type="button" onClick={() => navigator.clipboard?.writeText(paymentLink)} style={{ background:'none', border:'1px solid var(--light)', color:'var(--dark)', padding:'11px 16px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>
@@ -1600,7 +1600,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
         <div style={{ maxWidth:520, margin:'0 auto', textAlign:'center' }}>
           <div style={{ width:56, height:56, border:'1px solid var(--black)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', fontSize:22 }}>✓</div>
           <h2 style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, marginBottom:10 }}>付款單已建立</h2>
-          <p style={{ fontSize:13, color:'var(--dark)', marginBottom:26 }}>訂單編號：<strong style={{ color:'var(--dark)', letterSpacing:'0.06em' }}>{orderNo}</strong></p>
+          <p style={{ fontSize:13, color:'var(--dark)', marginBottom:26 }}>訂單編號：<strong style={{ color:'var(--dark)', letterSpacing:'0.06em', fontFamily:'var(--font-body)', fontVariantNumeric:'tabular-nums' }}>{orderNo}</strong></p>
         </div>
 
         <div className="gcheckout">
@@ -1668,14 +1668,14 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
                       {[['city','縣市'],['district','區域']].map(([k,ph]) => (
                         <input key={k} type="text" value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} required placeholder={ph}
-                          style={{ border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--black)' }}
+                          style={{ border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', fontVariantNumeric:'tabular-nums', outline:'none', background:'none', color:'var(--black)' }}
                           onFocus={e => e.target.style.borderBottomColor='var(--black)'}
                           onBlur={e => e.target.style.borderBottomColor='var(--light)'}
                         />
                       ))}
                     </div>
                     <input type="text" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} required placeholder="路/街/巷/弄/號/樓"
-                      style={{ width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--black)', boxSizing:'border-box' }}
+                      style={{ width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', fontVariantNumeric:'tabular-nums', outline:'none', background:'none', color:'var(--black)', boxSizing:'border-box' }}
                       onFocus={e => e.target.style.borderBottomColor='var(--black)'}
                       onBlur={e => e.target.style.borderBottomColor='var(--light)'}
                     />
@@ -1738,11 +1738,11 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
                                   {active && <div style={{ width:8, height:8, borderRadius:'50%', background:'var(--black)' }} />}
                                 </div>
                                 <div>
-                                  <div style={{ fontSize:14, fontWeight:500, color:'var(--black)' }}>{method.label}</div>
-                                  <div style={{ fontSize:11, color:'var(--dark)', marginTop:2 }}>{method.description}</div>
+                                  <div style={{ fontSize:14, fontWeight:500, color:'var(--black)', fontFamily:'var(--font-body)' }}>{method.label}</div>
+                                  <div style={{ fontSize:11, color:'var(--dark)', marginTop:2, fontFamily:'var(--font-body)' }}>{method.description}</div>
                                 </div>
                               </div>
-                              <div style={{ fontSize:11, letterSpacing:'0.08em', color:'var(--dark)' }}>{method.payType}</div>
+                              <div style={{ fontSize:11, letterSpacing:'0.08em', color:'var(--dark)', fontFamily:'var(--font-body)', fontVariantNumeric:'tabular-nums' }}>{method.payType}</div>
                             </div>
                           </button>
                         );
