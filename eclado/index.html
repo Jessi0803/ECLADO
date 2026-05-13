@@ -298,7 +298,9 @@ function extractPaymentLink(response) {
     response?.ATMParam?.WebAtmURL,
     response?.ATMParam?.QRCodeURL,
     response?.QRCodeURL,
+    response?.CardParam?.CardPayURL,
     response?.CardParam?.CardURL,
+    response?.MobileParam?.MobilePayURL,
     response?.MobileParam?.MobileURL,
     response?.WalletParam?.WalletURL,
   ];
@@ -316,6 +318,15 @@ function buildPaymentNotes(methodLabel, response) {
     response?.QRCodeURL ? `QR Code：${response.QRCodeURL}` : '',
   ].filter(Boolean);
   return lines.join('\n');
+}
+
+function getSinopacPaymentError(response) {
+  if (!response || typeof response !== 'object') return '';
+  const status = String(response.Status || '').trim().toUpperCase();
+  const description = String(response.Description || '').trim();
+  if (status && status !== 'S') return description || `永豐狀態：${status}`;
+  if (/^E\d{4}/i.test(description)) return description;
+  return '';
 }
 
 const HERO_SLIDES = [
@@ -1317,12 +1328,12 @@ function CartPage({ cart, setCart, setPage, user, promotions = [] }) {
                     <p style={{ fontSize:12, color:'var(--dark)', marginBottom:10 }}>{item.nameZh} · {item.size}</p>
                     <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                       <button onClick={() => updateQty(item.id,-1)} style={{ width:26, height:26, border:'1px solid var(--light)', background:'none', cursor:'pointer', fontSize:15, lineHeight:1 }}>−</button>
-                      <span style={{ fontSize:14, minWidth:20, textAlign:'center' }}>{item.qty}</span>
+                      <span style={{ fontSize:14, minWidth:20, textAlign:'center', fontFamily:'var(--font-display)' }}>{item.qty}</span>
                       <button onClick={() => updateQty(item.id,1)} style={{ width:26, height:26, border:'1px solid var(--light)', background:'none', cursor:'pointer', fontSize:15, lineHeight:1 }}>+</button>
                     </div>
                   </div>
                   <div style={{ textAlign:'right' }}>
-                    <p style={{ fontSize:14, fontWeight:500 }}>NT$ {(getMemberPrice(item, user)*item.qty).toLocaleString()}</p>
+                    <p style={{ fontSize:14, fontWeight:500, fontFamily:'var(--font-display)' }}>NT$ {(getMemberPrice(item, user)*item.qty).toLocaleString()}</p>
                     <button onClick={() => updateQty(item.id,-item.qty)} style={{ background:'none', border:'none', cursor:'pointer', fontSize:11, color:'var(--dark)', marginTop:6 }}>移除</button>
                   </div>
                 </div>
@@ -1330,16 +1341,16 @@ function CartPage({ cart, setCart, setPage, user, promotions = [] }) {
             </div>
             <div style={{ background:'var(--off-white)', padding:'28px', height:'fit-content' }}>
               <h3 style={{ fontFamily:'var(--font-display)', fontSize:18, fontWeight:400, marginBottom:20 }}>訂單摘要</h3>
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13 }}><span>小計</span><span>NT$ {subtotal.toLocaleString()}</span></div>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13 }}><span>小計</span><span style={{ fontFamily:'var(--font-display)' }}>NT$ {subtotal.toLocaleString()}</span></div>
               {discount > 0 && promotion && (
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13, color:'var(--gold)' }}>
                   <span>{promotion.name}</span>
-                  <span>−NT$ {discount.toLocaleString()}</span>
+                  <span style={{ fontFamily:'var(--font-display)' }}>−NT$ {discount.toLocaleString()}</span>
                 </div>
               )}
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13 }}>
                 <span>運費</span>
-                <span>{shipping === 0 ? <span style={{ color:'var(--gold)' }}>免運</span> : `NT$ ${shipping}`}</span>
+                <span style={{ fontFamily:'var(--font-display)' }}>{shipping === 0 ? <span style={{ color:'var(--gold)', fontFamily:'var(--font-body)' }}>免運</span> : `NT$ ${shipping}`}</span>
               </div>
               <div style={{ height:1, background:'var(--light)', margin:'16px 0' }} />
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:24, fontWeight:500 }}>
@@ -1449,14 +1460,14 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
                   <p style={{ fontSize:12, color:'var(--black)', marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.nameZh}</p>
                   <p style={{ fontSize:11, color:'var(--dark)' }}>{item.size}</p>
                 </div>
-                <span style={{ fontSize:13, color:'var(--black)', flexShrink:0 }}>NT$ {(unitPrice * item.qty).toLocaleString()}</span>
+                <span style={{ fontSize:13, color:'var(--black)', flexShrink:0, fontFamily:'var(--font-display)' }}>NT$ {(unitPrice * item.qty).toLocaleString()}</span>
               </div>
             );
           })}
         </div>
         <div style={{ height:1, background:'var(--light)', marginBottom:14 }} />
         <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--dark)', marginBottom:8 }}>
-          <span>小計</span><span>NT$ {summary.subtotal.toLocaleString()}</span>
+          <span>小計</span><span style={{ fontFamily:'var(--font-display)' }}>NT$ {summary.subtotal.toLocaleString()}</span>
         </div>
         {summary.discount > 0 && summary.promotion && (
           <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--gold)', marginBottom:8 }}>
@@ -1464,12 +1475,12 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
               <span style={{ background:'var(--gold)', color:'var(--white)', fontSize:9, padding:'1px 5px', letterSpacing:'0.06em' }}>活動</span>
               {summary.promotion.name}
             </span>
-            <span>−NT$ {summary.discount.toLocaleString()}</span>
+            <span style={{ fontFamily:'var(--font-display)' }}>−NT$ {summary.discount.toLocaleString()}</span>
           </div>
         )}
         <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--dark)', marginBottom:14, alignItems:'center' }}>
           <span>運費 <span style={{ fontSize:10, color:'var(--dark)' }}>（宅配到府）</span></span>
-          <span>{summary.shipping === 0 ? <span style={{ color:'var(--gold)' }}>免運</span> : `NT$ ${summary.shipping}`}</span>
+          <span style={{ fontFamily:'var(--font-display)' }}>{summary.shipping === 0 ? <span style={{ color:'var(--gold)', fontFamily:'var(--font-body)' }}>免運</span> : `NT$ ${summary.shipping}`}</span>
         </div>
         {summary.finalSubtotal < 3000 && <p style={{ fontSize:11, color:'var(--dark)', marginBottom:14, lineHeight:1.6 }}>消費滿 NT$ 3,000 享免運費，還差 NT$ {(3000 - summary.finalSubtotal).toLocaleString()}</p>}
         <div style={{ height:1, background:'var(--light)', marginBottom:14 }} />
@@ -1518,6 +1529,11 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
     if (step !== 2) return;
 
     const method = PAYMENT_METHODS[paymentMethod] || PAYMENT_METHODS.atm;
+    if (paymentMethod === 'atm' && total % 100 !== 0) {
+      setPaymentError('虛擬帳號匯款金額需為百元整。請改用信用卡、Apple Pay、Google Pay，或調整購物金額。');
+      return;
+    }
+
     const expireDate = formatDateCompact(addDays(new Date(), 7));
     const payload = {
       orderNo,
@@ -1547,6 +1563,9 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
       }
 
       const apiResponse = data.response || {};
+      const sinopacError = getSinopacPaymentError(apiResponse);
+      if (sinopacError) throw new Error(sinopacError);
+
       setPaymentSnapshot(cart.map(item => ({ ...item })));
       setPaymentSummary({ subtotal, discount, finalSubtotal, promotion, shipping, total, items: cart.map(item => ({ ...item })) });
       const insertError = await insertOrder(apiResponse, method.label);
