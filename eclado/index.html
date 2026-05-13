@@ -250,6 +250,32 @@ const HERO_SLIDES = [
   { headline:'Korea\'s\nNo.1 Pro Brand.', sub:'28年陪伴韓國8,000+皮膚管理中心成長，從問題肌修復、敏弱調理到抗老管理，147支系列打造完整院線療程邏輯，而非單一明星產品。', cta:'探索系列', img:'https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=1800&q=85&fit=crop', layout:'split', accent:'28 Years · 23 Countries' },
 ];
 
+const TOP_PRODUCT_IDS = [2, 6, 4, 1, 3, 8, 5, 7];
+
+const JOURNAL_ARTICLES = [
+  {
+    category:'成分學',
+    title:'胜肽、玻尿酸、積雪草，修護型保養怎麼排先後？',
+    excerpt:'從保濕、屏障到彈潤修護，整理三種常見活性成分的角色與適合膚況。',
+    readTime:'6 min read',
+    img:'https://images.unsplash.com/photo-1556228724-4b0f5a8763fd?w=900&q=85&fit=crop',
+  },
+  {
+    category:'保養觀念',
+    title:'敏弱肌日常流程：清潔、舒緩、鎖水的低刺激節奏',
+    excerpt:'以院線保養邏輯拆解居家早晚程序，減少過度疊擦造成的負擔。',
+    readTime:'5 min read',
+    img:'https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=900&q=85&fit=crop',
+  },
+  {
+    category:'專業分享',
+    title:'美容師如何為乾燥與熟齡肌挑選安瓶與乳霜搭配',
+    excerpt:'從質地、功能與客戶膚況三個面向，建立更清楚的療程推薦方向。',
+    readTime:'7 min read',
+    img:'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=900&q=85&fit=crop',
+  },
+];
+
 // ─── NAV ITEM (desktop dropdown) ─────────────────────────────────────────────
 function NavItem({ item, scrolled, setPage }) {
   const [open, setOpen] = useState(false);
@@ -443,6 +469,127 @@ function MobileNavSection({ item, setPage, close }) {
   );
 }
 
+function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPage }) {
+  const [active, setActive] = useState(0);
+  const visibleCount = isMobile ? 1 : 3;
+  const maxStart = Math.max(0, products.length - visibleCount);
+
+  useEffect(() => {
+    if (products.length <= visibleCount) return;
+    const timer = setInterval(() => {
+      setActive(current => current >= maxStart ? 0 : current + 1);
+    }, 5200);
+    return () => clearInterval(timer);
+  }, [maxStart, products.length, visibleCount]);
+
+  useEffect(() => {
+    setActive(current => Math.min(current, maxStart));
+  }, [maxStart]);
+
+  const start = Math.min(active, maxStart);
+  const visible = products.slice(start, start + visibleCount);
+
+  function move(delta) {
+    setActive(current => {
+      if (maxStart === 0) return 0;
+      const next = current + delta;
+      if (next < 0) return maxStart;
+      if (next > maxStart) return 0;
+      return next;
+    });
+  }
+
+  return (
+    <section style={{ background:'var(--off-white)', padding: isMobile ? '60px 0' : '96px 0', borderBottom:'1px solid var(--light)' }}>
+      <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
+        <div style={{ display:'flex', justifyContent:'space-between', gap:24, alignItems:'flex-end', marginBottom: isMobile ? 28 : 42, flexWrap:'wrap' }}>
+          <div style={{ maxWidth:680 }}>
+            <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>Top 10 Selection</p>
+            <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(28px,4vw,54px)', fontWeight:300, lineHeight:1.08, color:'var(--black)', marginBottom:14 }}>熱門商品輪播</h2>
+            <p style={{ fontSize:14, lineHeight:1.85, color:'var(--dark)', maxWidth:620 }}>從日常清潔、保濕修護到院線集中護理，快速瀏覽目前最受關注的核心商品。</p>
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <button aria-label="上一組熱門商品" onClick={() => move(-1)} style={{ width:44, height:44, border:'1px solid var(--light)', background:'var(--white)', color:'var(--black)', cursor:'pointer', fontSize:18 }}>←</button>
+            <button aria-label="下一組熱門商品" onClick={() => move(1)} style={{ width:44, height:44, border:'1px solid var(--black)', background:'var(--black)', color:'var(--white)', cursor:'pointer', fontSize:18 }}>→</button>
+          </div>
+        </div>
+
+        <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : `repeat(${visibleCount}, minmax(0, 1fr))`, gap: isMobile ? 18 : 24 }}>
+          {visible.map((product, index) => {
+            const rank = start + index + 1;
+            return (
+              <article key={`${product.id}-${rank}`} style={{ background:'var(--white)', border:'1px solid var(--light)', minHeight: isMobile ? 520 : 580, display:'flex', flexDirection:'column' }}>
+                <button onClick={() => onSelect(product)} style={{ position:'relative', border:'none', background:'none', cursor:'pointer', padding:0, textAlign:'left' }}>
+                  <img src={product.img} alt={product.nameZh} style={{ display:'block', width:'100%', aspectRatio:'4 / 4.5', objectFit:'cover' }} />
+                  <div style={{ position:'absolute', left:18, top:18, minWidth:58, height:58, background:'rgba(17,17,16,0.92)', color:'var(--white)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+                    <span style={{ fontSize:10, letterSpacing:'0.16em', color:'var(--gold)' }}>TOP</span>
+                    <strong style={{ fontFamily:'var(--font-display)', fontSize:24, fontWeight:400, lineHeight:1 }}>{String(rank).padStart(2,'0')}</strong>
+                  </div>
+                </button>
+                <div style={{ padding:'20px 20px 22px', display:'flex', flexDirection:'column', gap:14, flex:1 }}>
+                  <div>
+                    <div style={{ fontSize:11, letterSpacing:'0.18em', color:'var(--gold)', textTransform:'uppercase', marginBottom:8 }}>{product.category}</div>
+                    <h3 style={{ fontFamily:'var(--font-display)', fontSize:25, fontWeight:300, lineHeight:1.25, color:'var(--black)', marginBottom:8 }}>{product.nameZh}</h3>
+                    <p style={{ fontSize:13, lineHeight:1.75, color:'var(--dark)' }}>{product.features?.[0] || product.desc}</p>
+                  </div>
+                  <div style={{ marginTop:'auto', display:'flex', justifyContent:'space-between', gap:12, alignItems:'center', borderTop:'1px solid var(--light)', paddingTop:14 }}>
+                    <div>
+                      <div style={{ fontSize:11, color:'var(--mid)', marginBottom:3 }}>{getMemberTier(user).priceLabel}</div>
+                      <div style={{ fontSize:18, fontWeight:500, color:'var(--black)' }}>NT$ {getMemberPrice(product, user).toLocaleString()}</div>
+                    </div>
+                    <button onClick={() => onAdd(product)} style={{ border:'none', background:'var(--black)', color:'var(--white)', cursor:'pointer', padding:'12px 16px', fontSize:11, letterSpacing:'0.12em', whiteSpace:'nowrap' }}>加入購物車</button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+
+        <div style={{ marginTop:24, display:'flex', justifyContent:'space-between', gap:18, alignItems:'center', flexWrap:'wrap' }}>
+          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+            {Array.from({ length:maxStart + 1 }).map((_, index) => (
+              <button key={index} aria-label={`查看第 ${index + 1} 組熱門商品`} onClick={() => setActive(index)} style={{ width:index === start ? 28 : 9, height:3, border:'none', background:index === start ? 'var(--black)' : 'var(--light)', cursor:'pointer', padding:0, transition:'all 0.25s' }} />
+            ))}
+          </div>
+          <button onClick={() => setPage('shop')} style={{ background:'none', border:'none', borderBottom:'1px solid var(--dark)', color:'var(--dark)', cursor:'pointer', fontSize:13, paddingBottom:3 }}>瀏覽全部商品 →</button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function KnowledgeJournal({ isMobile }) {
+  return (
+    <section style={{ background:'var(--white)', padding: isMobile ? '64px 0 72px' : '104px 0 112px', borderTop:'1px solid var(--light)' }}>
+      <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
+        <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(280px, 0.9fr) minmax(0, 1.4fr)', gap: isMobile ? 28 : 56, alignItems:'start', marginBottom: isMobile ? 28 : 42 }}>
+          <div>
+            <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:12 }}>Journal</p>
+            <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(28px,4vw,54px)', fontWeight:300, lineHeight:1.08, color:'var(--black)', marginBottom:18 }}>保養專欄</h2>
+            <p style={{ fontSize:14, lineHeight:1.9, color:'var(--dark)', maxWidth:420 }}>沉澱成分知識、肌膚管理邏輯與美容師實務觀察，讓商品頁之外，也有能持續閱讀的品牌內容。</p>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap:18 }}>
+            {JOURNAL_ARTICLES.map(article => (
+              <article key={article.title} style={{ border:'1px solid var(--light)', background:'var(--off-white)', display:'flex', flexDirection:'column', minHeight: isMobile ? 420 : 470 }}>
+                <img src={article.img} alt="" style={{ width:'100%', aspectRatio:'4 / 3', objectFit:'cover', display:'block' }} />
+                <div style={{ padding:'18px 18px 20px', display:'flex', flexDirection:'column', gap:12, flex:1 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', fontSize:11, color:'var(--mid)' }}>
+                    <span style={{ letterSpacing:'0.16em', color:'var(--gold)', textTransform:'uppercase' }}>{article.category}</span>
+                    <span>{article.readTime}</span>
+                  </div>
+                  <h3 style={{ fontFamily:'var(--font-display)', fontSize:24, lineHeight:1.35, fontWeight:300, color:'var(--black)' }}>{article.title}</h3>
+                  <p style={{ fontSize:13, lineHeight:1.8, color:'var(--dark)' }}>{article.excerpt}</p>
+                  <span style={{ marginTop:'auto', width:'fit-content', borderBottom:'1px solid var(--dark)', color:'var(--dark)', fontSize:12, padding:'0 0 4px' }}>文章主題預覽</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ─── HOME PAGE ────────────────────────────────────────────────────────────────
 function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
   const [slide, setSlide] = useState(0);
@@ -450,6 +597,7 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const isMobile = useIsMobile();
   const livePromos = promotions.filter(isPromotionLive);
+  const topProducts = TOP_PRODUCT_IDS.map(id => PRODUCTS.find(product => product.id === id)).filter(Boolean);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -586,6 +734,8 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
         ))}
       </div>
 
+      <TopProductsCarousel products={topProducts} user={user} onAdd={addToCart} onSelect={setSelectedProduct} isMobile={isMobile} setPage={setPage} />
+
       {/* FEATURED PRODUCTS */}
       <section style={{ padding: isMobile ? '60px 0' : '100px 0', background:'var(--white)' }}>
         <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
@@ -651,6 +801,8 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
           >申請美容師會員</button>
         </div>
       </section>
+
+      <KnowledgeJournal isMobile={isMobile} />
 
       {/* FOOTER */}
       <footer style={{ background:'var(--black)', borderTop:'1px solid rgba(255,255,255,0.08)', padding: isMobile ? '48px 0 28px' : '60px 0 32px' }}>
