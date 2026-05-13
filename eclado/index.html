@@ -274,6 +274,27 @@ const JOURNAL_ARTICLES = [
     readTime:'7 min read',
     img:'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=900&q=85&fit=crop',
   },
+  {
+    category:'清潔筆記',
+    title:'卸妝後還要洗臉嗎？依膚況判斷第二步清潔',
+    excerpt:'從皮脂、彩妝殘留與乾敏肌耐受度，拆開常見清潔誤區。',
+    readTime:'4 min read',
+    img:'https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=900&q=85&fit=crop',
+  },
+  {
+    category:'安瓶應用',
+    title:'膚況不穩時，安瓶與面膜怎麼搭才不會過度保養',
+    excerpt:'整理集中護理常見順序，讓舒緩、保濕與修護更有節奏。',
+    readTime:'6 min read',
+    img:'https://images.unsplash.com/photo-1615397349754-cfa2066a298e?w=900&q=85&fit=crop',
+  },
+  {
+    category:'專業教育',
+    title:'院線級保養不是更厚重，而是更精準地處理需求',
+    excerpt:'從產品結構理解專業系列和一般日常保養的差異。',
+    readTime:'5 min read',
+    img:'https://images.unsplash.com/photo-1629198735660-e39ea93118f9?w=900&q=85&fit=crop',
+  },
 ];
 
 // ─── NAV ITEM (desktop dropdown) ─────────────────────────────────────────────
@@ -504,9 +525,9 @@ function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPag
       <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
         <div style={{ display:'flex', justifyContent:'space-between', gap:24, alignItems:'flex-end', marginBottom: isMobile ? 28 : 42, flexWrap:'wrap' }}>
           <div style={{ maxWidth:680 }}>
-            <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>Top 10 Selection</p>
-            <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(28px,4vw,54px)', fontWeight:300, lineHeight:1.08, color:'var(--black)', marginBottom:14 }}>熱門商品輪播</h2>
-            <p style={{ fontSize:14, lineHeight:1.85, color:'var(--dark)', maxWidth:620 }}>從日常清潔、保濕修護到院線集中護理，快速瀏覽目前最受關注的核心商品。</p>
+            <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>Popular</p>
+            <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(26px,4vw,52px)', fontWeight:300, lineHeight:1.1, color:'var(--black)', marginBottom:14 }}>熱門商品</h2>
+            <p style={{ fontSize:14, lineHeight:1.85, color:'var(--dark)', maxWidth:620 }}>以輪播的方式快速瀏覽近期熱門商品，從日常清潔、保濕修護到院線集中護理一次查看。</p>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             <button aria-label="上一組熱門商品" onClick={() => move(-1)} style={{ width:44, height:44, border:'1px solid var(--light)', background:'var(--white)', color:'var(--black)', cursor:'pointer', fontSize:18 }}>←</button>
@@ -559,27 +580,64 @@ function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPag
 }
 
 function KnowledgeJournal({ isMobile }) {
+  const leadArticle = JOURNAL_ARTICLES[0];
+  const supportingArticles = JOURNAL_ARTICLES.slice(1);
+
   return (
     <section style={{ background:'var(--white)', padding: isMobile ? '64px 0 72px' : '104px 0 112px', borderTop:'1px solid var(--light)' }}>
       <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
-        <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(280px, 0.9fr) minmax(0, 1.4fr)', gap: isMobile ? 28 : 56, alignItems:'start', marginBottom: isMobile ? 28 : 42 }}>
-          <div>
+        <div style={{ display:'flex', justifyContent:'space-between', gap:24, alignItems:'flex-end', flexWrap:'wrap', marginBottom: isMobile ? 28 : 42 }}>
+          <div style={{ maxWidth:560 }}>
             <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:12 }}>Journal</p>
-            <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(28px,4vw,54px)', fontWeight:300, lineHeight:1.08, color:'var(--black)', marginBottom:18 }}>保養專欄</h2>
-            <p style={{ fontSize:14, lineHeight:1.9, color:'var(--dark)', maxWidth:420 }}>沉澱成分知識、肌膚管理邏輯與美容師實務觀察，讓商品頁之外，也有能持續閱讀的品牌內容。</p>
+            <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(26px,4vw,52px)', fontWeight:300, lineHeight:1.1, color:'var(--black)', marginBottom:18 }}>保養專欄</h2>
+            <p style={{ fontSize:14, lineHeight:1.9, color:'var(--dark)', maxWidth:560 }}>文章會持續增加，因此改成一篇主打內容搭配可延展的文章列表，後續放入更多成分學、保養觀念與專業分享也能維持整齊。</p>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap:18 }}>
-            {JOURNAL_ARTICLES.map(article => (
-              <article key={article.title} style={{ border:'1px solid var(--light)', background:'var(--off-white)', display:'flex', flexDirection:'column', minHeight: isMobile ? 420 : 470 }}>
-                <img src={article.img} alt="" style={{ width:'100%', aspectRatio:'4 / 3', objectFit:'cover', display:'block' }} />
-                <div style={{ padding:'18px 18px 20px', display:'flex', flexDirection:'column', gap:12, flex:1 }}>
+          <span style={{ fontSize:12, color:'var(--mid)', letterSpacing:'0.08em' }}>{JOURNAL_ARTICLES.length} 篇主題內容</span>
+        </div>
+
+        <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(360px, 1.05fr) minmax(0, 1fr)', gap: isMobile ? 20 : 24, alignItems:'stretch', marginBottom:24 }}>
+          <article style={{ border:'1px solid var(--light)', background:'var(--off-white)', display:'grid', gridTemplateRows:'auto 1fr' }}>
+            <img src={leadArticle.img} alt="" style={{ width:'100%', aspectRatio:'16 / 10', objectFit:'cover', display:'block' }} />
+            <div style={{ padding: isMobile ? '20px 18px 22px' : '24px 24px 26px', display:'flex', flexDirection:'column', gap:14 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', fontSize:11, color:'var(--mid)' }}>
+                <span style={{ letterSpacing:'0.16em', color:'var(--gold)', textTransform:'uppercase' }}>{leadArticle.category}</span>
+                <span>{leadArticle.readTime}</span>
+              </div>
+              <h3 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 26 : 30, lineHeight:1.3, fontWeight:300, color:'var(--black)' }}>{leadArticle.title}</h3>
+              <p style={{ fontSize:14, lineHeight:1.9, color:'var(--dark)' }}>{leadArticle.excerpt}</p>
+              <span style={{ marginTop:'auto', width:'fit-content', borderBottom:'1px solid var(--dark)', color:'var(--dark)', fontSize:12, padding:'0 0 4px' }}>精選文章</span>
+            </div>
+          </article>
+
+          <div style={{ display:'grid', gridTemplateRows: isMobile ? 'auto' : 'repeat(2, minmax(0, 1fr))', gap:18 }}>
+            {supportingArticles.slice(0, 2).map(article => (
+              <article key={article.title} style={{ border:'1px solid var(--light)', background:'var(--white)', display:'grid', gridTemplateColumns: isMobile ? '1fr' : '180px minmax(0, 1fr)', minHeight: isMobile ? 320 : 0 }}>
+                <img src={article.img} alt="" style={{ width:'100%', height:'100%', minHeight: isMobile ? 210 : '100%', aspectRatio: isMobile ? '16 / 10' : 'auto', objectFit:'cover', display:'block' }} />
+                <div style={{ padding:'18px 18px 20px', display:'flex', flexDirection:'column', gap:10 }}>
                   <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', fontSize:11, color:'var(--mid)' }}>
                     <span style={{ letterSpacing:'0.16em', color:'var(--gold)', textTransform:'uppercase' }}>{article.category}</span>
                     <span>{article.readTime}</span>
                   </div>
-                  <h3 style={{ fontFamily:'var(--font-display)', fontSize:24, lineHeight:1.35, fontWeight:300, color:'var(--black)' }}>{article.title}</h3>
+                  <h3 style={{ fontFamily:'var(--font-display)', fontSize:22, lineHeight:1.35, fontWeight:300, color:'var(--black)' }}>{article.title}</h3>
                   <p style={{ fontSize:13, lineHeight:1.8, color:'var(--dark)' }}>{article.excerpt}</p>
-                  <span style={{ marginTop:'auto', width:'fit-content', borderBottom:'1px solid var(--dark)', color:'var(--dark)', fontSize:12, padding:'0 0 4px' }}>文章主題預覽</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ overflowX:'auto', paddingBottom:4 }}>
+          <div style={{ display:'grid', gridAutoFlow:'column', gridAutoColumns: isMobile ? 'minmax(260px, 82vw)' : 'minmax(280px, 1fr)', gap:18, minWidth: supportingArticles.length > 3 && !isMobile ? 1180 : 'auto' }}>
+            {supportingArticles.slice(2).map(article => (
+              <article key={article.title} style={{ border:'1px solid var(--light)', background:'var(--off-white)', minHeight:300, display:'flex', flexDirection:'column' }}>
+                <img src={article.img} alt="" style={{ width:'100%', aspectRatio:'16 / 9', objectFit:'cover', display:'block' }} />
+                <div style={{ padding:'16px 16px 18px', display:'flex', flexDirection:'column', gap:10, flex:1 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', fontSize:11, color:'var(--mid)' }}>
+                    <span style={{ letterSpacing:'0.16em', color:'var(--gold)', textTransform:'uppercase' }}>{article.category}</span>
+                    <span>{article.readTime}</span>
+                  </div>
+                  <h3 style={{ fontFamily:'var(--font-display)', fontSize:21, lineHeight:1.35, fontWeight:300, color:'var(--black)' }}>{article.title}</h3>
+                  <p style={{ fontSize:13, lineHeight:1.8, color:'var(--dark)' }}>{article.excerpt}</p>
                 </div>
               </article>
             ))}
