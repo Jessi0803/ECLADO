@@ -492,7 +492,7 @@ function MobileNavSection({ item, setPage, close }) {
 
 function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPage }) {
   const [active, setActive] = useState(0);
-  const visibleCount = isMobile ? 1 : 3;
+  const visibleCount = isMobile ? 2 : 3;
   const maxStart = Math.max(0, products.length - visibleCount);
 
   useEffect(() => {
@@ -534,7 +534,7 @@ function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPag
           </div>
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : `repeat(${visibleCount}, minmax(0, 1fr))`, gap: isMobile ? 18 : 24 }}>
+        <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : `repeat(${visibleCount}, minmax(0, 1fr))`, gap: isMobile ? 10 : 24 }}>
           {visible.map(product => (
             <ProductCard key={product.id} product={product} user={user} onAdd={() => onAdd(product)} onSelect={() => onSelect(product)} promotions={[]} />
           ))}
@@ -568,54 +568,69 @@ function KnowledgeJournal({ isMobile }) {
           <span style={{ fontSize:12, color:'var(--mid)', letterSpacing:'0.08em' }}>{JOURNAL_ARTICLES.length} 篇主題內容</span>
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(360px, 1.05fr) minmax(0, 1fr)', gap: isMobile ? 20 : 24, alignItems:'stretch', marginBottom:24 }}>
-          <article style={{ border:'1px solid var(--light)', background:'var(--off-white)', display:'grid', gridTemplateRows:'auto 1fr' }}>
-            <img src={leadArticle.img} alt="" style={{ width:'100%', aspectRatio:'16 / 10', objectFit:'cover', display:'block' }} />
-            <div style={{ padding: isMobile ? '20px 18px 22px' : '24px 24px 26px', display:'flex', flexDirection:'column', gap:14 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', fontSize:11, color:'var(--mid)' }}>
-                <span style={{ letterSpacing:'0.16em', color:'var(--gold)', textTransform:'uppercase' }}>{leadArticle.category}</span>
-                <span>{leadArticle.readTime}</span>
+        {isMobile ? (
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            {JOURNAL_ARTICLES.map(article => (
+              <article key={article.title} style={{ border:'1px solid var(--light)', background:'var(--off-white)', display:'flex', flexDirection:'column' }}>
+                <img src={article.img} alt="" style={{ width:'100%', aspectRatio:'4 / 3', objectFit:'cover', display:'block' }} />
+                <div style={{ padding:'12px 10px 14px', display:'flex', flexDirection:'column', gap:6 }}>
+                  <span style={{ fontSize:10, letterSpacing:'0.14em', color:'var(--gold)', textTransform:'uppercase' }}>{article.category}</span>
+                  <h3 style={{ fontFamily:'var(--font-display)', fontSize:14, lineHeight:1.4, fontWeight:300, color:'var(--black)' }}>{article.title}</h3>
+                  <p style={{ fontSize:11, lineHeight:1.7, color:'var(--dark)' }}>{article.excerpt}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div style={{ display:'grid', gridTemplateColumns:'minmax(360px, 1.05fr) minmax(0, 1fr)', gap:24, alignItems:'stretch', marginBottom:24 }}>
+              <article style={{ border:'1px solid var(--light)', background:'var(--off-white)', display:'grid', gridTemplateRows:'auto 1fr' }}>
+                <img src={leadArticle.img} alt="" style={{ width:'100%', aspectRatio:'16 / 10', objectFit:'cover', display:'block' }} />
+                <div style={{ padding:'24px 24px 26px', display:'flex', flexDirection:'column', gap:14 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', fontSize:11, color:'var(--mid)' }}>
+                    <span style={{ letterSpacing:'0.16em', color:'var(--gold)', textTransform:'uppercase' }}>{leadArticle.category}</span>
+                    <span>{leadArticle.readTime}</span>
+                  </div>
+                  <h3 style={{ fontFamily:'var(--font-display)', fontSize:30, lineHeight:1.3, fontWeight:300, color:'var(--black)' }}>{leadArticle.title}</h3>
+                  <p style={{ fontSize:14, lineHeight:1.9, color:'var(--dark)' }}>{leadArticle.excerpt}</p>
+                  <span style={{ marginTop:'auto', width:'fit-content', borderBottom:'1px solid var(--dark)', color:'var(--dark)', fontSize:12, padding:'0 0 4px' }}>精選文章</span>
+                </div>
+              </article>
+              <div style={{ display:'grid', gridTemplateRows:'repeat(2, minmax(0, 1fr))', gap:18 }}>
+                {supportingArticles.slice(0, 2).map(article => (
+                  <article key={article.title} style={{ border:'1px solid var(--light)', background:'var(--white)', display:'grid', gridTemplateColumns:'180px minmax(0, 1fr)' }}>
+                    <img src={article.img} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                    <div style={{ padding:'18px 18px 20px', display:'flex', flexDirection:'column', gap:10 }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', fontSize:11, color:'var(--mid)' }}>
+                        <span style={{ letterSpacing:'0.16em', color:'var(--gold)', textTransform:'uppercase' }}>{article.category}</span>
+                        <span>{article.readTime}</span>
+                      </div>
+                      <h3 style={{ fontFamily:'var(--font-display)', fontSize:22, lineHeight:1.35, fontWeight:300, color:'var(--black)' }}>{article.title}</h3>
+                      <p style={{ fontSize:13, lineHeight:1.8, color:'var(--dark)' }}>{article.excerpt}</p>
+                    </div>
+                  </article>
+                ))}
               </div>
-              <h3 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 26 : 30, lineHeight:1.3, fontWeight:300, color:'var(--black)' }}>{leadArticle.title}</h3>
-              <p style={{ fontSize:14, lineHeight:1.9, color:'var(--dark)' }}>{leadArticle.excerpt}</p>
-              <span style={{ marginTop:'auto', width:'fit-content', borderBottom:'1px solid var(--dark)', color:'var(--dark)', fontSize:12, padding:'0 0 4px' }}>精選文章</span>
             </div>
-          </article>
-
-          <div style={{ display:'grid', gridTemplateRows: isMobile ? 'auto' : 'repeat(2, minmax(0, 1fr))', gap:18 }}>
-            {supportingArticles.slice(0, 2).map(article => (
-              <article key={article.title} style={{ border:'1px solid var(--light)', background:'var(--white)', display:'grid', gridTemplateColumns: isMobile ? '1fr' : '180px minmax(0, 1fr)', minHeight: isMobile ? 320 : 0 }}>
-                <img src={article.img} alt="" style={{ width:'100%', height:'100%', minHeight: isMobile ? 210 : '100%', aspectRatio: isMobile ? '16 / 10' : 'auto', objectFit:'cover', display:'block' }} />
-                <div style={{ padding:'18px 18px 20px', display:'flex', flexDirection:'column', gap:10 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', fontSize:11, color:'var(--mid)' }}>
-                    <span style={{ letterSpacing:'0.16em', color:'var(--gold)', textTransform:'uppercase' }}>{article.category}</span>
-                    <span>{article.readTime}</span>
-                  </div>
-                  <h3 style={{ fontFamily:'var(--font-display)', fontSize:22, lineHeight:1.35, fontWeight:300, color:'var(--black)' }}>{article.title}</h3>
-                  <p style={{ fontSize:13, lineHeight:1.8, color:'var(--dark)' }}>{article.excerpt}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ overflowX:'auto', paddingBottom:4 }}>
-          <div style={{ display:'grid', gridAutoFlow:'column', gridAutoColumns: isMobile ? 'minmax(260px, 82vw)' : 'minmax(280px, 1fr)', gap:18, minWidth: supportingArticles.length > 3 && !isMobile ? 1180 : 'auto' }}>
-            {supportingArticles.slice(2).map(article => (
-              <article key={article.title} style={{ border:'1px solid var(--light)', background:'var(--off-white)', minHeight:300, display:'flex', flexDirection:'column' }}>
-                <img src={article.img} alt="" style={{ width:'100%', aspectRatio:'16 / 9', objectFit:'cover', display:'block' }} />
-                <div style={{ padding:'16px 16px 18px', display:'flex', flexDirection:'column', gap:10, flex:1 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', fontSize:11, color:'var(--mid)' }}>
-                    <span style={{ letterSpacing:'0.16em', color:'var(--gold)', textTransform:'uppercase' }}>{article.category}</span>
-                    <span>{article.readTime}</span>
-                  </div>
-                  <h3 style={{ fontFamily:'var(--font-display)', fontSize:21, lineHeight:1.35, fontWeight:300, color:'var(--black)' }}>{article.title}</h3>
-                  <p style={{ fontSize:13, lineHeight:1.8, color:'var(--dark)' }}>{article.excerpt}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
+            <div style={{ overflowX:'auto', paddingBottom:4 }}>
+              <div style={{ display:'grid', gridAutoFlow:'column', gridAutoColumns:'minmax(280px, 1fr)', gap:18, minWidth: supportingArticles.length > 3 ? 1180 : 'auto' }}>
+                {supportingArticles.slice(2).map(article => (
+                  <article key={article.title} style={{ border:'1px solid var(--light)', background:'var(--off-white)', minHeight:300, display:'flex', flexDirection:'column' }}>
+                    <img src={article.img} alt="" style={{ width:'100%', aspectRatio:'16 / 9', objectFit:'cover', display:'block' }} />
+                    <div style={{ padding:'16px 16px 18px', display:'flex', flexDirection:'column', gap:10, flex:1 }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', fontSize:11, color:'var(--mid)' }}>
+                        <span style={{ letterSpacing:'0.16em', color:'var(--gold)', textTransform:'uppercase' }}>{article.category}</span>
+                        <span>{article.readTime}</span>
+                      </div>
+                      <h3 style={{ fontFamily:'var(--font-display)', fontSize:21, lineHeight:1.35, fontWeight:300, color:'var(--black)' }}>{article.title}</h3>
+                      <p style={{ fontSize:13, lineHeight:1.8, color:'var(--dark)' }}>{article.excerpt}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </section>
   );
