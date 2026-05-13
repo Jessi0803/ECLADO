@@ -258,7 +258,7 @@ const JOURNAL_ARTICLES = [
     title:'胜肽、玻尿酸、積雪草，修護型保養怎麼排先後？',
     excerpt:'從保濕、屏障到彈潤修護，整理三種常見活性成分的角色與適合膚況。',
     readTime:'6 min read',
-    img:'https://images.unsplash.com/photo-1556228724-4b0f5a8763fd?w=900&q=85&fit=crop',
+    img:'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=900&q=85&fit=crop',
   },
   {
     category:'保養觀念',
@@ -293,7 +293,7 @@ const JOURNAL_ARTICLES = [
     title:'院線級保養不是更厚重，而是更精準地處理需求',
     excerpt:'從產品結構理解專業系列和一般日常保養的差異。',
     readTime:'5 min read',
-    img:'https://images.unsplash.com/photo-1629198735660-e39ea93118f9?w=900&q=85&fit=crop',
+    img:'https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=900&q=85&fit=crop',
   },
 ];
 
@@ -521,7 +521,7 @@ function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPag
   }
 
   return (
-    <section style={{ background:'var(--off-white)', padding: isMobile ? '60px 0' : '96px 0', borderBottom:'1px solid var(--light)' }}>
+    <section style={{ background:'var(--off-white)', padding: isMobile ? '60px 0' : '100px 0', borderBottom:'1px solid var(--light)' }}>
       <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
         <div style={{ display:'flex', justifyContent:'space-between', gap:24, alignItems:'flex-end', marginBottom: isMobile ? 28 : 42, flexWrap:'wrap' }}>
           <div style={{ maxWidth:680 }}>
@@ -536,34 +536,9 @@ function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPag
         </div>
 
         <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : `repeat(${visibleCount}, minmax(0, 1fr))`, gap: isMobile ? 18 : 24 }}>
-          {visible.map((product, index) => {
-            const rank = start + index + 1;
-            return (
-              <article key={`${product.id}-${rank}`} style={{ background:'var(--white)', border:'1px solid var(--light)', minHeight: isMobile ? 520 : 580, display:'flex', flexDirection:'column' }}>
-                <button onClick={() => onSelect(product)} style={{ position:'relative', border:'none', background:'none', cursor:'pointer', padding:0, textAlign:'left' }}>
-                  <img src={product.img} alt={product.nameZh} style={{ display:'block', width:'100%', aspectRatio:'4 / 4.5', objectFit:'cover' }} />
-                  <div style={{ position:'absolute', left:18, top:18, minWidth:58, height:58, background:'rgba(17,17,16,0.92)', color:'var(--white)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
-                    <span style={{ fontSize:10, letterSpacing:'0.16em', color:'var(--gold)' }}>TOP</span>
-                    <strong style={{ fontFamily:'var(--font-display)', fontSize:24, fontWeight:400, lineHeight:1 }}>{String(rank).padStart(2,'0')}</strong>
-                  </div>
-                </button>
-                <div style={{ padding:'20px 20px 22px', display:'flex', flexDirection:'column', gap:14, flex:1 }}>
-                  <div>
-                    <div style={{ fontSize:11, letterSpacing:'0.18em', color:'var(--gold)', textTransform:'uppercase', marginBottom:8 }}>{product.category}</div>
-                    <h3 style={{ fontFamily:'var(--font-display)', fontSize:25, fontWeight:300, lineHeight:1.25, color:'var(--black)', marginBottom:8 }}>{product.nameZh}</h3>
-                    <p style={{ fontSize:13, lineHeight:1.75, color:'var(--dark)' }}>{product.features?.[0] || product.desc}</p>
-                  </div>
-                  <div style={{ marginTop:'auto', display:'flex', justifyContent:'space-between', gap:12, alignItems:'center', borderTop:'1px solid var(--light)', paddingTop:14 }}>
-                    <div>
-                      <div style={{ fontSize:11, color:'var(--mid)', marginBottom:3 }}>{getMemberTier(user).priceLabel}</div>
-                      <div style={{ fontSize:18, fontWeight:500, color:'var(--black)' }}>NT$ {getMemberPrice(product, user).toLocaleString()}</div>
-                    </div>
-                    <button onClick={() => onAdd(product)} style={{ border:'none', background:'var(--black)', color:'var(--white)', cursor:'pointer', padding:'12px 16px', fontSize:11, letterSpacing:'0.12em', whiteSpace:'nowrap' }}>加入購物車</button>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
+          {visible.map(product => (
+            <ProductCard key={product.id} product={product} user={user} onAdd={() => onAdd(product)} onSelect={() => onSelect(product)} promotions={[]} />
+          ))}
         </div>
 
         <div style={{ marginTop:24, display:'flex', justifyContent:'space-between', gap:18, alignItems:'center', flexWrap:'wrap' }}>
@@ -590,7 +565,6 @@ function KnowledgeJournal({ isMobile }) {
           <div style={{ maxWidth:560 }}>
             <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:12 }}>Journal</p>
             <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(26px,4vw,52px)', fontWeight:300, lineHeight:1.1, color:'var(--black)', marginBottom:18 }}>保養專欄</h2>
-            <p style={{ fontSize:14, lineHeight:1.9, color:'var(--dark)', maxWidth:560 }}>文章會持續增加，因此改成一篇主打內容搭配可延展的文章列表，後續放入更多成分學、保養觀念與專業分享也能維持整齊。</p>
           </div>
           <span style={{ fontSize:12, color:'var(--mid)', letterSpacing:'0.08em' }}>{JOURNAL_ARTICLES.length} 篇主題內容</span>
         </div>
@@ -837,6 +811,8 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
         </div>
       </section>
 
+      <KnowledgeJournal isMobile={isMobile} />
+
       {/* PRO SECTION */}
       <section style={{ background:'var(--black)', padding: isMobile ? '60px 0' : '100px 0' }}>
         <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px', textAlign:'center' }} className="px-page">
@@ -859,8 +835,6 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
           >申請美容師會員</button>
         </div>
       </section>
-
-      <KnowledgeJournal isMobile={isMobile} />
 
       {/* FOOTER */}
       <footer style={{ background:'var(--black)', borderTop:'1px solid rgba(255,255,255,0.08)', padding: isMobile ? '48px 0 28px' : '60px 0 32px' }}>
