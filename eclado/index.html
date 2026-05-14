@@ -1636,21 +1636,21 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'8px 20px', fontSize:13 }}>
           <span style={{ color:'var(--dark)' }}>訂單編號</span>
-          <span style={{ color:'var(--black)', letterSpacing:'0.08em', fontFamily:'var(--font-body)', fontVariantNumeric:'tabular-nums' }}>{orderNo}</span>
+          <span style={{ color:'var(--black)', letterSpacing:'0.08em', fontFamily:'var(--font-display)', fontVariantNumeric:'tabular-nums' }}>{orderNo}</span>
           {resp?.TSNo && <>
             <span style={{ color:'var(--dark)' }}>交易編號</span>
-            <span style={{ color:'var(--black)', letterSpacing:'0.08em', fontFamily:'var(--font-body)', fontVariantNumeric:'tabular-nums' }}>{resp.TSNo}</span>
+            <span style={{ color:'var(--black)', letterSpacing:'0.08em', fontFamily:'var(--font-display)', fontVariantNumeric:'tabular-nums' }}>{resp.TSNo}</span>
           </>}
           {atmNo && <>
             <span style={{ color:'var(--dark)' }}>銀行代碼</span>
-            <span style={{ color:'var(--black)', fontWeight:500 }}>807 永豐銀行</span>
+            <span style={{ color:'var(--black)', fontFamily:'var(--font-display)', fontWeight:500 }}>807 永豐銀行</span>
           </>}
           {atmNo && <>
             <span style={{ color:'var(--dark)' }}>虛擬帳號</span>
-            <span style={{ color:'var(--black)', fontFamily:'var(--font-body)', letterSpacing:'0.12em', fontWeight:500, fontVariantNumeric:'tabular-nums' }}>{atmNo}</span>
+            <span style={{ color:'var(--black)', fontFamily:'var(--font-display)', letterSpacing:'0.12em', fontWeight:500, fontVariantNumeric:'tabular-nums' }}>{atmNo}</span>
           </>}
           <span style={{ color:'var(--dark)' }}>金額</span>
-          <span style={{ color:'var(--black)', fontWeight:500 }}>NT$ {total.toLocaleString()}</span>
+          <span style={{ color:'var(--black)', fontFamily:'var(--font-display)', fontWeight:500 }}>NT$ {total.toLocaleString()}</span>
         </div>
         {resp?.Description && <p style={{ fontSize:12, color:'var(--dark)', marginTop:12, lineHeight:1.7 }}>{resp.Description}</p>}
         {paymentResult.insertError && <p style={{ fontSize:12, color:'#b45309', marginTop:12, lineHeight:1.7 }}>付款單已建立，但本站訂單寫入失敗：{paymentResult.insertError}</p>}
@@ -1691,7 +1691,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
         <div style={{ maxWidth:520, margin:'0 auto', textAlign:'center' }}>
           <div style={{ width:56, height:56, border:'1px solid var(--black)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', fontSize:22 }}>✓</div>
           <h2 style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, marginBottom:10 }}>付款單已建立</h2>
-          <p style={{ fontSize:13, color:'var(--dark)', marginBottom:26 }}>訂單編號：<strong style={{ color:'var(--dark)', letterSpacing:'0.06em', fontFamily:'var(--font-body)', fontVariantNumeric:'tabular-nums' }}>{orderNo}</strong></p>
+          <p style={{ fontSize:13, color:'var(--dark)', marginBottom:26 }}>訂單編號：<strong style={{ color:'var(--dark)', letterSpacing:'0.06em', fontFamily:'var(--font-display)', fontVariantNumeric:'tabular-nums' }}>{orderNo}</strong></p>
         </div>
 
         <div className="gcheckout">
