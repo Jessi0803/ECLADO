@@ -1529,11 +1529,6 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
     if (step !== 2) return;
 
     const method = PAYMENT_METHODS[paymentMethod] || PAYMENT_METHODS.atm;
-    if (paymentMethod === 'atm' && total % 100 !== 0) {
-      setPaymentError('虛擬帳號匯款金額需為百元整。請改用信用卡、Apple Pay、Google Pay，或調整購物金額。');
-      return;
-    }
-
     const expireDate = formatDateCompact(addDays(new Date(), 7));
     const payload = {
       orderNo,
