@@ -310,15 +310,16 @@ function extractPaymentLink(response) {
     response.PayURL,
     response.RedirectURL,
     response.PaymentURL,
-    response.WebAtmURL,
-    response?.ATMParam?.WebAtmURL,
-    response?.ATMParam?.QRCodeURL,
-    response?.QRCodeURL,
     response?.CardParam?.CardPayURL,
     response?.CardParam?.CardURL,
     response?.MobileParam?.MobilePayURL,
     response?.MobileParam?.MobileURL,
+    response?.WalletParam?.WalletPayURL,
     response?.WalletParam?.WalletURL,
+    response.WebAtmURL,
+    response?.ATMParam?.WebAtmURL,
+    response?.ATMParam?.QRCodeURL,
+    response?.QRCodeURL,
   ];
   return candidates.find(url => typeof url === 'string' && url.startsWith('http')) || '';
 }
