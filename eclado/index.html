@@ -1645,7 +1645,14 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
         </div>
         {resp?.Description && <p style={{ fontSize:12, color:'var(--dark)', marginTop:12, lineHeight:1.7 }}>{resp.Description}</p>}
         {paymentResult.insertError && <p style={{ fontSize:12, color:'#b45309', marginTop:12, lineHeight:1.7 }}>付款單已建立，但本站訂單寫入失敗：{paymentResult.insertError}</p>}
-        {paymentLink && (
+        {atmNo && (
+          <div style={{ display:'flex', gap:10, marginTop:16, flexWrap:'wrap' }}>
+            <button type="button" onClick={() => navigator.clipboard?.writeText(atmNo)} style={{ background:'var(--black)', border:'1px solid var(--black)', color:'var(--white)', padding:'11px 16px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>
+              複製虛擬帳號
+            </button>
+          </div>
+        )}
+        {!atmNo && paymentLink && (
           <div style={{ display:'flex', gap:10, marginTop:16, flexWrap:'wrap' }}>
             <a href={paymentLink} target="_blank" rel="noreferrer" style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', padding:'11px 16px', border:'1px solid var(--black)', color:'var(--black)', textDecoration:'none', fontSize:12, letterSpacing:'0.12em', fontFamily:'var(--font-body)' }}>
               前往付款頁
