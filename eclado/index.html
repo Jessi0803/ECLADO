@@ -2489,14 +2489,32 @@ function PromoDiagnosticBar({ status, errorText }) {
   return null;
 }
 
+// ─── HISTORY / ROUTING ────────────────────────────────────────────────────────
+const PAGE_PATHS = {
+  home: '/', shop: '/shop', cart: '/cart', checkout: '/checkout',
+  login: '/login', 'pro-login': '/pro-login', 'reset-password': '/reset-password',
+  'professional-apply': '/professional-apply', about: '/about', info: '/info',
+};
+const PATH_PAGES = Object.fromEntries(Object.entries(PAGE_PATHS).map(([k, v]) => [v, k]));
+function pageFromPath(path) {
+  const p = path.replace(/\/$/, '') || '/';
+  return PATH_PAGES[p] || 'home';
+}
+
 function App() {
-  const [page, setPage] = useState(() => {
+  const [page, setPageState] = useState(() => {
     if (isPasswordRecoveryUrl()) {
-      window.history.replaceState(null, '', window.location.pathname || '/');
+      window.history.replaceState({ page: 'reset-password' }, '', window.location.pathname || '/');
       return 'reset-password';
     }
-    return 'home';
+    return pageFromPath(window.location.pathname);
   });
+
+  function setPage(newPage) {
+    const path = PAGE_PATHS[newPage] || '/';
+    window.history.pushState({ page: newPage }, '', path);
+    setPageState(newPage);
+  }
   const [user, setUser] = useState(null);
   const [cart, setCart] = useState([]);
   const [promotions, setPromotions] = useState([]);
@@ -2520,19 +2538,32 @@ function App() {
     });
   }
 
+  // 瀏覽器返回 / 前進
+  useEffect(() => {
+    function onPopState(e) {
+      setPageState(e.state?.page || pageFromPath(window.location.pathname));
+    }
+    window.addEventListener('popstate', onPopState);
+    if (!window.history.state?.page) {
+      const p = pageFromPath(window.location.pathname);
+      window.history.replaceState({ page: p }, '', window.location.pathname || '/');
+    }
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
   // 監聽 Supabase 登入狀態
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (isPasswordRecoveryUrl()) {
-        window.history.replaceState(null, '', window.location.pathname || '/');
-        setPage('reset-password');
+        window.history.replaceState({ page: 'reset-password' }, '', window.location.pathname || '/');
+        setPageState('reset-password');
       }
       if (session?.user) loadUser(session.user);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' || isPasswordRecoveryUrl()) {
-        window.history.replaceState(null, '', window.location.pathname || '/');
-        setPage('reset-password');
+        window.history.replaceState({ page: 'reset-password' }, '', window.location.pathname || '/');
+        setPageState('reset-password');
       }
       if (session?.user) loadUser(session.user);
       else setUser(null);
