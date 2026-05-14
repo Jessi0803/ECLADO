@@ -1,8 +1,9 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
-  "rewrites": [
-    { "source": "/admin", "destination": "/admin.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/admin", "dest": "/admin.html" },
+    { "src": "/.*", "dest": "/index.html" }
   ]
 }
