@@ -1450,37 +1450,33 @@ function Catalog({ products, setProducts }) {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <label style={lbl}>標籤</label>
-                  <input value={editing.tag} onChange={setF('tag')} placeholder="暢銷 / 新品 / 院線" style={inp} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 20 }}>
-                  <input type="checkbox" id="isProOnly" checked={editing.isProOnly}
-                    onChange={e => setEditing(prev => ({ ...prev, isProOnly: e.target.checked }))}
-                    style={{ width: 15, height: 15, cursor: 'pointer' }} />
-                  <label htmlFor="isProOnly" style={{ fontSize: 13, color: 'var(--dark)', cursor: 'pointer' }}>院線限定</label>
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input type="checkbox" id="isProOnly" checked={editing.isProOnly}
+                  onChange={e => setEditing(prev => ({ ...prev, isProOnly: e.target.checked }))}
+                  style={{ width: 15, height: 15, cursor: 'pointer' }} />
+                <label htmlFor="isProOnly" style={{ fontSize: 13, color: 'var(--dark)', cursor: 'pointer' }}>院線限定（非專業會員不顯示價格）</label>
+              </div>
+
+              <div style={{ height: 1, background: 'var(--border)' }} />
+
+              <div>
+                <label style={lbl}>商品特點（每行一條，顯示於商品頁右側）</label>
+                <textarea value={editing.featuresText} onChange={setF('featuresText')} style={{ ...ta, minHeight: 88 }} placeholder={'溫和低刺激配方\n洗後保濕不緊繃'} />
               </div>
 
               <div>
                 <label style={lbl}>商品描述</label>
-                <textarea value={editing.desc} onChange={setF('desc')} style={ta} />
+                <textarea value={editing.desc} onChange={setF('desc')} style={{ ...ta, minHeight: 96 }} />
               </div>
 
               <div>
                 <label style={lbl}>主要成分</label>
-                <textarea value={editing.ingredients} onChange={setF('ingredients')} style={ta} />
+                <textarea value={editing.ingredients} onChange={setF('ingredients')} style={{ ...ta, minHeight: 72 }} />
               </div>
 
               <div>
                 <label style={lbl}>適合膚質</label>
                 <input value={editing.skinType} onChange={setF('skinType')} style={inp} />
-              </div>
-
-              <div>
-                <label style={lbl}>商品特點（每行一條）</label>
-                <textarea value={editing.featuresText} onChange={setF('featuresText')} style={{ ...ta, minHeight: 88 }} placeholder={'溫和低刺激配方\n洗後保濕不緊繃'} />
               </div>
             </div>
 
