@@ -166,15 +166,17 @@ const PRODUCT_MONTHLY = {
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 const STATUS_MAP = {
   awaiting_confirm: { label: '轉帳待確認', color: 'var(--red)' },
+  unpaid: { label: '未付款', color: 'oklch(0.65 0.18 50)' },
   paid: { label: '已付款', color: 'var(--blue)' },
   preparing: { label: '備貨中', color: 'var(--yellow)' },
   shipped: { label: '已出貨', color: 'var(--gold)' },
   delivered: { label: '已到貨', color: 'var(--green)' },
+  returned: { label: '退貨', color: 'oklch(0.55 0.12 300)' },
   cancelled: { label: '已取消', color: 'var(--mid)' },
 };
 
 // 老闆可以從下拉選單變更的狀態（不含 awaiting_confirm，只有顧客填末五碼後系統會帶入）
-const STATUS_OPTIONS = ['awaiting_confirm', 'paid', 'preparing', 'shipped', 'delivered', 'cancelled'];
+const STATUS_OPTIONS = ['awaiting_confirm', 'unpaid', 'paid', 'preparing', 'shipped', 'delivered', 'returned', 'cancelled'];
 
 // ─── PROMOTION HELPERS ────────────────────────────────────────────────────────
 // 判斷活動是否「進行中」（僅依 active）
@@ -539,6 +541,8 @@ function Orders({ orders, setOrders }) {
 
   const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter);
   const awaitingCount = orders.filter(o => o.status === 'awaiting_confirm').length;
+  const unpaidCount = orders.filter(o => o.status === 'unpaid').length;
+  const returnedCount = orders.filter(o => o.status === 'returned').length;
 
   function updateStatus(id, status) {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
@@ -551,7 +555,7 @@ function Orders({ orders, setOrders }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
           <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>訂單管理</h1>
           <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
-            {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['paid','已付款'], ['preparing','備貨中'], ['shipped','已出貨'], ['delivered','已到貨']].map(([val, label]) => (
+            {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['unpaid','未付款'], ['paid','已付款'], ['preparing','備貨中'], ['shipped','已出貨'], ['delivered','已到貨'], ['returned','退貨']].map(([val, label]) => (
               <button key={val} onClick={() => setFilter(val)} style={{
                 padding: '8px 16px', border: 'none', fontSize: 12, letterSpacing: '0.04em',
                 background: filter === val ? 'var(--dark)' : 'transparent',
@@ -566,6 +570,20 @@ function Orders({ orders, setOrders }) {
                     minWidth: 18, height: 18, borderRadius: 9, padding: '0 6px',
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
                   }}>{awaitingCount}</span>
+                )}
+                {val === 'unpaid' && unpaidCount > 0 && (
+                  <span style={{
+                    background: 'oklch(0.65 0.18 50)', color: '#fff', fontSize: 10, fontWeight: 600,
+                    minWidth: 18, height: 18, borderRadius: 9, padding: '0 6px',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+                  }}>{unpaidCount}</span>
+                )}
+                {val === 'returned' && returnedCount > 0 && (
+                  <span style={{
+                    background: 'oklch(0.55 0.12 300)', color: '#fff', fontSize: 10, fontWeight: 600,
+                    minWidth: 18, height: 18, borderRadius: 9, padding: '0 6px',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+                  }}>{returnedCount}</span>
                 )}
               </button>
             ))}
