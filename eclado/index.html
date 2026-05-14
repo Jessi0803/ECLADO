@@ -1441,6 +1441,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
   const [paymentSummary, setPaymentSummary] = useState(null);
   const [paymentError, setPaymentError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [copiedAtmNo, setCopiedAtmNo] = useState(false);
   const isMobile = useIsMobile();
 
   const { subtotal, discount, finalSubtotal, promotion } = calculateDiscount(cart, promotions, user);
@@ -1622,6 +1623,12 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
     }
   }
 
+  function copyAtmNo(atmNo) {
+    navigator.clipboard?.writeText(atmNo);
+    setCopiedAtmNo(true);
+    setTimeout(() => setCopiedAtmNo(false), 2200);
+  }
+
   function PaymentInfo() {
     if (!paymentResult) return null;
     const resp = paymentResult.response || {};
@@ -1655,9 +1662,10 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
         {paymentResult.insertError && <p style={{ fontSize:12, color:'#b45309', marginTop:12, lineHeight:1.7 }}>付款單已建立，但本站訂單寫入失敗：{paymentResult.insertError}</p>}
         {atmNo && (
           <div style={{ display:'flex', gap:10, marginTop:16, flexWrap:'wrap' }}>
-            <button type="button" onClick={() => navigator.clipboard?.writeText(atmNo)} style={{ background:'var(--black)', border:'1px solid var(--black)', color:'var(--white)', padding:'11px 16px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>
+            <button type="button" onClick={() => copyAtmNo(atmNo)} style={{ background:'var(--black)', border:'1px solid var(--black)', color:'var(--white)', padding:'11px 16px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>
               複製虛擬帳號
             </button>
+            {copiedAtmNo && <span style={{ display:'inline-flex', alignItems:'center', color:'var(--black)', fontSize:12, letterSpacing:'0.08em', fontFamily:'var(--font-body)' }}>虛擬帳號已複製</span>}
           </div>
         )}
         {!atmNo && paymentLink && (
