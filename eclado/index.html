@@ -244,6 +244,18 @@ function calculateDiscount(cart, promotions, user) {
   return { subtotal, discount: 0, finalSubtotal: subtotal, promotion: null };
 }
 
+// 計算單一商品的活動顯示價（回傳 { price, promo } 或 null）
+function getPromoDisplayPrice(product, user, promotions) {
+  const basePrice = getMemberPrice(product, user);
+  const live = (promotions || []).filter(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));
+  if (!live.length) return null;
+  const p = live[0];
+  const rate = Number(p.discount_rate) || 1;
+  const amount = Number(p.discount_amount) || 0;
+  const discounted = Math.max(0, Math.round(basePrice * rate - amount));
+  return discounted < basePrice ? { price: discounted, promo: p } : null;
+}
+
 const SINOPAC_PAYMENT_API = 'https://pay.ecladotaiwan.com';
 
 const PAYMENT_METHODS = {
@@ -575,7 +587,7 @@ function MobileNavSection({ item, setPage, close }) {
   );
 }
 
-function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPage }) {
+function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPage, promotions = [] }) {
   const [active, setActive] = useState(0);
   const visibleCount = isMobile ? 2 : 3;
   const maxStart = Math.max(0, products.length - visibleCount);
@@ -621,7 +633,7 @@ function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPag
 
         <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : `repeat(${visibleCount}, minmax(0, 1fr))`, gap: isMobile ? 10 : 24 }}>
           {visible.map(product => (
-            <ProductCard key={product.id} product={product} user={user} onAdd={() => onAdd(product)} onSelect={() => onSelect(product)} promotions={[]} />
+            <ProductCard key={product.id} product={product} user={user} onAdd={() => onAdd(product)} onSelect={() => onSelect(product)} promotions={promotions} />
           ))}
         </div>
 
@@ -865,7 +877,7 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
         ))}
       </div>
 
-      <TopProductsCarousel products={topProducts} user={user} onAdd={addToCart} onSelect={setSelectedProduct} isMobile={isMobile} setPage={setPage} />
+      <TopProductsCarousel products={topProducts} user={user} onAdd={addToCart} onSelect={setSelectedProduct} isMobile={isMobile} setPage={setPage} promotions={promotions} />
 
       {/* FEATURED PRODUCTS */}
       <section style={{ padding: isMobile ? '60px 0' : '100px 0', background:'var(--white)' }}>
@@ -986,6 +998,7 @@ function ProductDetail({ product, user, onAdd, onBack, promotions = [] }) {
 
   const livePromosForProduct = (promotions || []).filter(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));
   const primaryPromo = livePromosForProduct[0];
+  const promoDisplay = getPromoDisplayPrice(product, user, promotions);
 
   function handleAdd() {
     for (let i = 0; i < qty; i++) onAdd(product);
@@ -1061,11 +1074,20 @@ function ProductDetail({ product, user, onAdd, onBack, promotions = [] }) {
             ) : (
               <div style={{ borderTop:'1px solid var(--light)', borderBottom:'1px solid var(--light)', padding:'20px 0', marginBottom:28 }}>
                 <div style={{ display:'flex', alignItems:'baseline', gap:12, flexWrap:'wrap' }}>
-                  <span style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, color:'var(--black)' }}>NT$ {showPrice.toLocaleString()}</span>
-                  {hasTierPrice && <>
-                    <span style={{ fontSize:13, color:'var(--dark)', textDecoration:'line-through' }}>NT$ {product.price.toLocaleString()}</span>
-                    <span style={{ fontSize:10, background:'var(--gold)', color:'var(--white)', padding:'3px 8px', letterSpacing:'0.1em', fontWeight:500 }}>{priceTier.priceLabel}</span>
-                  </>}
+                  {promoDisplay ? (
+                    <>
+                      <span style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, color:'var(--gold)' }}>NT$ {promoDisplay.price.toLocaleString()}</span>
+                      <span style={{ fontSize:13, color:'var(--dark)', textDecoration:'line-through' }}>NT$ {showPrice.toLocaleString()}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, color:'var(--black)' }}>NT$ {showPrice.toLocaleString()}</span>
+                      {hasTierPrice && <>
+                        <span style={{ fontSize:13, color:'var(--dark)', textDecoration:'line-through' }}>NT$ {product.price.toLocaleString()}</span>
+                        <span style={{ fontSize:10, background:'var(--gold)', color:'var(--white)', padding:'3px 8px', letterSpacing:'0.1em', fontWeight:500 }}>{priceTier.priceLabel}</span>
+                      </>}
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -1122,6 +1144,7 @@ function ProductCard({ product, user, onAdd, onSelect, promotions = [] }) {
   const priceTier = getMemberTier(user);
   const hasTierPrice = isProfessionalMember(user);
   const onPromo = promotions.some(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));
+  const promoDisplay = getPromoDisplayPrice(product, user, promotions);
   return (
     <div onClick={onSelect} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ cursor:'pointer', position:'relative' }}>
       {onPromo && (
@@ -1145,9 +1168,18 @@ function ProductCard({ product, user, onAdd, onSelect, promotions = [] }) {
         <p style={{ fontSize:12, color:'var(--dark)', marginBottom:8 }}>{product.nameZh} · {product.size}</p>
         {canPurchase ? (
           <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-            <span style={{ fontSize:15, fontWeight:500, color:'var(--black)' }}>NT$ {showPrice.toLocaleString()}</span>
-            {hasTierPrice && <span style={{ fontSize:11, color:'var(--dark)', textDecoration:'line-through' }}>NT$ {product.price.toLocaleString()}</span>}
-            {hasTierPrice && <span style={{ fontSize:10, background:'var(--off-white)', color:'var(--dark)', padding:'2px 6px' }}>{priceTier.priceLabel}</span>}
+            {promoDisplay ? (
+              <>
+                <span style={{ fontSize:15, fontWeight:500, fontFamily:'var(--font-display)', color:'var(--gold)' }}>NT$ {promoDisplay.price.toLocaleString()}</span>
+                <span style={{ fontSize:11, color:'var(--dark)', textDecoration:'line-through' }}>NT$ {showPrice.toLocaleString()}</span>
+              </>
+            ) : (
+              <>
+                <span style={{ fontSize:15, fontWeight:500, color:'var(--black)' }}>NT$ {showPrice.toLocaleString()}</span>
+                {hasTierPrice && <span style={{ fontSize:11, color:'var(--dark)', textDecoration:'line-through' }}>NT$ {product.price.toLocaleString()}</span>}
+                {hasTierPrice && <span style={{ fontSize:10, background:'var(--off-white)', color:'var(--dark)', padding:'2px 6px' }}>{priceTier.priceLabel}</span>}
+              </>
+            )}
           </div>
         ) : (
           <div>
