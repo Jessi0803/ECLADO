@@ -318,10 +318,8 @@ function extractPaymentLink(response) {
     response?.WalletParam?.WalletURL,
     response.WebAtmURL,
     response?.ATMParam?.WebAtmURL,
-    response?.ATMParam?.QRCodeURL,
-    response?.QRCodeURL,
   ];
-  return candidates.find(url => typeof url === 'string' && url.startsWith('http')) || '';
+  return candidates.find(url => typeof url === 'string' && url.startsWith('http') && !url.includes('QRCode')) || '';
 }
 
 function buildPaymentNotes(methodLabel, response) {
@@ -1671,12 +1669,6 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
             <button type="button" onClick={() => navigator.clipboard?.writeText(paymentLink)} style={{ background:'none', border:'1px solid var(--light)', color:'var(--dark)', padding:'11px 16px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>
               複製付款連結
             </button>
-          </div>
-        )}
-        {!atmNo && resp?.QRCodeURL && (
-          <div style={{ marginTop:18, padding:'14px', background:'var(--white)', border:'1px solid var(--light)' }}>
-            <div style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', marginBottom:10 }}>QR Code</div>
-            <img src={resp.QRCodeURL} alt="付款 QR Code" style={{ display:'block', width:'100%', maxWidth:240, height:'auto', margin:'0 auto' }} />
           </div>
         )}
       </div>
