@@ -1263,44 +1263,112 @@ function ProductsPage({ products, setProducts, hideHeader }) {
   );
 }
 
-// ─── CATALOG (商品 + 庫存 合頁) ────────────────────────────────────────────────
+// ─── CATALOG (商品 & 庫存 合併) ───────────────────────────────────────────────
 function Catalog({ products, setProducts }) {
-  const [tab, setTab] = useState('products'); // products | inventory
+  const [editId, setEditId] = useState(null);
+  const [editVal, setEditVal] = useState('');
   const lowStock = products.filter(p => p.stock <= p.minStock);
+
+  function saveStock(id) {
+    const val = parseInt(editVal);
+    if (!isNaN(val) && val >= 0) {
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, stock: val } : p));
+    }
+    setEditId(null);
+  }
 
   return (
     <div>
-      {/* Tab bar */}
-      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
-        {[
-          { id: 'products', label: '商品列表', sub: `${products.length} 件商品` },
-          { id: 'inventory', label: '庫存管理', sub: lowStock.length > 0 ? `${lowStock.length} 件庫存不足` : '庫存充足' },
-        ].map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: '14px 28px 14px 0', marginRight: 24,
-            borderBottom: tab === t.id ? '2px solid var(--dark)' : '2px solid transparent',
-            color: tab === t.id ? 'var(--dark)' : 'var(--mid)',
-            fontFamily: 'var(--font-d)', fontSize: 22, fontWeight: 400,
-            letterSpacing: '0.02em', display: 'flex', alignItems: 'baseline', gap: 12,
-            transition: 'all 0.15s',
-          }}>
-            {t.label}
-            <span style={{
-              fontSize: 11, fontFamily: 'var(--font)', letterSpacing: '0.04em',
-              color: tab === t.id
-                ? (t.id === 'inventory' && lowStock.length > 0 ? 'var(--red)' : 'var(--mid)')
-                : 'var(--light)',
-              fontWeight: 400,
-            }}>{t.sub}</span>
-          </button>
-        ))}
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 16 }}>
+          <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>商品 & 庫存</h1>
+          <span style={{ fontSize: 12, color: 'var(--mid)' }}>{products.length} 件商品</span>
+          {lowStock.length > 0 && (
+            <span style={{ fontSize: 12, color: 'var(--red)', fontWeight: 500 }}>⚠ {lowStock.length} 件庫存不足</span>
+          )}
+        </div>
+        <button style={{ padding: '10px 24px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>+ 新增商品</button>
       </div>
 
-      {/* Content */}
-      {tab === 'products'
-        ? <ProductsPage products={products} setProducts={setProducts} hideHeader />
-        : <Inventory products={products} setProducts={setProducts} hideHeader />}
+      {/* Low stock warning */}
+      {lowStock.length > 0 && (
+        <div style={{ background: 'oklch(0.60 0.18 25 / 0.05)', border: '1px solid oklch(0.60 0.18 25 / 0.2)', padding: '14px 20px', marginBottom: 20 }}>
+          <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--red)', marginBottom: 8 }}>⚠ 庫存不足警示 — 以下商品需要補貨</div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {lowStock.map(p => (
+              <div key={p.id} style={{ fontSize: 12, background: 'var(--white)', border: '1px solid var(--border)', padding: '5px 12px', display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span style={{ color: 'var(--dark)' }}>{p.nameZh}</span>
+                <span style={{ fontWeight: 700, color: p.stock === 0 ? 'var(--red)' : 'var(--yellow)' }}>{p.stock} 件</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Merged table */}
+      <div className="table-scroll" style={{ background: 'var(--white)', border: '1px solid var(--border)' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
+              {['商品名稱', '分類', '規格', '售價', '專業價', '院線限定', '庫存', '狀態', '操作'].map(h => (
+                <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {products.map(p => {
+              const isLow = p.stock <= p.minStock;
+              return (
+                <tr key={p.id} style={{ borderBottom: '1px solid var(--border)', background: p.stock === 0 ? 'oklch(0.60 0.18 25 / 0.03)' : 'transparent' }}>
+                  <td style={{ padding: '13px 14px' }}>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>{p.nameZh}</div>
+                    <div style={{ fontSize: 11, color: 'var(--mid)' }}>{p.name}</div>
+                  </td>
+                  <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{p.category}</td>
+                  <td style={{ padding: '13px 14px', fontSize: 12 }}>{p.size}</td>
+                  <td style={{ padding: '13px 14px', fontSize: 12, fontWeight: 500 }}>NT$ {p.price.toLocaleString()}</td>
+                  <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--gold)' }}>NT$ {p.proPrice.toLocaleString()}</td>
+                  <td style={{ padding: '13px 14px' }}>
+                    <span style={{ fontSize: 11, color: p.isProOnly ? 'var(--dark)' : 'var(--mid)', fontWeight: p.isProOnly ? 600 : 400 }}>
+                      {p.isProOnly ? '● 院線' : '○ 一般'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '13px 14px' }}>
+                    {editId === p.id ? (
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <input type="number" value={editVal} onChange={e => setEditVal(e.target.value)}
+                          style={{ width: 60, padding: '4px 8px', border: '1px solid var(--dark)', fontSize: 13, outline: 'none' }}
+                          autoFocus
+                          onKeyDown={e => { if (e.key === 'Enter') saveStock(p.id); if (e.key === 'Escape') setEditId(null); }} />
+                        <button onClick={() => saveStock(p.id)} style={{ padding: '4px 8px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 11, cursor: 'pointer' }}>✓</button>
+                        <button onClick={() => setEditId(null)} style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--border)', fontSize: 11, cursor: 'pointer', color: 'var(--mid)' }}>✗</button>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: 15, fontWeight: 600, color: p.stock === 0 ? 'var(--red)' : isLow ? 'var(--yellow)' : 'var(--dark)' }}>{p.stock}</span>
+                    )}
+                  </td>
+                  <td style={{ padding: '13px 14px' }}>
+                    {p.stock === 0
+                      ? <span style={{ fontSize: 11, color: 'var(--red)', fontWeight: 500 }}>缺貨</span>
+                      : isLow
+                        ? <span style={{ fontSize: 11, color: 'var(--yellow)', fontWeight: 500 }}>低庫存</span>
+                        : <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 500 }}>正常</span>}
+                  </td>
+                  <td style={{ padding: '13px 14px' }}>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <button onClick={() => { setEditId(p.id); setEditVal(String(p.stock)); }}
+                        style={{ padding: '5px 12px', fontSize: 11, background: 'none', border: '1px solid var(--border)', color: 'var(--dark)', cursor: 'pointer' }}>修改庫存</button>
+                      <button style={{ padding: '5px 12px', fontSize: 11, background: 'none', border: '1px solid var(--border)', color: 'var(--dark)', cursor: 'pointer' }}>編輯</button>
+                      <button style={{ padding: '5px 12px', fontSize: 11, background: 'none', border: '1px solid var(--border)', color: 'var(--mid)', cursor: 'pointer' }}>下架</button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
