@@ -87,7 +87,7 @@ create table if not exists public.orders (
   subtotal numeric,
   discount numeric not null default 0,
   status text not null default 'awaiting_confirm'
-    check (status in ('awaiting_confirm', 'paid', 'preparing', 'shipped', 'delivered', 'cancelled')),
+    check (status in ('awaiting_confirm', 'unpaid', 'paid', 'preparing', 'shipped', 'delivered', 'returned', 'cancelled')),
   date text,
   address text,
   phone text,
