@@ -1641,6 +1641,10 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
             <span style={{ color:'var(--black)', letterSpacing:'0.08em', fontFamily:'var(--font-body)', fontVariantNumeric:'tabular-nums' }}>{resp.TSNo}</span>
           </>}
           {atmNo && <>
+            <span style={{ color:'var(--dark)' }}>銀行代碼</span>
+            <span style={{ color:'var(--black)', fontWeight:500 }}>807 永豐銀行</span>
+          </>}
+          {atmNo && <>
             <span style={{ color:'var(--dark)' }}>虛擬帳號</span>
             <span style={{ color:'var(--black)', fontFamily:'var(--font-body)', letterSpacing:'0.12em', fontWeight:500, fontVariantNumeric:'tabular-nums' }}>{atmNo}</span>
           </>}
