@@ -1523,7 +1523,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
     );
   }
 
-  async function insertOrder(paymentData, methodLabel) {
+  async function insertOrder(paymentData, methodLabel, methodKey) {
     const today = new Date();
     const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     const noteParts = [safeTrim(form.note), buildPaymentNotes(methodLabel, paymentData)].filter(Boolean);
@@ -1537,7 +1537,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
       discount,
       promotion_id: promotion?.id || null,
       promotion_name: promotion?.name || null,
-      status: 'awaiting_confirm',
+      status: methodKey === 'atm' ? 'awaiting_confirm' : 'unpaid',
       date: dateStr,
       address: `${form.city}${form.district}${form.address}`,
       phone: form.phone,
@@ -1594,7 +1594,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
 
       setPaymentSnapshot(cart.map(item => ({ ...item })));
       setPaymentSummary({ subtotal, discount, finalSubtotal, promotion, shipping, total, items: cart.map(item => ({ ...item })) });
-      const insertError = await insertOrder(apiResponse, method.label);
+      const insertError = await insertOrder(apiResponse, method.label, paymentMethod);
       if (insertError) console.error(insertError);
 
       const paymentLink = extractPaymentLink(apiResponse);
