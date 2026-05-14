@@ -1,0 +1,8 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/admin", "destination": "/eclado/admin.html" },
+    { "source": "/:path*", "destination": "/eclado/index.html" }
+  ]
+}
