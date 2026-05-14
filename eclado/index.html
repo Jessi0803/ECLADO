@@ -1668,7 +1668,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
             </button>
           </div>
         )}
-        {resp?.QRCodeURL && (
+        {!atmNo && resp?.QRCodeURL && (
           <div style={{ marginTop:18, padding:'14px', background:'var(--white)', border:'1px solid var(--light)' }}>
             <div style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', marginBottom:10 }}>QR Code</div>
             <img src={resp.QRCodeURL} alt="付款 QR Code" style={{ display:'block', width:'100%', maxWidth:240, height:'auto', margin:'0 auto' }} />
