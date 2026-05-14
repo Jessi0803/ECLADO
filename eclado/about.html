@@ -1326,7 +1326,7 @@ function CartPage({ cart, setCart, setPage, user, promotions = [] }) {
     setCart(prev => prev.map(i => i.id===id ? { ...i, qty: Math.max(0, i.qty+delta) } : i).filter(i => i.qty>0));
   }
   const { subtotal, discount, finalSubtotal, promotion } = calculateDiscount(cart, promotions, user);
-  const shipping = finalSubtotal >= 3000 ? 0 : 150;
+  const shipping = 0;
   const grandTotal = finalSubtotal + shipping;
 
   return (
@@ -1440,7 +1440,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
   const isMobile = useIsMobile();
 
   const { subtotal, discount, finalSubtotal, promotion } = calculateDiscount(cart, promotions, user);
-  const shipping = finalSubtotal >= 3000 ? 0 : 150;
+  const shipping = 0;
   const total = finalSubtotal + shipping;
 
   const STEPS = ['收件資訊', '確認付款', '完成'];
@@ -1514,7 +1514,6 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
           <span>運費 <span style={{ fontSize:10, color:'var(--dark)' }}>（宅配到府）</span></span>
           <span style={{ fontFamily:'var(--font-display)' }}>{summary.shipping === 0 ? <span style={{ color:'var(--gold)', fontFamily:'var(--font-body)' }}>免運</span> : `NT$ ${summary.shipping}`}</span>
         </div>
-        {summary.finalSubtotal < 3000 && <p style={{ fontSize:11, color:'var(--dark)', marginBottom:14, lineHeight:1.6 }}>消費滿 NT$ 3,000 享免運費，還差 NT$ {(3000 - summary.finalSubtotal).toLocaleString()}</p>}
         <div style={{ height:1, background:'var(--light)', marginBottom:14 }} />
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
           <span style={{ fontSize:13, fontWeight:500 }}>合計</span>
@@ -1739,7 +1738,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
                     </div>
                     <div>
                       <p style={{ fontSize:12, fontWeight:500, color:'var(--black)', marginBottom:2 }}>宅配到府</p>
-                      <p style={{ fontSize:11, color:'var(--dark)' }}>黑貓宅急便 · 運費 NT$ 150（滿 NT$ 3,000 免運）</p>
+                      <p style={{ fontSize:11, color:'var(--dark)' }}>黑貓宅急便 · 免運費</p>
                     </div>
                   </div>
 
@@ -2418,7 +2417,7 @@ function InfoPage() {
     ]},
     '運送方式': { title:'運送方式', content:[
       { q:'配送方式', a:'全台宅配（黑貓宅急便），離島地區可能需額外 2-3 個工作天。' },
-      { q:'運費說明', a:'單筆訂單運費 NT$150，滿 NT$2,000 享免運費優惠。' },
+      { q:'運費說明', a:'目前全站免運費。' },
       { q:'出貨時間', a:'確認付款後 1-2 個工作天出貨，出貨後約 1-3 個工作天送達。' },
       { q:'出貨通知', a:'商品出貨後系統將自動透過 LINE 發送出貨通知，內含物流追蹤連結。' },
     ]},
