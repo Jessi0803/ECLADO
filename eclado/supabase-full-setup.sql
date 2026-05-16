@@ -257,12 +257,12 @@ exception when duplicate_object then null;
 end $$;
 
 -- 庫存扣補：建立訂單扣庫存，取消 / 退貨補回庫存。
-create or replace function public.order_reserves_inventory(order_status text)
+create or replace function public.order_consumes_inventory(order_status text)
 returns boolean
 language sql
 immutable
 as $$
-  select order_status in ('awaiting_confirm', 'paid', 'preparing', 'shipped', 'delivered');
+  select order_status = 'paid';
 $$;
 
 create or replace function public.adjust_inventory_for_order(order_items jsonb, direction integer)
@@ -321,18 +321,18 @@ set search_path = public
 as $$
 begin
   if tg_op = 'INSERT' then
-    if public.order_reserves_inventory(new.status) then
+    if public.order_consumes_inventory(new.status) then
       perform public.adjust_inventory_for_order(new.items, -1);
     end if;
     return new;
   end if;
 
   if tg_op = 'UPDATE' then
-    if public.order_reserves_inventory(old.status) and not public.order_reserves_inventory(new.status) then
+    if public.order_consumes_inventory(old.status) and not public.order_consumes_inventory(new.status) then
       perform public.adjust_inventory_for_order(old.items, 1);
-    elsif not public.order_reserves_inventory(old.status) and public.order_reserves_inventory(new.status) then
+    elsif not public.order_consumes_inventory(old.status) and public.order_consumes_inventory(new.status) then
       perform public.adjust_inventory_for_order(new.items, -1);
-    elsif public.order_reserves_inventory(old.status) and public.order_reserves_inventory(new.status) and old.items is distinct from new.items then
+    elsif public.order_consumes_inventory(old.status) and public.order_consumes_inventory(new.status) and old.items is distinct from new.items then
       perform public.adjust_inventory_for_order(old.items, 1);
       perform public.adjust_inventory_for_order(new.items, -1);
     end if;
