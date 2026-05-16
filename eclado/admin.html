@@ -546,6 +546,12 @@ function Dashboard({ orders, products, members }) {
 function Orders({ orders, setOrders }) {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState('awaiting_confirm');
+  const [trackingInput, setTrackingInput] = useState('');
+  const [pushing, setPushing] = useState(false);
+
+  useEffect(() => {
+    setTrackingInput(selected?.tracking || '');
+  }, [selected?.id]);
 
   const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter);
   const awaitingCount = orders.filter(o => o.status === 'awaiting_confirm').length;
@@ -555,6 +561,31 @@ function Orders({ orders, setOrders }) {
   function updateStatus(id, status) {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
     if (selected?.id === id) setSelected(s => ({ ...s, status }));
+  }
+
+  async function confirmShipment() {
+    const id = selected.id;
+    const tracking = trackingInput.trim();
+    if (!tracking) return;
+    setPushing(true);
+    const newStatus = ['paid', 'preparing'].includes(selected.status) ? 'shipped' : selected.status;
+    const isNewShipment = newStatus === 'shipped' && selected.status !== 'shipped';
+    try {
+      setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus, tracking } : o));
+      setSelected(s => ({ ...s, status: newStatus, tracking }));
+      if (isNewShipment && selected.user_id) {
+        const { data: profile } = await supabase.from('profiles').select('line_user_id').eq('id', selected.user_id).single();
+        if (profile?.line_user_id) {
+          await fetch('/api/line-push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lineUserId: profile.line_user_id, orderId: id, tracking, memberName: selected.member }),
+          }).catch(e => console.error('LINE push failed', e));
+        }
+      }
+    } finally {
+      setPushing(false);
+    }
   }
 
   return (
@@ -698,10 +729,42 @@ function Orders({ orders, setOrders }) {
               <div style={{ fontSize: 12, color: 'var(--dark)', lineHeight: 1.7 }}>{selected.note}</div>
             </div>
           )}
-          {selected.tracking && (
+          {/* 托運/出貨區塊 */}
+          {!['cancelled', 'returned'].includes(selected.status) && (
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>物流追蹤</div>
-              <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 500 }}>{selected.tracking}</div>
+              {['paid', 'preparing', 'shipped'].includes(selected.status) ? (
+                <>
+                  <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 6 }}>托運單號</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      value={trackingInput}
+                      onChange={e => setTrackingInput(e.target.value)}
+                      placeholder="輸入順豐托運單號"
+                      style={{ flex: 1, padding: '8px 10px', border: '1px solid var(--border)', fontSize: 12, outline: 'none', background: 'var(--off)' }}
+                    />
+                    <button
+                      onClick={confirmShipment}
+                      disabled={!trackingInput.trim() || pushing}
+                      style={{
+                        padding: '8px 12px', background: 'var(--dark)', color: '#fff', border: 'none',
+                        fontSize: 11, letterSpacing: '0.08em', whiteSpace: 'nowrap',
+                        cursor: trackingInput.trim() && !pushing ? 'pointer' : 'not-allowed',
+                        opacity: trackingInput.trim() && !pushing ? 1 : 0.45,
+                      }}
+                    >{pushing ? '...' : selected.status === 'shipped' ? '更新' : '確認出貨'}</button>
+                  </div>
+                  {selected.tracking && (
+                    <div style={{ fontSize: 11, color: 'var(--mid)', marginTop: 6 }}>
+                      目前：<a href={`https://htm.sf-express.com/sc/waybill.html?waybillno=${selected.tracking}`} target="_blank" style={{ color: 'var(--blue)' }}>{selected.tracking}</a>
+                    </div>
+                  )}
+                </>
+              ) : selected.tracking ? (
+                <>
+                  <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>物流追蹤</div>
+                  <a href={`https://htm.sf-express.com/sc/waybill.html?waybillno=${selected.tracking}`} target="_blank" style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 500, textDecoration: 'none' }}>{selected.tracking}</a>
+                </>
+              ) : null}
             </div>
           )}
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginBottom: 16 }}>
@@ -1934,16 +1997,21 @@ function App() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // 訂單狀態變動時同步到 Supabase
+  // 訂單狀態/托運單號變動時同步到 Supabase
   async function setOrdersWithSync(updater) {
     setOrders(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
       next.forEach(o => {
         const old = prev.find(p => p.id === o.id);
-        if (old && old.status !== o.status) {
-          supabase.from('orders').update({ status: o.status }).eq('id', o.id).then(({ error }) => {
-            if (error) console.error('update status failed', error);
-          });
+        if (old) {
+          const update = {};
+          if (old.status !== o.status) update.status = o.status;
+          if (old.tracking !== o.tracking) update.tracking = o.tracking;
+          if (Object.keys(update).length) {
+            supabase.from('orders').update(update).eq('id', o.id).then(({ error }) => {
+              if (error) console.error('update order failed', error);
+            });
+          }
         }
       });
       return next;
