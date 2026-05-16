@@ -1828,6 +1828,47 @@ function normalizeOrder(row) {
   };
 }
 
+function normalizeProduct(row) {
+  return {
+    id: row.id,
+    name: row.name || '',
+    nameZh: row.name_zh || '',
+    category: row.category || '',
+    size: row.size || '',
+    price: Number(row.price) || 0,
+    proPrice: Number(row.pro_price) || 0,
+    stock: Number(row.stock) || 0,
+    minStock: Number(row.min_stock) || 3,
+    isProOnly: !!row.is_pro_only,
+    img: row.image_url || '',
+    desc: row.description || '',
+    skinType: row.skin_type || '',
+    ingredients: row.ingredients || '',
+    features: Array.isArray(row.features) ? row.features : [],
+    active: row.active !== false,
+  };
+}
+
+function productToRow(product) {
+  return {
+    name: product.name || '',
+    name_zh: product.nameZh || '',
+    category: product.category || '',
+    size: product.size || '',
+    price: Number(product.price) || 0,
+    pro_price: Number(product.proPrice) || 0,
+    stock: Number(product.stock) || 0,
+    min_stock: Number(product.minStock) || 3,
+    is_pro_only: !!product.isProOnly,
+    image_url: product.img || null,
+    description: product.desc || '',
+    skin_type: product.skinType || '',
+    ingredients: product.ingredients || '',
+    features: Array.isArray(product.features) ? product.features : [],
+    active: product.active !== false,
+  };
+}
+
 // profiles → 會員顯示用格式
 function normalizeMember(row, allOrders) {
   const myOrders = allOrders.filter(o => o.user_id === row.id || o.email === row.email);
@@ -1851,12 +1892,13 @@ function App() {
   const [orders, setOrders] = useState(INIT_ORDERS);
   const [loadError, setLoadError] = useState('');
 
-  // 從 Supabase 載入訂單 + 會員
+  // 從 Supabase 載入訂單 + 會員 + 商品庫存
   async function fetchAll() {
     try {
-      const [ordersRes, profilesRes] = await Promise.all([
+      const [ordersRes, profilesRes, productsRes] = await Promise.all([
         supabase.from('orders').select('*').order('created_at', { ascending: false }),
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+        supabase.from('products').select('*').eq('active', true).order('id', { ascending: true }),
       ]);
       if (ordersRes.error) throw ordersRes.error;
       if (profilesRes.error) throw profilesRes.error;
@@ -1870,7 +1912,11 @@ function App() {
       const realMembers = (profilesRes.data || []).map(p => normalizeMember(p, allOrders));
       setMembers(realMembers.length > 0 ? realMembers : INIT_MEMBERS);
 
-      setLoadError('');
+      if (!productsRes.error && productsRes.data?.length) {
+        setProducts(productsRes.data.map(normalizeProduct));
+      }
+
+      setLoadError(productsRes.error ? '商品庫存尚未連接 Supabase products 表，請先執行 supabase-products.sql；目前顯示本機示範庫存。' : '');
     } catch (err) {
       console.error('fetch failed', err);
       setLoadError('無法連接 Supabase（' + (err.message || '') + '），目前顯示本機示範資料。');
@@ -1883,6 +1929,7 @@ function App() {
       .channel('admin-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchAll())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
@@ -1896,6 +1943,25 @@ function App() {
         if (old && old.status !== o.status) {
           supabase.from('orders').update({ status: o.status }).eq('id', o.id).then(({ error }) => {
             if (error) console.error('update status failed', error);
+          });
+        }
+      });
+      return next;
+    });
+  }
+
+  // 商品 / 庫存變動時同步到 Supabase products
+  async function setProductsWithSync(updater) {
+    setProducts(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      next.forEach(product => {
+        const old = prev.find(p => p.id === product.id);
+        if (old && JSON.stringify(old) !== JSON.stringify(product)) {
+          supabase.from('products').update(productToRow(product)).eq('id', product.id).then(({ error }) => {
+            if (error) {
+              console.error('update product failed', error);
+              setLoadError('商品庫存同步失敗：請確認已執行 supabase-products.sql。');
+            }
           });
         }
       });
@@ -1926,10 +1992,10 @@ function App() {
     switch (page) {
       case 'dashboard': return <Dashboard orders={orders} products={products} members={members} />;
       case 'orders': return <Orders orders={orders} setOrders={setOrdersWithSync} />;
-      case 'catalog': return <Catalog products={products} setProducts={setProducts} />;
+      case 'catalog': return <Catalog products={products} setProducts={setProductsWithSync} />;
       // 舊路徑相容，避免有人記住 /admin#products 之類的
       case 'products':
-      case 'inventory': return <Catalog products={products} setProducts={setProducts} />;
+      case 'inventory': return <Catalog products={products} setProducts={setProductsWithSync} />;
       case 'promotions': return <Promotions products={products} />;
       case 'members': return <Members members={members} setMembers={setMembersWithSync} orders={orders} />;
       case 'analytics': return <Analytics />;

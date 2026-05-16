@@ -4,6 +4,7 @@
 -- ============================================================================
 -- 會建立：
 --   public.profiles   會員資料
+--   public.products   商品與庫存
 --   public.orders     訂單資料
 --   public.promotions 活動資料
 --
@@ -76,6 +77,33 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- 商品與庫存
+create table if not exists public.products (
+  id integer primary key,
+  name text not null,
+  name_zh text not null,
+  category text not null,
+  size text,
+  price numeric not null default 0,
+  pro_price numeric not null default 0,
+  stock integer not null default 0 check (stock >= 0),
+  min_stock integer not null default 3 check (min_stock >= 0),
+  is_pro_only boolean not null default false,
+  image_url text,
+  description text,
+  skin_type text,
+  ingredients text,
+  features jsonb not null default '[]'::jsonb,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+drop trigger if exists trg_products_updated_at on public.products;
+create trigger trg_products_updated_at
+  before update on public.products
+  for each row execute function public.set_updated_at();
+
 -- 訂單資料
 create table if not exists public.orders (
   id text primary key,
@@ -131,6 +159,7 @@ alter table public.orders
 
 -- RLS：依照目前網站架構開放 anon 讀寫
 alter table public.profiles enable row level security;
+alter table public.products enable row level security;
 alter table public.orders enable row level security;
 alter table public.promotions enable row level security;
 
@@ -147,6 +176,21 @@ create policy "profiles_insert_all"
 drop policy if exists "profiles_update_all" on public.profiles;
 create policy "profiles_update_all"
   on public.profiles for update
+  using (true) with check (true);
+
+drop policy if exists "products_select_all" on public.products;
+create policy "products_select_all"
+  on public.products for select
+  using (true);
+
+drop policy if exists "products_insert_all" on public.products;
+create policy "products_insert_all"
+  on public.products for insert
+  with check (true);
+
+drop policy if exists "products_update_all" on public.products;
+create policy "products_update_all"
+  on public.products for update
   using (true) with check (true);
 
 drop policy if exists "orders_select_all" on public.orders;
@@ -190,6 +234,12 @@ create policy "promotions_delete_all"
 -- Realtime：如果已加入 publication，第二次執行可能會提示已存在，可忽略。
 do $$
 begin
+  alter publication supabase_realtime add table public.products;
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
   alter publication supabase_realtime add table public.orders;
 exception when duplicate_object then null;
 end $$;
@@ -207,5 +257,5 @@ exception when duplicate_object then null;
 end $$;
 
 -- ============================================================================
--- 執行完成後，請到 Table Editor 確認 profiles / orders / promotions 已建立。
+-- 執行完成後，請到 Table Editor 確認 profiles / products / orders / promotions 已建立。
 -- ============================================================================
