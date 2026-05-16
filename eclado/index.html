@@ -296,6 +296,12 @@ function formatDateCompact(date) {
   return `${y}${m}${d}`;
 }
 
+function formatTimeCompact(date) {
+  const h = String(date.getHours()).padStart(2, '0');
+  const m = String(date.getMinutes()).padStart(2, '0');
+  return `${h}${m}`;
+}
+
 function addDays(date, days) {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
@@ -1560,14 +1566,14 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
     if (step !== 2) return;
 
     const method = PAYMENT_METHODS[paymentMethod] || PAYMENT_METHODS.atm;
-    const expireDate = formatDateCompact(addDays(new Date(), 7));
+    const expiresAt = addDays(new Date(), 1);
     const payload = {
       orderNo,
       amount: total,
       prdtName: productNameForPayment(),
       payType: method.payType,
-      expireDate,
-      expireTime: '2359',
+      expireDate: formatDateCompact(expiresAt),
+      expireTime: formatTimeCompact(expiresAt),
       returnUrl: `${SINOPAC_PAYMENT_API}/return?orderNo=${encodeURIComponent(orderNo)}`,
       backendUrl: `${SINOPAC_PAYMENT_API}/api/sinopac/notify`,
       qrCodeStatus: 'Y',
