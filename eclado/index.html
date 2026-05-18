@@ -1457,11 +1457,12 @@ function CheckoutField({ label, name, type, required, placeholder, value, onChan
 
 // ─── CHECKOUT PAGE ────────────────────────────────────────────────────────────
 function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
+  const isLineEmail = user?.email?.startsWith('line.');
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     name: user?.name || '',
     phone: '',
-    email: user?.email || '',
+    email: isLineEmail ? '' : (user?.email || ''),
     city: '',
     district: '',
     address: '',
