@@ -992,12 +992,14 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
               <div style={{ fontFamily:'var(--font-display)', fontSize:18, letterSpacing:'0.22em', color:'var(--white)', marginBottom:5 }}>ECLADO</div>
               <div style={{ fontSize:9, letterSpacing:'0.24em', color:'var(--gold)', marginBottom:16 }}>Korean Cosmeceuticals</div>
               <p style={{ fontSize:13, color:'rgba(255,255,255,0.35)', lineHeight:1.8, marginBottom:24 }}>韓國醫美院線保養品<br />台灣專業代理</p>
-              <p style={{ fontSize:11, color:'rgba(255,255,255,0.3)', lineHeight:1.9 }}>
-                Zhao Cheng International Trading Co., Ltd.<br />
-                統一編號：60490580<br />
-                桃園市中壢區石頭里中正路82號10樓<br />
-                © 2026 ECLADO. All rights reserved.
-              </p>
+              {!isMobile && (
+                <p style={{ fontSize:11, color:'rgba(255,255,255,0.3)', lineHeight:1.9 }}>
+                  Zhao Cheng International Trading Co., Ltd.<br />
+                  統一編號：60490580<br />
+                  桃園市中壢區石頭里中正路82號10樓<br />
+                  © 2026 ECLADO. All rights reserved.
+                </p>
+              )}
             </div>
             <div style={{ display: isMobile ? 'grid' : 'contents', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : undefined, gap: isMobile ? 12 : undefined }}>
               {[
@@ -1025,6 +1027,16 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
               ))}
             </div>
           </div>
+          {isMobile && (
+            <div style={{ borderTop:'1px solid rgba(255,255,255,0.1)', marginTop:4, paddingTop:16, padding:'16px 20px 0' }}>
+              <p style={{ fontSize:11, color:'rgba(255,255,255,0.3)', lineHeight:2 }}>
+                Zhao Cheng International Trading Co., Ltd.<br />
+                統一編號：60490580<br />
+                桃園市中壢區石頭里中正路82號10樓<br />
+                © 2026 ECLADO. All rights reserved.
+              </p>
+            </div>
+          )}
         </div>
       </footer>
     </div>
