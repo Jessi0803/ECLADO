@@ -964,31 +964,19 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
       <footer style={{ background:'var(--black)', borderTop:'1px solid rgba(255,255,255,0.08)', padding: isMobile ? '48px 0 28px' : '60px 0 32px' }}>
         <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
           <div className="gfooter">
-            <div style={{ display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
-              <div>
-                <div style={{ fontFamily:'var(--font-display)', fontSize:18, letterSpacing:'0.22em', color:'var(--white)', marginBottom:5 }}>ECLADO</div>
-                <div style={{ fontSize:9, letterSpacing:'0.24em', color:'var(--gold)', marginBottom:16 }}>Korean Cosmeceuticals</div>
-                <p style={{ fontSize:13, color:'rgba(255,255,255,0.35)', lineHeight:1.8, marginBottom:24 }}>韓國醫美院線保養品<br />台灣專業代理</p>
-              </div>
-              <div>
-                <div style={{ display:'flex', gap:16, marginBottom:16 }}>
-                  <a href="https://lin.ee/5RLUjni" target="_blank" rel="noopener noreferrer" style={{ fontSize:12, color:'rgba(255,255,255,0.4)', textDecoration:'none', letterSpacing:'0.06em' }}
-                    onMouseEnter={e=>e.target.style.color='var(--white)'}
-                    onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.4)'}>LINE</a>
-                  <a href="https://www.instagram.com/eclado_tw" target="_blank" rel="noopener noreferrer" style={{ fontSize:12, color:'rgba(255,255,255,0.4)', textDecoration:'none', letterSpacing:'0.06em' }}
-                    onMouseEnter={e=>e.target.style.color='var(--white)'}
-                    onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.4)'}>Instagram</a>
-                </div>
-                <p style={{ fontSize:11, color:'rgba(255,255,255,0.3)', lineHeight:1.9 }}>
-                  Zhao Cheng International Trading Co., Ltd.<br />
-                  統一編號：60490580<br />
-                  © 2026 ECLADO. All rights reserved.
-                </p>
-              </div>
+            <div>
+              <div style={{ fontFamily:'var(--font-display)', fontSize:18, letterSpacing:'0.22em', color:'var(--white)', marginBottom:5 }}>ECLADO</div>
+              <div style={{ fontSize:9, letterSpacing:'0.24em', color:'var(--gold)', marginBottom:16 }}>Korean Cosmeceuticals</div>
+              <p style={{ fontSize:13, color:'rgba(255,255,255,0.35)', lineHeight:1.8, marginBottom:24 }}>韓國醫美院線保養品<br />台灣專業代理</p>
+              <p style={{ fontSize:11, color:'rgba(255,255,255,0.3)', lineHeight:1.9 }}>
+                Zhao Cheng International Trading Co., Ltd.<br />
+                統一編號：60490580<br />
+                © 2026 ECLADO. All rights reserved.
+              </p>
             </div>
             {[
               { title:'產品系列', links:['清潔系列','精華液','急救安瓶','面膜','眼霜','面霜'] },
-              { title:'服務', links:['關於我們','美容師專區','常見問題','聯絡我們'] },
+              { title:'服務', links:['關於我們','美容師專區','常見問題'] },
               { title:'購物說明', links:['訂單查詢','配送說明','退換貨政策','隱私政策'] },
             ].map(col => (
               <div key={col.title}>
@@ -1001,6 +989,17 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
                       onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.4)'}
                     >{link}</a>;
                   })}
+                  {col.title === '服務' && (
+                    <>
+                      <div style={{ fontSize:11, letterSpacing:'0.1em', color:'rgba(255,255,255,0.25)', marginTop:6, marginBottom:2 }}>聯絡我們</div>
+                      <a href="https://lin.ee/5RLUjni" target="_blank" rel="noopener noreferrer" style={{ fontSize:13, color:'rgba(255,255,255,0.4)', textDecoration:'none', letterSpacing:'0.04em', transition:'color 0.2s' }}
+                        onMouseEnter={e=>e.target.style.color='var(--white)'}
+                        onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.4)'}>LINE</a>
+                      <a href="https://www.instagram.com/eclado_tw" target="_blank" rel="noopener noreferrer" style={{ fontSize:13, color:'rgba(255,255,255,0.4)', textDecoration:'none', letterSpacing:'0.04em', transition:'color 0.2s' }}
+                        onMouseEnter={e=>e.target.style.color='var(--white)'}
+                        onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.4)'}>Instagram</a>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
