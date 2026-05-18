@@ -537,7 +537,6 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
                   <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><path d="M20 21a8 8 0 0 0-16 0" /><circle cx="12" cy="7" r="4" /></svg>
                   <span>{user.name}</span>
                 </button>
-                <button onClick={() => setUser()} style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color: darkMode ? 'var(--mid)' : 'rgba(255,255,255,0.5)', fontFamily:'var(--font-body)' }}>登出</button>
               </div>
             ) : null}
             <button onClick={() => setPage('cart')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)', letterSpacing:'0.04em', position:'relative', padding:'4px 0', whiteSpace:'nowrap', display:'inline-flex', alignItems:'center', gap:6 }}>
@@ -585,7 +584,6 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
             {user ? (
               <>
                 <button onClick={() => { setPage('account'); setDrawerOpen(false); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:14, color:'var(--dark)', textAlign:'left', padding:0, fontFamily:'var(--font-body)' }}>{isProfessionalMember(user) && <span style={{ fontSize:10, background:'var(--black)', color:'var(--white)', padding:'2px 7px', marginRight:8 }}>{getMemberTier(user).badge}</span>}{user.name}</button>
-                <button onClick={() => { setUser(); setDrawerOpen(false); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'var(--dark)', textAlign:'left', padding:0 }}>登出</button>
               </>
             ) : null}
           </div>
@@ -2608,7 +2606,7 @@ function LineCallbackPage() {
 }
 
 // ─── ACCOUNT PAGE ────────────────────────────────────────────────────────────
-function AccountPage({ user, setPage }) {
+function AccountPage({ user, setPage, onSignOut }) {
   const isMobile = useIsMobile();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -2651,6 +2649,7 @@ function AccountPage({ user, setPage }) {
   }
 
   const isLineMember = user.email?.startsWith('line.');
+  const visibleEmail = isLineMember ? '' : user.email;
 
   return (
     <div style={{ minHeight:'100vh', paddingTop:68, background:'var(--white)' }}>
@@ -2671,18 +2670,17 @@ function AccountPage({ user, setPage }) {
                 <div style={{ fontSize:11, color:'var(--dark)', marginBottom:4 }}>姓名</div>
                 <div style={{ fontSize:15, color:'var(--black)' }}>{user.name}</div>
               </div>
-              <div>
-                <div style={{ fontSize:11, color:'var(--dark)', marginBottom:4 }}>登入方式</div>
-                <div style={{ fontSize:15, color:'var(--black)' }}>{isLineMember ? 'LINE 登入' : 'Email 登入'}</div>
-              </div>
-              <div>
-                <div style={{ fontSize:11, color:'var(--dark)', marginBottom:4 }}>Email</div>
-                <div style={{ fontSize:13, color:'var(--black)', wordBreak:'break-all' }}>{user.email || '未提供'}</div>
-              </div>
+              {visibleEmail && (
+                <div>
+                  <div style={{ fontSize:11, color:'var(--dark)', marginBottom:4 }}>Email</div>
+                  <div style={{ fontSize:13, color:'var(--black)', wordBreak:'break-all' }}>{visibleEmail}</div>
+                </div>
+              )}
               <div>
                 <div style={{ fontSize:11, color:'var(--dark)', marginBottom:4 }}>會員類型</div>
                 <div style={{ fontSize:15, color:'var(--black)' }}>{getMemberTier(user).label}</div>
               </div>
+              <button onClick={onSignOut} style={{ marginTop:8, width:'fit-content', background:'none', color:'var(--dark)', border:'1px solid var(--light)', padding:'10px 18px', fontSize:12, letterSpacing:'0.08em', cursor:'pointer', fontFamily:'var(--font-body)' }}>登出</button>
             </div>
           </aside>
 
@@ -3008,7 +3006,7 @@ function App() {
       case 'pro-login': return <LoginPage setPage={setPage} professional />;
       case 'reset-password': return <ResetPasswordPage setPage={setPage} />;
       case 'professional-apply': return <ProfessionalApplicationPage setPage={setPage} user={user} />;
-      case 'account':  return <AccountPage user={user} setPage={setPage} />;
+      case 'account':  return <AccountPage user={user} setPage={setPage} onSignOut={handleSignOut} />;
       case 'about':    return <AboutPage />;
       case 'info':     return <InfoPage />;
       case 'line-callback': return <LineCallbackPage />;
