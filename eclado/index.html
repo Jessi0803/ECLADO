@@ -1890,6 +1890,22 @@ function isPasswordRecoveryUrl() {
   return search.has('reset-password') || search.get('type') === 'recovery' || hashText.includes('type=recovery');
 }
 
+const LINE_LOGIN_ERROR_MESSAGES = {
+  line_denied: 'LINE 登入已取消，請重新操作。',
+  config: 'LINE 登入設定尚未完成，請聯繫客服。',
+  token_failed: 'LINE 授權驗證失敗，請重新登入。',
+  profile_failed: '無法取得 LINE 會員資料，請重新登入。',
+  create_failed: '無法建立 LINE 會員，請稍後再試。',
+  link_failed: 'LINE 會員登入連結建立失敗，請稍後再試。',
+  server_error: 'LINE 登入服務暫時無法使用，請稍後再試。',
+};
+
+function getLineLoginErrorMessage() {
+  const errorCode = new URLSearchParams(window.location.search).get('error');
+  if (!errorCode) return '';
+  return LINE_LOGIN_ERROR_MESSAGES[errorCode] || `LINE 登入失敗：${errorCode}`;
+}
+
 function BackHomeButton({ setPage }) {
   return (
     <button
@@ -1919,6 +1935,15 @@ function LoginPage({ setPage, professional = false }) {
   useEffect(() => {
     setView('login');
     reset();
+  }, [professional]);
+
+  useEffect(() => {
+    const lineError = getLineLoginErrorMessage();
+    if (lineError) {
+      setView('login');
+      setError(lineError);
+      window.history.replaceState({ page: professional ? 'pro-login' : 'login' }, '', professional ? '/pro-login' : '/login');
+    }
   }, [professional]);
 
   // ── 登入 ──
@@ -2520,10 +2545,35 @@ function PromoDiagnosticBar({ status, errorText }) {
 
 // ─── LINE CALLBACK PAGE ───────────────────────────────────────────────────────
 function LineCallbackPage() {
+  const [status, setStatus] = useState('LINE 登入中...');
+  const [showRetry, setShowRetry] = useState(false);
+
+  useEffect(() => {
+    let done = false;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        done = true;
+        setStatus('LINE 登入成功，正在返回首頁...');
+        return;
+      }
+    });
+    const t = setTimeout(() => {
+      if (done) return;
+      setStatus('LINE 登入尚未完成，請重新登入或稍後再試。');
+      setShowRetry(true);
+    }, 8000);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--off-white)' }}>
       <div style={{ textAlign:'center' }}>
-        <div style={{ fontSize:13, letterSpacing:'0.1em', color:'var(--dark)' }}>LINE 登入中...</div>
+        <div style={{ fontSize:13, letterSpacing:'0.1em', color:'var(--dark)' }}>{status}</div>
+        {showRetry && (
+          <button onClick={() => window.location.href = '/login'} style={{ marginTop:18, background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 24px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>
+            返回登入
+          </button>
+        )}
       </div>
     </div>
   );
