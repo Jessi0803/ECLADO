@@ -7,6 +7,9 @@ function getAuthHeader(req) {
 
 function requireCronAuth(req, res) {
   const secret = process.env.CRON_SECRET;
+  const vercelCron = req.headers['x-vercel-cron'];
+  if (vercelCron === '1' || vercelCron === 1 || vercelCron === true) return true;
+
   if (!secret) {
     res.status(500).json({ error: 'CRON_SECRET not set' });
     return false;
@@ -21,10 +24,10 @@ function requireCronAuth(req, res) {
 
 async function supabaseRequest(path, options = {}) {
   const supabaseUrl = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
   if (!serviceKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY not set');
+    throw new Error('SUPABASE_SERVICE_KEY not set');
   }
 
   const { returnRepresentation, ...fetchOptions } = options;
