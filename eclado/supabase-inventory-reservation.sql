@@ -4,7 +4,10 @@
 -- Behavior:
 -- - Orders become inventory-active only when status changes to paid.
 -- - Orders moving from paid to cancelled/returned increment products.stock.
--- - If stock is insufficient, the order insert/update fails.
+-- - Stock can become negative; negative stock represents preorder/backorder quantity.
+
+alter table if exists public.products
+  drop constraint if exists products_stock_check;
 
 create or replace function public.order_consumes_inventory(order_status text)
 returns boolean
@@ -24,7 +27,6 @@ declare
   item record;
   product_id integer;
   item_qty integer;
-  current_stock integer;
 begin
   if order_items is null or jsonb_typeof(order_items) <> 'array' then
     return;
@@ -40,24 +42,13 @@ begin
       continue;
     end if;
 
-    if direction < 0 then
-      select stock into current_stock
-      from public.products
-      where id = product_id
-      for update;
-
-      if current_stock is null then
-        raise exception 'Product % not found', product_id;
-      end if;
-
-      if current_stock < item_qty then
-        raise exception 'Insufficient stock for product %, requested %, available %', product_id, item_qty, current_stock;
-      end if;
-    end if;
-
     update public.products
     set stock = stock + (direction * item_qty)
     where id = product_id;
+
+    if not found then
+      raise exception 'Product % not found', product_id;
+    end if;
   end loop;
 end;
 $$;

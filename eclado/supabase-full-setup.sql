@@ -87,7 +87,7 @@ create table if not exists public.products (
   size text,
   price numeric not null default 0,
   pro_price numeric not null default 0,
-  stock integer not null default 0 check (stock >= 0),
+  stock integer not null default 0,
   min_stock integer not null default 3 check (min_stock >= 0),
   is_pro_only boolean not null default false,
   image_url text,
@@ -276,7 +276,6 @@ declare
   item record;
   product_id integer;
   item_qty integer;
-  current_stock integer;
 begin
   if order_items is null or jsonb_typeof(order_items) <> 'array' then
     return;
@@ -292,24 +291,13 @@ begin
       continue;
     end if;
 
-    if direction < 0 then
-      select stock into current_stock
-      from public.products
-      where id = product_id
-      for update;
-
-      if current_stock is null then
-        raise exception 'Product % not found', product_id;
-      end if;
-
-      if current_stock < item_qty then
-        raise exception 'Insufficient stock for product %, requested %, available %', product_id, item_qty, current_stock;
-      end if;
-    end if;
-
     update public.products
     set stock = stock + (direction * item_qty)
     where id = product_id;
+
+    if not found then
+      raise exception 'Product % not found', product_id;
+    end if;
   end loop;
 end;
 $$;

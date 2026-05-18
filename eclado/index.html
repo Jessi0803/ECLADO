@@ -202,6 +202,26 @@ function getMemberPrice(product, user) {
   return Math.round(product.proPrice * tier.multiplier);
 }
 
+function getFulfillmentInfo(product) {
+  const stock = Number(product?.stock ?? 0);
+  if (stock <= 0) {
+    return {
+      type: 'preorder',
+      label: '預購商品',
+      shortLabel: '預購',
+      shipping: '出貨時間為 7-14 個工作天',
+      note: '庫存為 0 仍可下單，將依預購排程出貨。',
+    };
+  }
+  return {
+    type: 'in_stock',
+    label: '現貨商品',
+    shortLabel: '現貨',
+    shipping: '出貨時間為 5 個工作天內，每週二出貨',
+    note: '現貨商品依每週二出貨排程寄出。',
+  };
+}
+
 // ─── PROMOTION HELPERS ────────────────────────────────────────────────────────
 // Supabase integer[] 有時是數字、有時是字串，統一成數字 id
 function normProductIds(p) {
@@ -1051,6 +1071,7 @@ function ProductDetail({ product, user, onAdd, onBack, promotions = [] }) {
   const showPrice = getMemberPrice(product, user);
   const priceTier = getMemberTier(user);
   const hasTierPrice = isProfessionalMember(user);
+  const fulfillment = getFulfillmentInfo(product);
 
   const livePromosForProduct = (promotions || []).filter(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));
   const primaryPromo = livePromosForProduct[0];
@@ -1102,6 +1123,10 @@ function ProductDetail({ product, user, onAdd, onBack, promotions = [] }) {
             <p style={{ fontSize:10, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>{product.category}</p>
             <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 26 : 34, fontWeight:300, color:'var(--black)', lineHeight:1.2, marginBottom:6 }}>{product.nameZh}</h1>
             <p style={{ fontSize:12, color:'var(--dark)', letterSpacing:'0.1em', marginBottom:28 }}>{product.name} · {product.size}</p>
+            <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:10, marginBottom:22 }}>
+              <span style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--white)', background: fulfillment.type === 'preorder' ? 'var(--gold)' : 'var(--black)', padding:'5px 10px' }}>{fulfillment.label}</span>
+              <span style={{ fontSize:13, color:'var(--dark)', lineHeight:1.6 }}>{fulfillment.shipping}</span>
+            </div>
 
             {primaryPromo && (
               <div style={{ background:'var(--off-white)', border:'1px solid var(--gold)', padding:'14px 18px', marginBottom:20 }}>
@@ -1201,12 +1226,16 @@ function ProductCard({ product, user, onAdd, onSelect, promotions = [] }) {
   const hasTierPrice = isProfessionalMember(user);
   const onPromo = promotions.some(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));
   const promoDisplay = getPromoDisplayPrice(product, user, promotions);
+  const fulfillment = getFulfillmentInfo(product);
   return (
     <div onClick={onSelect} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ cursor:'pointer', position:'relative' }}>
       {onPromo && (
         <div style={{ position:'absolute', top:10, right:10, zIndex:3, background:'var(--gold)', color:'var(--white)', fontSize:10, padding:'3px 9px', letterSpacing:'0.1em', fontWeight:500 }}>活動中</div>
       )}
       <div style={{ position:'relative', overflow:'hidden', marginBottom:14 }}>
+        {canPurchase && (
+          <div style={{ position:'absolute', top:10, left:10, zIndex:3, background: fulfillment.type === 'preorder' ? 'var(--gold)' : 'rgba(12,12,10,0.86)', color:'var(--white)', fontSize:10, padding:'3px 9px', letterSpacing:'0.1em', fontWeight:500 }}>{fulfillment.shortLabel}</div>
+        )}
         <img src={product.img} alt={product.nameZh} style={{ width:'100%', height:260, objectFit:'cover', display:'block', transition:'transform 0.5s', transform: hovered?'scale(1.04)':'scale(1)' }} />
         <div style={{ position:'absolute', bottom:0, left:0, right:0, background:'var(--black)', padding:'10px', transform: hovered?'translateY(0)':'translateY(100%)', transition:'transform 0.25s' }}>
           {canPurchase ? (
@@ -1219,6 +1248,9 @@ function ProductCard({ product, user, onAdd, onSelect, promotions = [] }) {
       <div>
         <p style={{ fontSize:10, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', marginBottom:5 }}>{product.category}</p>
         <p style={{ fontSize:12, color:'var(--dark)', marginBottom:8 }}>{product.nameZh} · {product.size}</p>
+        {canPurchase && (
+          <p style={{ fontSize:11, color:'var(--dark)', marginBottom:8, lineHeight:1.5 }}>{fulfillment.label} · {fulfillment.shipping.replace('出貨時間為 ', '')}</p>
+        )}
         {canPurchase ? (
           <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
             {promoDisplay ? (
@@ -1405,24 +1437,28 @@ function CartPage({ cart, setCart, setPage, user, promotions = [] }) {
         ) : (
           <div className="gcart">
             <div>
-              {cart.map(item => (
-                <div key={item.id} style={{ display:'grid', gridTemplateColumns:'72px 1fr auto', gap:16, alignItems:'center', padding:'20px 0', borderBottom:'1px solid var(--light)' }}>
-                  <img src={item.img} alt={item.nameZh} style={{ width:72, height:72, objectFit:'cover', display:'block' }} />
-                  <div>
-                    <p style={{ fontFamily:'var(--font-display)', fontSize:14, fontWeight:400, marginBottom:3 }}>{item.name}</p>
-                    <p style={{ fontSize:12, color:'var(--dark)', marginBottom:10 }}>{item.nameZh} · {item.size}</p>
-                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                      <button onClick={() => updateQty(item.id,-1)} style={{ width:26, height:26, border:'1px solid var(--light)', background:'none', cursor:'pointer', fontSize:15, lineHeight:1 }}>−</button>
-                      <span style={{ fontSize:14, minWidth:20, textAlign:'center', fontFamily:'var(--font-display)' }}>{item.qty}</span>
-                      <button onClick={() => updateQty(item.id,1)} style={{ width:26, height:26, border:'1px solid var(--light)', background:'none', cursor:'pointer', fontSize:15, lineHeight:1 }}>+</button>
+              {cart.map(item => {
+                const fulfillment = getFulfillmentInfo(item);
+                return (
+                  <div key={item.id} style={{ display:'grid', gridTemplateColumns:'72px 1fr auto', gap:16, alignItems:'center', padding:'20px 0', borderBottom:'1px solid var(--light)' }}>
+                    <img src={item.img} alt={item.nameZh} style={{ width:72, height:72, objectFit:'cover', display:'block' }} />
+                    <div>
+                      <p style={{ fontFamily:'var(--font-display)', fontSize:14, fontWeight:400, marginBottom:3 }}>{item.name}</p>
+                      <p style={{ fontSize:12, color:'var(--dark)', marginBottom:6 }}>{item.nameZh} · {item.size}</p>
+                      <p style={{ fontSize:11, color: fulfillment.type === 'preorder' ? 'var(--gold)' : 'var(--dark)', marginBottom:10, lineHeight:1.5 }}>{fulfillment.label} · {fulfillment.shipping}</p>
+                      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                        <button onClick={() => updateQty(item.id,-1)} style={{ width:26, height:26, border:'1px solid var(--light)', background:'none', cursor:'pointer', fontSize:15, lineHeight:1 }}>−</button>
+                        <span style={{ fontSize:14, minWidth:20, textAlign:'center', fontFamily:'var(--font-display)' }}>{item.qty}</span>
+                        <button onClick={() => updateQty(item.id,1)} style={{ width:26, height:26, border:'1px solid var(--light)', background:'none', cursor:'pointer', fontSize:15, lineHeight:1 }}>+</button>
+                      </div>
+                    </div>
+                    <div style={{ textAlign:'right' }}>
+                      <p style={{ fontSize:14, fontWeight:500, fontFamily:'var(--font-display)' }}>NT$ {(getMemberPrice(item, user)*item.qty).toLocaleString()}</p>
+                      <button onClick={() => updateQty(item.id,-item.qty)} style={{ background:'none', border:'none', cursor:'pointer', fontSize:11, color:'var(--dark)', marginTop:6 }}>移除</button>
                     </div>
                   </div>
-                  <div style={{ textAlign:'right' }}>
-                    <p style={{ fontSize:14, fontWeight:500, fontFamily:'var(--font-display)' }}>NT$ {(getMemberPrice(item, user)*item.qty).toLocaleString()}</p>
-                    <button onClick={() => updateQty(item.id,-item.qty)} style={{ background:'none', border:'none', cursor:'pointer', fontSize:11, color:'var(--dark)', marginTop:6 }}>移除</button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div style={{ background:'var(--off-white)', padding:'28px', height:'fit-content' }}>
               <h3 style={{ fontFamily:'var(--font-display)', fontSize:18, fontWeight:400, marginBottom:20 }}>訂單摘要</h3>
@@ -1531,12 +1567,19 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
   function OrderSummary() {
     const summary = paymentSummary || { subtotal, discount, finalSubtotal, promotion, shipping, total };
     const summaryItems = paymentSnapshot?.items || cart;
+    const hasPreorderItem = summaryItems.some(item => getFulfillmentInfo(item).type === 'preorder');
     return (
       <div style={{ background:'var(--off-white)', padding:'28px 24px', height:'fit-content' }}>
         <h3 style={{ fontFamily:'var(--font-display)', fontSize:16, fontWeight:400, marginBottom:20, letterSpacing:'0.04em' }}>訂單明細</h3>
+        {hasPreorderItem && (
+          <div style={{ background:'var(--white)', border:'1px solid var(--gold)', padding:'12px 14px', marginBottom:16, fontSize:12, color:'var(--dark)', lineHeight:1.7 }}>
+            訂單含預購商品，預購品項出貨時間為 7-14 個工作天。
+          </div>
+        )}
         <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:18 }}>
           {summaryItems.map(item => {
             const unitPrice = getMemberPrice(item, user);
+            const fulfillment = getFulfillmentInfo(item);
             return (
               <div key={item.id} style={{ display:'flex', gap:12, alignItems:'center' }}>
                 <div style={{ width:48, height:48, flexShrink:0, position:'relative' }}>
@@ -1546,6 +1589,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
                 <div style={{ flex:1, minWidth:0 }}>
                   <p style={{ fontSize:12, color:'var(--black)', marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.nameZh}</p>
                   <p style={{ fontSize:11, color:'var(--dark)' }}>{item.size}</p>
+                  <p style={{ fontSize:10, color: fulfillment.type === 'preorder' ? 'var(--gold)' : 'var(--dark)', marginTop:3, lineHeight:1.45 }}>{fulfillment.label} · {fulfillment.shipping.replace('出貨時間為 ', '')}</p>
                 </div>
                 <span style={{ fontSize:13, color:'var(--black)', flexShrink:0, fontFamily:'var(--font-display)' }}>NT$ {(unitPrice * item.qty).toLocaleString()}</span>
               </div>
@@ -1586,7 +1630,19 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
       id: orderNo,
       member: form.name || user?.name || '訪客',
       type: getMemberRole(user),
-      items: cart.map(i => ({ id: i.id, name: i.nameZh, qty: i.qty, price: getMemberPrice(i, user) })),
+      items: cart.map(i => {
+        const fulfillment = getFulfillmentInfo(i);
+        return {
+          id: i.id,
+          name: i.nameZh,
+          qty: i.qty,
+          price: getMemberPrice(i, user),
+          fulfillment: fulfillment.label,
+          fulfillment_type: fulfillment.type,
+          shipping_time: fulfillment.shipping,
+          stock_at_order: Number(i.stock ?? 0),
+        };
+      }),
       total,
       subtotal,
       discount,
@@ -2529,7 +2585,7 @@ function InfoPage() {
     '運送方式': { title:'運送方式', content:[
       { q:'配送方式', a:'全台宅配（順豐物流），離島地區可能需額外 2-3 個工作天。' },
       { q:'運費說明', a:'全站統一運費 NT$ 120（宅配到府，順豐物流）。' },
-      { q:'出貨時間', a:'現貨商品於確認付款後 5 個工作天內出貨，每週二統一出貨。\n\n預購商品（從韓國運送）：下單後約 7–14 個工作天出貨，實際時間視韓方備貨及運輸狀況而定。' },
+      { q:'出貨時間', a:'現貨商品於確認付款後 5 個工作天內出貨，每週二統一出貨。\n\n預購商品：下單後約 7-14 個工作天出貨，實際時間視備貨及運輸狀況而定。' },
       { q:'出貨通知', a:'商品出貨後系統將自動透過 LINE 發送出貨通知，內含物流追蹤連結。' },
     ]},
     '付款說明': { title:'付款說明', content:[
@@ -2742,7 +2798,12 @@ function AccountPage({ user, setPage, onSignOut }) {
                       <div style={{ display:'grid', gap:8 }}>
                         {items.map((item, idx) => (
                           <div key={`${order.id}-${idx}`} style={{ display:'flex', justifyContent:'space-between', gap:12, fontSize:13, color:'var(--dark)', lineHeight:1.6 }}>
-                            <span>{item.name || item.nameZh || '商品'} × {item.qty || 1}</span>
+                            <span>
+                              {item.name || item.nameZh || '商品'} × {item.qty || 1}
+                              {item.fulfillment && (
+                                <span style={{ display:'block', fontSize:12, color: item.fulfillment_type === 'preorder' ? 'var(--gold)' : 'var(--dark)' }}>{item.fulfillment} · {item.shipping_time || ''}</span>
+                              )}
+                            </span>
                             {item.price != null && <span>NT$ {Number(item.price).toLocaleString()}</span>}
                           </div>
                         ))}
