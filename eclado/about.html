@@ -533,7 +533,10 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
             {user ? (
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                 {isProfessionalMember(user) && <span style={{ fontSize:10, letterSpacing:'0.1em', background: darkMode ? 'var(--black)' : 'rgba(255,255,255,0.15)', color:'var(--white)', padding:'3px 8px', fontWeight:500 }}>{getMemberTier(user).badge}</span>}
-                <button onClick={() => setPage('account')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)' }}>會員：{user.name}</button>
+                <button onClick={() => setPage('account')} aria-label="會員專區" style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)', display:'inline-flex', alignItems:'center', gap:6, padding:'4px 0' }}>
+                  <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><path d="M20 21a8 8 0 0 0-16 0" /><circle cx="12" cy="7" r="4" /></svg>
+                  <span>{user.name}</span>
+                </button>
                 <button onClick={() => setUser()} style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color: darkMode ? 'var(--mid)' : 'rgba(255,255,255,0.5)', fontFamily:'var(--font-body)' }}>登出</button>
               </div>
             ) : null}
@@ -547,8 +550,9 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
           {/* Mobile hamburger row */}
           <div className="nav-hamburger">
             {user && (
-              <button onClick={() => setPage('account')} style={{ maxWidth:96, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', background:'none', border:'none', cursor:'pointer', fontSize:12, color: drawerOpen ? 'var(--dark)' : iconCol, fontFamily:'var(--font-body)', padding:'4px 0' }}>
-                {user.name}
+              <button onClick={() => setPage('account')} aria-label="會員專區" style={{ maxWidth:108, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', background:'none', border:'none', cursor:'pointer', fontSize:12, color: drawerOpen ? 'var(--dark)' : iconCol, fontFamily:'var(--font-body)', padding:'4px 0', display:'inline-flex', alignItems:'center', gap:5 }}>
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><path d="M20 21a8 8 0 0 0-16 0" /><circle cx="12" cy="7" r="4" /></svg>
+                <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user.name}</span>
               </button>
             )}
             <button onClick={() => setPage('cart')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color: drawerOpen ? 'var(--dark)' : iconCol, fontFamily:'var(--font-body)', position:'relative', padding:'4px 0', display:'inline-flex', alignItems:'center', gap:6 }}>
