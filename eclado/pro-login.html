@@ -1986,10 +1986,11 @@ function LoginPage({ setPage, professional = false }) {
   function signInWithLine() {
     const state = Math.random().toString(36).substring(2, 15);
     sessionStorage.setItem('line_oauth_state', state);
+    const lineRedirectUri = 'https://www.ecladotaiwan.com/api/line-callback';
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: '2010106039',
-      redirect_uri: window.location.origin + '/api/line-callback',
+      redirect_uri: lineRedirectUri,
       state,
       scope: 'profile openid',
     });
