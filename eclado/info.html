@@ -289,6 +289,21 @@ const PAYMENT_METHODS = {
   },
 };
 
+const ORDER_STATUS_LABELS = {
+  awaiting_confirm: '轉帳待確認',
+  unpaid: '未付款',
+  paid: '已付款',
+  preparing: '備貨中',
+  shipped: '已出貨',
+  delivered: '已到貨',
+  returned: '退貨',
+  cancelled: '已取消',
+};
+
+function getOrderStatusLabel(status) {
+  return ORDER_STATUS_LABELS[status] || status || '處理中';
+}
+
 function formatDateCompact(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -560,7 +575,7 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
           <div style={{ borderTop:'1px solid var(--light)', paddingTop:24, marginTop:8, display:'flex', flexDirection:'column', gap:16 }}>
             {user ? (
               <>
-                <span style={{ fontSize:14, color:'var(--dark)' }}>{isProfessionalMember(user) && <span style={{ fontSize:10, background:'var(--black)', color:'var(--white)', padding:'2px 7px', marginRight:8 }}>{getMemberTier(user).badge}</span>}{user.name}</span>
+                <button onClick={() => { setPage('account'); setDrawerOpen(false); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:14, color:'var(--dark)', textAlign:'left', padding:0, fontFamily:'var(--font-body)' }}>{isProfessionalMember(user) && <span style={{ fontSize:10, background:'var(--black)', color:'var(--white)', padding:'2px 7px', marginRight:8 }}>{getMemberTier(user).badge}</span>}{user.name}</button>
                 <button onClick={() => { setUser(); setDrawerOpen(false); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'var(--dark)', textAlign:'left', padding:0 }}>登出</button>
               </>
             ) : null}
@@ -984,7 +999,7 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
                 <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                   {col.links.map(link => {
                     const href = link === '隱私政策' ? '/privacy' : link === '退換貨政策' ? '/info' : '#';
-                    return <a key={link} href={href} style={{ fontSize:13, color:'rgba(255,255,255,0.4)', textDecoration:'none', letterSpacing:'0.04em', transition:'color 0.2s' }}
+                    return <a key={link} href={href} style={{ fontSize:13, color:'rgba(255,255,255,0.4)', textDecoration:'none', letterSpacing:'0.04em', transition:'color 0.2s', cursor:'pointer' }}
                       onMouseEnter={e=>e.target.style.color='var(--white)'}
                       onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.4)'}
                     >{link}</a>;
@@ -1129,6 +1144,9 @@ function ProductDetail({ product, user, onAdd, onBack, promotions = [] }) {
                 </button>
               </div>
             )}
+            <p style={{ fontSize:11, color:'var(--dark)', lineHeight:1.8, borderTop:'1px solid var(--light)', paddingTop:14, marginTop:4 }}>
+              ⚠ 本商品為個人衛生用品，依《消費者保護法》第 19 條之 1，<strong>已拆封商品不適用七天猶豫期退貨</strong>。未拆封商品自收到次日起 7 日內可無條件退貨（退回運費由消費者負擔）。如有品質瑕疵，不限拆封與否均可申請退換，運費由本公司負擔。詳見<a href="/info" style={{ color:'var(--dark)', textUnderlineOffset:2 }}>退換貨政策</a>。
+            </p>
           </div>
         </div>
 
@@ -1847,12 +1865,15 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
                     </div>
                   </div>
 
+                  <div style={{ background:'#fffbf0', border:'1px solid #e8d9b0', padding:'12px 14px', fontSize:11, color:'#5a4a1e', lineHeight:1.85, marginBottom:10 }}>
+                    ⚠ <strong>退貨說明</strong>：本訂單商品為個人衛生用品，依《消費者保護法》第 19 條之 1，<strong>已拆封商品不適用七天猶豫期退貨</strong>。未拆封商品自收到次日起 7 日內可申請退貨（運費由消費者負擔）。如有品質瑕疵，不限拆封與否均可退換（運費由本公司負擔）。詳見<a href="/info" style={{ color:'#5a4a1e' }}>退換貨政策</a>。
+                  </div>
                   <button type="submit" disabled={submitting} style={{ background: submitting ? 'var(--dark)' : 'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: submitting ? 'wait' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8, opacity: submitting ? 0.7 : 1 }}>
                     {submitting ? '建立付款單中...' : '建立付款單'}
                   </button>
                   {paymentError && <p style={{ fontSize:12, color:'#c0392b', textAlign:'center', lineHeight:1.6 }}>{paymentError}</p>}
                   <p style={{ fontSize:11, color:'var(--dark)', textAlign:'center', lineHeight:1.6 }}>
-                    送出即表示您同意本公司退換貨及隱私權政策
+                    送出即表示您同意本公司<a href="/info" style={{ color:'var(--dark)', textDecoration:'underline', textUnderlineOffset:2 }}>退換貨政策</a>及<a href="/privacy" style={{ color:'var(--dark)', textDecoration:'underline', textUnderlineOffset:2 }}>隱私權政策</a>
                   </p>
                 </div>
               )}
@@ -1887,6 +1908,22 @@ function isPasswordRecoveryUrl() {
   return search.has('reset-password') || search.get('type') === 'recovery' || hashText.includes('type=recovery');
 }
 
+const LINE_LOGIN_ERROR_MESSAGES = {
+  line_denied: 'LINE 登入已取消，請重新操作。',
+  config: 'LINE 登入設定尚未完成，請聯繫客服。',
+  token_failed: 'LINE 授權驗證失敗，請重新登入。',
+  profile_failed: '無法取得 LINE 會員資料，請重新登入。',
+  create_failed: '無法建立 LINE 會員，請稍後再試。',
+  link_failed: 'LINE 會員登入連結建立失敗，請稍後再試。',
+  server_error: 'LINE 登入服務暫時無法使用，請稍後再試。',
+};
+
+function getLineLoginErrorMessage() {
+  const errorCode = new URLSearchParams(window.location.search).get('error');
+  if (!errorCode) return '';
+  return LINE_LOGIN_ERROR_MESSAGES[errorCode] || `LINE 登入失敗：${errorCode}`;
+}
+
 function BackHomeButton({ setPage }) {
   return (
     <button
@@ -1916,6 +1953,15 @@ function LoginPage({ setPage, professional = false }) {
   useEffect(() => {
     setView('login');
     reset();
+  }, [professional]);
+
+  useEffect(() => {
+    const lineError = getLineLoginErrorMessage();
+    if (lineError) {
+      setView('login');
+      setError(lineError);
+      window.history.replaceState({ page: professional ? 'pro-login' : 'login' }, '', professional ? '/pro-login' : '/login');
+    }
   }, [professional]);
 
   // ── 登入 ──
@@ -1985,6 +2031,21 @@ function LoginPage({ setPage, professional = false }) {
       setSuccess('✓ 密碼重設信已發送至 ' + email + '，請查收信箱。');
     } catch(err) { setError('網路異常，請確認連線'); }
     finally { setLoading(false); }
+  }
+
+  function signInWithLine() {
+    const state = Math.random().toString(36).substring(2, 15);
+    sessionStorage.setItem('line_oauth_state', state);
+    const lineRedirectUri = 'https://www.ecladotaiwan.com/api/line-callback';
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: '2010106039',
+      redirect_uri: lineRedirectUri,
+      state,
+      scope: 'profile openid',
+      bot_prompt: 'aggressive',
+    });
+    window.location.href = 'https://access.line.me/oauth2/v2.1/authorize?' + params;
   }
 
   const inputStyle = { width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'9px 0', fontSize:15, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--dark)' };
@@ -2128,9 +2189,9 @@ function LoginPage({ setPage, professional = false }) {
               <span style={{ fontSize:11, color:'var(--dark)', letterSpacing:'0.1em' }}>或</span>
               <div style={{ flex:1, height:1, background:'var(--light)' }} />
             </div>
-            <button style={{ width:'100%', background:'#00B900', color:'var(--white)', border:'none', padding:'14px', fontSize:13, letterSpacing:'0.08em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, display:'flex', alignItems:'center', justifyContent:'center', gap:10, opacity:0.6 }} title="即將推出">
+            <button onClick={signInWithLine} style={{ width:'100%', background:'#00B900', color:'var(--white)', border:'none', padding:'14px', fontSize:13, letterSpacing:'0.08em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="white"><path d="M10 2C5.6 2 2 5.1 2 8.8c0 2.5 1.6 4.7 4 5.9l-.5 2 2.3-1.2c.7.2 1.4.3 2.2.3 4.4 0 8-3.1 8-6.8C18 5.1 14.4 2 10 2z"/></svg>
-              使用 LINE 帳號登入（即將推出）
+              使用 LINE 帳號登入
             </button>
             {!professional && (
               <button
@@ -2501,11 +2562,290 @@ function PromoDiagnosticBar({ status, errorText }) {
   return null;
 }
 
+// ─── LINE CALLBACK PAGE ───────────────────────────────────────────────────────
+function LineCallbackPage() {
+  const [status, setStatus] = useState('LINE 登入中...');
+  const [showRetry, setShowRetry] = useState(false);
+
+  useEffect(() => {
+    let done = false;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        done = true;
+        setStatus('LINE 登入成功，正在返回首頁...');
+        return;
+      }
+    });
+    const t = setTimeout(() => {
+      if (done) return;
+      setStatus('LINE 登入尚未完成，請重新登入或稍後再試。');
+      setShowRetry(true);
+    }, 8000);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--off-white)' }}>
+      <div style={{ textAlign:'center' }}>
+        <div style={{ fontSize:13, letterSpacing:'0.1em', color:'var(--dark)' }}>{status}</div>
+        {showRetry && (
+          <button onClick={() => window.location.href = '/login'} style={{ marginTop:18, background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 24px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>
+            返回登入
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── ACCOUNT PAGE ────────────────────────────────────────────────────────────
+function AccountPage({ user, setPage }) {
+  const isMobile = useIsMobile();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    let alive = true;
+    async function loadOrders() {
+      setLoading(true);
+      setError('');
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, member, items, total, subtotal, discount, status, date, address, tracking, promotion_name, created_at')
+        .eq('user_id', user.uid)
+        .order('created_at', { ascending: false });
+      if (!alive) return;
+      if (error) {
+        setError('訂單資料無法載入，請稍後再試。');
+        setOrders([]);
+      } else {
+        setOrders(data || []);
+      }
+      setLoading(false);
+    }
+    loadOrders();
+    return () => { alive = false; };
+  }, [user?.uid]);
+
+  if (!user) {
+    return (
+      <div style={{ minHeight:'100vh', padding:'120px 24px 80px', background:'var(--white)' }}>
+        <div style={{ maxWidth:720, margin:'0 auto', textAlign:'center' }}>
+          <h1 style={{ fontFamily:'var(--font-display)', fontSize:isMobile ? 30 : 44, fontWeight:300, color:'var(--black)', marginBottom:16 }}>會員專區</h1>
+          <p style={{ fontSize:14, color:'var(--dark)', lineHeight:1.8, marginBottom:28 }}>請先登入會員後查看訂單紀錄。</p>
+          <button onClick={() => setPage('login')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'14px 30px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>前往登入</button>
+        </div>
+      </div>
+    );
+  }
+
+  const isLineMember = user.email?.startsWith('line.');
+
+  return (
+    <div style={{ minHeight:'100vh', paddingTop:68, background:'var(--white)' }}>
+      <div style={{ background:'var(--off-white)', borderBottom:'1px solid var(--light)', padding:isMobile ? '42px 20px 30px' : '58px 32px 38px' }}>
+        <div style={{ maxWidth:1040, margin:'0 auto' }}>
+          <p style={{ fontSize:11, letterSpacing:'0.26em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>Account</p>
+          <h1 style={{ fontFamily:'var(--font-display)', fontSize:isMobile ? 30 : 46, fontWeight:300, color:'var(--black)', marginBottom:12 }}>會員專區</h1>
+          <p style={{ fontSize:14, color:'var(--dark)', lineHeight:1.8 }}>您好，{user.name}</p>
+        </div>
+      </div>
+
+      <div style={{ maxWidth:1040, margin:'0 auto', padding:isMobile ? '32px 20px 72px' : '48px 32px 88px' }}>
+        <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '280px 1fr', gap:isMobile ? 28 : 40, alignItems:'start' }}>
+          <aside style={{ borderTop:'1px solid var(--black)', paddingTop:20 }}>
+            <div style={{ fontSize:12, letterSpacing:'0.16em', color:'var(--dark)', textTransform:'uppercase', marginBottom:18 }}>會員資料</div>
+            <div style={{ display:'grid', gap:14 }}>
+              <div>
+                <div style={{ fontSize:11, color:'var(--dark)', marginBottom:4 }}>姓名</div>
+                <div style={{ fontSize:15, color:'var(--black)' }}>{user.name}</div>
+              </div>
+              <div>
+                <div style={{ fontSize:11, color:'var(--dark)', marginBottom:4 }}>登入方式</div>
+                <div style={{ fontSize:15, color:'var(--black)' }}>{isLineMember ? 'LINE 登入' : 'Email 登入'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize:11, color:'var(--dark)', marginBottom:4 }}>Email</div>
+                <div style={{ fontSize:13, color:'var(--black)', wordBreak:'break-all' }}>{user.email || '未提供'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize:11, color:'var(--dark)', marginBottom:4 }}>會員類型</div>
+                <div style={{ fontSize:15, color:'var(--black)' }}>{getMemberTier(user).label}</div>
+              </div>
+            </div>
+          </aside>
+
+          <section>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:16, marginBottom:22 }}>
+              <h2 style={{ fontFamily:'var(--font-display)', fontSize:isMobile ? 24 : 32, fontWeight:300, color:'var(--black)' }}>我的訂單</h2>
+              <span style={{ fontSize:12, color:'var(--dark)' }}>{orders.length} 筆</span>
+            </div>
+
+            {loading && <div style={{ fontSize:13, color:'var(--dark)', padding:'28px 0', borderTop:'1px solid var(--light)' }}>正在載入訂單...</div>}
+            {error && <div style={{ fontSize:13, color:'#991b1b', background:'#fef2f2', border:'1px solid #fecaca', padding:'14px 16px', marginBottom:18 }}>{error}</div>}
+            {!loading && !error && orders.length === 0 && (
+              <div style={{ borderTop:'1px solid var(--light)', padding:'32px 0' }}>
+                <p style={{ fontSize:14, color:'var(--dark)', lineHeight:1.8, marginBottom:18 }}>目前沒有訂單紀錄。</p>
+                <button onClick={() => setPage('shop')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 24px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>前往購物</button>
+              </div>
+            )}
+
+            <div style={{ display:'grid', gap:14 }}>
+              {orders.map(order => {
+                const items = Array.isArray(order.items) ? order.items : [];
+                return (
+                  <div key={order.id} style={{ border:'1px solid var(--light)', padding:isMobile ? 16 : 20, background:'var(--white)' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', gap:16, alignItems:'flex-start', marginBottom:14 }}>
+                      <div>
+                        <div style={{ fontSize:12, color:'var(--dark)', marginBottom:5 }}>訂單編號</div>
+                        <div style={{ fontSize:14, color:'var(--black)', fontWeight:500, wordBreak:'break-all' }}>{order.id}</div>
+                      </div>
+                      <span style={{ flexShrink:0, fontSize:11, letterSpacing:'0.08em', border:'1px solid var(--gold)', color:'var(--black)', padding:'5px 9px' }}>{getOrderStatusLabel(order.status)}</span>
+                    </div>
+                    <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '1fr auto', gap:isMobile ? 12 : 24, borderTop:'1px solid var(--light)', paddingTop:14 }}>
+                      <div style={{ display:'grid', gap:8 }}>
+                        {items.map((item, idx) => (
+                          <div key={`${order.id}-${idx}`} style={{ display:'flex', justifyContent:'space-between', gap:12, fontSize:13, color:'var(--dark)', lineHeight:1.6 }}>
+                            <span>{item.name || item.nameZh || '商品'} × {item.qty || 1}</span>
+                            {item.price != null && <span>NT$ {Number(item.price).toLocaleString()}</span>}
+                          </div>
+                        ))}
+                        {order.promotion_name && <div style={{ fontSize:12, color:'var(--gold)' }}>活動：{order.promotion_name}</div>}
+                        {order.tracking && <div style={{ fontSize:12, color:'var(--dark)' }}>物流編號：{order.tracking}</div>}
+                      </div>
+                      <div style={{ textAlign:isMobile ? 'left' : 'right' }}>
+                        <div style={{ fontSize:12, color:'var(--dark)', marginBottom:5 }}>{order.date || order.created_at?.slice(0, 10) || ''}</div>
+                        <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'var(--black)' }}>NT$ {Number(order.total || 0).toLocaleString()}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PRIVACY PAGE ────────────────────────────────────────────────────────────
+function PrivacyPage() {
+  const isMobile = useIsMobile();
+  const sections = [
+    {
+      title: '一、蒐集主體',
+      content: `本隱私權政策適用於 ECLADO Taiwan（以下稱「本公司」）。本公司依據中華民國《個人資料保護法》及相關法令規定，訂定本政策以保障您的個人資料權益。`,
+    },
+    {
+      title: '二、蒐集目的與資料種類',
+      content: `本公司基於下列目的蒐集您的個人資料：
+
+• 會員帳號建立與身分識別：姓名、電子郵件、手機號碼、LINE 使用者 ID
+• 訂單處理與物流配送：收件人姓名、收件地址、聯絡電話
+• 金流付款處理：由永豐銀行豐收款代為處理，本公司不儲存完整信用卡資料
+• 行銷推廣及服務通知：電子郵件、LINE 推播通知
+• 美容師專業會員審核：執照影本或相關資格證明（僅用於資格審查，審核後刪除）`,
+    },
+    {
+      title: '三、資料使用方式',
+      content: `所蒐集之個人資料，將用於：
+
+• 處理訂單、安排出貨及退換貨事宜
+• 發送訂單狀態通知（LINE 訊息、電子郵件）
+• 提供會員登入驗證及帳號管理
+• 改善網站服務品質與使用者體驗
+• 依法律規定或主管機關要求提供
+
+本公司不會將您的個人資料出售予第三方，亦不會用於與上述目的無關之用途。`,
+    },
+    {
+      title: '四、第三方資料分享',
+      content: `為提供完整服務，本公司與以下第三方業者共享必要資料：
+
+• LINE Taiwan：用於 LINE 帳號登入驗證及訊息推播，適用 LINE 隱私權政策
+• 永豐商業銀行（豐收款）：用於處理線上付款，適用永豐銀行隱私權政策
+• Supabase Inc.：本公司使用之雲端資料庫服務，資料儲存於其安全環境中
+• 黑貓宅急便：提供配送服務，需提供收件人姓名、地址、電話
+
+上述業者均受本公司契約約束，僅得在提供服務所必要範圍內使用您的資料。`,
+    },
+    {
+      title: '五、資料保護措施',
+      content: `本公司採取以下安全措施保護您的個人資料：
+
+• 資料庫存取採行列層級安全（Row Level Security）控制
+• 傳輸過程使用 HTTPS 加密
+• 後台管理系統設有身分驗證機制，限制授權人員存取
+• 定期檢視存取紀錄及安全設定
+• 密碼以加密方式儲存，本公司人員無法讀取您的明文密碼`,
+    },
+    {
+      title: '六、資料保存期限',
+      content: `• 會員資料：帳號存續期間，帳號刪除後保留 30 天備份後清除
+• 訂單紀錄：依《商業會計法》規定保存 5 年
+• 美容師審核文件：審核完成後 30 日內刪除
+• 未完成之訂單：超過付款期限後自動取消，相關暫存資料 7 日後清除`,
+    },
+    {
+      title: '七、您的權利',
+      content: `依據《個人資料保護法》第 3 條，您對本公司持有之個人資料享有以下權利：
+
+• 查詢或請求閱覽
+• 請求製給複製本
+• 請求補充或更正
+• 請求停止蒐集、處理或利用
+• 請求刪除
+
+如欲行使上述權利，請透過 LINE 官方帳號（@ecladotw）或電子郵件提出申請，本公司將於 15 個工作日內回覆。`,
+    },
+    {
+      title: '八、Cookie 政策',
+      content: `本網站使用必要性 Cookie 以維持登入狀態及購物車功能。這些 Cookie 僅於瀏覽器工作階段內或依您設定保存，不用於跨網站追蹤或廣告投放。您可透過瀏覽器設定管理 Cookie，但停用可能影響部分功能正常運作。`,
+    },
+    {
+      title: '九、政策修訂',
+      content: `本公司得視業務需要或法令修訂而更新本隱私權政策，修訂後版本將於本頁面公告，重大變更將另行以 LINE 或電子郵件通知。繼續使用本網站服務，視為同意修訂後之政策內容。`,
+    },
+    {
+      title: '十、聯絡我們',
+      content: `如對本隱私權政策有任何疑問，請透過以下方式與我們聯繫：
+
+• LINE 官方帳號：@ecladotw
+• 電子郵件：service@ecladotaiwan.com
+• 本政策最後更新日期：2026 年 5 月`,
+    },
+  ];
+
+  return (
+    <div style={{ paddingTop: 68 }}>
+      <div style={{ background: 'var(--off-white)', padding: isMobile ? '48px 20px 32px' : '64px 32px 40px', borderBottom: '1px solid var(--light)' }}>
+        <div style={{ maxWidth: 860, margin: '0 auto' }}>
+          <p style={{ fontSize: 11, letterSpacing: '0.28em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 10 }}>Legal</p>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: isMobile ? 30 : 44, fontWeight: 300, color: 'var(--black)', marginBottom: 12 }}>隱私權政策</h1>
+          <p style={{ fontSize: 13, color: 'var(--dark)', lineHeight: 1.8 }}>Privacy Policy — 依《個人資料保護法》及國際通用規範訂定</p>
+        </div>
+      </div>
+      <div style={{ maxWidth: 860, margin: '0 auto', padding: isMobile ? '40px 20px 64px' : '60px 32px 80px' }}>
+        {sections.map((s, i) => (
+          <div key={i} style={{ marginBottom: 40, paddingBottom: 40, borderBottom: i < sections.length - 1 ? '1px solid var(--light)' : 'none' }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: isMobile ? 17 : 20, fontWeight: 400, color: 'var(--black)', marginBottom: 16 }}>{s.title}</h2>
+            <p style={{ fontSize: 14, color: '#555', lineHeight: 2, whiteSpace: 'pre-line' }}>{s.content}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── HISTORY / ROUTING ────────────────────────────────────────────────────────
 const PAGE_PATHS = {
   home: '/', shop: '/shop', cart: '/cart', checkout: '/checkout',
   login: '/login', 'pro-login': '/pro-login', 'reset-password': '/reset-password',
-  'professional-apply': '/professional-apply', about: '/about', info: '/info',
+  'professional-apply': '/professional-apply', account: '/account', about: '/about', info: '/info',
+  'line-callback': '/line-callback', privacy: '/privacy',
 };
 const PATH_PAGES = Object.fromEntries(Object.entries(PAGE_PATHS).map(([k, v]) => [v, k]));
 function pageFromPath(path) {
@@ -2538,12 +2878,19 @@ function App() {
   async function loadUser(supabaseUser) {
     const { data } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, line_user_id, name')
       .eq('id', supabaseUser.id)
       .single();
+
+    const displayName = data?.name
+      || supabaseUser.user_metadata?.full_name
+      || supabaseUser.user_metadata?.name
+      || supabaseUser.email?.split('@')[0]
+      || 'LINE 用戶';
+
     setUser({
-      name: supabaseUser.email.split('@')[0],
-      email: supabaseUser.email,
+      name: displayName,
+      email: supabaseUser.email || '',
       role: data?.role || 'consumer',
       isPro: data?.role === 'pro',
       uid: supabaseUser.id,
@@ -2576,6 +2923,8 @@ function App() {
       if (event === 'PASSWORD_RECOVERY' || isPasswordRecoveryUrl()) {
         window.history.replaceState({ page: 'reset-password' }, '', window.location.pathname || '/');
         setPageState('reset-password');
+      } else if (event === 'SIGNED_IN' && window.location.pathname === '/line-callback') {
+        setPage('home');
       }
       if (session?.user) loadUser(session.user);
       else setUser(null);
@@ -2650,13 +2999,16 @@ function App() {
       case 'pro-login': return <LoginPage setPage={setPage} professional />;
       case 'reset-password': return <ResetPasswordPage setPage={setPage} />;
       case 'professional-apply': return <ProfessionalApplicationPage setPage={setPage} user={user} />;
+      case 'account':  return <AccountPage user={user} setPage={setPage} />;
       case 'about':    return <AboutPage />;
       case 'info':     return <InfoPage />;
+      case 'line-callback': return <LineCallbackPage />;
+      case 'privacy':  return <PrivacyPage />;
       default:         return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} promotions={promotions} />;
     }
   }
 
-  const authPage = page === 'login' || page === 'pro-login' || page === 'reset-password';
+  const authPage = page === 'login' || page === 'pro-login' || page === 'reset-password' || page === 'line-callback';
   const showPromoBar = !authPage;
 
   return (

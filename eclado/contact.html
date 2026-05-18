@@ -47,7 +47,7 @@
 
   .content { max-width: 860px; margin: 0 auto; padding: 64px 32px 96px; flex: 1; }
 
-  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
 
   .card {
     border: 1px solid var(--light);
@@ -71,7 +71,7 @@
     .hero { padding: 48px 20px 36px; }
     .hero-title { font-size: 30px; }
     .content { padding: 48px 20px 72px; }
-    .cards { grid-template-columns: 1fr; }
+    .cards { grid-template-columns: 1fr; gap: 16px; }
     .card { padding: 32px 24px; }
   }
 </style>
@@ -96,6 +96,20 @@
 
 <div class="content">
   <div class="cards">
+
+    <a href="mailto:ecladotaiwan@gmail.com" class="card">
+      <!-- Email icon -->
+      <svg class="card-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="40" height="40" rx="10" fill="#141412"/>
+        <rect x="9" y="13" width="22" height="15" rx="2" stroke="white" stroke-width="1.8" fill="none"/>
+        <path d="M9 15l11 8 11-8" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <div class="card-name">電子郵件</div>
+        <div class="card-desc">ecladotaiwan@gmail.com<br>我們將於 2 個工作天內回覆。</div>
+      </div>
+      <div class="card-cta">發送郵件 →</div>
+    </a>
 
     <a href="https://lin.ee/5RLUjni" target="_blank" rel="noopener noreferrer" class="card">
       <!-- LINE icon -->
