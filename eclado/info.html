@@ -990,15 +990,9 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
                     >{link}</a>;
                   })}
                   {col.title === '服務' && (
-                    <>
-                      <div style={{ fontSize:11, letterSpacing:'0.1em', color:'rgba(255,255,255,0.25)', marginTop:6, marginBottom:2 }}>聯絡我們</div>
-                      <a href="https://lin.ee/5RLUjni" target="_blank" rel="noopener noreferrer" style={{ fontSize:13, color:'rgba(255,255,255,0.4)', textDecoration:'none', letterSpacing:'0.04em', transition:'color 0.2s' }}
-                        onMouseEnter={e=>e.target.style.color='var(--white)'}
-                        onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.4)'}>LINE</a>
-                      <a href="https://www.instagram.com/eclado_tw" target="_blank" rel="noopener noreferrer" style={{ fontSize:13, color:'rgba(255,255,255,0.4)', textDecoration:'none', letterSpacing:'0.04em', transition:'color 0.2s' }}
-                        onMouseEnter={e=>e.target.style.color='var(--white)'}
-                        onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.4)'}>Instagram</a>
-                    </>
+                    <a href="/contact" style={{ fontSize:13, color:'rgba(255,255,255,0.4)', textDecoration:'none', letterSpacing:'0.04em', transition:'color 0.2s' }}
+                      onMouseEnter={e=>e.target.style.color='var(--white)'}
+                      onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.4)'}>聯絡我們</a>
                   )}
                 </div>
               </div>
