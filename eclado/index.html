@@ -264,6 +264,7 @@ function getPromoDisplayPrice(product, user, promotions) {
 }
 
 const SINOPAC_PAYMENT_API = 'https://pay.ecladotaiwan.com';
+const PAYMENT_REQUEST_TIMEOUT_MS = 15000;
 
 const PAYMENT_METHODS = {
   atm: {
@@ -1618,12 +1619,17 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
 
     setPaymentError('');
     setSubmitting(true);
+    let timeout;
     try {
+      const controller = new AbortController();
+      timeout = setTimeout(() => controller.abort(), PAYMENT_REQUEST_TIMEOUT_MS);
       const response = await fetch(`${SINOPAC_PAYMENT_API}/api/sinopac/create-payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
       const data = await response.json().catch(() => ({}));
       if (!response.ok || data.ok === false) {
         throw new Error(data.error || `金流建立失敗（HTTP ${response.status}）`);
@@ -1652,8 +1658,12 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
       setStep(3);
     } catch (err) {
       console.error(err);
-      setPaymentError('付款單建立失敗，請稍後再試或聯繫客服。' + (err?.message ? `（${err.message}）` : ''));
+      const message = err?.name === 'AbortError'
+        ? '付款服務連線逾時，請稍後再試或聯繫客服。'
+        : '付款單建立失敗，請稍後再試或聯繫客服。' + (err?.message ? `（${err.message}）` : '');
+      setPaymentError(message);
     } finally {
+      if (timeout) clearTimeout(timeout);
       setSubmitting(false);
     }
   }
