@@ -1844,12 +1844,15 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
                     </div>
                   </div>
 
+                  <div style={{ background:'#fffbf0', border:'1px solid #e8d9b0', padding:'12px 14px', fontSize:11, color:'#5a4a1e', lineHeight:1.85, marginBottom:10 }}>
+                    ⚠ <strong>退貨說明</strong>：本訂單商品為個人衛生用品，依《消費者保護法》第 19 條之 1，<strong>已拆封商品不適用七天猶豫期退貨</strong>。未拆封商品自收到次日起 7 日內可申請退貨（運費由消費者負擔）。如有品質瑕疵，不限拆封與否均可退換（運費由本公司負擔）。詳見<a href="/info" style={{ color:'#5a4a1e' }}>退換貨政策</a>。
+                  </div>
                   <button type="submit" disabled={submitting} style={{ background: submitting ? 'var(--dark)' : 'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: submitting ? 'wait' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8, opacity: submitting ? 0.7 : 1 }}>
                     {submitting ? '建立付款單中...' : '建立付款單'}
                   </button>
                   {paymentError && <p style={{ fontSize:12, color:'#c0392b', textAlign:'center', lineHeight:1.6 }}>{paymentError}</p>}
                   <p style={{ fontSize:11, color:'var(--dark)', textAlign:'center', lineHeight:1.6 }}>
-                    送出即表示您同意本公司退換貨及隱私權政策
+                    送出即表示您同意本公司<a href="/info" style={{ color:'var(--dark)', textDecoration:'underline', textUnderlineOffset:2 }}>退換貨政策</a>及<a href="/privacy" style={{ color:'var(--dark)', textDecoration:'underline', textUnderlineOffset:2 }}>隱私權政策</a>
                   </p>
                 </div>
               )}
