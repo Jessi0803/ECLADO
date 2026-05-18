@@ -533,7 +533,7 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
             {user ? (
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                 {isProfessionalMember(user) && <span style={{ fontSize:10, letterSpacing:'0.1em', background: darkMode ? 'var(--black)' : 'rgba(255,255,255,0.15)', color:'var(--white)', padding:'3px 8px', fontWeight:500 }}>{getMemberTier(user).badge}</span>}
-                <button onClick={() => setPage('account')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)' }}>{user.name}</button>
+                <button onClick={() => setPage('account')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)' }}>會員：{user.name}</button>
                 <button onClick={() => setUser()} style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color: darkMode ? 'var(--mid)' : 'rgba(255,255,255,0.5)', fontFamily:'var(--font-body)' }}>登出</button>
               </div>
             ) : null}
@@ -546,6 +546,11 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
 
           {/* Mobile hamburger row */}
           <div className="nav-hamburger">
+            {user && (
+              <button onClick={() => setPage('account')} style={{ maxWidth:96, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', background:'none', border:'none', cursor:'pointer', fontSize:12, color: drawerOpen ? 'var(--dark)' : iconCol, fontFamily:'var(--font-body)', padding:'4px 0' }}>
+                {user.name}
+              </button>
+            )}
             <button onClick={() => setPage('cart')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color: drawerOpen ? 'var(--dark)' : iconCol, fontFamily:'var(--font-body)', position:'relative', padding:'4px 0', display:'inline-flex', alignItems:'center', gap:6 }}>
               <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h8.86a2 2 0 0 0 1.95-1.57L21 7H5.12" /></svg>
               <span>購物車</span>
