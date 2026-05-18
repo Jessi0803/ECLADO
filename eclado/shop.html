@@ -988,12 +988,15 @@ function HomePage({ setPage, user, cart, setCart, promotions = [] }) {
               </div>
             ))}
           </div>
-          <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', paddingTop:20, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
-            <span style={{ fontSize:12, color:'rgba(255,255,255,0.25)' }}>© 2026 ECLADO. All rights reserved.</span>
-            <div style={{ display:'flex', gap:20 }}>
-              <span style={{ fontSize:12, color:'rgba(255,255,255,0.25)' }}>LINE</span>
-              <span style={{ fontSize:12, color:'rgba(255,255,255,0.25)' }}>Instagram</span>
+          <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', paddingTop:20, display:'flex', flexDirection:'column', gap:8 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
+              <span style={{ fontSize:12, color:'rgba(255,255,255,0.25)' }}>© 2026 ECLADO. All rights reserved.</span>
+              <div style={{ display:'flex', gap:20 }}>
+                <span style={{ fontSize:12, color:'rgba(255,255,255,0.25)' }}>LINE</span>
+                <span style={{ fontSize:12, color:'rgba(255,255,255,0.25)' }}>Instagram</span>
+              </div>
             </div>
+            <span style={{ fontSize:11, color:'rgba(255,255,255,0.18)', letterSpacing:'0.04em' }}>Zhao Cheng International Trading Co., Ltd. ｜ 統一編號：60490580</span>
           </div>
         </div>
       </footer>
