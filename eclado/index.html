@@ -81,7 +81,7 @@
   /* ── Tablet ── */
   @media (max-width: 900px) {
     .g4, .g4lg { grid-template-columns: repeat(2,1fr) !important; gap: 16px !important; }
-    .g2         { grid-template-columns: 1fr !important; gap: 40px !important; }
+    .g2         { gap: 40px !important; }
     .gabout     { grid-template-columns: 1fr !important; gap: 40px !important; margin-bottom: 48px !important; }
     .gfooter    { grid-template-columns: 1fr 1fr !important; gap: 28px !important; }
     .gcart      { grid-template-columns: 1fr !important; }
@@ -95,8 +95,9 @@
 
   /* ── Mobile ── */
   @media (max-width: 540px) {
+    .g2     { grid-template-columns: 1fr !important; }
     .g3     { grid-template-columns: 1fr !important; }
-    .gfooter{ grid-template-columns: 1fr !important; }
+    .gfooter{ gap: 16px !important; }
     .px-page{ padding-left: 20px !important; padding-right: 20px !important; }
   }
 </style>
