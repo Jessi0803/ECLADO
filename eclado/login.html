@@ -600,7 +600,7 @@ function MobileNavSection({ item, setPage, close }) {
 
 function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPage, promotions = [] }) {
   const [active, setActive] = useState(0);
-  const visibleCount = isMobile ? 2 : 3;
+  const visibleCount = isMobile ? 2 : 4;
   const maxStart = Math.max(0, products.length - visibleCount);
 
   useEffect(() => {
