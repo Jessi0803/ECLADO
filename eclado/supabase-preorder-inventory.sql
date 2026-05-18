@@ -2,11 +2,17 @@
 -- Run this once in Supabase SQL Editor if products/orders tables already exist.
 --
 -- Allows orders to be paid even when product stock is 0.
--- When paid orders exceed available stock, products.stock becomes negative,
--- and the storefront treats stock <= 0 as preorder.
+-- Preorder quantity does not push products.stock below 0.
+
+update public.products
+set stock = 0
+where stock < 0;
 
 alter table if exists public.products
   drop constraint if exists products_stock_check;
+
+alter table if exists public.products
+  add constraint products_stock_check check (stock >= 0);
 
 create or replace function public.adjust_inventory_for_order(order_items jsonb, direction integer)
 returns void
@@ -18,6 +24,8 @@ declare
   item record;
   product_id integer;
   item_qty integer;
+  stock_at_order integer;
+  stock_qty integer;
 begin
   if order_items is null or jsonb_typeof(order_items) <> 'array' then
     return;
@@ -28,13 +36,15 @@ begin
   loop
     product_id := nullif(item.value ->> 'id', '')::integer;
     item_qty := coalesce(nullif(item.value ->> 'qty', '')::integer, 0);
+    stock_at_order := greatest(coalesce(nullif(item.value ->> 'stock_at_order', '')::integer, item_qty), 0);
+    stock_qty := least(item_qty, stock_at_order);
 
     if product_id is null or item_qty <= 0 then
       continue;
     end if;
 
     update public.products
-    set stock = stock + (direction * item_qty)
+    set stock = greatest(0, stock + (direction * stock_qty))
     where id = product_id;
 
     if not found then

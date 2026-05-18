@@ -3,11 +3,18 @@
 --
 -- Behavior:
 -- - Orders become inventory-active only when status changes to paid.
--- - Orders moving from paid to cancelled/returned increment products.stock.
--- - Stock can become negative; negative stock represents preorder/backorder quantity.
+-- - Orders moving from paid to cancelled/returned restore only the stock that was deducted.
+-- - Preorder quantity does not push products.stock below 0.
+
+update public.products
+set stock = 0
+where stock < 0;
 
 alter table if exists public.products
   drop constraint if exists products_stock_check;
+
+alter table if exists public.products
+  add constraint products_stock_check check (stock >= 0);
 
 create or replace function public.order_consumes_inventory(order_status text)
 returns boolean
@@ -27,6 +34,8 @@ declare
   item record;
   product_id integer;
   item_qty integer;
+  stock_at_order integer;
+  stock_qty integer;
 begin
   if order_items is null or jsonb_typeof(order_items) <> 'array' then
     return;
@@ -37,13 +46,15 @@ begin
   loop
     product_id := nullif(item.value ->> 'id', '')::integer;
     item_qty := coalesce(nullif(item.value ->> 'qty', '')::integer, 0);
+    stock_at_order := greatest(coalesce(nullif(item.value ->> 'stock_at_order', '')::integer, item_qty), 0);
+    stock_qty := least(item_qty, stock_at_order);
 
     if product_id is null or item_qty <= 0 then
       continue;
     end if;
 
     update public.products
-    set stock = stock + (direction * item_qty)
+    set stock = greatest(0, stock + (direction * stock_qty))
     where id = product_id;
 
     if not found then

@@ -87,7 +87,7 @@ create table if not exists public.products (
   size text,
   price numeric not null default 0,
   pro_price numeric not null default 0,
-  stock integer not null default 0,
+  stock integer not null default 0 check (stock >= 0),
   min_stock integer not null default 3 check (min_stock >= 0),
   is_pro_only boolean not null default false,
   image_url text,
@@ -257,7 +257,7 @@ begin
 exception when duplicate_object then null;
 end $$;
 
--- 庫存扣補：建立訂單扣庫存，取消 / 退貨補回庫存。
+-- 庫存扣補：付款扣可用現貨庫存；預購數量不讓庫存扣成負數。
 create or replace function public.order_consumes_inventory(order_status text)
 returns boolean
 language sql
@@ -276,6 +276,8 @@ declare
   item record;
   product_id integer;
   item_qty integer;
+  stock_at_order integer;
+  stock_qty integer;
 begin
   if order_items is null or jsonb_typeof(order_items) <> 'array' then
     return;
@@ -286,13 +288,15 @@ begin
   loop
     product_id := nullif(item.value ->> 'id', '')::integer;
     item_qty := coalesce(nullif(item.value ->> 'qty', '')::integer, 0);
+    stock_at_order := greatest(coalesce(nullif(item.value ->> 'stock_at_order', '')::integer, item_qty), 0);
+    stock_qty := least(item_qty, stock_at_order);
 
     if product_id is null or item_qty <= 0 then
       continue;
     end if;
 
     update public.products
-    set stock = stock + (direction * item_qty)
+    set stock = greatest(0, stock + (direction * stock_qty))
     where id = product_id;
 
     if not found then
