@@ -34,6 +34,7 @@ create table if not exists public.profiles (
   email text unique,
   name text,
   phone text,
+  line_user_id text unique,
   role text not null default 'consumer'
     check (role in ('consumer', 'pro', 'instructor', 'distributor', 'pending')),
   cert text,

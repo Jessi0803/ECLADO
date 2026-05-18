@@ -30,6 +30,25 @@ module.exports = async function handler(req, res) {
       },
     });
 
+  async function readJson(response) {
+    const text = await response.text();
+    if (!text) return null;
+    try {
+      return JSON.parse(text);
+    } catch (err) {
+      return { raw: text };
+    }
+  }
+
+  async function expectOk(response, step) {
+    const data = await readJson(response);
+    if (!response.ok) {
+      console.error(`[LINE callback] ${step} failed`, response.status, data);
+      throw new Error(step);
+    }
+    return data;
+  }
+
   try {
     // 1. Exchange code → LINE access token
     const tokenRes = await fetch('https://api.line.me/oauth2/v2.1/token', {
@@ -43,59 +62,61 @@ module.exports = async function handler(req, res) {
         client_secret: loginSecret,
       }),
     });
-    const { access_token } = await tokenRes.json();
+    const tokenData = await expectOk(tokenRes, 'line_token');
+    const { access_token } = tokenData || {};
     if (!access_token) return res.redirect(`${SITE_URL}/login?error=token_failed`);
 
     // 2. Get LINE profile (userId + displayName)
-    const lineProfile = await fetch('https://api.line.me/v2/profile', {
+    const profileRes = await fetch('https://api.line.me/v2/profile', {
       headers: { Authorization: `Bearer ${access_token}` },
-    }).then(r => r.json());
+    });
+    const lineProfile = await expectOk(profileRes, 'line_profile');
 
     const { userId: lineUserId, displayName } = lineProfile;
     if (!lineUserId) return res.redirect(`${SITE_URL}/login?error=profile_failed`);
 
     // 3. Find existing profile by line_user_id
-    const existing = await sb(
+    const existing = await expectOk(await sb(
       `/rest/v1/profiles?line_user_id=eq.${lineUserId}&select=id,email`
-    ).then(r => r.json());
+    ), 'profiles_lookup');
 
     let email, userId;
 
     if (existing.length > 0) {
       ({ id: userId, email } = existing[0]);
       // Keep displayName up to date
-      await sb(`/rest/v1/profiles?id=eq.${userId}`, {
+      await expectOk(await sb(`/rest/v1/profiles?id=eq.${userId}`, {
         method: 'PATCH',
         body: JSON.stringify({ name: displayName }),
-      });
+      }), 'profiles_update');
     } else {
       // 4. New user — create Supabase auth user
       email = `line.${lineUserId}@ecladotaiwan.com`;
-      const created = await sb('/auth/v1/admin/users', {
+      const created = await expectOk(await sb('/auth/v1/admin/users', {
         method: 'POST',
         body: JSON.stringify({ email, email_confirm: true, user_metadata: { full_name: displayName } }),
-      }).then(r => r.json());
+      }), 'auth_create_user');
 
       userId = created.id;
       if (!userId) return res.redirect(`${SITE_URL}/login?error=create_failed`);
 
       // 5. Create profile row
-      await sb('/rest/v1/profiles', {
+      await expectOk(await sb('/rest/v1/profiles', {
         method: 'POST',
         headers: { Prefer: 'resolution=merge-duplicates' },
         body: JSON.stringify({ id: userId, email, name: displayName, line_user_id: lineUserId, role: 'consumer' }),
-      });
+      }), 'profiles_insert');
     }
 
     // 6. Generate magic link → auto-login
-    const linkData = await sb('/auth/v1/admin/generate_link', {
+    const linkData = await expectOk(await sb('/auth/v1/admin/generate_link', {
       method: 'POST',
       body: JSON.stringify({
         type: 'magiclink',
         email,
         options: { redirectTo: LINE_AUTH_REDIRECT_URI },
       }),
-    }).then(r => r.json());
+    }), 'auth_generate_link');
 
     const actionLink = linkData.action_link || linkData.properties?.action_link;
     if (!actionLink) return res.redirect(`${SITE_URL}/login?error=link_failed`);
