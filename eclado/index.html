@@ -2022,9 +2022,10 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
 
 // ─── LOGIN PAGE ───────────────────────────────────────────────────────────────
 function getPasswordResetRedirectUrl() {
-  const origin = window.location.origin;
-  const base = origin.includes('ecladotaiwan.com') ? origin : 'https://ecladotaiwan.com';
-  return base + '/?reset-password=1';
+  const url = new URL(window.location.href);
+  url.search = '?reset-password=1';
+  url.hash = '';
+  return url.toString();
 }
 
 function getAuthRedirectUrl() {
