@@ -448,14 +448,15 @@ function MiniBarChart({ data, color = 'var(--dark)', height = 80 }) {
 }
 
 // ─── DASHBOARD ───────────────────────────────────────────────────────────────
-function Dashboard({ orders, products, members }) {
+function Dashboard({ orders, products, members, applications = [] }) {
   const thisMonth = MONTHLY_REVENUE[MONTHLY_REVENUE.length - 1];
   const lastMonth = MONTHLY_REVENUE[MONTHLY_REVENUE.length - 2];
   const growth = (((thisMonth.revenue - lastMonth.revenue) / lastMonth.revenue) * 100).toFixed(1);
   const lowStock = products.filter(p => p.stock <= p.minStock);
   const pendingOrders = orders.filter(o => ['awaiting_confirm', 'paid', 'preparing'].includes(o.status));
   const awaitingConfirm = orders.filter(o => o.status === 'awaiting_confirm');
-  const proMembers = members.filter(m => ['pro', 'instructor', 'distributor'].includes(m.type));
+  const applicationCount = applications.length;
+  const pendingApplications = applications.filter(a => a.status === 'pending');
 
   return (
     <div>
@@ -468,7 +469,7 @@ function Dashboard({ orders, products, members }) {
       <div className="stat-grid-4" style={{ marginBottom: 32 }}>
         <StatCard label="本月營業額" value={`NT$ ${thisMonth.revenue.toLocaleString()}`} sub={`較上月 ${growth > 0 ? '+' : ''}${growth}%`} accent="var(--dark)" icon="◐" />
         <StatCard label="轉帳待確認" value={awaitingConfirm.length} sub={awaitingConfirm.length > 0 ? '請儘快對帳確認' : '目前無待確認'} accent={awaitingConfirm.length > 0 ? 'var(--red)' : 'var(--green)'} icon="◫" />
-        <StatCard label="專業會員" value={proMembers.length} sub={`共 ${members.length} 位會員`} accent="var(--dark)" icon="◎" />
+        <StatCard label="專業申請" value={applicationCount} sub={pendingApplications.length > 0 ? `待審核 ${pendingApplications.length} 筆` : '目前無待審核'} accent="var(--dark)" icon="◉" />
         <StatCard label="庫存警示" value={lowStock.length} sub="件商品庫存不足" accent={lowStock.length > 0 ? 'var(--red)' : 'var(--green)'} icon="◉" />
       </div>
 
@@ -2129,15 +2130,17 @@ function App({ adminEmail, onSignOut }) {
   const [products, setProducts] = useState(INIT_PRODUCTS);
   const [members, setMembers] = useState(INIT_MEMBERS);
   const [orders, setOrders] = useState(INIT_ORDERS);
+  const [applications, setApplications] = useState([]);
   const [loadError, setLoadError] = useState('');
 
   // 從 Supabase 載入訂單 + 會員 + 商品庫存
   async function fetchAll() {
     try {
-      const [ordersRes, profilesRes, productsRes] = await Promise.all([
+      const [ordersRes, profilesRes, productsRes, applicationsRes] = await Promise.all([
         supabase.from('orders').select('*').order('created_at', { ascending: false }),
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
         supabase.from('products').select('*').eq('active', true).order('id', { ascending: true }),
+        supabase.from('professional_applications').select('*').order('created_at', { ascending: false }),
       ]);
       if (ordersRes.error) throw ordersRes.error;
       if (profilesRes.error) throw profilesRes.error;
@@ -2154,6 +2157,9 @@ function App({ adminEmail, onSignOut }) {
       if (!productsRes.error && productsRes.data?.length) {
         setProducts(productsRes.data.map(normalizeProduct));
       }
+      if (!applicationsRes.error) {
+        setApplications(applicationsRes.data || []);
+      }
 
       setLoadError(productsRes.error ? '商品庫存尚未連接 Supabase products 表，請先執行 supabase-products.sql；目前顯示本機示範庫存。' : '');
     } catch (err) {
@@ -2169,6 +2175,7 @@ function App({ adminEmail, onSignOut }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'professional_applications' }, () => fetchAll())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
@@ -2234,7 +2241,7 @@ function App({ adminEmail, onSignOut }) {
 
   function renderPage() {
     switch (page) {
-      case 'dashboard': return <Dashboard orders={orders} products={products} members={members} />;
+      case 'dashboard': return <Dashboard orders={orders} products={products} members={members} applications={applications} />;
       case 'orders': return <Orders orders={orders} setOrders={setOrdersWithSync} />;
       case 'catalog': return <Catalog products={products} setProducts={setProductsWithSync} />;
       // 舊路徑相容，避免有人記住 /admin#products 之類的
@@ -2245,7 +2252,7 @@ function App({ adminEmail, onSignOut }) {
       case 'applications': return <Applications />;
       case 'analytics': return <Analytics />;
       case 'ai': return <AIReorder products={products} />;
-      default: return <Dashboard orders={orders} products={products} members={members} />;
+      default: return <Dashboard orders={orders} products={products} members={members} applications={applications} />;
     }
   }
 
