@@ -2079,6 +2079,12 @@ function LoginPage({ setPage, professional = false }) {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
   const [success, setSuccess]   = useState('');
+  // 美容師加入欄位
+  const [memberType, setMemberType]     = useState('consumer'); // 'consumer' | 'pro'
+  const [studioName, setStudioName]     = useState('');
+  const [proAddress, setProAddress]     = useState('');
+  const [socialMedia, setSocialMedia]   = useState('');
+  const [certificate, setCertificate]   = useState('');
   const loginTitle = professional ? '登入專業會員' : '登入';
 
   function reset() { setError(''); setSuccess(''); }
@@ -2136,17 +2142,33 @@ function LoginPage({ setPage, professional = false }) {
         }
       });
       if (error) { setError(sbError(error.message)); return; }
-      // 補一筆 profiles 資料（trigger 也會做，但這裡明確帶上 phone）
       if (data?.user?.id) {
         await supabase.from('profiles').upsert({
           id: data.user.id,
           email: normalizedEmail, name, phone, role: 'consumer',
         });
+        if (memberType === 'pro') {
+          await supabase.from('professional_applications').insert({
+            studio_name: studioName,
+            contact_name: name,
+            phone,
+            address: proAddress,
+            social_media: socialMedia,
+            certificate,
+            user_id: data.user.id,
+            user_email: normalizedEmail,
+            status: 'pending',
+          });
+        }
       }
       if (data?.session) {
-        setSuccess('✓ 會員已建立完成，請直接登入。');
+        setSuccess(memberType === 'pro'
+          ? '✓ 帳號已建立！美容師申請已送出，審核通過後即可使用專業會員功能。'
+          : '✓ 會員已建立完成，請直接登入。');
       } else {
-        setSuccess('✓ 驗證信已發送！請查收 ' + normalizedEmail + ' 並點擊驗證連結後再登入。若未收到，請檢查垃圾郵件或稍後再試一次。');
+        setSuccess(memberType === 'pro'
+          ? '✓ 驗證信已發送至 ' + normalizedEmail + '！請先點擊驗證連結，美容師申請將於審核後開通。'
+          : '✓ 驗證信已發送！請查收 ' + normalizedEmail + ' 並點擊驗證連結後再登入。若未收到，請檢查垃圾郵件或稍後再試一次。');
       }
       setView('login');
     } catch(err) { setError('網路異常，請確認連線'); }
@@ -2262,6 +2284,24 @@ function LoginPage({ setPage, professional = false }) {
         {/* 註冊表單 */}
         {view === 'register' && (
           <form onSubmit={handleRegister} style={{ display:'flex', flexDirection:'column', gap:22 }}>
+            {/* 身份選擇 */}
+            <div>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:9 }}>我的身份</label>
+              <div style={{ display:'flex', gap:0 }}>
+                {[{ value:'consumer', label:'一般會員' }, { value:'pro', label:'美容師' }].map(opt => (
+                  <button key={opt.value} type="button" onClick={() => setMemberType(opt.value)} style={{
+                    flex:1, padding:'10px 0', fontSize:12, letterSpacing:'0.1em',
+                    border:'1px solid var(--light)',
+                    borderRight: opt.value === 'consumer' ? 'none' : '1px solid var(--light)',
+                    background: memberType === opt.value ? 'var(--black)' : 'transparent',
+                    color: memberType === opt.value ? 'var(--white)' : 'var(--dark)',
+                    cursor:'pointer', fontFamily:'var(--font-body)',
+                    transition:'all 0.15s',
+                  }}>{opt.label}</button>
+                ))}
+              </div>
+            </div>
+            {/* 基本欄位 */}
             <div>
               <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:9 }}>姓名</label>
               <input type="text" value={name} onChange={e=>setName(e.target.value)} required style={inputStyle}
@@ -2292,6 +2332,40 @@ function LoginPage({ setPage, professional = false }) {
                 onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
                 onBlur={e=>e.target.style.borderBottomColor='var(--light)'} />
             </div>
+            {/* 美容師額外欄位 */}
+            {memberType === 'pro' && (
+              <>
+                <div style={{ height:1, background:'var(--light)', margin:'2px 0' }} />
+                <p style={{ fontSize:11, letterSpacing:'0.1em', color:'var(--gold)', textTransform:'uppercase' }}>美容師資料</p>
+                <div>
+                  <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:9 }}>皮膚管理院 / 工作室名稱</label>
+                  <input type="text" value={studioName} onChange={e=>setStudioName(e.target.value)} required style={inputStyle}
+                    onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
+                    onBlur={e=>e.target.style.borderBottomColor='var(--light)'} />
+                </div>
+                <div>
+                  <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:9 }}>收件地址</label>
+                  <input type="text" value={proAddress} onChange={e=>setProAddress(e.target.value)} required style={inputStyle}
+                    onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
+                    onBlur={e=>e.target.style.borderBottomColor='var(--light)'} />
+                </div>
+                <div>
+                  <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:9 }}>IG 或 Facebook 帳號</label>
+                  <input type="text" value={socialMedia} onChange={e=>setSocialMedia(e.target.value)} required placeholder="@帳號名稱 或 https://..." style={inputStyle}
+                    onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
+                    onBlur={e=>e.target.style.borderBottomColor='var(--light)'} />
+                </div>
+                <div>
+                  <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:9 }}>美容相關證書</label>
+                  <textarea value={certificate} onChange={e=>setCertificate(e.target.value)} required rows="2"
+                    placeholder="例：美容丙級技術士證照、美容師執照..."
+                    onFocus={e=>e.target.style.borderColor='var(--dark)'}
+                    onBlur={e=>e.target.style.borderColor='var(--light)'}
+                    style={{ ...inputStyle, resize:'vertical', border:'1px solid var(--light)', padding:'10px', lineHeight:1.7, borderBottom:'1px solid var(--light)' }} />
+                </div>
+                <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7 }}>送出後帳號即建立，美容師資格將於審核後開通。</p>
+              </>
+            )}
             <button type="submit" disabled={loading} style={{ width:'100%', background: loading ? 'var(--mid)' : 'var(--black)', color:'var(--white)', border:'none', padding:'15px', fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase', cursor: loading ? 'default' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, marginTop:4 }}>
               {loading ? '建立中...' : '建立帳號'}
             </button>
@@ -2325,15 +2399,6 @@ function LoginPage({ setPage, professional = false }) {
               <svg width="20" height="20" viewBox="0 0 20 20" fill="white"><path d="M10 2C5.6 2 2 5.1 2 8.8c0 2.5 1.6 4.7 4 5.9l-.5 2 2.3-1.2c.7.2 1.4.3 2.2.3 4.4 0 8-3.1 8-6.8C18 5.1 14.4 2 10 2z"/></svg>
               使用 LINE 帳號登入
             </button>
-            {!professional && (
-              <button
-                type="button"
-                onClick={() => setPage('professional-apply')}
-                style={{ width:'100%', background:'var(--off-white)', color:'var(--black)', border:'1px solid var(--light)', padding:'14px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, marginTop:12 }}
-              >
-                申請成為專業會員
-              </button>
-            )}
           </>
         )}
       </div>
