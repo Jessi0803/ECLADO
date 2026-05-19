@@ -647,13 +647,7 @@ function MobileNavSection({ item, setPage, close }) {
   function go(page) { setPage(page); close(); }
   return (
     <div style={{ borderBottom:'1px solid var(--light)' }}>
-      <button onClick={() => {
-        if (item.children) { setOpen(o=>!o); return; }
-        if (item.label === '會員登錄') go('login');
-        else if (item.label === '品牌故事') go('about');
-        else if (item.label === '購物說明') go('info');
-        else if (item.label === '所有產品') go('shop');
-      }} style={{
+      <button onClick={() => item.children ? setOpen(o=>!o) : go(item.label === '品牌故事' ? 'about' : 'info')} style={{
         width:'100%', background:'none', border:'none', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center',
         padding:'18px 0', fontSize:15, color:'var(--dark)', fontFamily:'var(--font-body)', letterSpacing:'0.04em',
       }}>
