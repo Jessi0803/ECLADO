@@ -7,6 +7,7 @@
 --   public.products   商品與庫存
 --   public.orders     訂單資料
 --   public.promotions 活動資料
+--   public.professional_applications 美容師專業申請
 --
 -- 注意：
 --   1) Auth 使用者在 auth.users，不是 public 表。若要保留會員密碼，
@@ -158,11 +159,39 @@ alter table public.orders
   add column if not exists promotion_id uuid references public.promotions(id) on delete set null,
   add column if not exists promotion_name text;
 
+-- 美容師專業會員申請
+create table if not exists public.professional_applications (
+  id uuid primary key default gen_random_uuid(),
+  studio_name text not null,
+  contact_name text not null,
+  phone text not null,
+  address text not null,
+  social_media text not null,
+  certificate text not null,
+  user_id uuid references auth.users(id) on delete set null,
+  user_email text,
+  status text not null default 'pending'
+    check (status in ('pending', 'approved', 'rejected')),
+  source text not null default 'standalone'
+    check (source in ('registration', 'standalone')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_professional_applications_status
+  on public.professional_applications (status, created_at desc);
+
+drop trigger if exists trg_professional_applications_updated_at on public.professional_applications;
+create trigger trg_professional_applications_updated_at
+  before update on public.professional_applications
+  for each row execute function public.set_updated_at();
+
 -- RLS：依照目前網站架構開放 anon 讀寫
 alter table public.profiles enable row level security;
 alter table public.products enable row level security;
 alter table public.orders enable row level security;
 alter table public.promotions enable row level security;
+alter table public.professional_applications enable row level security;
 
 drop policy if exists "profiles_select_all" on public.profiles;
 create policy "profiles_select_all"
@@ -232,6 +261,21 @@ create policy "promotions_delete_all"
   on public.promotions for delete
   using (true);
 
+drop policy if exists "professional_applications_select_all" on public.professional_applications;
+create policy "professional_applications_select_all"
+  on public.professional_applications for select
+  using (true);
+
+drop policy if exists "professional_applications_insert_all" on public.professional_applications;
+create policy "professional_applications_insert_all"
+  on public.professional_applications for insert
+  with check (true);
+
+drop policy if exists "professional_applications_update_all" on public.professional_applications;
+create policy "professional_applications_update_all"
+  on public.professional_applications for update
+  using (true) with check (true);
+
 -- Realtime：如果已加入 publication，第二次執行可能會提示已存在，可忽略。
 do $$
 begin
@@ -254,6 +298,12 @@ end $$;
 do $$
 begin
   alter publication supabase_realtime add table public.promotions;
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.professional_applications;
 exception when duplicate_object then null;
 end $$;
 

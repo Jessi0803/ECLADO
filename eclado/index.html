@@ -152,10 +152,47 @@ function useIsMobile() {
 const NAV_LINKS = ['清潔', '精華液', '急救安瓶', '面膜', '眼霜', '面霜'];
 const NAV_ITEMS = [
   { label: '所有產品', children: ['清潔', '精華液', '急救安瓶', '面膜', '眼霜', '面霜'] },
-  { label: '會員登錄' },
+  { label: '會員登錄', children: ['會員登入', '美容師申請'] },
   { label: '品牌故事', children: null },
   { label: '購物說明', children: ['退換貨說明', '運送方式', '付款說明', '常見問題'] },
 ];
+
+const POST_LOGIN_PAGE_KEY = 'eclado_post_login';
+
+async function fetchLatestProApplication(userId) {
+  if (!userId) return null;
+  const { data } = await supabase
+    .from('professional_applications')
+    .select('status')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data;
+}
+
+async function goProfessionalApply(user, setPage) {
+  if (!user?.uid) {
+    sessionStorage.setItem(POST_LOGIN_PAGE_KEY, 'professional-apply');
+    setPage('login');
+    return;
+  }
+  const role = getMemberRole(user);
+  if (['pro', 'instructor', 'distributor'].includes(role)) {
+    setPage('account');
+    return;
+  }
+  if (role === 'pending') {
+    setPage('account');
+    return;
+  }
+  const app = await fetchLatestProApplication(user.uid);
+  if (app?.status === 'pending') {
+    setPage('account');
+    return;
+  }
+  setPage('professional-apply');
+}
 
 const PRODUCTS = [
   { id:1, name:'Deep Cleansing Foam', nameZh:'深層清潔泡沫洗面乳', category:'清潔', size:'200ml', price:1280, proPrice:960, isProOnly:false, img:'https://images.unsplash.com/photo-1556228578-dd539282b964?w=600&q=80&fit=crop',
@@ -472,7 +509,7 @@ const JOURNAL_ARTICLES = [
 ];
 
 // ─── NAV ITEM (desktop dropdown) ─────────────────────────────────────────────
-function NavItem({ item, scrolled, setPage }) {
+function NavItem({ item, scrolled, setPage, user }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
@@ -481,11 +518,13 @@ function NavItem({ item, scrolled, setPage }) {
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  function go(child) {
+  async function go(child) {
     setOpen(false);
     if (item.label === '所有產品') setPage('shop');
-    else if (item.label === '會員登錄') setPage('login');
-    else if (item.label === '品牌故事') setPage('about');
+    else if (item.label === '會員登錄') {
+      if (child === '美容師申請') await goProfessionalApply(user, setPage);
+      else setPage(user ? 'account' : 'login');
+    } else if (item.label === '品牌故事') setPage('about');
     else if (item.label === '購物說明') setPage('info');
   }
 
@@ -576,7 +615,7 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
 
           {/* Desktop nav */}
           <div className="nav-desktop">
-            {NAV_ITEMS.map(item => <NavItem key={item.label} item={item} scrolled={darkMode} setPage={setPage} />)}
+            {NAV_ITEMS.map(item => <NavItem key={item.label} item={item} scrolled={darkMode} setPage={setPage} user={user} />)}
           </div>
 
           {/* Desktop right */}
@@ -629,7 +668,7 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
       {drawerOpen && (
         <div className="mobile-drawer">
           {NAV_ITEMS.map(item => (
-            <MobileNavSection key={item.label} item={item} setPage={setPage} close={() => setDrawerOpen(false)} />
+            <MobileNavSection key={item.label} item={item} setPage={setPage} user={user} close={() => setDrawerOpen(false)} />
           ))}
           <div style={{ borderTop:'1px solid var(--light)', paddingTop:24, marginTop:8, display:'flex', flexDirection:'column', gap:16 }}>
             {user ? (
@@ -644,14 +683,18 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
   );
 }
 
-function MobileNavSection({ item, setPage, close }) {
+function MobileNavSection({ item, setPage, user, close }) {
   const [open, setOpen] = useState(false);
   function go(page) { setPage(page); close(); }
+  async function goMemberChild(child) {
+    if (child === '美容師申請') await goProfessionalApply(user, setPage);
+    else go(user ? 'account' : 'login');
+  }
   return (
     <div style={{ borderBottom:'1px solid var(--light)' }}>
       <button onClick={() => item.children ? setOpen(o=>!o) : go(
         item.label === '品牌故事' ? 'about'
-        : item.label === '會員登錄' ? 'login'
+        : item.label === '會員登錄' ? (user ? 'account' : 'login')
         : item.label === '所有產品' ? 'shop'
         : 'info'
       )} style={{
@@ -664,9 +707,9 @@ function MobileNavSection({ item, setPage, close }) {
       {item.children && open && (
         <div style={{ paddingBottom:8 }}>
           {item.children.map(c => (
-            <button key={c} onClick={() => {
+            <button key={c} onClick={async () => {
               if (item.label === '所有產品') go('shop');
-              else if (item.label === '會員登錄') go('login');
+              else if (item.label === '會員登錄') await goMemberChild(c);
               else if (item.label === '購物說明') go('info');
             }} style={{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:13, color:'var(--dark)', padding:'10px 16px', letterSpacing:'0.04em' }}>
               {c}
@@ -1039,7 +1082,7 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
               </div>
             ))}
           </div>
-          <button onClick={() => setPage('professional-apply')} style={{ background:'transparent', border:'1px solid var(--gold)', color:'var(--gold)', padding:'13px 40px', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', transition:'all 0.25s' }}
+          <button onClick={() => goProfessionalApply(user, setPage)} style={{ background:'transparent', border:'1px solid var(--gold)', color:'var(--gold)', padding:'13px 40px', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', transition:'all 0.25s' }}
             onMouseEnter={e=>{e.target.style.background='var(--gold)';e.target.style.color='var(--black)';}}
             onMouseLeave={e=>{e.target.style.background='transparent';e.target.style.color='var(--gold)';}}
           >申請美容師會員</button>
@@ -2156,7 +2199,11 @@ function LoginPage({ setPage }) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { setError(sbError(error.message)); return; }
-      setPage('shop');
+      if (sessionStorage.getItem(POST_LOGIN_PAGE_KEY)) {
+        setPage('login');
+      } else {
+        setPage('shop');
+      }
     } catch(err) { setError('網路異常，請確認連線'); }
     finally { setLoading(false); }
   }
@@ -2192,10 +2239,11 @@ function LoginPage({ setPage }) {
       if (data?.user?.id) {
         await supabase.from('profiles').upsert({
           id: data.user.id,
-          email: normalizedEmail, name, phone, role: 'consumer',
+          email: normalizedEmail, name, phone,
+          role: memberType === 'pro' ? 'pending' : 'consumer',
         });
         if (memberType === 'pro') {
-          await supabase.from('professional_applications').insert({
+          const { error: appError } = await supabase.from('professional_applications').insert({
             studio_name: studioName,
             contact_name: name,
             phone,
@@ -2205,7 +2253,13 @@ function LoginPage({ setPage }) {
             user_id: data.user.id,
             user_email: normalizedEmail,
             status: 'pending',
+            source: 'registration',
           });
+          if (appError) {
+            console.error('[ECLADO] 美容師申請寫入失敗：', appError.message);
+            setError('帳號已建立，但美容師申請資料未能儲存，請登入後至「申請專業會員」重新填寫，或聯繫客服。');
+            return;
+          }
         }
       }
       if (data?.session) {
@@ -2541,7 +2595,7 @@ function ResetPasswordPage({ setPage }) {
 }
 
 // ─── PROFESSIONAL APPLICATION PAGE ────────────────────────────────────────────
-function ProfessionalApplicationPage({ setPage, user }) {
+function ProfessionalApplicationPage({ setPage, user, authReady, onUserUpdated }) {
   const [form, setForm] = useState({
     studioName: '',
     contactName: user?.name || '',
@@ -2553,33 +2607,87 @@ function ProfessionalApplicationPage({ setPage, user }) {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [gateLoading, setGateLoading] = useState(true);
+  const [blocked, setBlocked] = useState(null); // 'login' | 'pro' | 'pending'
   const isMobile = useIsMobile();
   const inputStyle = { width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--black)', boxSizing:'border-box' };
   const field = key => e => setForm(prev => ({ ...prev, [key]: e.target.value }));
 
+  useEffect(() => {
+    if (!authReady) return;
+    let alive = true;
+    async function checkAccess() {
+      if (!user?.uid) {
+        sessionStorage.setItem(POST_LOGIN_PAGE_KEY, 'professional-apply');
+        setPage('login');
+        return;
+      }
+      const role = getMemberRole(user);
+      if (['pro', 'instructor', 'distributor'].includes(role)) {
+        if (alive) { setBlocked('pro'); setGateLoading(false); }
+        return;
+      }
+      if (role === 'pending') {
+        if (alive) { setBlocked('pending'); setGateLoading(false); }
+        return;
+      }
+      const app = await fetchLatestProApplication(user.uid);
+      if (!alive) return;
+      if (app?.status === 'pending') {
+        setBlocked('pending');
+      }
+      setGateLoading(false);
+    }
+    checkAccess();
+    return () => { alive = false; };
+  }, [authReady, user?.uid, user?.role]);
+
+  useEffect(() => {
+    if (user?.name && !form.contactName) {
+      setForm(prev => ({ ...prev, contactName: user.name }));
+    }
+  }, [user?.name]);
+
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!user?.uid) {
+      sessionStorage.setItem(POST_LOGIN_PAGE_KEY, 'professional-apply');
+      setPage('login');
+      return;
+    }
     setSubmitting(true);
     setSubmitError('');
     const sb = window.supabase;
-    if (sb) {
-      const { error } = await sb.from('professional_applications').insert({
-        studio_name: form.studioName,
-        contact_name: form.contactName,
-        phone: form.phone,
-        address: form.address,
-        social_media: form.socialMedia,
-        certificate: form.certificate,
-        user_id: user?.id || null,
-        user_email: user?.email || null,
-        status: 'pending',
-      });
-      if (error) {
-        setSubmitError('送出失敗，請稍後再試。');
-        setSubmitting(false);
-        return;
-      }
+    if (!sb) {
+      setSubmitError('系統尚未就緒，請重新整理後再試。');
+      setSubmitting(false);
+      return;
     }
+    const existing = await fetchLatestProApplication(user.uid);
+    if (existing?.status === 'pending') {
+      setSubmitError('您已有審核中的申請，請至會員專區查看。');
+      setSubmitting(false);
+      return;
+    }
+    const { error } = await sb.from('professional_applications').insert({
+      studio_name: form.studioName,
+      contact_name: form.contactName,
+      phone: form.phone,
+      address: form.address,
+      social_media: form.socialMedia,
+      certificate: form.certificate,
+      user_id: user.uid,
+      user_email: user.email || null,
+      status: 'pending',
+      source: 'upgrade',
+    });
+    if (error) {
+      setSubmitError('送出失敗，請稍後再試。');
+      setSubmitting(false);
+      return;
+    }
+    await sb.from('profiles').update({ role: 'pending' }).eq('id', user.uid);
+    if (onUserUpdated) await onUserUpdated();
     setSubmitting(false);
     setSubmitted(true);
     window.scrollTo(0, 0);
@@ -2602,11 +2710,25 @@ function ProfessionalApplicationPage({ setPage, user }) {
       </div>
 
       <div style={{ maxWidth:900, margin:'0 auto', padding: isMobile ? '36px 20px 60px' : '48px 32px 72px' }}>
-        {submitted ? (
+        {!authReady || gateLoading ? (
+          <p style={{ fontSize:14, color:'var(--dark)', padding:'24px 0' }}>載入中…</p>
+        ) : blocked === 'pro' ? (
+          <div style={{ border:'1px solid var(--light)', background:'var(--off-white)', padding:'28px' }}>
+            <h2 style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:300, marginBottom:10 }}>您已是專業會員</h2>
+            <p style={{ fontSize:14, lineHeight:1.8, marginBottom:20, color:'var(--dark)' }}>無需重複申請，可至會員專區查看帳戶資訊。</p>
+            <button type="button" onClick={() => setPage('account')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 28px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>前往會員專區</button>
+          </div>
+        ) : blocked === 'pending' ? (
+          <div style={{ border:'1px solid var(--gold)', background:'#fffdf5', padding:'28px' }}>
+            <h2 style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:300, marginBottom:10 }}>申請審核中</h2>
+            <p style={{ fontSize:14, lineHeight:1.8, marginBottom:20, color:'var(--dark)' }}>我們正在審核您的美容師會員申請，通過後將自動開通專業價與院線商品購買資格。</p>
+            <button type="button" onClick={() => setPage('account')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 28px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>前往會員專區</button>
+          </div>
+        ) : submitted ? (
           <div style={{ border:'1px solid #b7ddb7', background:'#f0faf0', padding:'28px', color:'#2d6a2d' }}>
             <h2 style={{ fontFamily:'var(--font-display)', fontSize:24, fontWeight:300, color:'#1f5f1f', marginBottom:10 }}>申請資料已送出</h2>
-            <p style={{ fontSize:14, lineHeight:1.8, marginBottom:20 }}>我們已收到您的專業會員申請資料，將盡快與您聯繫並協助開立客戶資料。</p>
-            <button onClick={() => window.history.back()} style={{ background:'none', border:'none', color:'var(--dark)', cursor:'pointer', fontSize:12, letterSpacing:'0.08em', fontFamily:'var(--font-body)', padding:0 }}>← 返回</button>
+            <p style={{ fontSize:14, lineHeight:1.8, marginBottom:20 }}>我們已收到您的專業會員申請資料，審核通過後將開通美容師會員功能。</p>
+            <button type="button" onClick={() => setPage('account')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 28px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>前往會員專區</button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:28 }}>
@@ -2959,13 +3081,13 @@ function AccountPage({ user, setPage, onSignOut }) {
                     <>
                       <div style={{ fontSize:11, letterSpacing:'0.1em', color:'#c0392b', textTransform:'uppercase', marginBottom:6 }}>申請未通過</div>
                       <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7, marginBottom:10 }}>如有疑問請透過 LINE 聯繫客服。</p>
-                      <button onClick={() => setPage('professional-apply')} style={{ background:'none', border:'none', padding:0, fontSize:12, color:'var(--dark)', cursor:'pointer', fontFamily:'var(--font-body)', textDecoration:'underline', letterSpacing:'0.04em' }}>重新申請 →</button>
+                      <button onClick={() => goProfessionalApply(user, setPage)} style={{ background:'none', border:'none', padding:0, fontSize:12, color:'var(--dark)', cursor:'pointer', fontFamily:'var(--font-body)', textDecoration:'underline', letterSpacing:'0.04em' }}>重新申請 →</button>
                     </>
                   ) : (
                     <>
                       <div style={{ fontSize:11, letterSpacing:'0.1em', color:'var(--gold)', textTransform:'uppercase', marginBottom:6 }}>成為認證美容師</div>
                       <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7, marginBottom:10 }}>享有院線商品購買資格及專業折扣。</p>
-                      <button onClick={() => setPage('professional-apply')} style={{ background:'none', border:'none', padding:0, fontSize:12, color:'var(--black)', cursor:'pointer', fontFamily:'var(--font-body)', letterSpacing:'0.08em', fontWeight:500 }}>申請專業會員 →</button>
+                      <button onClick={() => goProfessionalApply(user, setPage)} style={{ background:'none', border:'none', padding:0, fontSize:12, color:'var(--black)', cursor:'pointer', fontFamily:'var(--font-body)', letterSpacing:'0.08em', fontWeight:500 }}>申請專業會員 →</button>
                     </>
                   )}
                 </div>
@@ -3175,6 +3297,7 @@ function App() {
   const [promoFetchStatus, setPromoFetchStatus] = useState('loading'); // 先顯示載入中，避免空白誤判
   const [promoFetchError, setPromoFetchError] = useState('');
   const [showProBanner, setShowProBanner] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
   const cartCount = cart.reduce((sum,i) => sum+i.qty, 0);
 
   // 從 profiles 表讀取角色
@@ -3214,6 +3337,23 @@ function App() {
     }
   }
 
+  async function refreshUser() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) await loadUser(session.user);
+  }
+
+  // 登入後導向美容師申請（從導覽「美容師申請」未登入時進入）
+  useEffect(() => {
+    if (!user?.uid) return;
+    if (sessionStorage.getItem(POST_LOGIN_PAGE_KEY) !== 'professional-apply') return;
+    let cancelled = false;
+    (async () => {
+      sessionStorage.removeItem(POST_LOGIN_PAGE_KEY);
+      if (!cancelled) await goProfessionalApply(user, setPage);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.uid]);
+
   // 瀏覽器返回 / 前進
   useEffect(() => {
     function onPopState(e) {
@@ -3233,46 +3373,52 @@ function App() {
 
     async function finishAuthCallback() {
       if (!hasAuthCallbackInUrl()) return;
-
-      const authErr = getAuthCallbackErrorMessage();
-      if (authErr) {
-        sessionStorage.setItem('eclado_auth_notice', 'error:' + authErr);
-        cleanAuthCallbackFromUrl('/login');
-        if (!cancelled) setPageState('login');
-        return;
-      }
-
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (cancelled) return;
-
-      if (error) {
-        sessionStorage.setItem('eclado_auth_notice', 'error:' + sbError(error.message));
-        cleanAuthCallbackFromUrl('/login');
-        setPageState('login');
-        return;
-      }
-
-      if (isPasswordRecoveryUrl()) {
-        cleanAuthCallbackFromUrl('/reset-password');
-        setPageState('reset-password');
-        return;
-      }
-
-      if (session?.user) {
-        await loadUser(session.user);
-        if (isEmailVerificationCallback()) {
-          sessionStorage.setItem('eclado_auth_notice', 'email_verified');
+      try {
+        const authErr = getAuthCallbackErrorMessage();
+        if (authErr) {
+          sessionStorage.setItem('eclado_auth_notice', 'error:' + authErr);
+          cleanAuthCallbackFromUrl('/login');
+          if (!cancelled) setPageState('login');
+          return;
         }
-        cleanAuthCallbackFromUrl('/login');
-        setPageState('login');
+
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (cancelled) return;
+
+        if (error) {
+          sessionStorage.setItem('eclado_auth_notice', 'error:' + sbError(error.message));
+          cleanAuthCallbackFromUrl('/login');
+          setPageState('login');
+          return;
+        }
+
+        if (isPasswordRecoveryUrl()) {
+          cleanAuthCallbackFromUrl('/reset-password');
+          setPageState('reset-password');
+          return;
+        }
+
+        if (session?.user) {
+          await loadUser(session.user);
+          if (isEmailVerificationCallback()) {
+            sessionStorage.setItem('eclado_auth_notice', 'email_verified');
+          }
+          cleanAuthCallbackFromUrl('/login');
+          setPageState('login');
+        }
+      } finally {
+        if (!cancelled) setAuthReady(true);
       }
     }
 
     finishAuthCallback();
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (cancelled || hasAuthCallbackInUrl()) return;
-      if (session?.user) loadUser(session.user);
+      if (cancelled) return;
+      if (!hasAuthCallbackInUrl()) {
+        if (session?.user) loadUser(session.user);
+        setAuthReady(true);
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -3289,6 +3435,7 @@ function App() {
       }
       if (session?.user) loadUser(session.user);
       else if (event === 'SIGNED_OUT') setUser(null);
+      if (!hasAuthCallbackInUrl()) setAuthReady(true);
     });
 
     return () => { cancelled = true; subscription.unsubscribe(); };
@@ -3399,7 +3546,7 @@ function App() {
       case 'login':    return <LoginPage setPage={setPage} />;
       case 'pro-login': return <LoginPage setPage={setPage} />;
       case 'reset-password': return <ResetPasswordPage setPage={setPage} />;
-      case 'professional-apply': return <ProfessionalApplicationPage setPage={setPage} user={user} />;
+      case 'professional-apply': return <ProfessionalApplicationPage setPage={setPage} user={user} authReady={authReady} onUserUpdated={refreshUser} />;
       case 'account':  return <AccountPage user={user} setPage={setPage} onSignOut={handleSignOut} />;
       case 'about':    return <AboutPage />;
       case 'info':     return <InfoPage />;
@@ -3430,7 +3577,7 @@ function App() {
             <div style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--gold)', textTransform:'uppercase', marginBottom:4 }}>美容師專業會員</div>
             <div style={{ fontSize:13, lineHeight:1.6 }}>您是美容師嗎？申請專業會員享有院線商品與專業折扣。</div>
           </div>
-          <button onClick={() => { dismissProBanner(); setPage('professional-apply'); }} style={{ background:'var(--gold)', color:'var(--black)', border:'none', padding:'9px 16px', fontSize:11, letterSpacing:'0.1em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}>立即申請</button>
+          <button onClick={() => { dismissProBanner(); goProfessionalApply(user, setPage); }} style={{ background:'var(--gold)', color:'var(--black)', border:'none', padding:'9px 16px', fontSize:11, letterSpacing:'0.1em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}>立即申請</button>
           <button onClick={dismissProBanner} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.4)', fontSize:20, cursor:'pointer', lineHeight:1, padding:'0 4px', flexShrink:0 }}>×</button>
         </div>
       )}

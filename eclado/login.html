@@ -2192,10 +2192,11 @@ function LoginPage({ setPage }) {
       if (data?.user?.id) {
         await supabase.from('profiles').upsert({
           id: data.user.id,
-          email: normalizedEmail, name, phone, role: 'consumer',
+          email: normalizedEmail, name, phone,
+          role: memberType === 'pro' ? 'pending' : 'consumer',
         });
         if (memberType === 'pro') {
-          await supabase.from('professional_applications').insert({
+          const { error: appError } = await supabase.from('professional_applications').insert({
             studio_name: studioName,
             contact_name: name,
             phone,
@@ -2205,7 +2206,13 @@ function LoginPage({ setPage }) {
             user_id: data.user.id,
             user_email: normalizedEmail,
             status: 'pending',
+            source: 'registration',
           });
+          if (appError) {
+            console.error('[ECLADO] 美容師申請寫入失敗：', appError.message);
+            setError('帳號已建立，但美容師申請資料未能儲存，請登入後至「申請專業會員」重新填寫，或聯繫客服。');
+            return;
+          }
         }
       }
       if (data?.session) {
