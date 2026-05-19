@@ -647,7 +647,12 @@ function MobileNavSection({ item, setPage, close }) {
   function go(page) { setPage(page); close(); }
   return (
     <div style={{ borderBottom:'1px solid var(--light)' }}>
-      <button onClick={() => item.children ? setOpen(o=>!o) : go(item.label === '品牌故事' ? 'about' : 'info')} style={{
+      <button onClick={() => item.children ? setOpen(o=>!o) : go(
+        item.label === '品牌故事' ? 'about'
+        : item.label === '會員登錄' ? 'login'
+        : item.label === '所有產品' ? 'shop'
+        : 'info'
+      )} style={{
         width:'100%', background:'none', border:'none', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center',
         padding:'18px 0', fontSize:15, color:'var(--dark)', fontFamily:'var(--font-body)', letterSpacing:'0.04em',
       }}>
@@ -2069,7 +2074,7 @@ function BackHomeButton({ setPage }) {
   );
 }
 
-function LoginPage({ setPage, professional = false }) {
+function LoginPage({ setPage }) {
   const [view, setView]         = useState('login'); // 'login' | 'register' | 'forgot'
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -2079,29 +2084,22 @@ function LoginPage({ setPage, professional = false }) {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
   const [success, setSuccess]   = useState('');
-  // 美容師加入欄位
   const [memberType, setMemberType]     = useState('consumer'); // 'consumer' | 'pro'
   const [studioName, setStudioName]     = useState('');
   const [proAddress, setProAddress]     = useState('');
   const [socialMedia, setSocialMedia]   = useState('');
   const [certificate, setCertificate]   = useState('');
-  const loginTitle = professional ? '登入專業會員' : '登入';
 
   function reset() { setError(''); setSuccess(''); }
-
-  useEffect(() => {
-    setView('login');
-    reset();
-  }, [professional]);
 
   useEffect(() => {
     const lineError = getLineLoginErrorMessage();
     if (lineError) {
       setView('login');
       setError(lineError);
-      window.history.replaceState({ page: professional ? 'pro-login' : 'login' }, '', professional ? '/pro-login' : '/login');
+      window.history.replaceState({ page: 'login' }, '', '/login');
     }
-  }, [professional]);
+  }, []);
 
   // ── 登入 ──
   async function handleSignIn(e) {
@@ -2214,7 +2212,7 @@ function LoginPage({ setPage, professional = false }) {
           <div style={{ fontFamily:'var(--font-display)', fontSize:26, letterSpacing:'0.22em', color:'var(--white)', marginBottom:6 }}>ECLADO</div>
           <div style={{ fontSize:9, letterSpacing:'0.3em', color:'var(--gold)', marginBottom:40, textTransform:'uppercase' }}>Korean Cosmeceuticals</div>
           <p style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, color:'var(--white)', lineHeight:1.4, marginBottom:20 }}>Professional<br />Skincare.</p>
-          <p style={{ fontSize:13, color:'rgba(255,255,255,0.4)', lineHeight:1.9 }}>{professional ? '專業會員登入後可查看對應價格與院線商品' : '登入後享有完整購物體驗'}</p>
+          <p style={{ fontSize:13, color:'rgba(255,255,255,0.4)', lineHeight:1.9 }}>登入後享有完整購物體驗</p>
         </div>
       </div>
 
@@ -2230,8 +2228,8 @@ function LoginPage({ setPage, professional = false }) {
         {/* Tabs — 登入 / 註冊 (hidden on forgot view) */}
         {view !== 'forgot' && (
           <div style={{ display:'flex', marginBottom:32, borderBottom:'1px solid var(--light)' }}>
-            <button onClick={() => { setView('login'); reset(); }} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:14, padding:'11px 0', marginRight:28, color: view==='login' ? 'var(--black)' : 'var(--dark)', borderBottom: view==='login' ? '1px solid var(--black)' : '1px solid transparent', letterSpacing:'0.04em', fontWeight: view==='login' ? 500 : 300 }}>{loginTitle}</button>
-            <button onClick={() => { setView('register'); setMemberType(professional ? 'pro' : 'consumer'); reset(); }} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:14, padding:'11px 0', marginRight:28, color: view==='register' ? 'var(--black)' : 'var(--dark)', borderBottom: view==='register' ? '1px solid var(--black)' : '1px solid transparent', letterSpacing:'0.04em', fontWeight: view==='register' ? 500 : 300 }}>註冊</button>
+            <button onClick={() => { setView('login'); reset(); }} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:14, padding:'11px 0', marginRight:28, color: view==='login' ? 'var(--black)' : 'var(--dark)', borderBottom: view==='login' ? '1px solid var(--black)' : '1px solid transparent', letterSpacing:'0.04em', fontWeight: view==='login' ? 500 : 300 }}>登入</button>
+            <button onClick={() => { setView('register'); setMemberType('consumer'); reset(); }} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:14, padding:'11px 0', marginRight:28, color: view==='register' ? 'var(--black)' : 'var(--dark)', borderBottom: view==='register' ? '1px solid var(--black)' : '1px solid transparent', letterSpacing:'0.04em', fontWeight: view==='register' ? 500 : 300 }}>註冊</button>
           </div>
         )}
 
@@ -2272,7 +2270,7 @@ function LoginPage({ setPage, professional = false }) {
                 onBlur={e=>e.target.style.borderBottomColor='var(--light)'} />
             </div>
             <button type="submit" disabled={loading} style={{ width:'100%', background: loading ? 'var(--mid)' : 'var(--black)', color:'var(--white)', border:'none', padding:'15px', fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase', cursor: loading ? 'default' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, marginTop:4 }}>
-              {loading ? '登入中...' : loginTitle}
+              {loading ? '登入中...' : '登入'}
             </button>
           </form>
         )}
@@ -2282,9 +2280,9 @@ function LoginPage({ setPage, professional = false }) {
           <form onSubmit={handleRegister} style={{ display:'flex', flexDirection:'column', gap:22 }}>
             {/* 身份選擇 */}
             <div>
-              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:9 }}>我的身份</label>
+              <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:9 }}>會員類型</label>
               <div style={{ display:'flex', gap:0 }}>
-                {[{ value:'consumer', label:'一般會員' }, { value:'pro', label:'美容師' }].map(opt => (
+                {[{ value:'consumer', label:'一般會員' }, { value:'pro', label:'美容師會員' }].map(opt => (
                   <button key={opt.value} type="button" onClick={() => setMemberType(opt.value)} style={{
                     flex:1, padding:'10px 0', fontSize:12, letterSpacing:'0.1em',
                     border:'1px solid var(--light)',
@@ -2721,7 +2719,7 @@ function InfoPage() {
       { q:'匯款 / 付款說明', a:'如為虛擬帳號匯款，付款完成後請保留收據；信用卡與行動支付則依永豐付款頁面流程完成即可。' },
     ]},
     '常見問題': { title:'常見問題', content:[
-      { q:'如何成為美容師會員？', a:'請先完成一般會員註冊，再透過 LINE 聯繫客服提供美容師執照或相關證明，審核通過後即可升級為美容師會員。' },
+      { q:'如何成為美容師會員？', a:'於會員註冊時選擇「美容師會員」並填寫申請資料，審核通過後即可享有院線商品與專業折扣。已是一般會員者，可至會員專區申請升級。' },
       { q:'院線商品跟客裝商品有什麼差別？', a:'院線商品需要專業操作技術，僅開放給認證美容師會員購買；客裝商品則適合一般消費者在家自行保養使用。' },
       { q:'如何查詢訂單狀態？', a:'登入會員後可在「我的訂單」查詢所有訂單狀態。下單及出貨時系統也會自動發送 LINE 通知。' },
       { q:'商品可以退款嗎？', a:'商品未拆封且在 7 天內，如有品質問題可申請退款。請透過 LINE 聯繫客服處理。' },
@@ -3105,6 +3103,7 @@ const PAGE_PATHS = {
 const PATH_PAGES = Object.fromEntries(Object.entries(PAGE_PATHS).map(([k, v]) => [v, k]));
 function pageFromPath(path) {
   const p = path.replace(/\/$/, '') || '/';
+  if (p === '/pro-login') return 'login';
   return PATH_PAGES[p] || 'home';
 }
 
@@ -3306,7 +3305,7 @@ function App() {
       case 'cart':     return <CartPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
       case 'checkout': return <CheckoutPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
       case 'login':    return <LoginPage setPage={setPage} />;
-      case 'pro-login': return <LoginPage setPage={setPage} professional />;
+      case 'pro-login': return <LoginPage setPage={setPage} />;
       case 'reset-password': return <ResetPasswordPage setPage={setPage} />;
       case 'professional-apply': return <ProfessionalApplicationPage setPage={setPage} user={user} />;
       case 'account':  return <AccountPage user={user} setPage={setPage} onSignOut={handleSignOut} />;
