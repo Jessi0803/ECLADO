@@ -454,7 +454,7 @@ function Dashboard({ orders, products, members, applications = [] }) {
   const growth = (((thisMonth.revenue - lastMonth.revenue) / lastMonth.revenue) * 100).toFixed(1);
   const lowStock = products.filter(p => p.stock <= p.minStock);
   const pendingOrders = orders.filter(o => ['awaiting_confirm', 'paid', 'preparing'].includes(o.status));
-  const awaitingConfirm = orders.filter(o => o.status === 'awaiting_confirm');
+  const paidOrders = orders.filter(o => o.status === 'paid');
   const applicationCount = applications.length;
   const pendingApplications = applications.filter(a => a.status === 'pending');
 
@@ -468,7 +468,7 @@ function Dashboard({ orders, products, members, applications = [] }) {
       {/* Stats grid */}
       <div className="stat-grid-4" style={{ marginBottom: 32 }}>
         <StatCard label="本月營業額" value={`NT$ ${thisMonth.revenue.toLocaleString()}`} sub={`較上月 ${growth > 0 ? '+' : ''}${growth}%`} accent="var(--dark)" icon="◐" />
-        <StatCard label="轉帳待確認" value={awaitingConfirm.length} sub={awaitingConfirm.length > 0 ? '請儘快對帳確認' : '目前無待確認'} accent={awaitingConfirm.length > 0 ? 'var(--red)' : 'var(--green)'} icon="◫" />
+        <StatCard label="已付款訂單" value={paidOrders.length} sub={paidOrders.length > 0 ? '可安排後續出貨' : '目前無已付款訂單'} accent={paidOrders.length > 0 ? 'var(--blue)' : 'var(--green)'} icon="◫" />
         <StatCard label="專業申請" value={applicationCount} sub={pendingApplications.length > 0 ? `待審核 ${pendingApplications.length} 筆` : '目前無待審核'} accent="var(--dark)" icon="◉" />
         <StatCard label="庫存警示" value={lowStock.length} sub="件商品庫存不足" accent={lowStock.length > 0 ? 'var(--red)' : 'var(--green)'} icon="◉" />
       </div>
