@@ -150,7 +150,7 @@ function useIsMobile() {
 const NAV_LINKS = ['清潔', '精華液', '急救安瓶', '面膜', '眼霜', '面霜'];
 const NAV_ITEMS = [
   { label: '所有產品', children: ['清潔', '精華液', '急救安瓶', '面膜', '眼霜', '面霜'] },
-  { label: '會員登錄', children: ['一般會員', '美容師專區'] },
+  { label: '會員登錄' },
   { label: '品牌故事', children: null },
   { label: '購物說明', children: ['退換貨說明', '運送方式', '付款說明', '常見問題'] },
 ];
@@ -482,7 +482,7 @@ function NavItem({ item, scrolled, setPage }) {
   function go(child) {
     setOpen(false);
     if (item.label === '所有產品') setPage('shop');
-    else if (item.label === '會員登錄') setPage(child === '美容師專區' ? 'pro-login' : 'login');
+    else if (item.label === '會員登錄') setPage('login');
     else if (item.label === '品牌故事') setPage('about');
     else if (item.label === '購物說明') setPage('info');
   }
@@ -659,7 +659,7 @@ function MobileNavSection({ item, setPage, close }) {
           {item.children.map(c => (
             <button key={c} onClick={() => {
               if (item.label === '所有產品') go('shop');
-              else if (item.label === '會員登錄') go(c === '美容師專區' ? 'pro-login' : 'login');
+              else if (item.label === '會員登錄') go('login');
               else if (item.label === '購物說明') go('info');
             }} style={{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:13, color:'var(--dark)', padding:'10px 16px', letterSpacing:'0.04em' }}>
               {c}
@@ -2085,6 +2085,8 @@ function LoginPage({ setPage, professional = false }) {
   const [proAddress, setProAddress]     = useState('');
   const [socialMedia, setSocialMedia]   = useState('');
   const [certificate, setCertificate]   = useState('');
+  // LINE 登入身份選擇
+  const [lineType, setLineType]         = useState('consumer'); // 'consumer' | 'pro'
   const loginTitle = professional ? '登入專業會員' : '登入';
 
   function reset() { setError(''); setSuccess(''); }
@@ -2191,6 +2193,8 @@ function LoginPage({ setPage, professional = false }) {
   function signInWithLine() {
     const state = Math.random().toString(36).substring(2, 15);
     sessionStorage.setItem('line_oauth_state', state);
+    if (lineType === 'pro') sessionStorage.setItem('eclado_line_intent', 'pro');
+    else sessionStorage.removeItem('eclado_line_intent');
     const lineRedirectUri = 'https://www.ecladotaiwan.com/api/line-callback';
     const params = new URLSearchParams({
       response_type: 'code',
@@ -2389,6 +2393,18 @@ function LoginPage({ setPage, professional = false }) {
               <div style={{ flex:1, height:1, background:'var(--light)' }} />
               <span style={{ fontSize:11, color:'var(--dark)', letterSpacing:'0.1em' }}>或</span>
               <div style={{ flex:1, height:1, background:'var(--light)' }} />
+            </div>
+            <div style={{ display:'flex', gap:0, marginBottom:10 }}>
+              {[{ value:'consumer', label:'一般會員' }, { value:'pro', label:'美容師' }].map(opt => (
+                <button key={opt.value} type="button" onClick={() => setLineType(opt.value)} style={{
+                  flex:1, padding:'9px 0', fontSize:12, letterSpacing:'0.08em',
+                  border:'1px solid var(--light)',
+                  borderRight: opt.value === 'consumer' ? 'none' : '1px solid var(--light)',
+                  background: lineType === opt.value ? 'var(--dark)' : 'transparent',
+                  color: lineType === opt.value ? 'var(--white)' : 'var(--dark)',
+                  cursor:'pointer', fontFamily:'var(--font-body)', transition:'all 0.15s',
+                }}>{opt.label}</button>
+              ))}
             </div>
             <button onClick={signInWithLine} style={{ width:'100%', background:'#00B900', color:'var(--white)', border:'none', padding:'14px', fontSize:13, letterSpacing:'0.08em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="white"><path d="M10 2C5.6 2 2 5.1 2 8.8c0 2.5 1.6 4.7 4 5.9l-.5 2 2.3-1.2c.7.2 1.4.3 2.2.3 4.4 0 8-3.1 8-6.8C18 5.1 14.4 2 10 2z"/></svg>
@@ -3180,7 +3196,10 @@ function App() {
         window.history.replaceState({ page: 'reset-password' }, '', window.location.pathname || '/');
         setPageState('reset-password');
       } else if (event === 'SIGNED_IN' && window.location.pathname === '/line-callback') {
-        setPage('home');
+        const lineIntent = sessionStorage.getItem('eclado_line_intent');
+        sessionStorage.removeItem('eclado_line_intent');
+        if (lineIntent === 'pro') setPage('professional-apply');
+        else setPage('home');
       }
       if (session?.user) loadUser(session.user);
       else setUser(null);
