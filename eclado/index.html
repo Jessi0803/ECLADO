@@ -2231,11 +2231,7 @@ function LoginPage({ setPage, professional = false }) {
         {view !== 'forgot' && (
           <div style={{ display:'flex', marginBottom:32, borderBottom:'1px solid var(--light)' }}>
             <button onClick={() => { setView('login'); reset(); }} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:14, padding:'11px 0', marginRight:28, color: view==='login' ? 'var(--black)' : 'var(--dark)', borderBottom: view==='login' ? '1px solid var(--black)' : '1px solid transparent', letterSpacing:'0.04em', fontWeight: view==='login' ? 500 : 300 }}>{loginTitle}</button>
-            {professional ? (
-              <button onClick={() => setPage('professional-apply')} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:14, padding:'11px 0', marginRight:28, color:'var(--dark)', borderBottom:'1px solid transparent', letterSpacing:'0.04em', fontWeight:300 }}>註冊專業會員</button>
-            ) : (
-              <button onClick={() => { setView('register'); reset(); }} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:14, padding:'11px 0', marginRight:28, color: view==='register' ? 'var(--black)' : 'var(--dark)', borderBottom: view==='register' ? '1px solid var(--black)' : '1px solid transparent', letterSpacing:'0.04em', fontWeight: view==='register' ? 500 : 300 }}>註冊</button>
-            )}
+            <button onClick={() => { setView('register'); setMemberType(professional ? 'pro' : 'consumer'); reset(); }} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:14, padding:'11px 0', marginRight:28, color: view==='register' ? 'var(--black)' : 'var(--dark)', borderBottom: view==='register' ? '1px solid var(--black)' : '1px solid transparent', letterSpacing:'0.04em', fontWeight: view==='register' ? 500 : 300 }}>註冊</button>
           </div>
         )}
 
