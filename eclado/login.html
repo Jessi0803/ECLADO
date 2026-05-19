@@ -117,7 +117,9 @@
       window.supabase = null;
       return;
     }
-    window.supabase = lib.createClient(SUPABASE_URL, SUPABASE_ANON);
+    window.supabase = lib.createClient(SUPABASE_URL, SUPABASE_ANON, {
+      auth: { detectSessionInUrl: true, persistSession: true },
+    });
   })();
 
   function sbError(msg) {
@@ -652,7 +654,7 @@ function MobileNavSection({ item, setPage, close }) {
         : item.label === '會員登錄' ? 'login'
         : item.label === '所有產品' ? 'shop'
         : 'info'
-      ) style={{
+      )} style={{
         width:'100%', background:'none', border:'none', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center',
         padding:'18px 0', fontSize:15, color:'var(--dark)', fontFamily:'var(--font-body)', letterSpacing:'0.04em',
       }}>
@@ -2026,24 +2028,60 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
 }
 
 // ─── LOGIN PAGE ───────────────────────────────────────────────────────────────
-function getPasswordResetRedirectUrl() {
-  const url = new URL(window.location.href);
-  url.search = '?reset-password=1';
-  url.hash = '';
-  return url.toString();
+const ECLADO_SITE_ORIGIN = 'https://www.ecladotaiwan.com';
+
+function getSiteOrigin() {
+  const { hostname, origin } = window.location;
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.vercel.app')) {
+    return origin;
+  }
+  return ECLADO_SITE_ORIGIN;
 }
 
 function getAuthRedirectUrl() {
-  const url = new URL(window.location.href);
-  url.search = '';
-  url.hash = '';
-  return url.toString();
+  return `${getSiteOrigin()}/login`;
+}
+
+function getPasswordResetRedirectUrl() {
+  return `${getSiteOrigin()}/reset-password`;
+}
+
+function getUrlAuthParams() {
+  const search = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+  const merged = new URLSearchParams();
+  search.forEach((v, k) => merged.set(k, v));
+  hash.forEach((v, k) => { if (!merged.has(k)) merged.set(k, v); });
+  return merged;
+}
+
+function hasAuthCallbackInUrl() {
+  const p = getUrlAuthParams();
+  return p.has('code') || p.has('access_token')
+    || (p.has('error') && (p.has('error_description') || p.has('error_code')));
 }
 
 function isPasswordRecoveryUrl() {
-  const search = new URLSearchParams(window.location.search);
-  const hashText = window.location.hash || '';
-  return search.has('reset-password') || search.get('type') === 'recovery' || hashText.includes('type=recovery');
+  const p = getUrlAuthParams();
+  const path = (window.location.pathname || '/').replace(/\/$/, '') || '/';
+  return path === '/reset-password' || p.get('type') === 'recovery';
+}
+
+function isEmailVerificationCallback() {
+  const t = getUrlAuthParams().get('type');
+  return t === 'signup' || t === 'email' || t === 'invite' || t === 'magiclink';
+}
+
+function getAuthCallbackErrorMessage() {
+  const err = getUrlAuthParams().get('error_description') || getUrlAuthParams().get('error');
+  if (!err) return '';
+  try { return decodeURIComponent(String(err).replace(/\+/g, ' ')); }
+  catch { return String(err); }
+}
+
+function cleanAuthCallbackFromUrl(path) {
+  const pageKey = path === '/reset-password' ? 'reset-password' : path === '/login' ? 'login' : 'home';
+  window.history.replaceState({ page: pageKey }, '', path);
 }
 
 const LINE_LOGIN_ERROR_MESSAGES = {
@@ -2097,7 +2135,18 @@ function LoginPage({ setPage }) {
     if (lineError) {
       setView('login');
       setError(lineError);
-      window.history.replaceState({ page: 'login' }, '', '/login');
+      cleanAuthCallbackFromUrl('/login');
+      return;
+    }
+    const notice = sessionStorage.getItem('eclado_auth_notice');
+    if (notice === 'email_verified') {
+      sessionStorage.removeItem('eclado_auth_notice');
+      setView('login');
+      setSuccess('✓ Email 已驗證成功，請使用您的帳號密碼登入。');
+    } else if (notice?.startsWith('error:')) {
+      sessionStorage.removeItem('eclado_auth_notice');
+      setView('login');
+      setError(notice.slice(6));
     }
   }, []);
 
@@ -3050,10 +3099,8 @@ function pageFromPath(path) {
 
 function App() {
   const [page, setPageState] = useState(() => {
-    if (isPasswordRecoveryUrl()) {
-      window.history.replaceState({ page: 'reset-password' }, '', window.location.pathname || '/');
-      return 'reset-password';
-    }
+    if (isPasswordRecoveryUrl()) return 'reset-password';
+    if (hasAuthCallbackInUrl() && !isPasswordRecoveryUrl()) return 'login';
     return pageFromPath(window.location.pathname);
   });
 
@@ -3099,33 +3146,78 @@ function App() {
       setPageState(e.state?.page || pageFromPath(window.location.pathname));
     }
     window.addEventListener('popstate', onPopState);
-    if (!window.history.state?.page) {
+    if (!window.history.state?.page && !hasAuthCallbackInUrl()) {
       const p = pageFromPath(window.location.pathname);
       window.history.replaceState({ page: p }, '', window.location.pathname || '/');
     }
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
-  // 監聽 Supabase 登入狀態
+  // 監聽 Supabase 登入狀態（驗證信 / 重設密碼回傳須先完成 session 交換，再清 URL）
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (isPasswordRecoveryUrl()) {
-        window.history.replaceState({ page: 'reset-password' }, '', window.location.pathname || '/');
-        setPageState('reset-password');
+    let cancelled = false;
+
+    async function finishAuthCallback() {
+      if (!hasAuthCallbackInUrl()) return;
+
+      const authErr = getAuthCallbackErrorMessage();
+      if (authErr) {
+        sessionStorage.setItem('eclado_auth_notice', 'error:' + authErr);
+        cleanAuthCallbackFromUrl('/login');
+        if (!cancelled) setPageState('login');
+        return;
       }
+
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (cancelled) return;
+
+      if (error) {
+        sessionStorage.setItem('eclado_auth_notice', 'error:' + sbError(error.message));
+        cleanAuthCallbackFromUrl('/login');
+        setPageState('login');
+        return;
+      }
+
+      if (isPasswordRecoveryUrl()) {
+        cleanAuthCallbackFromUrl('/reset-password');
+        setPageState('reset-password');
+        return;
+      }
+
+      if (session?.user) {
+        await loadUser(session.user);
+        if (isEmailVerificationCallback()) {
+          sessionStorage.setItem('eclado_auth_notice', 'email_verified');
+        }
+        cleanAuthCallbackFromUrl('/login');
+        setPageState('login');
+      }
+    }
+
+    finishAuthCallback();
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled || hasAuthCallbackInUrl()) return;
       if (session?.user) loadUser(session.user);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'PASSWORD_RECOVERY' || isPasswordRecoveryUrl()) {
-        window.history.replaceState({ page: 'reset-password' }, '', window.location.pathname || '/');
+        cleanAuthCallbackFromUrl('/reset-password');
         setPageState('reset-password');
       } else if (event === 'SIGNED_IN' && window.location.pathname === '/line-callback') {
         setPage('home');
+      } else if (event === 'SIGNED_IN' && isEmailVerificationCallback()) {
+        if (session?.user) await loadUser(session.user);
+        sessionStorage.setItem('eclado_auth_notice', 'email_verified');
+        cleanAuthCallbackFromUrl('/login');
+        setPageState('login');
       }
       if (session?.user) loadUser(session.user);
-      else setUser(null);
+      else if (event === 'SIGNED_OUT') setUser(null);
     });
-    return () => subscription.unsubscribe();
+
+    return () => { cancelled = true; subscription.unsubscribe(); };
   }, []);
 
   // 載入進行中的活動（含 realtime 同步）
