@@ -9,6 +9,9 @@
   ],
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" },
-    { "source": "/:path*", "destination": "/index.html" }
+    { "source": "/contact", "destination": "/contact.html" },
+    { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
