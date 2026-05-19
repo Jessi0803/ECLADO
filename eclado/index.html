@@ -2824,6 +2824,18 @@ function AccountPage({ user, setPage, onSignOut }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [proAppStatus, setProAppStatus] = useState(null); // null | 'pending' | 'approved' | 'rejected'
+
+  useEffect(() => {
+    if (!user?.uid || isProfessionalMember(user)) return;
+    supabase.from('professional_applications')
+      .select('status')
+      .eq('user_id', user.uid)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => { if (data) setProAppStatus(data.status); });
+  }, [user?.uid]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -2893,6 +2905,28 @@ function AccountPage({ user, setPage, onSignOut }) {
                 <div style={{ fontSize:11, color:'var(--dark)', marginBottom:4 }}>會員類型</div>
                 <div style={{ fontSize:15, color:'var(--black)' }}>{getMemberTier(user).label}</div>
               </div>
+              {!isProfessionalMember(user) && (
+                <div style={{ marginTop:4, padding:'16px', background:'var(--off-white)', borderLeft:'2px solid var(--gold)' }}>
+                  {proAppStatus === 'pending' ? (
+                    <>
+                      <div style={{ fontSize:11, letterSpacing:'0.1em', color:'var(--gold)', textTransform:'uppercase', marginBottom:6 }}>美容師申請審核中</div>
+                      <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7 }}>我們正在審核您的申請，通過後將自動開通專業會員功能。</p>
+                    </>
+                  ) : proAppStatus === 'rejected' ? (
+                    <>
+                      <div style={{ fontSize:11, letterSpacing:'0.1em', color:'#c0392b', textTransform:'uppercase', marginBottom:6 }}>申請未通過</div>
+                      <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7, marginBottom:10 }}>如有疑問請透過 LINE 聯繫客服。</p>
+                      <button onClick={() => setPage('professional-apply')} style={{ background:'none', border:'none', padding:0, fontSize:12, color:'var(--dark)', cursor:'pointer', fontFamily:'var(--font-body)', textDecoration:'underline', letterSpacing:'0.04em' }}>重新申請 →</button>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize:11, letterSpacing:'0.1em', color:'var(--gold)', textTransform:'uppercase', marginBottom:6 }}>成為認證美容師</div>
+                      <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7, marginBottom:10 }}>享有院線商品購買資格及專業折扣。</p>
+                      <button onClick={() => setPage('professional-apply')} style={{ background:'none', border:'none', padding:0, fontSize:12, color:'var(--black)', cursor:'pointer', fontFamily:'var(--font-body)', letterSpacing:'0.08em', fontWeight:500 }}>申請專業會員 →</button>
+                    </>
+                  )}
+                </div>
+              )}
               <button onClick={onSignOut} style={{ marginTop:8, width:'fit-content', background:'none', color:'var(--dark)', border:'1px solid var(--light)', padding:'10px 18px', fontSize:12, letterSpacing:'0.08em', cursor:'pointer', fontFamily:'var(--font-body)' }}>登出</button>
             </div>
           </aside>
