@@ -339,7 +339,7 @@ const MENU_GROUPS = [
     ],
   },
   {
-    title: '其他',
+    title: '會員',
     items: [
       { id: 'members', icon: '◎', label: '會員管理' },
       { id: 'applications', icon: '◉', label: '專業申請' },
@@ -1077,6 +1077,18 @@ function Applications() {
 
   async function updateStatus(id, status) {
     await supabase.from('professional_applications').update({ status }).eq('id', id);
+    if (status === 'approved') {
+      const app = apps.find(a => a.id === id);
+      if (app?.user_id) {
+        await supabase.from('profiles').update({ role: 'pro' }).eq('id', app.user_id);
+      }
+    }
+    if (status === 'rejected') {
+      const app = apps.find(a => a.id === id);
+      if (app?.user_id) {
+        await supabase.from('profiles').update({ role: 'consumer' }).eq('id', app.user_id);
+      }
+    }
     setApps(prev => prev.map(a => a.id === id ? { ...a, status } : a));
     if (selected?.id === id) setSelected(prev => ({ ...prev, status }));
   }
