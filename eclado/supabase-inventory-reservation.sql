@@ -2,8 +2,8 @@
 -- Run once in Supabase SQL Editor after supabase-products.sql.
 --
 -- Behavior:
--- - Orders become inventory-active only when status changes to paid.
--- - Orders moving from paid to cancelled/returned restore only the stock that was deducted.
+-- - Orders become inventory-active when status changes to paid/preparing/shipped/delivered.
+-- - Orders moving from an inventory-active status to cancelled/returned/unpaid restore only the stock that was deducted.
 -- - Preorder quantity does not push products.stock below 0.
 
 update public.products
@@ -21,7 +21,7 @@ returns boolean
 language sql
 immutable
 as $$
-  select order_status = 'paid';
+  select order_status in ('paid', 'preparing', 'shipped', 'delivered');
 $$;
 
 create or replace function public.adjust_inventory_for_order(order_items jsonb, direction integer)

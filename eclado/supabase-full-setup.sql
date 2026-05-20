@@ -307,13 +307,13 @@ begin
 exception when duplicate_object then null;
 end $$;
 
--- 庫存扣補：付款扣可用現貨庫存；預購數量不讓庫存扣成負數。
+-- 庫存扣補：付款後到出貨完成都占用可用現貨庫存；預購數量不讓庫存扣成負數。
 create or replace function public.order_consumes_inventory(order_status text)
 returns boolean
 language sql
 immutable
 as $$
-  select order_status = 'paid';
+  select order_status in ('paid', 'preparing', 'shipped', 'delivered');
 $$;
 
 create or replace function public.adjust_inventory_for_order(order_items jsonb, direction integer)
