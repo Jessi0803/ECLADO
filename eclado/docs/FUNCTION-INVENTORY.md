@@ -91,20 +91,22 @@
 |--------|----------|----------------|
 | `tests/eclado-frontend.spec.ts` | Mock E2E | 1、3、4、5、6、7、26、27、28 |
 | `tests/inventory-sql.spec.ts` | 本地 SQL / 文件檢查 | 8、9 的文字與 trigger 規則一致性 |
+| `tests/integration/payment.spec.ts` | 永豐 QPay integration | 7 |
 | `tests/integration/staging-inventory.spec.ts` | staging Supabase integration | 8、9 的真實資料庫 trigger 驗證 |
+| `tests/integration/line-handler.test.cjs` | 完全隔離 LINE handler 測試 | 16、23 的後端核心邏輯 |
 
 ### 預計補齊
 
 | 測試檔 | 建議範圍 | 對應功能 |
 |--------|----------|----------|
-| `tests/integration/payment.spec.ts` | 永豐 QPay 測試環境或低金額測試商品 | 7 |
 | `tests/integration/line.spec.ts` | LINE 登入與 LINE 推播 | 16、23 |
 | `tests/integration/email.spec.ts` | Resend 測試寄信 / 測試收件地址 | 12、13、14 |
 
 ### 分層原則
 
 - `npm run test:e2e`：跑最快、最安全的本地測試，主要驗前台流程與 SQL / 文件一致性。
-- `npm run test:integration`：跑 staging Supabase 連線測試，專門驗資料庫 trigger 與外部整合。
+- `npm run test:integration`：跑 staging Supabase 連線測試，專門驗資料庫 trigger 與外部整合。會包含永豐 QPay 測試，前提是 `RUN_PAYMENT_INTEGRATION=1`。
+- `npm run test:line`：完全隔離的 LINE 後端測試，只驗 `api/line-callback.js` 和 `api/line-push.js`，不打正式 LINE 服務。
 - 外部服務測試不要混在同一支檔案，避免失敗原因難查，也方便分開開關與排錯。
 
 ---

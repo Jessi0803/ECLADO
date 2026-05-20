@@ -2679,7 +2679,7 @@ function ProfessionalApplicationPage({ setPage, user, authReady, onUserUpdated }
       user_id: user.uid,
       user_email: user.email || null,
       status: 'pending',
-      source: 'upgrade',
+      source: 'standalone',
     });
     if (error) {
       setSubmitError('送出失敗，請稍後再試。');

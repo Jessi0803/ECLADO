@@ -3,7 +3,8 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
-    "test:integration": "RUN_STAGING_INTEGRATION=1 BASE_URL=http://127.0.0.1:4173 playwright test tests/integration --project=chromium"
+    "test:integration": "RUN_STAGING_INTEGRATION=1 RUN_PAYMENT_INTEGRATION=1 playwright test tests/integration --project=chromium",
+    "test:line": "node --test tests/integration/line-handler.test.cjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0"

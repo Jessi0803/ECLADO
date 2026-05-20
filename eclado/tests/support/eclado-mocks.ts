@@ -31,7 +31,12 @@ async function json(route: Route, body: unknown, status = 200) {
   });
 }
 
-export async function mockEcladoApis(page: Page) {
+export type MockEcladoApiOptions = {
+  paymentMode?: 'mock' | 'live';
+  onOrderInsert?: (order: Record<string, unknown>) => void;
+};
+
+export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions = {}) {
   await page.route('**/rest/v1/products**', async route => {
     if (route.request().method() === 'GET') return json(route, products);
     return json(route, []);
@@ -45,6 +50,7 @@ export async function mockEcladoApis(page: Page) {
   await page.route('**/rest/v1/orders**', async route => {
     if (route.request().method() === 'POST') {
       const order = route.request().postDataJSON();
+      options.onOrderInsert?.(order);
       return json(route, [{ ...order, created_at: new Date().toISOString() }], 201);
     }
     return json(route, []);
@@ -64,21 +70,23 @@ export async function mockEcladoApis(page: Page) {
     return json(route, []);
   });
 
-  await page.route('https://pay.ecladotaiwan.com/api/sinopac/create-payment', async route => {
-    const request = route.request().postDataJSON();
-    return json(route, {
-      ok: true,
-      response: {
-        Status: 'S',
-        Description: '付款單建立成功',
-        TSNo: `E2E${Date.now()}`,
-        ATMParam: {
-          AtmPayNo: '8071234567890123',
+  if (options.paymentMode !== 'live') {
+    await page.route('https://pay.ecladotaiwan.com/api/sinopac/create-payment', async route => {
+      const request = route.request().postDataJSON();
+      return json(route, {
+        ok: true,
+        response: {
+          Status: 'S',
+          Description: '付款單建立成功',
+          TSNo: `E2E${Date.now()}`,
+          ATMParam: {
+            AtmPayNo: '8071234567890123',
+          },
+          Echo: request,
         },
-        Echo: request,
-      },
+      });
     });
-  });
+  }
 
   await page.route('**/api/line-push', async route => json(route, { ok: true }));
 }
