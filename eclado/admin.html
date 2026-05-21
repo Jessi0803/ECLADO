@@ -567,6 +567,7 @@ function Orders({ orders, setOrders }) {
 
   const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter);
   const awaitingCount = orders.filter(o => o.status === 'awaiting_confirm').length;
+  const unpaidCount = orders.filter(o => o.status === 'unpaid').length;
   const returnedCount = orders.filter(o => o.status === 'returned').length;
 
   async function pushLineOrderNotice(order, type, extra = {}) {
@@ -654,7 +655,7 @@ function Orders({ orders, setOrders }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
           <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>訂單管理</h1>
           <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
-            {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['paid','已付款'], ['preparing','備貨中'], ['shipped','已出貨'], ['delivered','已到貨'], ['returned','退貨']].map(([val, label]) => (
+            {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['unpaid','未付款'], ['paid','已付款'], ['preparing','備貨中'], ['shipped','已出貨'], ['delivered','已到貨'], ['returned','退貨']].map(([val, label]) => (
               <button key={val} onClick={() => setFilter(val)} style={{
                 padding: '8px 16px', border: 'none', fontSize: 12, letterSpacing: '0.04em',
                 background: filter === val ? 'var(--dark)' : 'transparent',
@@ -669,6 +670,13 @@ function Orders({ orders, setOrders }) {
                     minWidth: 18, height: 18, borderRadius: 9, padding: '0 6px',
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
                   }}>{awaitingCount}</span>
+                )}
+                {val === 'unpaid' && unpaidCount > 0 && (
+                  <span style={{
+                    background: 'oklch(0.65 0.18 50)', color: '#fff', fontSize: 10, fontWeight: 600,
+                    minWidth: 18, height: 18, borderRadius: 9, padding: '0 6px',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+                  }}>{unpaidCount}</span>
                 )}
                 {val === 'returned' && returnedCount > 0 && (
                   <span style={{
