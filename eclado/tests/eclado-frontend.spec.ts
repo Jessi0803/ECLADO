@@ -139,7 +139,7 @@ test('活動折扣可先減金額再打折', async ({ page }) => {
   await expect(page.getByText('NT$ 3,224')).toBeVisible();
 });
 
-test('活動未勾選啟用但排程時間有效時仍顯示活動商品', async ({ page }) => {
+test('活動不受 active 欄位影響，只依排程時間顯示活動商品', async ({ page }) => {
   await mockEcladoApis(page, {
     promotions: [{
       ...activePromotion,

@@ -275,11 +275,6 @@ function normProductIds(p) {
 }
 
 function isPromotionLive(p) {
-  const hasSchedule = Boolean(p?.start_at || p?.end_at);
-  if (!hasSchedule) {
-    if (p && p.active === false) return false;
-    if (String(p?.active).toLowerCase() === 'false') return false;
-  }
   const now = Date.now();
   if (p?.start_at && new Date(p.start_at).getTime() > now) return false;
   if (p?.end_at && new Date(p.end_at).getTime() < now) return false;

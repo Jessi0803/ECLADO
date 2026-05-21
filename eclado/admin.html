@@ -187,7 +187,7 @@ const STATUS_MAP = {
 const STATUS_OPTIONS = ['awaiting_confirm', 'paid', 'preparing', 'shipped', 'delivered', 'returned'];
 
 // ─── PROMOTION HELPERS ────────────────────────────────────────────────────────
-// 判斷活動是否「進行中」（僅依 active）
+// 判斷活動是否「進行中」（只依上下架時間）
 function normProductIds(p) {
   const raw = p?.product_ids;
   if (!raw) return [];
@@ -202,11 +202,6 @@ function normProductIds(p) {
 }
 
 function isPromotionLive(p) {
-  const hasSchedule = Boolean(p?.start_at || p?.end_at);
-  if (!hasSchedule) {
-    if (p && p.active === false) return false;
-    if (String(p?.active).toLowerCase() === 'false') return false;
-  }
   const now = Date.now();
   if (p?.start_at && new Date(p.start_at).getTime() > now) return false;
   if (p?.end_at && new Date(p.end_at).getTime() < now) return false;
@@ -227,16 +222,10 @@ function applyPromotionFormula(base, rate, amount, order) {
   return Math.max(0, subtotal * discountRate - discountAmount);
 }
 
-// 有排程時以時間為主；沒有排程時才看手動啟用。
 function getPromotionPhase(p) {
-  const hasSchedule = Boolean(p?.start_at || p?.end_at);
   const now = Date.now();
   if (p?.start_at && new Date(p.start_at).getTime() > now) return 'scheduled';
   if (p?.end_at && new Date(p.end_at).getTime() < now) return 'expired';
-  if (!hasSchedule) {
-    if (p && p.active === false) return 'disabled';
-    if (String(p?.active).toLowerCase() === 'false') return 'disabled';
-  }
   return 'live';
 }
 
@@ -244,11 +233,10 @@ const PROMO_PHASE_MAP = {
   live:      { label: '進行中', color: 'var(--green)' },
   scheduled: { label: '排程中', color: 'var(--gold)' },
   expired:   { label: '已結束', color: 'var(--mid)' },
-  disabled:  { label: '已停用', color: 'var(--light)' },
 };
 
 function PromoBadge({ phase }) {
-  const m = PROMO_PHASE_MAP[phase] || PROMO_PHASE_MAP.disabled;
+  const m = PROMO_PHASE_MAP[phase] || PROMO_PHASE_MAP.expired;
   return (
     <span style={{ display: 'inline-block', padding: '3px 10px', fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', background: m.color + '18', color: m.color, borderRadius: 2 }}>{m.label}</span>
   );
@@ -1856,10 +1844,6 @@ function Promotions({ products }) {
     return () => { supabase.removeChannel(ch); };
   }, []);
 
-  async function toggleActive(p) {
-    await supabase.from('promotions').update({ active: !p.active }).eq('id', p.id);
-  }
-
   async function remove(p) {
     if (!confirm(`確定要刪除活動「${p.name}」嗎？此操作無法還原。`)) return;
     await supabase.from('promotions').delete().eq('id', p.id);
@@ -1907,10 +1891,6 @@ function Promotions({ products }) {
                     <h3 style={{ fontSize: 15, fontWeight: 500, color: 'var(--dark)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</h3>
                     <PromoBadge phase={phase} />
                   </div>
-                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 11, color: 'var(--mid)' }}>
-                    <input type="checkbox" checked={!!p.active} onChange={() => toggleActive(p)} style={{ cursor: 'pointer' }} />
-                    啟用
-                  </label>
                 </div>
 
                 <div style={{ background: 'var(--off)', padding: '10px 12px', fontSize: 12, color: 'var(--dark)', borderLeft: '2px solid var(--gold)' }}>
@@ -1970,7 +1950,6 @@ function PromotionForm({ promo, products, onClose }) {
   const [rate, setRate] = useState(promo?.discount_rate ?? 0.95);
   const [amount, setAmount] = useState(promo?.discount_amount ?? 1000);
   const [discountOrder, setDiscountOrder] = useState(getPromotionDiscountOrder(promo));
-  const [active, setActive] = useState(promo?.active ?? true);
   const [startAt, setStartAt] = useState(promo?.start_at ? promo.start_at.slice(0, 16) : '');
   const [endAt, setEndAt] = useState(promo?.end_at ? promo.end_at.slice(0, 16) : '');
   const [saving, setSaving] = useState(false);
@@ -2000,7 +1979,7 @@ function PromotionForm({ promo, products, onClose }) {
       discount_order: discountOrder,
       start_at: startAt ? new Date(startAt).toISOString() : null,
       end_at: endAt ? new Date(endAt).toISOString() : null,
-      active,
+      active: true,
     };
 
     setSaving(true);
@@ -2081,12 +2060,6 @@ function PromotionForm({ promo, products, onClose }) {
             <>活動商品小計 × <b>{rate}</b> − <b>NT$ {Number(amount).toLocaleString()}</b></>
           )}
         </div>
-
-        {/* 啟用 */}
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--dark)' }}>
-          <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />
-          啟用此活動
-        </label>
 
         {/* 排程時間 */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>

@@ -48,6 +48,12 @@ async function mockAdminApis(
   });
 }
 
+async function openAdminSection(page: Page, name: RegExp) {
+  const mobileMenu = page.getByRole('button', { name: '開啟選單' });
+  if (await mobileMenu.isVisible()) await mobileMenu.click();
+  await page.getByRole('button', { name }).click();
+}
+
 test('後台登入權限：非管理員擋下，管理員可進入', async ({ page }) => {
   await mockEcladoApis(page, {
     signInUser: normalUser(),
@@ -82,7 +88,7 @@ test('訂單管理可查看明細並更新狀態', async ({ page }) => {
   });
 
   await page.goto('/admin');
-  await page.getByRole('button', { name: /訂單管理/ }).click();
+  await openAdminSection(page, /訂單管理/);
   await expect(page.getByText('E2E-ORDER-001')).toBeVisible();
   await page.getByText('E2E-ORDER-001').click();
   await expect(page.getByText('訂單詳情')).toBeVisible();
@@ -102,7 +108,7 @@ test('出貨可寫入托運單號並送出 LINE 通知', async ({ page }) => {
   });
 
   await page.goto('/admin');
-  await page.getByRole('button', { name: /訂單管理/ }).click();
+  await openAdminSection(page, /訂單管理/);
   await page.getByRole('button', { name: '已付款' }).click();
   await page.getByText('E2E-ORDER-002').click();
   await page.getByPlaceholder('輸入順豐托運單號（選填）').fill('SF987654321');
@@ -129,7 +135,7 @@ test('商品庫存可在後台修改並同步 products 更新', async ({ page })
   });
 
   await page.goto('/admin');
-  await page.getByRole('button', { name: /商品 & 庫存/ }).click();
+  await openAdminSection(page, /商品 & 庫存/);
   await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();
   await page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr').getByRole('button', { name: '修改庫存' }).click();
   await page.locator('input[type="number"]').fill('12');
@@ -139,21 +145,20 @@ test('商品庫存可在後台修改並同步 products 更新', async ({ page })
   await expect.poll(() => productUpdates.some(update => update.stock === 12)).toBe(true);
 });
 
-test('活動管理可停用、建立活動並送出正確 payload', async ({ page }) => {
-  const promotionUpdates: Record<string, unknown>[] = [];
+test('活動管理可建立活動並送出正確 payload', async ({ page }) => {
   const promotionInserts: Record<string, unknown>[] = [];
   await mockAdminApis(page, {
-    onPromotionUpdate: update => promotionUpdates.push(update),
     onPromotionInsert: promo => promotionInserts.push(promo),
   });
 
   await page.goto('/admin');
-  await page.getByRole('button', { name: /活動管理/ }).click();
+  await openAdminSection(page, /活動管理/);
   await expect(page.getByText('E2E 測試活動')).toBeVisible();
-  await page.getByLabel('啟用').click({ force: true });
-  await expect.poll(() => promotionUpdates.some(update => update.active === false)).toBe(true);
+  await expect(page.getByLabel('啟用')).toHaveCount(0);
+  await expect(page.getByText('啟用此活動')).toHaveCount(0);
 
   await page.getByRole('button', { name: '+ 新增活動' }).click();
+  await expect(page.getByText('啟用此活動')).toHaveCount(0);
   await page.locator('input[placeholder="例：五月慶 95折再折千"]').fill('E2E 新活動');
   await page.locator('textarea[placeholder="顯示給顧客看的說明文字"]').fill('活動測試');
   await page.locator('input[type="number"]').nth(0).fill('0.8');
@@ -183,7 +188,7 @@ test('活動排程：建立活動時可設上架 / 下架時間並送出正確 p
   });
 
   await page.goto('/admin');
-  await page.getByRole('button', { name: /活動管理/ }).click();
+  await openAdminSection(page, /活動管理/);
   await page.getByRole('button', { name: '+ 新增活動' }).click();
   await page.locator('input[placeholder="例：五月慶 95折再折千"]').fill('排程測試活動');
   await page.locator('input[type="number"]').nth(0).fill('0.9');
@@ -211,7 +216,7 @@ test('活動排程：排程中活動顯示「排程中」badge，已結束顯示
   });
 
   await page.goto('/admin');
-  await page.getByRole('button', { name: /活動管理/ }).click();
+  await openAdminSection(page, /活動管理/);
 
   const futureCard = page.locator('div').filter({ hasText: '未來活動' }).first();
   await expect(futureCard.getByText('排程中')).toBeVisible();
@@ -227,7 +232,7 @@ test('後台核准美容師申請會同步 application status 與 profiles.role'
   });
 
   await page.goto('/admin');
-  await page.getByRole('button', { name: /會員管理/ }).click();
+  await openAdminSection(page, /會員管理/);
   await page.getByRole('button', { name: /待審核申請/ }).click();
   await page.getByText('審核中會員').click();
   await expect(page.getByText('審核中工作室')).toBeVisible();
