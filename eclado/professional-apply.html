@@ -2566,6 +2566,10 @@ function ProfessionalApplicationPage({ setPage, user }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!user?.uid) {
+      setError('請先登入會員後再送出申請。');
+      return;
+    }
     setSubmitting(true);
     setError('');
     try {
@@ -2581,8 +2585,8 @@ function ProfessionalApplicationPage({ setPage, user }) {
         address: form.address,
         social_media: form.socialMedia,
         certificate: form.certificate,
-        user_id: user?.uid || null,
-        user_email: user?.email || null,
+        user_id: user.uid,
+        user_email: user.email || null,
         status: 'pending',
         source: 'standalone',
       });
@@ -2617,7 +2621,13 @@ function ProfessionalApplicationPage({ setPage, user }) {
       </div>
 
       <div style={{ maxWidth:900, margin:'0 auto', padding: isMobile ? '36px 20px 60px' : '48px 32px 72px' }}>
-        {submitted ? (
+        {!user?.uid ? (
+          <div style={{ border:'1px solid var(--light)', background:'var(--off-white)', padding:'28px', color:'var(--dark)' }}>
+            <h2 style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:300, color:'var(--black)', marginBottom:10 }}>請先登入會員</h2>
+            <p style={{ fontSize:14, lineHeight:1.8, marginBottom:20 }}>申請美容師會員前，請先登入或註冊一般會員，這樣我們才能將申請與您的帳號連動，並在審核完成後通知您。</p>
+            <button onClick={() => setPage('login')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'13px 28px', fontSize:12, letterSpacing:'0.14em', cursor:'pointer', fontFamily:'var(--font-body)' }}>前往登入 / 註冊</button>
+          </div>
+        ) : submitted ? (
           <div style={{ border:'1px solid #b7ddb7', background:'#f0faf0', padding:'28px', color:'#2d6a2d' }}>
             <h2 style={{ fontFamily:'var(--font-display)', fontSize:24, fontWeight:300, color:'#1f5f1f', marginBottom:10 }}>申請資料已送出</h2>
             <p style={{ fontSize:14, lineHeight:1.8, marginBottom:20 }}>我們已收到您的專業會員申請資料，將盡快與您聯繫並協助開立客戶資料。</p>

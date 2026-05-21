@@ -991,6 +991,11 @@ const APP_STATUS_BG = { pending: '#fff8e1', approved: '#e8f5e9', rejected: '#ffe
 
 function appsForMember(applications, memberId) {
   if (!memberId) return [];
+  // 虛擬會員（未綁帳號的申請）：id 格式為 'app:<applicationId>'，直接對 application.id
+  if (typeof memberId === 'string' && memberId.startsWith('app:')) {
+    const appId = memberId.slice(4);
+    return applications.filter(a => a.id === appId);
+  }
   return applications
     .filter(a => a.user_id === memberId)
     .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
@@ -1034,6 +1039,10 @@ function Members({
   const selectedPending = selected ? memberHasPendingApp(applications, selected.id) : false;
 
   function changeType(id, type) {
+    if (typeof id === 'string' && id.startsWith('app:')) {
+      setTypeNotice('此申請尚未綁定會員帳號，請在下方「美容師申請」區塊按「核准」或「拒絕」。');
+      return;
+    }
     if (type === 'pro' && memberHasPendingApp(applications, id)) {
       setTypeNotice('此會員有審核中的美容師申請，請在下方「美容師申請」區塊按「核准」。');
       return;
@@ -2219,7 +2228,26 @@ function App({ adminEmail, onSignOut }) {
       setOrders(allOrders);
 
       const realMembers = (profilesRes.data || []).map(p => normalizeMember(p, allOrders));
-      setMembers(realMembers.length > 0 ? realMembers : INIT_MEMBERS);
+      const apps = applicationsRes.error ? [] : (applicationsRes.data || []);
+
+      // 沒對到 profile 的 pending 申請（user_id null 或 user_id 對不到任何 profile）
+      // 包成虛擬會員加入列表，讓後台「待審核申請」tab 看得到
+      const profileIds = new Set(realMembers.map(m => m.id));
+      const orphanMembers = apps
+        .filter(a => a.status === 'pending' && (!a.user_id || !profileIds.has(a.user_id)))
+        .map(a => ({
+          id: `app:${a.id}`,
+          name: a.contact_name || '未登入申請',
+          email: a.user_email || '',
+          phone: a.phone || '',
+          type: 'pending',
+          cert: a.certificate || '',
+          joined: a.created_at ? a.created_at.slice(0, 10) : '',
+          orders: 0,
+          total: 0,
+        }));
+      const allMembers = [...realMembers, ...orphanMembers];
+      setMembers(allMembers.length > 0 ? allMembers : INIT_MEMBERS);
 
       if (!productsRes.error && productsRes.data?.length) {
         setProducts(productsRes.data.map(normalizeProduct));
@@ -2229,7 +2257,7 @@ function App({ adminEmail, onSignOut }) {
         setApplications([]);
         setApplicationsError('無法載入專業申請：' + (applicationsRes.error.message || '請確認已建立 professional_applications 資料表'));
       } else {
-        setApplications(applicationsRes.data || []);
+        setApplications(apps);
         setApplicationsError('');
       }
 
