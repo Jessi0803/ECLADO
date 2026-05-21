@@ -281,10 +281,18 @@ function getFulfillmentInfo(product) {
 }
 
 function mergeProductsWithStock(baseProducts, stockRows) {
-  const stockMap = new Map((stockRows || []).map(row => [Number(row.id), Number(row.stock ?? 0)]));
+  const rowMap = new Map((stockRows || []).map(row => [Number(row.id), row]));
   return baseProducts.map(product => {
-    const stock = stockMap.has(Number(product.id)) ? stockMap.get(Number(product.id)) : (product.stock ?? null);
-    return { ...product, stock };
+    const row = rowMap.get(Number(product.id));
+    if (!row) return { ...product, stock: null };
+    return {
+      ...product,
+      stock: Number(row.stock ?? 0),
+      isProOnly: row.is_pro_only != null ? !!row.is_pro_only : product.isProOnly,
+      price: row.price != null ? Number(row.price) : product.price,
+      proPrice: row.pro_price != null ? Number(row.pro_price) : product.proPrice,
+      active: row.active != null ? row.active : product.active,
+    };
   });
 }
 
@@ -3414,7 +3422,7 @@ function App() {
     let alive = true;
 
     async function loadProducts() {
-      const { data, error } = await sb.from('products').select('id, stock');
+      const { data, error } = await sb.from('products').select('id, stock, is_pro_only, price, pro_price, active');
       if (!alive) return;
       if (error) {
         console.error('[ECLADO] 無法載入 products：', error.message, error);
