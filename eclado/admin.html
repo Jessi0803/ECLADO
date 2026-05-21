@@ -183,8 +183,8 @@ const STATUS_MAP = {
   cancelled: { label: '已取消', color: 'var(--mid)' },
 };
 
-// 老闆可以從下拉選單變更的狀態（不含 awaiting_confirm，只有顧客填末五碼後系統會帶入）
-const STATUS_OPTIONS = ['awaiting_confirm', 'unpaid', 'paid', 'preparing', 'shipped', 'delivered', 'returned', 'cancelled'];
+// 老闆可以從下拉選單變更的狀態（對齊上方篩選 tab：轉帳待確認／已付款／備貨中／已出貨／已到貨／退貨）
+const STATUS_OPTIONS = ['awaiting_confirm', 'paid', 'preparing', 'shipped', 'delivered', 'returned'];
 
 // ─── PROMOTION HELPERS ────────────────────────────────────────────────────────
 // 判斷活動是否「進行中」（僅依 active）
@@ -618,7 +618,7 @@ function Orders({ orders, setOrders }) {
     const shouldNotifyPaid = order && order.status !== 'paid' && status === 'paid';
     const typedTracking = selected?.id === id ? trackingInput.trim() : '';
     const shipmentTracking = order?.tracking || typedTracking;
-    const shouldNotifyShipment = order && order.status !== 'shipped' && status === 'shipped' && shipmentTracking;
+    const shouldNotifyShipment = order && order.status !== 'shipped' && status === 'shipped';
     const patch = status === 'shipped' && typedTracking ? { status, tracking: typedTracking } : { status };
     setOrders(prev => prev.map(o => o.id === id ? { ...o, ...patch } : o));
     if (selected?.id === id) setSelected(s => ({ ...s, ...patch }));
