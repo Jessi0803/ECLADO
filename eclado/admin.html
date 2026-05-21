@@ -202,8 +202,14 @@ function normProductIds(p) {
 }
 
 function isPromotionLive(p) {
-  if (p && p.active === false) return false;
-  if (String(p?.active).toLowerCase() === 'false') return false;
+  const hasSchedule = Boolean(p?.start_at || p?.end_at);
+  if (!hasSchedule) {
+    if (p && p.active === false) return false;
+    if (String(p?.active).toLowerCase() === 'false') return false;
+  }
+  const now = Date.now();
+  if (p?.start_at && new Date(p.start_at).getTime() > now) return false;
+  if (p?.end_at && new Date(p.end_at).getTime() < now) return false;
   return true;
 }
 
@@ -221,13 +227,16 @@ function applyPromotionFormula(base, rate, amount, order) {
   return Math.max(0, subtotal * discountRate - discountAmount);
 }
 
-// 活動狀態（僅依「啟用」；資料庫若仍有舊的 start/end 欄位，前台已不再使用）
+// 有排程時以時間為主；沒有排程時才看手動啟用。
 function getPromotionPhase(p) {
-  if (p && p.active === false) return 'disabled';
-  if (String(p?.active).toLowerCase() === 'false') return 'disabled';
+  const hasSchedule = Boolean(p?.start_at || p?.end_at);
   const now = Date.now();
   if (p?.start_at && new Date(p.start_at).getTime() > now) return 'scheduled';
   if (p?.end_at && new Date(p.end_at).getTime() < now) return 'expired';
+  if (!hasSchedule) {
+    if (p && p.active === false) return 'disabled';
+    if (String(p?.active).toLowerCase() === 'false') return 'disabled';
+  }
   return 'live';
 }
 

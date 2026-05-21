@@ -139,6 +139,23 @@ test('活動折扣可先減金額再打折', async ({ page }) => {
   await expect(page.getByText('NT$ 3,224')).toBeVisible();
 });
 
+test('活動未勾選啟用但排程時間有效時仍顯示活動商品', async ({ page }) => {
+  await mockEcladoApis(page, {
+    promotions: [{
+      ...activePromotion,
+      name: '排程有效活動',
+      active: false,
+      start_at: '2020-01-01T00:00:00.000Z',
+      end_at: '2099-12-31T23:59:59.000Z',
+    }],
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await expect(page.getByText('限時優惠')).toBeVisible();
+  await expect(page.getByText('NT$ 3,582')).toBeVisible();
+});
+
 test('庫存為 0 顯示預購，且一般商品仍可加入購物車下單', async ({ page }) => {
   await mockEcladoApis(page, {
     products: mockProducts.map(product => product.id === 2 ? { ...product, stock: 0 } : product),
