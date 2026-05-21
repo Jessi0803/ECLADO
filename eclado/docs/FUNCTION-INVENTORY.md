@@ -96,6 +96,7 @@
 | `tests/integration/payment.spec.ts` | 永豐 QPay integration | 7 |
 | `tests/integration/staging-inventory.spec.ts` | staging Supabase integration | 8、9 的真實資料庫 trigger 驗證 |
 | `tests/integration/professional-applications.spec.ts` | staging Supabase integration | 18、20（申請寫入、核准／拒絕流程、status constraint、standalone source） |
+| `tests/integration/email.spec.ts` | Resend + staging Supabase integration | 12（驗證信確實寄出）、14（忘記密碼信確實寄出）— 透過 Resend API 驗證 |
 | `tests/integration/line-handler.test.cjs` | 完全隔離 LINE handler 測試 | 16、23 的後端核心邏輯 |
 
 ### 預計補齊
@@ -103,7 +104,6 @@
 | 測試檔 | 建議範圍 | 對應功能 |
 |--------|----------|----------|
 | `tests/integration/line.spec.ts` | LINE 登入與 LINE 推播 | 16、23 |
-| `tests/integration/email.spec.ts` | 真實收信驗證（Resend 測試地址）— Email 真的寄出並可點連結 | 13、14 |
 
 ### 分層原則
 
