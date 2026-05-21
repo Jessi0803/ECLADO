@@ -593,14 +593,17 @@ function Orders({ orders, setOrders }) {
   function updateStatus(id, status) {
     const order = orders.find(o => o.id === id);
     const shouldNotifyPaid = order && order.status !== 'paid' && status === 'paid';
-    const shouldNotifyShipment = order && order.status !== 'shipped' && status === 'shipped' && order.tracking;
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-    if (selected?.id === id) setSelected(s => ({ ...s, status }));
+    const typedTracking = selected?.id === id ? trackingInput.trim() : '';
+    const shipmentTracking = order?.tracking || typedTracking;
+    const shouldNotifyShipment = order && order.status !== 'shipped' && status === 'shipped' && shipmentTracking;
+    const patch = status === 'shipped' && typedTracking ? { status, tracking: typedTracking } : { status };
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, ...patch } : o));
+    if (selected?.id === id) setSelected(s => ({ ...s, ...patch }));
     if (shouldNotifyPaid) {
       pushLineOrderNotice({ ...order, status }, 'payment_paid');
     }
     if (shouldNotifyShipment) {
-      pushLineOrderNotice({ ...order, status }, 'shipment', { tracking: order.tracking });
+      pushLineOrderNotice({ ...order, status, tracking: shipmentTracking }, 'shipment', { tracking: shipmentTracking });
     }
   }
 
