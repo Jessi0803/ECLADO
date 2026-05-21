@@ -554,9 +554,14 @@ function Dashboard({ orders, products, members, applications = [], onGoToPending
 }
 
 // ─── ORDERS ───────────────────────────────────────────────────────────────────
+function hasPreorder(order) {
+  return Array.isArray(order.items) && order.items.some(i => i.fulfillment_type === 'preorder');
+}
+
 function Orders({ orders, setOrders }) {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState('awaiting_confirm');
+  const [stockFilter, setStockFilter] = useState('all');
   const [trackingInput, setTrackingInput] = useState('');
   const [pushing, setPushing] = useState(false);
   const [lineNotice, setLineNotice] = useState('');
@@ -565,10 +570,15 @@ function Orders({ orders, setOrders }) {
     setTrackingInput(selected?.tracking || '');
   }, [selected?.id]);
 
-  const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter);
+  const byStatus = filter === 'all' ? orders : orders.filter(o => o.status === filter);
+  const filtered = stockFilter === 'all' ? byStatus
+    : stockFilter === 'preorder' ? byStatus.filter(hasPreorder)
+    : byStatus.filter(o => !hasPreorder(o));
   const awaitingCount = orders.filter(o => o.status === 'awaiting_confirm').length;
   const unpaidCount = orders.filter(o => o.status === 'unpaid').length;
   const returnedCount = orders.filter(o => o.status === 'returned').length;
+  const preorderCount = byStatus.filter(hasPreorder).length;
+  const inStockCount = byStatus.filter(o => !hasPreorder(o)).length;
 
   async function pushLineOrderNotice(order, type, extra = {}) {
     if (!order?.user_id) {
@@ -690,6 +700,32 @@ function Orders({ orders, setOrders }) {
           </div>
         </div>
 
+        {/* 庫存狀態篩選 */}
+        <div style={{ display: 'flex', gap: 0, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: 11, color: 'var(--mid)', letterSpacing: '0.08em', marginRight: 10, whiteSpace: 'nowrap' }}>庫存狀態</span>
+          {[['all', '全部'], ['in_stock', '現貨'], ['preorder', '含預購']].map(([val, label]) => {
+            const count = val === 'in_stock' ? inStockCount : val === 'preorder' ? preorderCount : null;
+            return (
+              <button key={val} onClick={() => setStockFilter(val)} style={{
+                padding: '6px 14px', border: '1px solid var(--border)', borderRight: 'none', fontSize: 11,
+                background: stockFilter === val ? 'var(--dark)' : 'var(--white)',
+                color: stockFilter === val ? '#fff' : 'var(--mid)',
+                cursor: 'pointer', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 5,
+                ...(val === 'preorder' ? { borderRight: '1px solid var(--border)' } : {}),
+              }}>
+                {label}
+                {count != null && count > 0 && (
+                  <span style={{
+                    background: val === 'preorder' ? 'var(--gold)' : 'var(--green)', color: '#fff',
+                    fontSize: 10, fontWeight: 600, minWidth: 16, height: 16, borderRadius: 8,
+                    padding: '0 4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{count}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
         {/* 轉帳待確認提示 */}
         {filter === 'awaiting_confirm' && awaitingCount > 0 && (
           <div style={{ background: 'oklch(0.60 0.18 25 / 0.05)', border: '1px solid oklch(0.60 0.18 25 / 0.2)', padding: '14px 20px', marginBottom: 16, fontSize: 13, color: 'var(--red)', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -702,7 +738,7 @@ function Orders({ orders, setOrders }) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
-                {['訂單編號', '會員', '類型', '金額', '付款碼', '狀態', '日期'].map(h => (
+                {['訂單編號', '會員', '類型', '金額', '付款碼', '庫存', '狀態', '日期'].map(h => (
                   <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -710,7 +746,7 @@ function Orders({ orders, setOrders }) {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--mid)', fontSize: 13 }}>目前沒有訂單</td>
+                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: 'var(--mid)', fontSize: 13 }}>目前沒有訂單</td>
                 </tr>
               )}
               {filtered.map(o => (
@@ -723,6 +759,12 @@ function Orders({ orders, setOrders }) {
                   <td style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>NT$ {o.total.toLocaleString()}</td>
                   <td style={{ padding: '13px 14px', fontSize: 13, fontFamily: 'var(--font-d)', letterSpacing: '0.15em', color: o.transferLast5 ? 'var(--dark)' : 'var(--light)', fontWeight: 600 }}>
                     {o.transferLast5 || '—'}
+                  </td>
+                  <td style={{ padding: '13px 14px' }}>
+                    {hasPreorder(o)
+                      ? <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--gold)', background: 'oklch(0.82 0.12 80 / 0.12)', padding: '3px 8px', whiteSpace: 'nowrap' }}>預購</span>
+                      : <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--green)', background: 'oklch(0.65 0.18 145 / 0.10)', padding: '3px 8px', whiteSpace: 'nowrap' }}>現貨</span>
+                    }
                   </td>
                   <td style={{ padding: '13px 14px' }}>
                     <StatusSelect status={o.status} onChange={ns => updateStatus(o.id, ns)} />
