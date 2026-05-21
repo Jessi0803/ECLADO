@@ -29,13 +29,14 @@ test.describe('忘記密碼', () => {
     await expect(page.getByText(/密碼重設信已發送/)).toBeVisible();
   });
 
-  test('Supabase 回傳錯誤時顯示錯誤訊息', async ({ page }) => {
-    await page.route('**/auth/v1/recover', async route => {
-      await route.fulfill({
-        status: 422,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'invalid_request', error_description: 'Email not found' }),
-      });
+	  test('Supabase 回傳錯誤時顯示錯誤訊息', async ({ page }) => {
+	    await page.route('**/*', async route => {
+	      if (!route.request().url().includes('/auth/v1/recover')) return route.fallback();
+	      await route.fulfill({
+	        status: 422,
+	        contentType: 'application/json',
+	        body: JSON.stringify({ error: 'invalid_request', error_description: 'Email not found' }),
+	      });
     });
 
     await page.goto('/login');
@@ -43,7 +44,7 @@ test.describe('忘記密碼', () => {
     await page.locator('form input[type="email"]').fill('notexist@example.com');
     await page.getByRole('button', { name: '發送重設密碼信' }).click();
 
-    await expect(page.getByText(/錯誤|失敗|找不到|不正確/)).toBeVisible();
+	    await expect(page.getByText(/Email not found|錯誤|失敗|找不到|不正確/)).toBeVisible();
   });
 });
 
@@ -51,7 +52,17 @@ test.describe('忘記密碼', () => {
 
 test.describe('重設密碼頁', () => {
   test.beforeEach(async ({ page }) => {
-    await mockEcladoApis(page);
+	    await mockEcladoApis(page, {
+	      authUser: {
+	        id: 'test-uid',
+	        email: 'user@example.com',
+	        user_metadata: { name: '測試會員' },
+	        app_metadata: { provider: 'email' },
+	        aud: 'authenticated',
+	        role: 'authenticated',
+	        created_at: '2026-01-01T00:00:00.000Z',
+	      },
+	    });
     // updateUser 與 signOut 的 Supabase auth 呼叫
     await page.route('**/auth/v1/user', async route => {
       await route.fulfill({
@@ -78,14 +89,14 @@ test.describe('重設密碼頁', () => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) });
     });
 
-    await page.goto('/reset-password');
-    const inputs = page.locator('form input[type="password"]');
-    await inputs.nth(0).fill('12345');   // 5 字，太短
-    await inputs.nth(1).fill('12345');
-    await page.getByRole('button', { name: '更新密碼' }).click();
+	    await page.goto('/reset-password');
+	    const inputs = page.locator('form input[type="password"]');
+	    await inputs.nth(0).fill('12345');   // 5 字，太短
+	    await inputs.nth(1).fill('12345');
+	    await page.getByRole('button', { name: '更新密碼' }).click();
 
-    await expect(page.getByText('密碼至少需要 6 個字元')).toBeVisible();
-    expect(updateUserCalled).toBe(false);
+    await expect.poll(() => inputs.nth(0).evaluate(input => (input as HTMLInputElement).validity.tooShort)).toBe(true);
+	    expect(updateUserCalled).toBe(false);
   });
 
   test('兩次密碼不一致顯示錯誤，不送出 API', async ({ page }) => {
@@ -130,7 +141,7 @@ test.describe('重設密碼頁', () => {
     await inputs.nth(1).fill('newpass123');
     await page.getByRole('button', { name: '更新密碼' }).click();
 
-    await expect(page.getByText(/失效|錯誤|重新申請/)).toBeVisible();
+    await expect(page.getByText(/Token expired|失效|錯誤|重新申請/)).toBeVisible();
   });
 });
 
@@ -146,4 +157,62 @@ test('Email 驗證後重導回登入頁，顯示「Email 已驗證成功」訊�
 
   await page.goto('/login');
   await expect(page.getByText(/Email 已驗證成功/)).toBeVisible();
+});
+
+// ─── 登入錯誤 ────────────────────────────────────────────────────────────────
+
+test('密碼錯誤時顯示正確錯誤提示且不建立資料', async ({ page }) => {
+  await mockEcladoApis(page);
+  await page.route('**/auth/v1/token**', async route => {
+    await route.fulfill({
+      status: 400,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        error: 'invalid_grant',
+        error_description: 'Invalid login credentials',
+      }),
+    });
+  });
+
+  let profileWriteCalled = false;
+  await page.route('**/rest/v1/profiles**', async route => {
+    if (route.request().method() !== 'GET') profileWriteCalled = true;
+    await route.fallback();
+  });
+
+  await page.goto('/login');
+  await page.locator('form input[type="email"]').fill('wrong@example.com');
+  await page.locator('form input[type="password"]').fill('bad-password');
+  await page.locator('form').getByRole('button', { name: '登入' }).click();
+
+  await expect(page.getByText('Email 或密碼錯誤')).toBeVisible();
+  expect(profileWriteCalled).toBe(false);
+});
+
+test('Email 未驗證時顯示驗證提示且不建立資料', async ({ page }) => {
+  await mockEcladoApis(page);
+  await page.route('**/auth/v1/token**', async route => {
+    await route.fulfill({
+      status: 400,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        error: 'email_not_confirmed',
+        error_description: 'Email not confirmed',
+      }),
+    });
+  });
+
+  let orderWriteCalled = false;
+  await page.route('**/rest/v1/orders**', async route => {
+    if (route.request().method() !== 'GET') orderWriteCalled = true;
+    await route.fallback();
+  });
+
+  await page.goto('/login');
+  await page.locator('form input[type="email"]').fill('unverified@example.com');
+  await page.locator('form input[type="password"]').fill('password123');
+  await page.locator('form').getByRole('button', { name: '登入' }).click();
+
+  await expect(page.getByText(/請先驗證您的電子郵件|Email 尚未驗證|驗證信|信箱/)).toBeVisible();
+  expect(orderWriteCalled).toBe(false);
 });

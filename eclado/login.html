@@ -281,6 +281,20 @@ function isPromotionLive(p) {
   return true;
 }
 
+function getPromotionDiscountOrder(p) {
+  return p?.discount_order === 'amount_then_rate' ? 'amount_then_rate' : 'rate_then_amount';
+}
+
+function applyPromotionFormula(base, rate, amount, order) {
+  const subtotal = Math.max(0, Number(base) || 0);
+  const discountRate = Number(rate) || 1;
+  const discountAmount = Math.max(0, Number(amount) || 0);
+  if (order === 'amount_then_rate') {
+    return Math.max(0, (subtotal - discountAmount) * discountRate);
+  }
+  return Math.max(0, subtotal * discountRate - discountAmount);
+}
+
 // 用購物車與目前生效的活動，回傳折扣計算結果
 function calculateDiscount(cart, promotions, user) {
   const unit = item => getMemberPrice(item, user);
@@ -297,7 +311,7 @@ function calculateDiscount(cart, promotions, user) {
     const promoSubtotal = promoItems.reduce((s, i) => s + unit(i) * i.qty, 0);
     const rate = Number(p.discount_rate) || 1;
     const amount = Number(p.discount_amount) || 0;
-    const afterPromo = Math.max(0, promoSubtotal * rate - amount);
+    const afterPromo = applyPromotionFormula(promoSubtotal, rate, amount, getPromotionDiscountOrder(p));
     const discount = Math.round(promoSubtotal - afterPromo);
     return { subtotal, discount, finalSubtotal: subtotal - discount, promotion: p };
   }
@@ -312,7 +326,7 @@ function getPromoDisplayPrice(product, user, promotions) {
   const p = live[0];
   const rate = Number(p.discount_rate) || 1;
   const amount = Number(p.discount_amount) || 0;
-  const discounted = Math.max(0, Math.round(basePrice * rate - amount));
+  const discounted = Math.round(applyPromotionFormula(basePrice, rate, amount, getPromotionDiscountOrder(p)));
   if (discounted >= basePrice) return null;
   const parts = [];
   if (rate < 1) parts.push(`${Math.round(rate * 10)}折`);

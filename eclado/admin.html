@@ -207,6 +207,20 @@ function isPromotionLive(p) {
   return true;
 }
 
+function getPromotionDiscountOrder(p) {
+  return p?.discount_order === 'amount_then_rate' ? 'amount_then_rate' : 'rate_then_amount';
+}
+
+function applyPromotionFormula(base, rate, amount, order) {
+  const subtotal = Math.max(0, Number(base) || 0);
+  const discountRate = Number(rate) || 1;
+  const discountAmount = Math.max(0, Number(amount) || 0);
+  if (order === 'amount_then_rate') {
+    return Math.max(0, (subtotal - discountAmount) * discountRate);
+  }
+  return Math.max(0, subtotal * discountRate - discountAmount);
+}
+
 // 活動狀態（僅依「啟用」；資料庫若仍有舊的 start/end 欄位，前台已不再使用）
 function getPromotionPhase(p) {
   if (p && p.active === false) return 'disabled';
@@ -252,7 +266,7 @@ function calculateDiscount(cart, promotions, user) {
     const promoSubtotal = promoItems.reduce((s, i) => s + unit(i) * i.qty, 0);
     const rate = Number(p.discount_rate) || 1;
     const amount = Number(p.discount_amount) || 0;
-    const afterPromo = Math.max(0, promoSubtotal * rate - amount);
+    const afterPromo = applyPromotionFormula(promoSubtotal, rate, amount, getPromotionDiscountOrder(p));
     const discount = Math.round(promoSubtotal - afterPromo);
     return {
       subtotal,
@@ -1886,8 +1900,18 @@ function Promotions({ products }) {
                 </div>
 
                 <div style={{ background: 'var(--off)', padding: '10px 12px', fontSize: 12, color: 'var(--dark)', borderLeft: '2px solid var(--gold)' }}>
-                  原價 × <b>{p.discount_rate}</b>
-                  {Number(p.discount_amount) > 0 && <> − <b>NT$ {Number(p.discount_amount).toLocaleString()}</b></>}
+                  {getPromotionDiscountOrder(p) === 'amount_then_rate' ? (
+                    <>
+                      （原價
+                      {Number(p.discount_amount) > 0 && <> − <b>NT$ {Number(p.discount_amount).toLocaleString()}</b></>}
+                      ） × <b>{p.discount_rate}</b>
+                    </>
+                  ) : (
+                    <>
+                      原價 × <b>{p.discount_rate}</b>
+                      {Number(p.discount_amount) > 0 && <> − <b>NT$ {Number(p.discount_amount).toLocaleString()}</b></>}
+                    </>
+                  )}
                 </div>
 
                 <div style={{ fontSize: 12, color: 'var(--mid)', lineHeight: 1.6 }}>
@@ -1924,6 +1948,7 @@ function PromotionForm({ promo, products, onClose }) {
   const [productIds, setProductIds] = useState(new Set((promo?.product_ids || []).map(Number)));
   const [rate, setRate] = useState(promo?.discount_rate ?? 0.95);
   const [amount, setAmount] = useState(promo?.discount_amount ?? 1000);
+  const [discountOrder, setDiscountOrder] = useState(getPromotionDiscountOrder(promo));
   const [active, setActive] = useState(promo?.active ?? true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -1949,6 +1974,7 @@ function PromotionForm({ promo, products, onClose }) {
       product_ids: Array.from(productIds),
       discount_rate: Number(rate),
       discount_amount: Number(amount),
+      discount_order: discountOrder,
       start_at: null,
       end_at: null,
       active,
@@ -2009,10 +2035,24 @@ function PromotionForm({ promo, products, onClose }) {
               style={{ width: '100%', border: 'none', borderBottom: '1px solid var(--border)', padding: '10px 0', fontSize: 15, outline: 'none', background: 'none' }} />
             <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 4 }}>0 = 不額外減</p>
           </div>
+          <div>
+            <label htmlFor="promotion-discount-order" style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>折扣計算順序</label>
+            <select id="promotion-discount-order" value={discountOrder} onChange={e => setDiscountOrder(e.target.value)}
+              style={{ width: '100%', border: 'none', borderBottom: '1px solid var(--border)', padding: '10px 0', fontSize: 15, outline: 'none', background: 'none' }}>
+              <option value="rate_then_amount">先打折，再減金額</option>
+              <option value="amount_then_rate">先減金額，再打折</option>
+            </select>
+            <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 4 }}>新選項會先折抵固定金額，再套用折扣率</p>
+          </div>
         </div>
 
         <div style={{ background: 'var(--off)', padding: '12px 16px', fontSize: 13, color: 'var(--dark)', borderLeft: '2px solid var(--gold)' }}>
-          計算公式：活動商品小計 × <b>{rate}</b> − <b>NT$ {Number(amount).toLocaleString()}</b>
+          計算公式：
+          {discountOrder === 'amount_then_rate' ? (
+            <>（活動商品小計 − <b>NT$ {Number(amount).toLocaleString()}</b>） × <b>{rate}</b></>
+          ) : (
+            <>活動商品小計 × <b>{rate}</b> − <b>NT$ {Number(amount).toLocaleString()}</b></>
+          )}
         </div>
 
         {/* 啟用 */}

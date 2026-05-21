@@ -143,6 +143,8 @@ create table if not exists public.promotions (
   product_ids integer[] not null default '{}',
   discount_rate numeric not null default 0.95,
   discount_amount numeric not null default 1000,
+  discount_order text not null default 'rate_then_amount'
+    check (discount_order in ('rate_then_amount', 'amount_then_rate')),
   start_at timestamptz,
   end_at timestamptz,
   active boolean not null default true,

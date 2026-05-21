@@ -11,6 +11,8 @@ create table if not exists public.promotions (
   product_ids integer[] not null default '{}',             -- 參與活動的商品 id 陣列
   discount_rate numeric not null default 0.95,             -- 乘法折扣（0.95 = 95折）
   discount_amount numeric not null default 1000,           -- 減法折扣（NT$）
+  discount_order text not null default 'rate_then_amount'
+    check (discount_order in ('rate_then_amount', 'amount_then_rate')), -- rate_then_amount=先打折再減金額；amount_then_rate=先減金額再打折
   start_at timestamptz,                                    -- 活動開始（null = 立即）
   end_at timestamptz,                                      -- 活動結束（null = 無限期）
   active boolean not null default true,                    -- 手動總開關

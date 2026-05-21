@@ -89,15 +89,17 @@
 
 | 測試檔 | 對應範圍 | 目前涵蓋的功能 |
 |--------|----------|----------------|
-| `tests/eclado-frontend.spec.ts` | Mock E2E | 1、3、4、5、6、7、26、27、28 |
+| `tests/eclado-frontend.spec.ts` | Mock E2E | 1、2（pro／instructor／distributor 價格）、3（含預購可下單）、4、5、6（訂單 payload / user_id）、7（虛擬帳號、信用卡、Apple Pay、Google Pay payType）、17、26、27、28 |
 | `tests/inventory-sql.spec.ts` | 本地 SQL / 文件檢查 | 8、9 的文字與 trigger 規則一致性 |
-| `tests/auth-email.spec.ts` | Mock E2E | 12（Email 驗證成功通知）、13（驗證後登入頁提示）、14（忘記密碼表單、送出成功/失敗）、重設密碼頁密碼驗證與成功更新 |
-| `tests/professional-registration.spec.ts` | Mock E2E | 18（美容師欄位顯示/隱藏、signUp metadata 攜帶正確 role、申請資料寫入 `professional_applications`、一般會員不觸發申請）、`professional-apply.html` 獨立申請頁送出 |
+| `tests/auth-email.spec.ts` | Mock E2E | 12（Email 驗證成功通知）、13（驗證後登入頁提示）、14（忘記密碼表單、送出成功/失敗）、15（密碼錯誤、未驗證 Email）、重設密碼頁密碼驗證與成功更新 |
+| `tests/professional-registration.spec.ts` | Mock E2E | 18（一般會員登入後填 `professional-apply.html` 並寫入 `professional_applications`）、19（pending／pro 不能重複申請）、一般會員註冊不觸發申請 |
+| `tests/admin.spec.ts` | Mock Admin E2E | 10、20（核准申請同步 `profiles.role`）、21、22、23（托運單號 + LINE push payload）、24、25 |
 | `tests/integration/payment.spec.ts` | 永豐 QPay integration | 7 |
 | `tests/integration/staging-inventory.spec.ts` | staging Supabase integration | 8、9 的真實資料庫 trigger 驗證 |
 | `tests/integration/professional-applications.spec.ts` | staging Supabase integration | 18、20（申請寫入、核准／拒絕流程、status constraint、standalone source） |
 | `tests/integration/email.spec.ts` | Resend + staging Supabase integration | 12（驗證信確實寄出）、14（忘記密碼信確實寄出）— 透過 Resend API 驗證 |
 | `tests/integration/line-handler.test.cjs` | 完全隔離 LINE handler 測試 | 16、23 的後端核心邏輯 |
+| `tests/integration/cancel-expired-orders.test.cjs` | 完全隔離 Cron handler 測試 | 11（24 小時未付款自動取消：授權、查詢條件、批次取消） |
 | `tests/integration/email-click.spec.ts` | Playwright + Resend + staging Supabase | 13（驗證信連結點擊 → `email_confirmed_at` 寫入）、14（重設密碼連結點擊 → 填新密碼 → 成功） |
 
 ### 預計補齊
