@@ -91,8 +91,10 @@
 |--------|----------|----------------|
 | `tests/eclado-frontend.spec.ts` | Mock E2E | 1、3、4、5、6、7、26、27、28 |
 | `tests/inventory-sql.spec.ts` | 本地 SQL / 文件檢查 | 8、9 的文字與 trigger 規則一致性 |
+| `tests/professional-registration.spec.ts` | Mock E2E | 18（美容師欄位顯示/隱藏、signUp metadata 攜帶正確 role、申請資料寫入 `professional_applications`、一般會員不觸發申請）、`professional-apply.html` 獨立申請頁送出 |
 | `tests/integration/payment.spec.ts` | 永豐 QPay integration | 7 |
 | `tests/integration/staging-inventory.spec.ts` | staging Supabase integration | 8、9 的真實資料庫 trigger 驗證 |
+| `tests/integration/professional-applications.spec.ts` | staging Supabase integration | 18、20（申請寫入、核准／拒絕流程、status constraint、standalone source） |
 | `tests/integration/line-handler.test.cjs` | 完全隔離 LINE handler 測試 | 16、23 的後端核心邏輯 |
 
 ### 預計補齊
