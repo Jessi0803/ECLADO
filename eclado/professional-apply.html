@@ -2501,6 +2501,18 @@ function ProfessionalApplicationPage({ setPage, user }) {
         setError('系統初始化失敗，請重新整理頁面後再試。');
         return;
       }
+      const { data: existing } = await sb
+        .from('professional_applications')
+        .select('id, status')
+        .eq('user_id', user.uid)
+        .in('status', ['pending', 'approved'])
+        .maybeSingle();
+      if (existing) {
+        setError(existing.status === 'approved'
+          ? '此帳號已通過美容師審核，無需重複申請。'
+          : '您已有一份審核中的申請，請勿重複送出。');
+        return;
+      }
       const { error: insertError } = await sb.from('professional_applications').insert({
         studio_name: form.studioName,
         contact_name: form.contactName,
@@ -2517,6 +2529,7 @@ function ProfessionalApplicationPage({ setPage, user }) {
         setError('申請送出失敗，請稍後再試或聯繫客服。');
         return;
       }
+      await sb.from('profiles').update({ role: 'pending' }).eq('id', user.uid);
       setSubmitted(true);
       window.scrollTo(0, 0);
     } catch {
