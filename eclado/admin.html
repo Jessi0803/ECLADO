@@ -225,12 +225,17 @@ function applyPromotionFormula(base, rate, amount, order) {
 function getPromotionPhase(p) {
   if (p && p.active === false) return 'disabled';
   if (String(p?.active).toLowerCase() === 'false') return 'disabled';
+  const now = Date.now();
+  if (p?.start_at && new Date(p.start_at).getTime() > now) return 'scheduled';
+  if (p?.end_at && new Date(p.end_at).getTime() < now) return 'expired';
   return 'live';
 }
 
 const PROMO_PHASE_MAP = {
-  live: { label: '進行中', color: 'var(--green)' },
-  disabled: { label: '已停用', color: 'var(--light)' },
+  live:      { label: '進行中', color: 'var(--green)' },
+  scheduled: { label: '排程中', color: 'var(--gold)' },
+  expired:   { label: '已結束', color: 'var(--mid)' },
+  disabled:  { label: '已停用', color: 'var(--light)' },
 };
 
 function PromoBadge({ phase }) {
@@ -1923,6 +1928,13 @@ function Promotions({ products }) {
                   )}
                 </div>
 
+                {(p.start_at || p.end_at) && (
+                  <div style={{ fontSize: 11, color: 'var(--mid)', lineHeight: 1.8, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+                    {p.start_at && <div>上架：{new Date(p.start_at).toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>}
+                    {p.end_at && <div>下架：{new Date(p.end_at).toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>}
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                   <button onClick={() => setEditing(p)} style={{
                     flex: 1, padding: '8px', background: 'var(--off)', color: 'var(--dark)',
@@ -1950,6 +1962,8 @@ function PromotionForm({ promo, products, onClose }) {
   const [amount, setAmount] = useState(promo?.discount_amount ?? 1000);
   const [discountOrder, setDiscountOrder] = useState(getPromotionDiscountOrder(promo));
   const [active, setActive] = useState(promo?.active ?? true);
+  const [startAt, setStartAt] = useState(promo?.start_at ? promo.start_at.slice(0, 16) : '');
+  const [endAt, setEndAt] = useState(promo?.end_at ? promo.end_at.slice(0, 16) : '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -1975,8 +1989,8 @@ function PromotionForm({ promo, products, onClose }) {
       discount_rate: Number(rate),
       discount_amount: Number(amount),
       discount_order: discountOrder,
-      start_at: null,
-      end_at: null,
+      start_at: startAt ? new Date(startAt).toISOString() : null,
+      end_at: endAt ? new Date(endAt).toISOString() : null,
       active,
     };
 
@@ -2064,6 +2078,22 @@ function PromotionForm({ promo, products, onClose }) {
           <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />
           啟用此活動
         </label>
+
+        {/* 排程時間 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
+          <div>
+            <label style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>上架時間（選填）</label>
+            <input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)}
+              style={{ width: '100%', border: 'none', borderBottom: '1px solid var(--border)', padding: '10px 0', fontSize: 14, outline: 'none', background: 'none', color: 'var(--dark)' }} />
+            <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 4 }}>留空表示立即生效</p>
+          </div>
+          <div>
+            <label style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>下架時間（選填）</label>
+            <input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)}
+              style={{ width: '100%', border: 'none', borderBottom: '1px solid var(--border)', padding: '10px 0', fontSize: 14, outline: 'none', background: 'none', color: 'var(--dark)' }} />
+            <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 4 }}>留空表示永不自動下架</p>
+          </div>
+        </div>
 
         {/* 商品選擇 */}
         <div>

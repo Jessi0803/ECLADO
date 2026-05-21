@@ -312,9 +312,11 @@ function normProductIds(p) {
 }
 
 function isPromotionLive(p) {
-  // 僅在明確為 false 時停用（避免 API 漏欄位被當成不生效）；不再使用起訖時間
   if (p && p.active === false) return false;
   if (String(p?.active).toLowerCase() === 'false') return false;
+  const now = Date.now();
+  if (p?.start_at && new Date(p.start_at).getTime() > now) return false;
+  if (p?.end_at && new Date(p.end_at).getTime() < now) return false;
   return true;
 }
 

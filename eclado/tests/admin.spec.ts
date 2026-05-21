@@ -176,6 +176,50 @@ test('活動管理可停用、建立活動並送出正確 payload', async ({ pag
   expect(promotionInserts[0].product_ids).toEqual([2]);
 });
 
+test('活動排程：建立活動時可設上架 / 下架時間並送出正確 payload', async ({ page }) => {
+  const promotionInserts: Record<string, unknown>[] = [];
+  await mockAdminApis(page, {
+    onPromotionInsert: promo => promotionInserts.push(promo),
+  });
+
+  await page.goto('/admin');
+  await page.getByRole('button', { name: /活動管理/ }).click();
+  await page.getByRole('button', { name: '+ 新增活動' }).click();
+  await page.locator('input[placeholder="例：五月慶 95折再折千"]').fill('排程測試活動');
+  await page.locator('input[type="number"]').nth(0).fill('0.9');
+  await page.locator('input[type="number"]').nth(1).fill('0');
+  await page.getByRole('button', { name: '清除' }).click();
+  await page.getByText('胜肽修護精華液').click();
+
+  await page.locator('input[type="datetime-local"]').nth(0).fill('2030-01-01T10:00');
+  await page.locator('input[type="datetime-local"]').nth(1).fill('2030-12-31T23:59');
+
+  await page.getByRole('button', { name: '建立活動' }).click();
+
+  await expect.poll(() => promotionInserts.length).toBe(1);
+  expect(promotionInserts[0].name).toBe('排程測試活動');
+  expect(promotionInserts[0].start_at).toBe(new Date('2030-01-01T10:00').toISOString());
+  expect(promotionInserts[0].end_at).toBe(new Date('2030-12-31T23:59').toISOString());
+});
+
+test('活動排程：排程中活動顯示「排程中」badge，已結束顯示「已結束」', async ({ page }) => {
+  await mockAdminApis(page, {
+    promotions: [
+      { ...activePromotion, id: 'future-promo', name: '未來活動', start_at: '2099-01-01T00:00:00.000Z', end_at: null },
+      { ...activePromotion, id: 'past-promo', name: '過期活動', start_at: null, end_at: '2020-01-01T00:00:00.000Z' },
+    ],
+  });
+
+  await page.goto('/admin');
+  await page.getByRole('button', { name: /活動管理/ }).click();
+
+  const futureCard = page.locator('div').filter({ hasText: '未來活動' }).first();
+  await expect(futureCard.getByText('排程中')).toBeVisible();
+
+  const pastCard = page.locator('div').filter({ hasText: '過期活動' }).first();
+  await expect(pastCard.getByText('已結束')).toBeVisible();
+});
+
 test('後台核准美容師申請會同步 application status 與 profiles.role', async ({ page }) => {
   const profileUpdates: Record<string, unknown>[] = [];
   await mockAdminApis(page, {
