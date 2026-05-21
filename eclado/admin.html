@@ -633,7 +633,6 @@ function Orders({ orders, setOrders }) {
   async function confirmShipment() {
     const id = selected.id;
     const tracking = trackingInput.trim();
-    if (!tracking) return;
     setPushing(true);
     setLineNotice('');
     const newStatus = ['paid', 'preparing'].includes(selected.status) ? 'shipped' : selected.status;
@@ -806,17 +805,17 @@ function Orders({ orders, setOrders }) {
                     <input
                       value={trackingInput}
                       onChange={e => setTrackingInput(e.target.value)}
-                      placeholder="輸入順豐托運單號"
+                      placeholder="輸入順豐托運單號（選填）"
                       style={{ flex: 1, padding: '8px 10px', border: '1px solid var(--border)', fontSize: 12, outline: 'none', background: 'var(--off)' }}
                     />
                     <button
                       onClick={confirmShipment}
-                      disabled={!trackingInput.trim() || pushing}
+                      disabled={pushing}
                       style={{
                         padding: '8px 12px', background: 'var(--dark)', color: '#fff', border: 'none',
                         fontSize: 11, letterSpacing: '0.08em', whiteSpace: 'nowrap',
-                        cursor: trackingInput.trim() && !pushing ? 'pointer' : 'not-allowed',
-                        opacity: trackingInput.trim() && !pushing ? 1 : 0.45,
+                        cursor: !pushing ? 'pointer' : 'not-allowed',
+                        opacity: !pushing ? 1 : 0.45,
                       }}
                     >{pushing ? '...' : selected.status === 'shipped' ? '更新' : '確認出貨'}</button>
                   </div>
