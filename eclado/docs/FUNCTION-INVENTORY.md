@@ -98,6 +98,7 @@
 | `tests/integration/professional-applications.spec.ts` | staging Supabase integration | 18、20（申請寫入、核准／拒絕流程、status constraint、standalone source） |
 | `tests/integration/email.spec.ts` | Resend + staging Supabase integration | 12（驗證信確實寄出）、14（忘記密碼信確實寄出）— 透過 Resend API 驗證 |
 | `tests/integration/line-handler.test.cjs` | 完全隔離 LINE handler 測試 | 16、23 的後端核心邏輯 |
+| `tests/integration/email-click.spec.ts` | Playwright + Resend + staging Supabase | 13（驗證信連結點擊 → `email_confirmed_at` 寫入）、14（重設密碼連結點擊 → 填新密碼 → 成功） |
 
 ### 預計補齊
 

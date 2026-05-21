@@ -566,12 +566,42 @@ function Orders({ orders, setOrders }) {
 
   const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter);
   const awaitingCount = orders.filter(o => o.status === 'awaiting_confirm').length;
-  const unpaidCount = orders.filter(o => o.status === 'unpaid').length;
   const returnedCount = orders.filter(o => o.status === 'returned').length;
 
+  async function pushLineOrderNotice(order, type, extra = {}) {
+    if (!order?.user_id) return;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('line_user_id')
+      .eq('id', order.user_id)
+      .single();
+    if (!profile?.line_user_id) return;
+    await fetch('/api/line-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type,
+        lineUserId: profile.line_user_id,
+        orderId: order.id,
+        memberName: order.member,
+        total: order.total,
+        ...extra,
+      }),
+    }).catch(e => console.error('LINE push failed', e));
+  }
+
   function updateStatus(id, status) {
+    const order = orders.find(o => o.id === id);
+    const shouldNotifyPaid = order && order.status !== 'paid' && status === 'paid';
+    const shouldNotifyShipment = order && order.status !== 'shipped' && status === 'shipped' && order.tracking;
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
     if (selected?.id === id) setSelected(s => ({ ...s, status }));
+    if (shouldNotifyPaid) {
+      pushLineOrderNotice({ ...order, status }, 'payment_paid');
+    }
+    if (shouldNotifyShipment) {
+      pushLineOrderNotice({ ...order, status }, 'shipment', { tracking: order.tracking });
+    }
   }
 
   async function confirmShipment() {
@@ -584,15 +614,8 @@ function Orders({ orders, setOrders }) {
     try {
       setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus, tracking } : o));
       setSelected(s => ({ ...s, status: newStatus, tracking }));
-      if (isNewShipment && selected.user_id) {
-        const { data: profile } = await supabase.from('profiles').select('line_user_id').eq('id', selected.user_id).single();
-        if (profile?.line_user_id) {
-          await fetch('/api/line-push', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ lineUserId: profile.line_user_id, orderId: id, tracking, memberName: selected.member }),
-          }).catch(e => console.error('LINE push failed', e));
-        }
+      if (isNewShipment) {
+        await pushLineOrderNotice({ ...selected, status: newStatus, tracking }, 'shipment', { tracking });
       }
     } finally {
       setPushing(false);
@@ -605,7 +628,7 @@ function Orders({ orders, setOrders }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
           <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>訂單管理</h1>
           <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
-            {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['unpaid','未付款'], ['paid','已付款'], ['preparing','備貨中'], ['shipped','已出貨'], ['delivered','已到貨'], ['returned','退貨']].map(([val, label]) => (
+            {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['paid','已付款'], ['preparing','備貨中'], ['shipped','已出貨'], ['delivered','已到貨'], ['returned','退貨']].map(([val, label]) => (
               <button key={val} onClick={() => setFilter(val)} style={{
                 padding: '8px 16px', border: 'none', fontSize: 12, letterSpacing: '0.04em',
                 background: filter === val ? 'var(--dark)' : 'transparent',
@@ -620,13 +643,6 @@ function Orders({ orders, setOrders }) {
                     minWidth: 18, height: 18, borderRadius: 9, padding: '0 6px',
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
                   }}>{awaitingCount}</span>
-                )}
-                {val === 'unpaid' && unpaidCount > 0 && (
-                  <span style={{
-                    background: 'oklch(0.65 0.18 50)', color: '#fff', fontSize: 10, fontWeight: 600,
-                    minWidth: 18, height: 18, borderRadius: 9, padding: '0 6px',
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-                  }}>{unpaidCount}</span>
                 )}
                 {val === 'returned' && returnedCount > 0 && (
                   <span style={{

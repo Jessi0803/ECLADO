@@ -176,6 +176,53 @@ test('LINE push 會送出出貨通知', async () => {
   assert.equal(calls.length, 1);
 });
 
+test('LINE push 會送出付款完成通知', async () => {
+  const calls = [];
+  const originalFetch = global.fetch;
+  const originalEnv = {
+    LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+  };
+
+  process.env.LINE_CHANNEL_ACCESS_TOKEN = 'test-line-token';
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+
+    if (url === 'https://api.line.me/v2/bot/message/push') {
+      const body = JSON.parse(options.body);
+      assert.equal(body.to, 'U1234567890');
+      assert.equal(body.messages[0].type, 'text');
+      assert.match(body.messages[0].text, /訂單已付款完成/);
+      assert.match(body.messages[0].text, /訂單編號：ORDER-002/);
+      assert.match(body.messages[0].text, /付款金額：NT\$ 4,130/);
+      return jsonResponse(200, { ok: true });
+    }
+
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  const res = createRes();
+
+  try {
+    await linePush({
+      method: 'POST',
+      body: {
+        type: 'payment_paid',
+        lineUserId: 'U1234567890',
+        orderId: 'ORDER-002',
+        total: 4130,
+        memberName: '測試會員',
+      },
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.jsonBody, { status: 'sent' });
+  assert.equal(calls.length, 1);
+});
+
 function createRes() {
   return {
     statusCode: 200,
