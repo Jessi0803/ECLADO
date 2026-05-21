@@ -91,6 +91,7 @@
 |--------|----------|----------------|
 | `tests/eclado-frontend.spec.ts` | Mock E2E | 1、3、4、5、6、7、26、27、28 |
 | `tests/inventory-sql.spec.ts` | 本地 SQL / 文件檢查 | 8、9 的文字與 trigger 規則一致性 |
+| `tests/auth-email.spec.ts` | Mock E2E | 12（Email 驗證成功通知）、13（驗證後登入頁提示）、14（忘記密碼表單、送出成功/失敗）、重設密碼頁密碼驗證與成功更新 |
 | `tests/professional-registration.spec.ts` | Mock E2E | 18（美容師欄位顯示/隱藏、signUp metadata 攜帶正確 role、申請資料寫入 `professional_applications`、一般會員不觸發申請）、`professional-apply.html` 獨立申請頁送出 |
 | `tests/integration/payment.spec.ts` | 永豐 QPay integration | 7 |
 | `tests/integration/staging-inventory.spec.ts` | staging Supabase integration | 8、9 的真實資料庫 trigger 驗證 |
@@ -102,7 +103,7 @@
 | 測試檔 | 建議範圍 | 對應功能 |
 |--------|----------|----------|
 | `tests/integration/line.spec.ts` | LINE 登入與 LINE 推播 | 16、23 |
-| `tests/integration/email.spec.ts` | Resend 測試寄信 / 測試收件地址 | 12、13、14 |
+| `tests/integration/email.spec.ts` | 真實收信驗證（Resend 測試地址）— Email 真的寄出並可點連結 | 13、14 |
 
 ### 分層原則
 
