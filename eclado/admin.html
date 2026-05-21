@@ -1987,6 +1987,10 @@ function PromotionForm({ promo, products, onClose }) {
     setSaving(false);
 
     if (error) {
+      if (String(error.message || '').includes('discount_order')) {
+        setError('儲存失敗：請先到 Supabase 執行 supabase-promotions-discount-order.sql，更新 promotions 的 discount_order 欄位後再試一次。');
+        return;
+      }
       setError('儲存失敗：' + error.message);
       return;
     }

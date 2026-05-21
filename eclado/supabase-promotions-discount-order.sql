@@ -22,3 +22,5 @@ end $$;
 
 comment on column public.promotions.discount_order is
   'rate_then_amount=先打折再減金額；amount_then_rate=先減金額再打折';
+
+notify pgrst, 'reload schema';
