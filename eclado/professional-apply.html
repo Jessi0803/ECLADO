@@ -2558,14 +2558,45 @@ function ProfessionalApplicationPage({ setPage, user }) {
     certificate: '',
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
   const isMobile = useIsMobile();
   const inputStyle = { width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--black)', boxSizing:'border-box' };
   const field = key => e => setForm(prev => ({ ...prev, [key]: e.target.value }));
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    setSubmitted(true);
-    window.scrollTo(0, 0);
+    setSubmitting(true);
+    setError('');
+    try {
+      const sb = window.supabase;
+      if (!sb || typeof sb.from !== 'function') {
+        setError('系統初始化失敗，請重新整理頁面後再試。');
+        return;
+      }
+      const { error: insertError } = await sb.from('professional_applications').insert({
+        studio_name: form.studioName,
+        contact_name: form.contactName,
+        phone: form.phone,
+        address: form.address,
+        social_media: form.socialMedia,
+        certificate: form.certificate,
+        user_id: user?.uid || null,
+        user_email: user?.email || null,
+        status: 'pending',
+        source: 'standalone',
+      });
+      if (insertError) {
+        setError('申請送出失敗，請稍後再試或聯繫客服。');
+        return;
+      }
+      setSubmitted(true);
+      window.scrollTo(0, 0);
+    } catch {
+      setError('網路異常，請確認連線後再試。');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const labelStyle = { fontSize:14, color:'var(--dark)', display:'block', marginBottom:8 };
@@ -2645,8 +2676,9 @@ function ProfessionalApplicationPage({ setPage, user }) {
                 style={{ ...inputStyle, resize:'vertical', border:'1px solid var(--light)', padding:'12px', lineHeight:1.7, borderBottom:'1px solid var(--light)' }} />
             </div>
 
+            {error && <p style={{ fontSize:13, color:'#b45309', lineHeight:1.7 }}>{error}</p>}
             <div style={{ display:'flex', gap:12, flexWrap:'wrap', paddingTop:8 }}>
-              <button type="submit" style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'15px 40px', fontSize:12, letterSpacing:'0.18em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500 }}>送出申請</button>
+              <button type="submit" disabled={submitting} style={{ background: submitting ? 'var(--dark)' : 'var(--black)', color:'var(--white)', border:'none', padding:'15px 40px', fontSize:12, letterSpacing:'0.18em', cursor: submitting ? 'wait' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, opacity: submitting ? 0.7 : 1 }}>{submitting ? '送出中...' : '送出申請'}</button>
               <button type="button" onClick={() => setPage('login')} style={{ background:'none', color:'var(--dark)', border:'1px solid var(--light)', padding:'15px 32px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>返回會員登入</button>
             </div>
           </form>
