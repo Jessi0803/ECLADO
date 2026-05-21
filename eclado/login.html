@@ -2184,7 +2184,7 @@ function LoginPage({ setPage }) {
       const { data, error } = await supabase.auth.signUp({
         email: normalizedEmail, password,
         options: {
-          data: { name, phone, role: 'consumer' },
+          data: { name, phone, role: memberType === 'pro' ? 'pending' : 'consumer' },
           emailRedirectTo: getAuthRedirectUrl(),
         }
       });
