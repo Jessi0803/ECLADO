@@ -559,6 +559,7 @@ function Orders({ orders, setOrders }) {
   const [filter, setFilter] = useState('awaiting_confirm');
   const [trackingInput, setTrackingInput] = useState('');
   const [pushing, setPushing] = useState(false);
+  const [lineNotice, setLineNotice] = useState('');
 
   useEffect(() => {
     setTrackingInput(selected?.tracking || '');
@@ -569,14 +570,24 @@ function Orders({ orders, setOrders }) {
   const returnedCount = orders.filter(o => o.status === 'returned').length;
 
   async function pushLineOrderNotice(order, type, extra = {}) {
-    if (!order?.user_id) return;
-    const { data: profile } = await supabase
+    if (!order?.user_id) {
+      setLineNotice('此訂單沒有綁定會員，無法發送 LINE 通知。');
+      return false;
+    }
+    const { data: profile, error } = await supabase
       .from('profiles')
       .select('line_user_id')
       .eq('id', order.user_id)
       .single();
-    if (!profile?.line_user_id) return;
-    await fetch('/api/line-push', {
+    if (error) {
+      setLineNotice('讀取會員 LINE 資料失敗：' + (error.message || '請稍後再試'));
+      return false;
+    }
+    if (!profile?.line_user_id) {
+      setLineNotice('此會員沒有 LINE 綁定資料，無法發送 LINE 通知。');
+      return false;
+    }
+    const response = await fetch('/api/line-push', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -587,10 +598,22 @@ function Orders({ orders, setOrders }) {
         total: order.total,
         ...extra,
       }),
-    }).catch(e => console.error('LINE push failed', e));
+    }).catch(e => {
+      setLineNotice('LINE 通知送出失敗：' + (e.message || '網路錯誤'));
+      return null;
+    });
+    if (!response) return false;
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      setLineNotice('LINE 通知送出失敗：' + (body.error || `HTTP ${response.status}`));
+      return false;
+    }
+    setLineNotice(type === 'payment_paid' ? 'LINE 付款完成通知已送出。' : 'LINE 出貨通知已送出。');
+    return true;
   }
 
-  function updateStatus(id, status) {
+  async function updateStatus(id, status) {
+    setLineNotice('');
     const order = orders.find(o => o.id === id);
     const shouldNotifyPaid = order && order.status !== 'paid' && status === 'paid';
     const typedTracking = selected?.id === id ? trackingInput.trim() : '';
@@ -600,10 +623,10 @@ function Orders({ orders, setOrders }) {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, ...patch } : o));
     if (selected?.id === id) setSelected(s => ({ ...s, ...patch }));
     if (shouldNotifyPaid) {
-      pushLineOrderNotice({ ...order, status }, 'payment_paid');
+      await pushLineOrderNotice({ ...order, status }, 'payment_paid');
     }
     if (shouldNotifyShipment) {
-      pushLineOrderNotice({ ...order, status, tracking: shipmentTracking }, 'shipment', { tracking: shipmentTracking });
+      await pushLineOrderNotice({ ...order, status, tracking: shipmentTracking }, 'shipment', { tracking: shipmentTracking });
     }
   }
 
@@ -612,6 +635,7 @@ function Orders({ orders, setOrders }) {
     const tracking = trackingInput.trim();
     if (!tracking) return;
     setPushing(true);
+    setLineNotice('');
     const newStatus = ['paid', 'preparing'].includes(selected.status) ? 'shipped' : selected.status;
     const isNewShipment = newStatus === 'shipped' && selected.status !== 'shipped';
     try {
@@ -749,6 +773,19 @@ function Orders({ orders, setOrders }) {
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>聯絡電話</div>
               <div style={{ fontSize: 13, color: 'var(--dark)' }}>{selected.phone}</div>
+            </div>
+          )}
+          {lineNotice && (
+            <div style={{
+              border: '1px solid var(--border)',
+              background: 'var(--off)',
+              padding: '10px 12px',
+              marginBottom: 14,
+              fontSize: 12,
+              color: lineNotice.includes('失敗') || lineNotice.includes('無法') ? 'var(--red)' : 'var(--green)',
+              lineHeight: 1.6,
+            }}>
+              {lineNotice}
             </div>
           )}
           <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 8 }}>收件地址</div>
