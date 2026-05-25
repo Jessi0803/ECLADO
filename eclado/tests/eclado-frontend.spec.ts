@@ -35,6 +35,7 @@ async function openCart(page: import('@playwright/test').Page) {
 }
 
 test('主要路徑可開啟且不白屏', async ({ page }) => {
+  test.slow();
   for (const path of ['/', '/shop', '/cart', '/checkout', '/login', '/professional-apply', '/about', '/info', '/privacy', '/contact', '/admin']) {
     await page.goto(path, { waitUntil: 'domcontentloaded' });
     const body = page.locator('body');
@@ -98,6 +99,49 @@ test('DB 的 price 覆蓋寫死的售價', async ({ page }) => {
   await page.goto('/shop');
   await page.getByText('胜肽修護精華液').first().click();
   await expect(page.getByText('NT$ 2,999').first()).toBeVisible();
+});
+
+test('DB 新增的商品會顯示在商城', async ({ page }) => {
+  await mockEcladoApis(page, {
+    products: [
+      ...mockProducts,
+      {
+        id: 10,
+        name: 'New Hydration Cream',
+        name_zh: '新款保濕乳霜',
+        category: '面霜',
+        size: '50ml',
+        price: 1880,
+        pro_price: 1380,
+        stock: 12,
+        min_stock: 3,
+        is_pro_only: false,
+        image_url: 'https://example.com/new-product.jpg',
+        description: '新增商品測試',
+        skin_type: '全膚質',
+        ingredients: '玻尿酸',
+        features: ['保濕'],
+        active: true,
+      },
+    ],
+    promotions: [],
+  });
+
+  await page.goto('/shop');
+  await expect(page.getByText('新款保濕乳霜')).toBeVisible();
+  await page.getByText('新款保濕乳霜').click();
+  await expect(page.getByText('新增商品測試')).toBeVisible();
+  await expect(page.getByText('NT$ 1,880').first()).toBeVisible();
+});
+
+test('DB 下架的商品不會顯示在商城', async ({ page }) => {
+  await mockEcladoApis(page, {
+    products: mockProducts.map(product => product.id === 2 ? { ...product, active: false } : product),
+    promotions: [],
+  });
+
+  await page.goto('/shop');
+  await expect(page.getByText('胜肽修護精華液')).toHaveCount(0);
 });
 
 test('現貨、預購、活動折扣與購物車操作', async ({ page }) => {

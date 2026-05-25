@@ -162,6 +162,7 @@ export type MockEcladoApiOptions = {
   paymentMode?: 'mock' | 'live';
   onOrderInsert?: (order: Record<string, unknown>) => void;
   onOrderUpdate?: (update: Record<string, unknown>, url: string) => void;
+  onProductInsert?: (product: Record<string, unknown>) => void;
   onProductUpdate?: (update: Record<string, unknown>, url: string) => void;
   onProfileUpdate?: (update: Record<string, unknown>, url: string) => void;
   onPromotionInsert?: (promotion: Record<string, unknown>) => void;
@@ -222,7 +223,19 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
 
   await page.route('**/rest/v1/products**', async route => {
     const method = route.request().method();
-    if (method === 'GET') return json(route, filterRows(products, route.request().url()));
+    if (method === 'GET') {
+      const url = route.request().url();
+      const rows = filterRows(products, url);
+      if (queryValue(url, 'order') === 'id.desc' && queryValue(url, 'limit') === '1') {
+        return json(route, [...rows].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 1));
+      }
+      return json(route, rows);
+    }
+    if (method === 'POST') {
+      const body = route.request().postDataJSON();
+      options.onProductInsert?.(body);
+      return json(route, [body], 201);
+    }
     if (method === 'PATCH') {
       const body = route.request().postDataJSON();
       options.onProductUpdate?.(body, route.request().url());

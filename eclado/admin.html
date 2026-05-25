@@ -1595,10 +1595,12 @@ function ProductsPage({ products, setProducts, hideHeader }) {
 // ─── CATALOG (商品 & 庫存 合併) ───────────────────────────────────────────────
 const PRODUCT_CATEGORIES = ['清潔', '精華液', '急救安瓶', '面膜', '眼霜', '面霜'];
 
-function Catalog({ products, setProducts }) {
+function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct }) {
   const [stockEditId, setStockEditId] = useState(null);
   const [stockVal, setStockVal] = useState('');
   const [editing, setEditing] = useState(null); // product being edited (draft copy)
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const lowStock = products.filter(p => p.stock <= p.minStock);
 
   const lbl = { fontSize: 11, letterSpacing: '0.1em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 6 };
@@ -1614,21 +1616,72 @@ function Catalog({ products, setProducts }) {
   }
 
   function openEdit(p) {
+    setError('');
     setEditing({ ...p });
+  }
+
+  function openNew() {
+    setError('');
+    setEditing({
+      id: null,
+      name: '',
+      nameZh: '',
+      category: PRODUCT_CATEGORIES[0],
+      size: '',
+      price: 0,
+      proPrice: 0,
+      stock: 0,
+      minStock: 3,
+      isProOnly: false,
+      img: '',
+      desc: '',
+      skinType: '',
+      ingredients: '',
+      features: [],
+      active: true,
+      isNew: true,
+    });
   }
 
   function setF(field) {
     return e => setEditing(prev => ({ ...prev, [field]: e.target.value }));
   }
 
-  function saveEdit() {
+  async function saveEdit() {
+    setError('');
+    if (!editing.nameZh.trim() || !editing.name.trim() || (editing.isNew && !editing.img.trim())) {
+      setError('請輸入中文名稱、英文名稱與商品圖片網址');
+      return;
+    }
     const updated = {
       ...editing,
       price: Number(editing.price) || 0,
       proPrice: Number(editing.proPrice) || 0,
+      stock: Math.max(0, Number(editing.stock) || 0),
+      minStock: Math.max(0, Number(editing.minStock) || 0),
     };
+    if (editing.isNew) {
+      setSaving(true);
+      const saveError = await onCreateProduct(updated);
+      setSaving(false);
+      if (saveError) {
+        setError(saveError);
+        return;
+      }
+      setEditing(null);
+      return;
+    }
     setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
     setEditing(null);
+  }
+
+  async function archiveProduct(p) {
+    if (!confirm(`確定要下架商品「${p.nameZh}」嗎？下架後前台將不顯示此商品。`)) return;
+    setError('');
+    setSaving(true);
+    const archiveError = await onArchiveProduct(p);
+    setSaving(false);
+    if (archiveError) setError(archiveError);
   }
 
   return (
@@ -1642,8 +1695,14 @@ function Catalog({ products, setProducts }) {
             <span style={{ fontSize: 12, color: 'var(--red)', fontWeight: 500 }}>⚠ {lowStock.length} 件庫存不足</span>
           )}
         </div>
-        <button style={{ padding: '10px 24px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>+ 新增商品</button>
+        <button onClick={openNew} style={{ padding: '10px 24px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>+ 新增商品</button>
       </div>
+
+      {error && (
+        <div style={{ background: 'oklch(0.60 0.18 25 / 0.05)', border: '1px solid oklch(0.60 0.18 25 / 0.2)', padding: '12px 16px', marginBottom: 20, fontSize: 12, color: 'var(--red)' }}>
+          {error}
+        </div>
+      )}
 
       {/* Low stock warning */}
       {lowStock.length > 0 && (
@@ -1718,7 +1777,8 @@ function Catalog({ products, setProducts }) {
                             style={{ padding: '5px 12px', fontSize: 11, background: 'none', border: '1px solid var(--border)', color: 'var(--dark)', cursor: 'pointer' }}>修改庫存</button>
                           <button onClick={() => openEdit(p)}
                             style={{ padding: '5px 12px', fontSize: 11, background: isEditing ? 'var(--dark)' : 'none', border: '1px solid var(--border)', color: isEditing ? '#fff' : 'var(--dark)', cursor: 'pointer' }}>編輯</button>
-                          <button style={{ padding: '5px 12px', fontSize: 11, background: 'none', border: '1px solid var(--border)', color: 'var(--mid)', cursor: 'pointer' }}>下架</button>
+                          <button onClick={() => archiveProduct(p)} disabled={saving}
+                            style={{ padding: '5px 12px', fontSize: 11, background: 'none', border: '1px solid var(--border)', color: 'var(--mid)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>下架</button>
                         </div>
                       </td>
                     </tr>
@@ -1734,8 +1794,8 @@ function Catalog({ products, setProducts }) {
           <div className="detail-panel" style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
               <div>
-                <div style={{ fontSize: 10, letterSpacing: '0.14em', color: 'var(--mid)', textTransform: 'uppercase', marginBottom: 4 }}>編輯商品</div>
-                <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--dark)' }}>{editing.nameZh}</div>
+                <div style={{ fontSize: 10, letterSpacing: '0.14em', color: 'var(--mid)', textTransform: 'uppercase', marginBottom: 4 }}>{editing.isNew ? '新增商品' : '編輯商品'}</div>
+                <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--dark)' }}>{editing.nameZh || '新商品'}</div>
               </div>
               <button onClick={() => setEditing(null)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--mid)', lineHeight: 1, padding: '0 0 0 8px' }}>✕</button>
             </div>
@@ -1743,37 +1803,48 @@ function Catalog({ products, setProducts }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label style={lbl}>中文名稱</label>
-                  <input value={editing.nameZh} onChange={setF('nameZh')} style={inp} />
+                  <label htmlFor="productNameZh" style={lbl}>中文名稱</label>
+                  <input id="productNameZh" value={editing.nameZh} onChange={setF('nameZh')} style={inp} />
                 </div>
                 <div>
-                  <label style={lbl}>英文名稱</label>
-                  <input value={editing.name} onChange={setF('name')} style={inp} />
+                  <label htmlFor="productName" style={lbl}>英文名稱</label>
+                  <input id="productName" value={editing.name} onChange={setF('name')} style={inp} />
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label style={lbl}>分類</label>
-                  <select value={editing.category} onChange={setF('category')}
+                  <label htmlFor="productCategory" style={lbl}>分類</label>
+                  <select id="productCategory" value={editing.category} onChange={setF('category')}
                     style={{ ...inp, cursor: 'pointer' }}>
                     {PRODUCT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={lbl}>規格</label>
-                  <input value={editing.size} onChange={setF('size')} style={inp} />
+                  <label htmlFor="productSize" style={lbl}>規格</label>
+                  <input id="productSize" value={editing.size} onChange={setF('size')} style={inp} />
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label style={lbl}>售價 (NT$)</label>
-                  <input type="number" value={editing.price} onChange={setF('price')} style={inp} />
+                  <label htmlFor="productPrice" style={lbl}>售價 (NT$)</label>
+                  <input id="productPrice" type="number" value={editing.price} onChange={setF('price')} style={inp} />
                 </div>
                 <div>
-                  <label style={lbl}>專業價 (NT$)</label>
-                  <input type="number" value={editing.proPrice} onChange={setF('proPrice')} style={inp} />
+                  <label htmlFor="productProPrice" style={lbl}>專業價 (NT$)</label>
+                  <input id="productProPrice" type="number" value={editing.proPrice} onChange={setF('proPrice')} style={inp} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <label htmlFor="productStock" style={lbl}>庫存數量</label>
+                  <input id="productStock" type="number" min="0" value={editing.stock} onChange={setF('stock')} style={inp} />
+                </div>
+                <div>
+                  <label htmlFor="productMinStock" style={lbl}>低庫存警示值</label>
+                  <input id="productMinStock" type="number" min="0" value={editing.minStock} onChange={setF('minStock')} style={inp} />
                 </div>
               </div>
 
@@ -1787,25 +1858,30 @@ function Catalog({ products, setProducts }) {
               <div style={{ height: 1, background: 'var(--border)' }} />
 
               <div>
-                <label style={lbl}>商品描述</label>
-                <textarea value={editing.desc} onChange={setF('desc')} style={{ ...ta, minHeight: 96 }} />
+                <label htmlFor="productImage" style={lbl}>商品圖片網址</label>
+                <input id="productImage" value={editing.img} onChange={setF('img')} style={inp} placeholder="https://..." />
               </div>
 
               <div>
-                <label style={lbl}>主要成分</label>
-                <textarea value={editing.ingredients} onChange={setF('ingredients')} style={{ ...ta, minHeight: 72 }} />
+                <label htmlFor="productDescription" style={lbl}>商品描述</label>
+                <textarea id="productDescription" value={editing.desc} onChange={setF('desc')} style={{ ...ta, minHeight: 96 }} />
               </div>
 
               <div>
-                <label style={lbl}>適合膚質</label>
-                <input value={editing.skinType} onChange={setF('skinType')} style={inp} />
+                <label htmlFor="productIngredients" style={lbl}>主要成分</label>
+                <textarea id="productIngredients" value={editing.ingredients} onChange={setF('ingredients')} style={{ ...ta, minHeight: 72 }} />
+              </div>
+
+              <div>
+                <label htmlFor="productSkinType" style={lbl}>適合膚質</label>
+                <input id="productSkinType" value={editing.skinType} onChange={setF('skinType')} style={inp} />
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-              <button onClick={saveEdit}
-                style={{ flex: 1, padding: '12px 0', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>
-                儲存
+              <button onClick={saveEdit} disabled={saving}
+                style={{ flex: 1, padding: '12px 0', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                {saving ? '儲存中…' : editing.isNew ? '建立商品' : '儲存'}
               </button>
               <button onClick={() => setEditing(null)}
                 style={{ padding: '12px 20px', background: 'none', border: '1px solid var(--border)', fontSize: 12, color: 'var(--mid)', cursor: 'pointer' }}>
@@ -2248,7 +2324,7 @@ function productToRow(product) {
     price: Number(product.price) || 0,
     pro_price: Number(product.proPrice) || 0,
     stock: Number(product.stock) || 0,
-    min_stock: Number(product.minStock) || 3,
+    min_stock: product.minStock === '' || product.minStock == null ? 3 : Math.max(0, Number(product.minStock) || 0),
     is_pro_only: !!product.isProOnly,
     image_url: product.img || null,
     description: product.desc || '',
@@ -2347,8 +2423,8 @@ function App({ adminEmail, onSignOut }) {
       const allMembers = [...realMembers, ...orphanMembers];
       setMembers(allMembers.length > 0 ? allMembers : INIT_MEMBERS);
 
-      if (!productsRes.error && productsRes.data?.length) {
-        setProducts(productsRes.data.map(normalizeProduct));
+      if (!productsRes.error) {
+        setProducts((productsRes.data || []).map(normalizeProduct));
       }
       if (applicationsRes.error) {
         console.error('applications fetch failed', applicationsRes.error);
@@ -2421,6 +2497,35 @@ function App({ adminEmail, onSignOut }) {
     });
   }
 
+  async function createProduct(product) {
+    const { data: latestProducts, error: idError } = await supabase
+      .from('products')
+      .select('id')
+      .order('id', { ascending: false })
+      .limit(1);
+    if (idError) {
+      return '新增商品失敗：無法取得商品編號。';
+    }
+    const nextId = Number(latestProducts?.[0]?.id || 0) + 1;
+    const created = { ...product, id: nextId, active: true };
+    delete created.isNew;
+    const { error } = await supabase.from('products').insert({ id: nextId, ...productToRow(created) });
+    if (error) {
+      return '新增商品失敗：' + (error.message || '請稍後再試');
+    }
+    setProducts(prev => [...prev, created].sort((a, b) => a.id - b.id));
+    return '';
+  }
+
+  async function archiveProduct(product) {
+    const { error } = await supabase.from('products').update({ active: false }).eq('id', product.id);
+    if (error) {
+      return '下架商品失敗：' + (error.message || '請稍後再試');
+    }
+    setProducts(prev => prev.filter(p => p.id !== product.id));
+    return '';
+  }
+
   // 會員角色變動時同步到 Supabase
   async function setMembersWithSync(updater) {
     setMembers(prev => {
@@ -2444,10 +2549,10 @@ function App({ adminEmail, onSignOut }) {
     switch (page) {
       case 'dashboard': return <Dashboard orders={orders} products={products} members={members} applications={applications} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} />;
       case 'orders': return <Orders orders={orders} setOrders={setOrdersWithSync} />;
-      case 'catalog': return <Catalog products={products} setProducts={setProductsWithSync} />;
+      case 'catalog': return <Catalog products={products} setProducts={setProductsWithSync} onCreateProduct={createProduct} onArchiveProduct={archiveProduct} />;
       // 舊路徑相容，避免有人記住 /admin#products 之類的
       case 'products':
-      case 'inventory': return <Catalog products={products} setProducts={setProductsWithSync} />;
+      case 'inventory': return <Catalog products={products} setProducts={setProductsWithSync} onCreateProduct={createProduct} onArchiveProduct={archiveProduct} />;
       case 'promotions': return <Promotions products={products} />;
       case 'members': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} defaultFilter={membersDefaultFilter} />;
       case 'applications': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} defaultFilter="app_pending" />;

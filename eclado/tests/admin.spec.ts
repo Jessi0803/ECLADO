@@ -242,6 +242,59 @@ test('商品管理可編輯名稱、價格與院線限定並同步 products 更�
   )).toBe(true);
 });
 
+test('商品管理可新增商品並寫入 products', async ({ page }) => {
+  const productInserts: Record<string, unknown>[] = [];
+  await mockAdminApis(page, {
+    onProductInsert: product => productInserts.push(product),
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /商品 & 庫存/);
+  await page.getByRole('button', { name: '+ 新增商品' }).click();
+
+  const panel = page.locator('.detail-panel');
+  await panel.getByLabel('中文名稱').fill('E2E 新商品');
+  await panel.getByLabel('英文名稱').fill('E2E New Product');
+  await panel.getByLabel('規格').fill('50ml');
+  await panel.getByLabel('售價 (NT$)').fill('1680');
+  await panel.getByLabel('專業價 (NT$)').fill('1280');
+  await panel.getByLabel('庫存數量').fill('20');
+  await panel.getByLabel('低庫存警示值').fill('5');
+  await panel.getByLabel('商品圖片網址').fill('https://example.com/product.jpg');
+  await panel.getByRole('button', { name: '建立商品' }).click();
+
+  await expect.poll(() => productInserts.length).toBe(1);
+  expect(productInserts[0]).toMatchObject({
+    id: 8,
+    name: 'E2E New Product',
+    name_zh: 'E2E 新商品',
+    size: '50ml',
+    price: 1680,
+    pro_price: 1280,
+    stock: 20,
+    min_stock: 5,
+    image_url: 'https://example.com/product.jpg',
+    active: true,
+  });
+  await expect(page.getByText('E2E 新商品')).toBeVisible();
+});
+
+test('商品管理可下架商品並寫入 active false', async ({ page }) => {
+  const productUpdates: Record<string, unknown>[] = [];
+  await mockAdminApis(page, {
+    onProductUpdate: update => productUpdates.push(update),
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /商品 & 庫存/);
+  const productRow = page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr');
+  page.once('dialog', dialog => dialog.accept());
+  await productRow.getByRole('button', { name: '下架' }).click();
+
+  await expect.poll(() => productUpdates.some(update => update.active === false)).toBe(true);
+  await expect(page.getByText('胜肽修護精華液')).toHaveCount(0);
+});
+
 test('活動管理可建立活動並送出正確 payload', async ({ page }) => {
   const promotionInserts: Record<string, unknown>[] = [];
   await mockAdminApis(page, {

@@ -244,16 +244,25 @@ function getFulfillmentInfo(product) {
 }
 
 function mergeProductsWithStock(baseProducts, stockRows) {
-  const rowMap = new Map((stockRows || []).map(row => [Number(row.id), row]));
-  return baseProducts.map(product => {
-    const row = rowMap.get(Number(product.id));
-    if (!row) return { ...product, stock: null };
+  const productMap = new Map(baseProducts.map(product => [Number(product.id), product]));
+  return (stockRows || []).filter(row => row.active !== false).map(row => {
+    const product = productMap.get(Number(row.id)) || {};
     return {
       ...product,
+      id: Number(row.id),
+      name: row.name || product.name || '',
+      nameZh: row.name_zh || product.nameZh || '',
+      category: row.category || product.category || '',
+      size: row.size || product.size || '',
       stock: Number(row.stock ?? 0),
       isProOnly: row.is_pro_only != null ? !!row.is_pro_only : product.isProOnly,
       price: row.price != null ? Number(row.price) : product.price,
       proPrice: row.pro_price != null ? Number(row.pro_price) : product.proPrice,
+      img: row.image_url || product.img || '',
+      desc: row.description || product.desc || '',
+      skinType: row.skin_type || product.skinType || '',
+      ingredients: row.ingredients || product.ingredients || '',
+      features: Array.isArray(row.features) ? row.features : (product.features || []),
       active: row.active != null ? row.active : product.active,
     };
   });
@@ -3216,24 +3225,26 @@ function App() {
     return () => { if (ch) sb.removeChannel(ch); };
   }, []);
 
-  // 載入商品庫存（保留前端既有商品資料，只覆寫 stock）
+  // 載入商品資料；資料庫控制上架商品，既有靜態資料作為舊商品顯示 fallback。
   useEffect(() => {
     if (!window.supabase || typeof window.supabase.from !== 'function') return;
     const sb = window.supabase;
     let alive = true;
 
     async function loadProducts() {
-      const { data, error } = await sb.from('products').select('id, stock, is_pro_only, price, pro_price, active');
+      const { data, error } = await sb.from('products').select('*');
       if (!alive) return;
       if (error) {
         console.error('[ECLADO] 無法載入 products：', error.message, error);
         setProducts(PRODUCTS.map(product => ({ ...product, stock: null })));
         return;
       }
-      setProducts(mergeProductsWithStock(PRODUCTS, data || []));
-      setCart(prev => prev.map(item => {
-        const stockRow = (data || []).find(row => Number(row.id) === Number(item.id));
-        return stockRow ? { ...item, stock: Number(stockRow.stock ?? 0) } : item;
+      const loadedProducts = mergeProductsWithStock(PRODUCTS, data || []);
+      const availableIds = new Set(loadedProducts.map(product => Number(product.id)));
+      setProducts(loadedProducts);
+      setCart(prev => prev.filter(item => availableIds.has(Number(item.id))).map(item => {
+        const product = loadedProducts.find(current => Number(current.id) === Number(item.id));
+        return product ? { ...item, stock: product.stock } : item;
       }));
     }
 
