@@ -166,8 +166,12 @@ export type MockEcladoApiOptions = {
   onProfileUpdate?: (update: Record<string, unknown>, url: string) => void;
   onPromotionInsert?: (promotion: Record<string, unknown>) => void;
   onPromotionUpdate?: (update: Record<string, unknown>, url: string) => void;
+  onPromotionDelete?: (url: string) => void;
+  onApplicationUpdate?: (update: Record<string, unknown>, url: string) => void;
   onLinePush?: (body: Record<string, unknown>) => void;
   onPaymentRequest?: (body: Record<string, unknown>) => void;
+  promotionWriteError?: string;
+  linePushError?: string;
   authUser?: MockAuthUser | null;
   signInUser?: MockAuthUser;
   signInError?: string;
@@ -233,14 +237,19 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     if (method === 'POST') {
       const body = route.request().postDataJSON();
       options.onPromotionInsert?.(body);
+      if (options.promotionWriteError) return json(route, { message: options.promotionWriteError }, 400);
       return json(route, [{ id: 'promo-new-1', ...body, created_at: new Date().toISOString() }], 201);
     }
     if (method === 'PATCH') {
       const body = route.request().postDataJSON();
       options.onPromotionUpdate?.(body, route.request().url());
+      if (options.promotionWriteError) return json(route, { message: options.promotionWriteError }, 400);
       return json(route, [body]);
     }
-    if (method === 'DELETE') return json(route, []);
+    if (method === 'DELETE') {
+      options.onPromotionDelete?.(route.request().url());
+      return json(route, []);
+    }
     return json(route, []);
   });
 
@@ -279,7 +288,11 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     if (route.request().method() === 'POST') {
       return json(route, [{ id: '22222222-2222-4222-8222-222222222222', status: 'pending' }], 201);
     }
-    if (route.request().method() === 'PATCH') return json(route, [route.request().postDataJSON()]);
+    if (route.request().method() === 'PATCH') {
+      const body = route.request().postDataJSON();
+      options.onApplicationUpdate?.(body, route.request().url());
+      return json(route, [body]);
+    }
     return json(route, []);
   });
 
@@ -304,6 +317,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
 
   await page.route('**/api/line-push', async route => {
     options.onLinePush?.(route.request().postDataJSON());
+    if (options.linePushError) return json(route, { error: options.linePushError }, 500);
     return json(route, { ok: true });
   });
 }
