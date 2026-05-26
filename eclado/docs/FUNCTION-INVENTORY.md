@@ -17,7 +17,7 @@
 | 2 | 會員價格與院線商品 | 一般會員：一般價。美容師：專業價（`proPrice`）。師資：專業價 7 折（畫面標「師資價・專業價7折」）。經銷商：專業價 65 折（畫面標「經銷價・專業價65折」）。一般會員看得到院線品介紹但不能加入購物車，畫面引導私訊 LINE 官方詢問 | `profiles.role` 與價格一致：`pro`＝專業價；`instructor`＝`proPrice×0.7`；`distributor`＝`proPrice×0.65`（四捨五入） |
 | 3 | 現貨／預購 | 庫存 > 0 顯示現貨；≤ 0 顯示預購且仍可下單 | `products.stock` 與前台標示一致 |
 | 4 | 購物車 | 加購、改數量、刪除；金額正確 | 無（購物車僅瀏覽器記憶體，重整會清空） |
-| 5 | 活動折扣 | 有啟用活動時，商城與購物車價格、折扣正確 | `promotions.active` 不是 `false` 即視為生效；目前前台不依 `start_at`／`end_at` 判斷，請確認 `product_ids`、折扣與前台一致 |
+| 5 | 活動折扣 | 位於活動上架／下架時間範圍內時，商城與購物車價格、折扣正確；尚未開始或已結束的活動不折扣 | 前台依 `start_at`／`end_at` 判斷生效期間；`active` 欄位目前不影響是否套用，請確認 `product_ids`、排程與折扣一致 |
 | 6 | 結帳全流程 | 填收件資料 → 選付款 → 送出；畫面有訂單編號 | `orders` 新增一筆：`id`、`items`、`total`、`address`、`phone`、`email`、`user_id`（登入時）正確 |
 | 7 | 付款方式（虛擬帳號／信用卡／行動支付） | 虛擬帳號：顯示完整虛擬帳號（永豐 807）供匯款。信用卡／Apple Pay／Google Pay：能完成或進入付款流程 | `orders` 有新單；訂單狀態為 `paid` 前 `products.stock` 不變 |
 
@@ -51,8 +51,8 @@
 | 21 | 後台登入權限 | 管理員可進；非管理員擋下 | 無寫入（僅驗證權限） |
 | 22 | 訂單管理 | 列表、明細、改狀態 | `orders.status` 與後台一致；改為 `paid` 時 `products.stock` 減少 |
 | 23 | 出貨與 LINE 通知 | 填托運單號；會員專區看得到單號；曾 LINE 登入的會員在 LINE 收到出貨推播（訂單編號、托運單號） | `orders.tracking` 有值；`status` 通常為 `shipped` |
-| 24 | 商品庫存 | 後台可改庫存；前台刷新後現貨／預購標示連動 | `products.stock` 與後台輸入一致 |
-| 25 | 活動管理 | 新增／編輯／停用；前台價格連動 | `promotions` 與前台一致；目前只有 `active=false` 會停用，前台不依活動起訖時間自動判斷 |
+| 24 | 商品管理與庫存 | 後台可新增商品、上傳圖片、改庫存、下架與重新上架；前台刷新後僅顯示上架商品，現貨／預購標示連動 | `products.image_url`、`products.stock`、`products.active` 與後台操作一致 |
+| 25 | 活動管理 | 新增／編輯／刪除／設定上下架時間；前台價格依排程連動 | `promotions` 與前台一致；前台依 `start_at`／`end_at` 判斷，目前不依 `active` 欄位停用 |
 
 ### 全站
 
@@ -78,6 +78,7 @@
 | 登入後申請美容師 | `professional_applications` + `profiles` | `pending` 申請 + `role` = `pending` |
 | 後台核准／拒絕美容師 | `professional_applications` + `profiles` | `approved`／`rejected` + `role` 更新 |
 | 後台出貨 | `orders` + LINE 推播 | `tracking`、`status`；`api/line-push` |
+| 後台新增／上下架商品 | `products` | 新增包含 `image_url`；下架 `active=false`；重新上架 `active=true` |
 
 查詢方式：Supabase 專案 → Table Editor → 選表 → 依 `created_at` 或訂單 `id` 排序找最新一筆。
 
@@ -89,11 +90,11 @@
 
 | 測試檔 | 對應範圍 | 目前涵蓋的功能 |
 |--------|----------|----------------|
-| `tests/eclado-frontend.spec.ts` | Mock E2E | 1、2（pro／instructor／distributor 價格）、3（含預購可下單）、4、5、6（訂單 payload / user_id）、7（虛擬帳號、信用卡、Apple Pay、Google Pay payType）、17、26、27、28 |
+| `tests/eclado-frontend.spec.ts` | Mock E2E | 1、2（pro／instructor／distributor 價格）、3（含預購可下單）、4（含商品下架後自購物車移除）、5（折扣順序與排程生效/不生效）、6（訂單 payload / user_id）、7（虛擬帳號、信用卡、Apple Pay、Google Pay payType 與失敗提示）、17、26、27、28 |
 | `tests/inventory-sql.spec.ts` | 本地 SQL / 文件檢查 | 8、9 的文字與 trigger 規則一致性 |
 | `tests/auth-email.spec.ts` | Mock E2E | 12（Email 驗證成功通知）、13（驗證後登入頁提示）、14（忘記密碼表單、送出成功/失敗）、15（密碼錯誤、未驗證 Email）、重設密碼頁密碼驗證與成功更新 |
 | `tests/professional-registration.spec.ts` | Mock E2E | 18（一般會員登入後填 `professional-apply.html` 並寫入 `professional_applications`）、19（pending／pro 不能重複申請）、一般會員註冊不觸發申請 |
-| `tests/admin.spec.ts` | Mock Admin E2E | 10、20（核准申請同步 `profiles.role`）、21、22、23（托運單號 + LINE push payload）、24、25 |
+| `tests/admin.spec.ts` | Mock Admin E2E | 10、20（核准申請同步 `profiles.role`）、21、22、23（托運單號 + LINE push payload）、24（新增商品、本機圖片上傳、下架／重新上架、庫存）、25 |
 | `tests/integration/payment.spec.ts` | 永豐 QPay integration | 7 |
 | `tests/integration/staging-inventory.spec.ts` | staging Supabase integration | 8、9 的真實資料庫 trigger 驗證 |
 | `tests/integration/professional-applications.spec.ts` | staging Supabase integration | 18、20（申請寫入、核准／拒絕流程、status constraint、standalone source） |

@@ -144,6 +144,31 @@ test('DB 下架的商品不會顯示在商城', async ({ page }) => {
   await expect(page.getByText('胜肽修護精華液')).toHaveCount(0);
 });
 
+test('購物車中的商品收到下架更新後會被移除', async ({ page }) => {
+  let products = [...mockProducts];
+  await mockEcladoApis(page, {
+    products: () => products,
+    promotions: [],
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+  await expect(page.getByText('胜肽修護精華液')).toBeVisible();
+
+  products = products.map(product => product.id === 2 ? { ...product, active: false } : product);
+  await page.evaluate(() => {
+    const client = (window as any).supabase;
+    const channel = client.getChannels().find((candidate: any) => candidate.topic.includes('products-realtime'));
+    const callback = channel?.bindings?.postgres_changes?.[0]?.callback;
+    if (!callback) throw new Error('products realtime callback not found');
+    callback({});
+  });
+
+  await expect(page.getByText('購物車是空的')).toBeVisible();
+});
+
 test('現貨、預購、活動折扣與購物車操作', async ({ page }) => {
   await page.goto('/shop');
   await page.getByText('胜肽修護精華液').first().click();
@@ -198,6 +223,19 @@ test('活動不受 active 欄位影響，只依排程時間顯示活動商品', 
   await page.getByText('胜肽修護精華液').first().click();
   await expect(page.getByText('限時優惠')).toBeVisible();
   await expect(page.getByText('NT$ 3,582')).toBeVisible();
+});
+
+test('尚未開始與已結束的活動不會套用折扣', async ({ page }) => {
+  for (const promotion of [
+    { ...activePromotion, name: '尚未開始活動', start_at: '2099-01-01T00:00:00.000Z', end_at: null },
+    { ...activePromotion, name: '已結束活動', start_at: null, end_at: '2020-01-01T00:00:00.000Z' },
+  ]) {
+    await mockEcladoApis(page, { promotions: [promotion] });
+    await page.goto('/shop');
+    await page.getByText('胜肽修護精華液').first().click();
+    await expect(page.getByText('限時優惠')).toHaveCount(0);
+    await expect(page.getByText('NT$ 3,980').first()).toBeVisible();
+  }
 });
 
 test('庫存為 0 顯示預購，且一般商品仍可加入購物車下單', async ({ page }) => {
@@ -309,6 +347,32 @@ test('信用卡、Apple Pay、Google Pay 會送出對應金流 payType', async (
     await expect(page.getByText('付款單已建立')).toBeVisible();
     expect(paymentRequests.at(-1)?.payType).toBe(method.payType);
   }
+});
+
+test('金流建單失敗時顯示錯誤且不進入付款完成畫面', async ({ page }) => {
+  await mockEcladoApis(page, {
+    promotions: [],
+    paymentError: '測試金流暫時不可用',
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+  await page.getByRole('button', { name: /前往結帳/ }).click();
+
+  const checkoutInputs = page.locator('form input');
+  await checkoutInputs.nth(0).fill('金流失敗測試');
+  await checkoutInputs.nth(1).fill('0912345678');
+  await checkoutInputs.nth(2).fill('failed@example.com');
+  await page.getByPlaceholder('縣市').fill('台北市');
+  await page.getByPlaceholder('區域').fill('大安區');
+  await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('測試路 1 號');
+  await page.getByRole('button', { name: /繼續確認付款/ }).click();
+  await page.getByRole('button', { name: /建立付款單/ }).click();
+
+  await expect(page.getByText(/付款單建立失敗.*測試金流暫時不可用/)).toBeVisible();
+  await expect(page.getByText('付款單已建立')).toHaveCount(0);
 });
 
 test('購物車只存在瀏覽器記憶體，重新整理會清空', async ({ page }) => {

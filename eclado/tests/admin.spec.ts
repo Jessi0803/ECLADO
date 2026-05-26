@@ -242,7 +242,7 @@ test('商品管理可編輯名稱、價格與院線限定並同步 products 更�
   )).toBe(true);
 });
 
-test('商品管理可新增商品並寫入 products', async ({ page }) => {
+test('商品管理可從本機上傳圖片建立商品並寫入 products', async ({ page }) => {
   const productInserts: Record<string, unknown>[] = [];
   await mockAdminApis(page, {
     onProductInsert: product => productInserts.push(product),
@@ -260,7 +260,12 @@ test('商品管理可新增商品並寫入 products', async ({ page }) => {
   await panel.getByLabel('專業價 (NT$)').fill('1280');
   await panel.getByLabel('庫存數量').fill('20');
   await panel.getByLabel('低庫存警示值').fill('5');
-  await panel.getByLabel('商品圖片網址').fill('https://example.com/product.jpg');
+  await panel.getByLabel('上傳商品圖片').setInputFiles({
+    name: 'e2e-product.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('e2e-image-data'),
+  });
+  await expect(panel.getByAltText('E2E 新商品')).toBeVisible();
   await panel.getByRole('button', { name: '建立商品' }).click();
 
   await expect.poll(() => productInserts.length).toBe(1);
@@ -273,13 +278,13 @@ test('商品管理可新增商品並寫入 products', async ({ page }) => {
     pro_price: 1280,
     stock: 20,
     min_stock: 5,
-    image_url: 'https://example.com/product.jpg',
     active: true,
   });
+  expect(String(productInserts[0].image_url)).toMatch(/^data:image\/png;base64,/);
   await expect(page.getByText('E2E 新商品')).toBeVisible();
 });
 
-test('商品管理可下架商品並寫入 active false', async ({ page }) => {
+test('商品管理可下架、於已下架清單查看並重新上架商品', async ({ page }) => {
   const productUpdates: Record<string, unknown>[] = [];
   await mockAdminApis(page, {
     onProductUpdate: update => productUpdates.push(update),
@@ -293,6 +298,13 @@ test('商品管理可下架商品並寫入 active false', async ({ page }) => {
 
   await expect.poll(() => productUpdates.some(update => update.active === false)).toBe(true);
   await expect(page.getByText('胜肽修護精華液')).toHaveCount(0);
+  await page.getByRole('button', { name: /已下架/ }).click();
+  const archivedRow = page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr');
+  await expect(archivedRow.getByText('已下架')).toBeVisible();
+  await archivedRow.getByRole('button', { name: '重新上架' }).click();
+  await expect.poll(() => productUpdates.some(update => update.active === true)).toBe(true);
+  await page.getByRole('button', { name: /上架中/ }).click();
+  await expect(page.getByRole('table').getByText('胜肽修護精華液')).toBeVisible();
 });
 
 test('活動管理可建立活動並送出正確 payload', async ({ page }) => {

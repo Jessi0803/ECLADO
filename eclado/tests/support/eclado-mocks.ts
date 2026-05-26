@@ -173,10 +173,11 @@ export type MockEcladoApiOptions = {
   onPaymentRequest?: (body: Record<string, unknown>) => void;
   promotionWriteError?: string;
   linePushError?: string;
+  paymentError?: string;
   authUser?: MockAuthUser | null;
   signInUser?: MockAuthUser;
   signInError?: string;
-  products?: Record<string, unknown>[];
+  products?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
   promotions?: Record<string, unknown>[];
   orders?: Record<string, unknown>[];
   profiles?: Record<string, unknown>[];
@@ -184,7 +185,9 @@ export type MockEcladoApiOptions = {
 };
 
 export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions = {}) {
-  const products = options.products || mockProducts;
+  const products = () => typeof options.products === 'function'
+    ? options.products()
+    : (options.products || mockProducts);
   const promotions = options.promotions || [activePromotion];
   const orders = options.orders || [];
   const profiles = options.profiles || [];
@@ -225,7 +228,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     const method = route.request().method();
     if (method === 'GET') {
       const url = route.request().url();
-      const rows = filterRows(products, url);
+      const rows = filterRows(products(), url);
       if (queryValue(url, 'order') === 'id.desc' && queryValue(url, 'limit') === '1') {
         return json(route, [...rows].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 1));
       }
@@ -313,6 +316,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     await page.route('https://pay.ecladotaiwan.com/api/sinopac/create-payment', async route => {
       const request = route.request().postDataJSON();
       options.onPaymentRequest?.(request);
+      if (options.paymentError) return json(route, { ok: false, error: options.paymentError }, 502);
       return json(route, {
         ok: true,
         response: {
