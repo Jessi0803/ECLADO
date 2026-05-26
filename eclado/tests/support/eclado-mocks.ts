@@ -171,6 +171,7 @@ export type MockEcladoApiOptions = {
   onApplicationUpdate?: (update: Record<string, unknown>, url: string) => void;
   onLinePush?: (body: Record<string, unknown>) => void;
   onPaymentRequest?: (body: Record<string, unknown>) => void;
+  productWriteError?: string;
   promotionWriteError?: string;
   linePushError?: string;
   paymentError?: string;
@@ -237,11 +238,13 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     if (method === 'POST') {
       const body = route.request().postDataJSON();
       options.onProductInsert?.(body);
+      if (options.productWriteError) return json(route, { message: options.productWriteError }, 400);
       return json(route, [body], 201);
     }
     if (method === 'PATCH') {
       const body = route.request().postDataJSON();
       options.onProductUpdate?.(body, route.request().url());
+      if (options.productWriteError) return json(route, { message: options.productWriteError }, 400);
       return json(route, [body]);
     }
     return json(route, []);

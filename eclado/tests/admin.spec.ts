@@ -232,13 +232,20 @@ test('商品管理可編輯名稱、價格與院線限定並同步 products 更�
   await panel.locator('input[type="number"]').nth(0).fill('4200');
   await panel.locator('input[type="number"]').nth(1).fill('3100');
   await panel.getByLabel(/院線限定/).check();
+  await panel.getByLabel('上傳商品圖片').setInputFiles({
+    name: 'updated-product.webp',
+    mimeType: 'image/webp',
+    buffer: Buffer.from('updated-image-data'),
+  });
+  await expect(panel.getByAltText('胜肽全效修護精華液')).toBeVisible();
   await panel.getByRole('button', { name: '儲存' }).click();
 
   await expect.poll(() => productUpdates.some(update =>
     update.name_zh === '胜肽全效修護精華液' &&
     update.price === 4200 &&
     update.pro_price === 3100 &&
-    update.is_pro_only === true,
+    update.is_pro_only === true &&
+    String(update.image_url).startsWith('data:image/webp;base64,'),
   )).toBe(true);
 });
 
@@ -284,6 +291,60 @@ test('商品管理可從本機上傳圖片建立商品並寫入 products', async
   await expect(page.getByText('E2E 新商品')).toBeVisible();
 });
 
+test('商品圖片上傳會阻止未選圖片、非圖片與超過 2 MB 的檔案', async ({ page }) => {
+  const productInserts: Record<string, unknown>[] = [];
+  await mockAdminApis(page, {
+    onProductInsert: product => productInserts.push(product),
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /商品 & 庫存/);
+  await page.getByRole('button', { name: '+ 新增商品' }).click();
+  const panel = page.locator('.detail-panel');
+  await panel.getByLabel('中文名稱').fill('無圖商品');
+  await panel.getByLabel('英文名稱').fill('Missing Image Product');
+
+  await panel.getByRole('button', { name: '建立商品' }).click();
+  await expect(page.getByText('請輸入中文名稱、英文名稱並選擇商品圖片')).toBeVisible();
+
+  await panel.getByLabel('上傳商品圖片').setInputFiles({
+    name: 'not-an-image.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('not an image'),
+  });
+  await expect(page.getByText('請選擇圖片檔案')).toBeVisible();
+
+  await panel.getByLabel('上傳商品圖片').setInputFiles({
+    name: 'too-large.png',
+    mimeType: 'image/png',
+    buffer: Buffer.alloc(2 * 1024 * 1024 + 1),
+  });
+  await expect(page.getByText('圖片大小不可超過 2 MB')).toBeVisible();
+  expect(productInserts).toHaveLength(0);
+});
+
+test('新增商品寫入失敗時顯示錯誤且不加入商品清單', async ({ page }) => {
+  await mockAdminApis(page, {
+    productWriteError: '測試商品新增失敗',
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /商品 & 庫存/);
+  await page.getByRole('button', { name: '+ 新增商品' }).click();
+  const panel = page.locator('.detail-panel');
+  await panel.getByLabel('中文名稱').fill('失敗商品');
+  await panel.getByLabel('英文名稱').fill('Failed Product');
+  await panel.getByLabel('上傳商品圖片').setInputFiles({
+    name: 'product.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('image'),
+  });
+  await panel.getByRole('button', { name: '建立商品' }).click();
+
+  await expect(page.getByText(/新增商品失敗：測試商品新增失敗/)).toBeVisible();
+  await expect(page.getByRole('table').getByText('失敗商品')).toHaveCount(0);
+});
+
 test('商品管理可下架、於已下架清單查看並重新上架商品', async ({ page }) => {
   const productUpdates: Record<string, unknown>[] = [];
   await mockAdminApis(page, {
@@ -305,6 +366,30 @@ test('商品管理可下架、於已下架清單查看並重新上架商品', as
   await expect.poll(() => productUpdates.some(update => update.active === true)).toBe(true);
   await page.getByRole('button', { name: /上架中/ }).click();
   await expect(page.getByRole('table').getByText('胜肽修護精華液')).toBeVisible();
+});
+
+test('商品下架與重新上架寫入失敗時維持原清單狀態', async ({ page }) => {
+  await mockAdminApis(page, {
+    productWriteError: '測試狀態更新失敗',
+    products: [
+      ...adminProductRows,
+      { ...adminProductRows[0], id: 88, name: 'Archived Item', name_zh: '已下架測試商品', active: false },
+    ],
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /商品 & 庫存/);
+  const activeRow = page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr');
+  page.once('dialog', dialog => dialog.accept());
+  await activeRow.getByRole('button', { name: '下架' }).click();
+  await expect(page.getByText(/下架商品失敗：測試狀態更新失敗/)).toBeVisible();
+  await expect(page.getByRole('table').getByText('胜肽修護精華液')).toBeVisible();
+
+  await page.getByRole('button', { name: /已下架/ }).click();
+  const archivedRow = page.getByText('已下架測試商品').locator('xpath=ancestor::tr');
+  await archivedRow.getByRole('button', { name: '重新上架' }).click();
+  await expect(page.getByText(/重新上架失敗：測試狀態更新失敗/)).toBeVisible();
+  await expect(page.getByRole('table').getByText('已下架測試商品')).toBeVisible();
 });
 
 test('活動管理可建立活動並送出正確 payload', async ({ page }) => {
@@ -423,6 +508,26 @@ test('活動排程：建立活動時可設上架 / 下架時間並送出正確 p
   expect(promotionInserts[0].name).toBe('排程測試活動');
   expect(promotionInserts[0].start_at).toBe(new Date('2030-01-01T10:00').toISOString());
   expect(promotionInserts[0].end_at).toBe(new Date('2030-12-31T23:59').toISOString());
+});
+
+test('活動排程：下架時間不晚於上架時間時阻止儲存', async ({ page }) => {
+  const promotionInserts: Record<string, unknown>[] = [];
+  await mockAdminApis(page, {
+    onPromotionInsert: promo => promotionInserts.push(promo),
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /活動管理/);
+  await page.getByRole('button', { name: '+ 新增活動' }).click();
+  await page.locator('input[placeholder="例：五月慶 95折再折千"]').fill('錯誤排程活動');
+  await page.getByRole('button', { name: '清除' }).click();
+  await page.getByText('胜肽修護精華液').click();
+  await page.locator('input[type="datetime-local"]').nth(0).fill('2030-12-31T23:59');
+  await page.locator('input[type="datetime-local"]').nth(1).fill('2030-01-01T10:00');
+  await page.getByRole('button', { name: '建立活動' }).click();
+
+  await expect(page.getByText('下架時間必須晚於上架時間')).toBeVisible();
+  expect(promotionInserts).toHaveLength(0);
 });
 
 test('活動排程：排程中活動顯示「排程中」badge，已結束顯示「已結束」', async ({ page }) => {

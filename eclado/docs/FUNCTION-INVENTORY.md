@@ -90,13 +90,14 @@
 
 | 測試檔 | 對應範圍 | 目前涵蓋的功能 |
 |--------|----------|----------------|
-| `tests/eclado-frontend.spec.ts` | Mock E2E | 1、2（pro／instructor／distributor 價格）、3（含預購可下單）、4（含商品下架後自購物車移除）、5（折扣順序與排程生效/不生效）、6（訂單 payload / user_id）、7（虛擬帳號、信用卡、Apple Pay、Google Pay payType 與失敗提示）、17、26、27、28 |
+| `tests/eclado-frontend.spec.ts` | Mock E2E | 1、2（pro／instructor／distributor 價格）、3（含預購可下單及 realtime 庫存更新）、4（商品下架、價格與院線限制 realtime 同步）、5（折扣順序與排程邊界/生效/不生效）、6（訂單 payload / user_id）、7（虛擬帳號、信用卡、Apple Pay、Google Pay payType 與失敗提示）、17、26、27、28 |
 | `tests/inventory-sql.spec.ts` | 本地 SQL / 文件檢查 | 8、9 的文字與 trigger 規則一致性 |
 | `tests/auth-email.spec.ts` | Mock E2E | 12（Email 驗證成功通知）、13（驗證後登入頁提示）、14（忘記密碼表單、送出成功/失敗）、15（密碼錯誤、未驗證 Email）、重設密碼頁密碼驗證與成功更新 |
 | `tests/professional-registration.spec.ts` | Mock E2E | 18（一般會員登入後填 `professional-apply.html` 並寫入 `professional_applications`）、19（pending／pro 不能重複申請）、一般會員註冊不觸發申請 |
-| `tests/admin.spec.ts` | Mock Admin E2E | 10、20（核准申請同步 `profiles.role`）、21、22、23（托運單號 + LINE push payload）、24（新增商品、本機圖片上傳、下架／重新上架、庫存）、25 |
+| `tests/admin.spec.ts` | Mock Admin E2E | 10、20（核准申請同步 `profiles.role`）、21、22、23（托運單號 + LINE push payload）、24（新增商品、本機圖片上傳驗證與寫入失敗、下架／重新上架與失敗狀態、庫存）、25（含排程時間倒置驗證） |
 | `tests/integration/payment.spec.ts` | 永豐 QPay integration | 7 |
 | `tests/integration/staging-inventory.spec.ts` | staging Supabase integration | 8、9 的真實資料庫 trigger 驗證 |
+| `tests/integration/staging-products.spec.ts` | staging Supabase integration | 24（新增商品的 `image_url` 寫入、下架與重新上架的 `active` 讀寫；拒絕正式 Supabase project） |
 | `tests/integration/professional-applications.spec.ts` | staging Supabase integration | 18、20（申請寫入、核准／拒絕流程、status constraint、standalone source） |
 | `tests/integration/email.spec.ts` | Resend + staging Supabase integration | 12（驗證信確實寄出）、14（忘記密碼信確實寄出）— 透過 Resend API 驗證 |
 | `tests/integration/line-handler.test.cjs` | 完全隔離 LINE handler 測試 | 16、23 的後端核心邏輯 |

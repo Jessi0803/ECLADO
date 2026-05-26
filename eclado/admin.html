@@ -2115,6 +2115,10 @@ function PromotionForm({ promo, products, onClose }) {
     setError('');
     if (!name.trim()) { setError('請輸入活動名稱'); return; }
     if (productIds.size === 0) { setError('請至少選擇一個參與商品'); return; }
+    if (startAt && endAt && new Date(startAt).getTime() >= new Date(endAt).getTime()) {
+      setError('下架時間必須晚於上架時間');
+      return;
+    }
 
     const payload = {
       name: name.trim(),

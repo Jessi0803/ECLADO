@@ -875,7 +875,7 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
   useEffect(() => {
     if (!selectedProduct) return;
     const fresh = products.find(product => product.id === selectedProduct.id);
-    if (fresh && fresh.stock !== selectedProduct.stock) {
+    if (fresh && fresh !== selectedProduct) {
       setSelectedProduct(fresh);
     }
   }, [products, selectedProduct]);
@@ -3240,12 +3240,12 @@ function App() {
         return;
       }
       const loadedProducts = mergeProductsWithStock(PRODUCTS, data || []);
-      const availableIds = new Set(loadedProducts.map(product => Number(product.id)));
       setProducts(loadedProducts);
-      setCart(prev => prev.filter(item => availableIds.has(Number(item.id))).map(item => {
+      setCart(prev => prev.map(item => {
         const product = loadedProducts.find(current => Number(current.id) === Number(item.id));
-        return product ? { ...item, stock: product.stock } : item;
-      }));
+        if (!product || (product.isProOnly && !isProfessionalMember(user))) return null;
+        return { ...product, qty: item.qty };
+      }).filter(Boolean));
     }
 
     loadProducts();
@@ -3264,7 +3264,7 @@ function App() {
       alive = false;
       if (ch) sb.removeChannel(ch);
     };
-  }, []);
+  }, [user?.role]);
 
   // 網址列 #eclado-promotions 時捲到活動區
   useEffect(() => {
