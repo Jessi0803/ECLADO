@@ -604,6 +604,22 @@ test('會員管理可手動切換會員類型並同步 profile role', async ({ p
   await expect.poll(() => profileUpdates.some(update => update.role === 'distributor')).toBe(true);
 });
 
+test('會員管理可刪除會員並同步資料庫', async ({ page }) => {
+  const deletedMemberIds: string[] = [];
+  await mockAdminApis(page, {
+    onMemberDelete: memberId => deletedMemberIds.push(memberId),
+  });
+  page.on('dialog', dialog => dialog.accept());
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+  await page.getByRole('cell', { name: '測試會員' }).click();
+  await page.getByRole('button', { name: '刪除會員' }).click();
+
+  await expect.poll(() => deletedMemberIds).toContain('user-consumer-1');
+  await expect(page.getByRole('cell', { name: '測試會員' })).toHaveCount(0);
+});
+
 test('營業分析與 AI 補貨頁面可使用，AI 回應由本地 stub 提供', async ({ page }) => {
   await page.addInitScript(() => {
     (window as any).claude = {

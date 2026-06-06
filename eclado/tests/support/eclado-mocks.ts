@@ -165,6 +165,7 @@ export type MockEcladoApiOptions = {
   onProductInsert?: (product: Record<string, unknown>) => void;
   onProductUpdate?: (update: Record<string, unknown>, url: string) => void;
   onProfileUpdate?: (update: Record<string, unknown>, url: string) => void;
+  onMemberDelete?: (memberId: string) => void;
   onPromotionInsert?: (promotion: Record<string, unknown>) => void;
   onPromotionUpdate?: (update: Record<string, unknown>, url: string) => void;
   onPromotionDelete?: (url: string) => void;
@@ -191,7 +192,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     : (options.products || mockProducts);
   const promotions = options.promotions || [activePromotion];
   const orders = options.orders || [];
-  const profiles = options.profiles || [];
+  const profiles = [...(options.profiles || [])];
   const applications = options.applications || [];
   const authUser = options.authUser;
 
@@ -300,6 +301,15 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       return json(route, [body]);
     }
     return json(route, []);
+  });
+
+  await page.route('**/api/admin-delete-member', async route => {
+    const body = route.request().postDataJSON();
+    const memberId = String(body?.memberId || '');
+    options.onMemberDelete?.(memberId);
+    const index = profiles.findIndex(profile => String(profile.id) === memberId);
+    if (index >= 0) profiles.splice(index, 1);
+    return json(route, { ok: true, memberId });
   });
 
   await page.route('**/rest/v1/professional_applications**', async route => {

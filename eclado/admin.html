@@ -1066,11 +1066,13 @@ function memberHasPendingApp(applications, memberId) {
 function Members({
   members, setMembers, orders = [],
   applications = [], applicationsLoading = false, applicationsError = '',
-  onUpdateApplicationStatus, defaultFilter = 'all',
+  onUpdateApplicationStatus, onDeleteMember, defaultFilter = 'all',
 }) {
   const [filter, setFilter] = useState(defaultFilter);
   const [selected, setSelected] = useState(null);
   const [typeNotice, setTypeNotice] = useState('');
+  const [deleteNotice, setDeleteNotice] = useState('');
+  const [deletingId, setDeletingId] = useState('');
 
   useEffect(() => { setFilter(defaultFilter); }, [defaultFilter]);
 
@@ -1116,6 +1118,25 @@ function Members({
     await onUpdateApplicationStatus(appId, status);
   }
 
+  async function deleteMember(member) {
+    if (!onDeleteMember || !member) return;
+    if (typeof member.id === 'string' && member.id.startsWith('app:')) {
+      setDeleteNotice('此筆是未綁定帳號的申請資料，請在美容師申請區塊核准或拒絕。');
+      return;
+    }
+    const name = member.name || member.email || member.id;
+    if (!confirm(`確定要刪除會員「${name}」嗎？\n\n此操作會同步刪除 Supabase Auth 帳號與會員資料，無法還原。歷史訂單會保留。`)) return;
+    setDeletingId(member.id);
+    setDeleteNotice('');
+    const error = await onDeleteMember(member);
+    setDeletingId('');
+    if (error) {
+      setDeleteNotice(error);
+      return;
+    }
+    setSelected(null);
+  }
+
   return (
     <div className={'detail-grid' + (selected ? '' : ' no-panel')}>
       <div>
@@ -1155,7 +1176,7 @@ function Members({
             </thead>
             <tbody>
               {filtered.map(m => (
-                <tr key={m.id} onClick={() => { setSelected(m); setTypeNotice(''); }} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: selected?.id === m.id ? 'var(--off)' : 'transparent', transition: 'background 0.1s' }}
+                <tr key={m.id} onClick={() => { setSelected(m); setTypeNotice(''); setDeleteNotice(''); }} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: selected?.id === m.id ? 'var(--off)' : 'transparent', transition: 'background 0.1s' }}
                 onMouseEnter={e => { if (selected?.id !== m.id) e.currentTarget.style.background = 'var(--off)'; }}
                 onMouseLeave={e => { if (selected?.id !== m.id) e.currentTarget.style.background = 'transparent'; }}>
                   <td style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>{m.name}</td>
@@ -1265,6 +1286,9 @@ function Members({
           {typeNotice && (
             <p style={{ marginTop: 12, fontSize: 12, color: 'var(--red)', lineHeight: 1.6 }}>{typeNotice}</p>
           )}
+          {deleteNotice && (
+            <p style={{ marginTop: 12, fontSize: 12, color: 'var(--red)', lineHeight: 1.6 }}>{deleteNotice}</p>
+          )}
 
           <div style={{ marginTop: 20 }}>
             <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 10, letterSpacing: '0.08em' }}>變更會員類型（內部調整）</div>
@@ -1275,6 +1299,21 @@ function Members({
               <button onClick={() => changeType(selected.id, 'distributor')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'distributor' ? 'var(--dark)' : 'none', color: selected.type === 'distributor' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: 'pointer' }}>經銷商</button>
             </div>
           </div>
+
+          {onDeleteMember && !(typeof selected.id === 'string' && selected.id.startsWith('app:')) && (
+            <div style={{ marginTop: 24, padding: '16px', border: '1px solid oklch(0.60 0.18 25 / 0.28)', background: 'oklch(0.60 0.18 25 / 0.06)' }}>
+              <div style={{ fontSize: 11, color: 'var(--red)', marginBottom: 8, letterSpacing: '0.08em' }}>刪除會員</div>
+              <p style={{ fontSize: 12, color: 'var(--mid)', lineHeight: 1.7, marginBottom: 12 }}>刪除後會同步移除登入帳號與會員資料，歷史訂單仍會保留方便對帳。</p>
+              <button
+                type="button"
+                onClick={() => deleteMember(selected)}
+                disabled={deletingId === selected.id}
+                style={{ width: '100%', padding: '10px 0', fontSize: 12, background: 'var(--white)', color: 'var(--red)', border: '1px solid oklch(0.60 0.18 25 / 0.45)', cursor: deletingId === selected.id ? 'wait' : 'pointer' }}
+              >
+                {deletingId === selected.id ? '刪除中…' : '刪除會員'}
+              </button>
+            </div>
+          )}
 
           {/* 歷史訂單 */}
           <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
@@ -2636,6 +2675,35 @@ function App({ adminEmail, onSignOut }) {
     });
   }
 
+  async function deleteMemberWithSync(member) {
+    if (!member?.id) return '找不到會員 ID，無法刪除。';
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) return '管理員登入狀態已失效，請重新登入後再試。';
+
+      const response = await fetch('/api/admin-delete-member', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ memberId: member.id }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result?.ok === false) {
+        return '刪除會員失敗：' + (result?.error || '請稍後再試');
+      }
+
+      setMembers(prev => prev.filter(m => m.id !== member.id));
+      await fetchAll();
+      return '';
+    } catch (error) {
+      console.error('delete member failed', error);
+      return '刪除會員失敗：' + (error.message || '請稍後再試');
+    }
+  }
+
   function renderPage() {
     const activeProducts = products.filter(product => product.active !== false);
     switch (page) {
@@ -2646,8 +2714,8 @@ function App({ adminEmail, onSignOut }) {
       case 'products':
       case 'inventory': return <Catalog products={products} setProducts={setProductsWithSync} onCreateProduct={createProduct} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} />;
       case 'promotions': return <Promotions products={activeProducts} />;
-      case 'members': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} defaultFilter={membersDefaultFilter} />;
-      case 'applications': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} defaultFilter="app_pending" />;
+      case 'members': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onDeleteMember={deleteMemberWithSync} defaultFilter={membersDefaultFilter} />;
+      case 'applications': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onDeleteMember={deleteMemberWithSync} defaultFilter="app_pending" />;
       case 'analytics': return <Analytics />;
       case 'ai': return <AIReorder products={activeProducts} />;
       default: return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} />;
