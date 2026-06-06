@@ -3159,9 +3159,15 @@ function App() {
         await loadUser(session.user);
         if (isEmailVerificationCallback()) {
           sessionStorage.setItem('eclado_auth_notice', 'email_verified');
+          cleanAuthCallbackFromUrl('/login');
+          setPageState('login');
+        } else if (window.location.pathname === '/line-callback') {
+          cleanAuthCallbackFromUrl('/account');
+          setPageState('account');
+        } else {
+          cleanAuthCallbackFromUrl('/login');
+          setPageState('login');
         }
-        cleanAuthCallbackFromUrl('/login');
-        setPageState('login');
       }
     }
 
