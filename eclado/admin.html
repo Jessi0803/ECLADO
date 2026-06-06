@@ -2277,8 +2277,12 @@ function PromotionForm({ promo, products, onClose }) {
 const ADMIN_EMAILS = [
   'baby90522@gmail.com',
   'ecladotaiwan@gmail.com',
-  'line.U6f71cfa36c3fb2188f54396a5cb58882@ecladotaiwan.com',
+  'line.u6f71cfa36c3fb2188f54396a5cb58882@ecladotaiwan.com',
 ];
+
+function isAdminEmail(email) {
+  return ADMIN_EMAILS.includes((email || '').toLowerCase());
+}
 
 function AdminGate({ children }) {
   const [session, setSession] = useState(undefined); // undefined = loading
@@ -2304,7 +2308,7 @@ function AdminGate({ children }) {
     const { data, error: err } = await supabase.auth.signInWithPassword({ email, password: pwd });
     setLoading(false);
     if (err) { setError('帳號或密碼錯誤'); setPwd(''); return; }
-    if (!ADMIN_EMAILS.includes(data.user?.email)) {
+    if (!isAdminEmail(data.user?.email)) {
       await supabase.auth.signOut();
       setError('此帳號無管理員權限');
       setPwd('');
@@ -2317,7 +2321,7 @@ function AdminGate({ children }) {
 
   if (session === undefined) return null; // loading
 
-  const isAdmin = session && ADMIN_EMAILS.includes(session.user?.email);
+  const isAdmin = session && isAdminEmail(session.user?.email);
   if (isAdmin) return React.cloneElement(children, { adminEmail: session.user.email, onSignOut: signOut });
 
   return (
