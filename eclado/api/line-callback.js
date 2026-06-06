@@ -49,6 +49,29 @@ module.exports = async function handler(req, res) {
     return data;
   }
 
+  async function getLineEmail(idToken) {
+    if (!idToken) return '';
+    try {
+      const verifyRes = await fetch('https://api.line.me/oauth2/v2.1/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          id_token: idToken,
+          client_id: LINE_CHANNEL_ID,
+        }),
+      });
+      const data = await readJson(verifyRes);
+      if (!verifyRes.ok) {
+        console.warn('[LINE callback] id_token verify failed', verifyRes.status, data);
+        return '';
+      }
+      return (data?.email || '').trim().toLowerCase();
+    } catch (err) {
+      console.warn('[LINE callback] id_token verify error', err);
+      return '';
+    }
+  }
+
   try {
     // 1. Exchange code → LINE access token
     const tokenRes = await fetch('https://api.line.me/oauth2/v2.1/token', {
@@ -63,7 +86,7 @@ module.exports = async function handler(req, res) {
       }),
     });
     const tokenData = await expectOk(tokenRes, 'line_token');
-    const { access_token } = tokenData || {};
+    const { access_token, id_token } = tokenData || {};
     if (!access_token) return res.redirect(`${SITE_URL}/login?error=token_failed`);
 
     // 2. Get LINE profile (userId + displayName)
@@ -74,6 +97,7 @@ module.exports = async function handler(req, res) {
 
     const { userId: lineUserId, displayName } = lineProfile;
     if (!lineUserId) return res.redirect(`${SITE_URL}/login?error=profile_failed`);
+    const lineEmail = await getLineEmail(id_token);
 
     // 3. Find existing profile by line_user_id
     const existing = await expectOk(await sb(
@@ -90,22 +114,35 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify({ name: displayName }),
       }), 'profiles_update');
     } else {
-      // 4. New user — create Supabase auth user
-      email = `line.${lineUserId}@ecladotaiwan.com`;
-      const created = await expectOk(await sb('/auth/v1/admin/users', {
-        method: 'POST',
-        body: JSON.stringify({ email, email_confirm: true, user_metadata: { full_name: displayName } }),
-      }), 'auth_create_user');
+      const existingByEmail = lineEmail ? await expectOk(await sb(
+        `/rest/v1/profiles?email=eq.${encodeURIComponent(lineEmail)}&select=id,email,line_user_id`
+      ), 'profiles_email_lookup') : [];
 
-      userId = created.id;
-      if (!userId) return res.redirect(`${SITE_URL}/login?error=create_failed`);
+      if (existingByEmail.length > 0) {
+        ({ id: userId, email } = existingByEmail[0]);
+        email = email || lineEmail;
+        await expectOk(await sb(`/rest/v1/profiles?id=eq.${userId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ name: displayName, line_user_id: lineUserId }),
+        }), 'profiles_link_line');
+      } else {
+        // 4. New user — create Supabase auth user
+        email = lineEmail || `line.${lineUserId}@ecladotaiwan.com`;
+        const created = await expectOk(await sb('/auth/v1/admin/users', {
+          method: 'POST',
+          body: JSON.stringify({ email, email_confirm: true, user_metadata: { full_name: displayName } }),
+        }), 'auth_create_user');
 
-      // 5. Create profile row
-      await expectOk(await sb('/rest/v1/profiles', {
-        method: 'POST',
-        headers: { Prefer: 'resolution=merge-duplicates' },
-        body: JSON.stringify({ id: userId, email, name: displayName, line_user_id: lineUserId, role: 'consumer' }),
-      }), 'profiles_insert');
+        userId = created.id;
+        if (!userId) return res.redirect(`${SITE_URL}/login?error=create_failed`);
+
+        // 5. Create profile row
+        await expectOk(await sb('/rest/v1/profiles', {
+          method: 'POST',
+          headers: { Prefer: 'resolution=merge-duplicates' },
+          body: JSON.stringify({ id: userId, email, name: displayName, line_user_id: lineUserId, role: 'consumer' }),
+        }), 'profiles_insert');
+      }
     }
 
     // 6. Generate magic link → auto-login

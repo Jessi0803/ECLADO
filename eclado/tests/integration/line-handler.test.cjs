@@ -131,6 +131,80 @@ test('LINE callback - 已存在會員會更新名稱並重用既有帳號', asyn
   assert.ok(calls.some(call => call.url === `${SUPABASE_URL}/rest/v1/profiles?id=eq.user-999`));
 });
 
+test('LINE callback - LINE email 與既有會員相同時會綁定同一個帳戶', async () => {
+  const calls = [];
+  const originalFetch = global.fetch;
+  const originalEnv = {
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+    LINE_LOGIN_CHANNEL_SECRET: process.env.LINE_LOGIN_CHANNEL_SECRET,
+  };
+
+  process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
+  process.env.LINE_LOGIN_CHANNEL_SECRET = 'test-login-secret';
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+
+    if (url === 'https://api.line.me/oauth2/v2.1/token') {
+      return jsonResponse(200, { access_token: 'line-access-token', id_token: 'line-id-token' });
+    }
+
+    if (url === 'https://api.line.me/oauth2/v2.1/verify') {
+      const body = new URLSearchParams(options.body);
+      assert.equal(body.get('id_token'), 'line-id-token');
+      assert.equal(body.get('client_id'), '2010106039');
+      return jsonResponse(200, { email: 'SameUser@Example.com' });
+    }
+
+    if (url === 'https://api.line.me/v2/profile') {
+      return jsonResponse(200, { userId: 'U-email-match', displayName: 'LINE 同信箱' });
+    }
+
+    if (String(url).startsWith(`${SUPABASE_URL}/rest/v1/profiles?line_user_id=eq.U-email-match`)) {
+      return jsonResponse(200, []);
+    }
+
+    if (String(url).startsWith(`${SUPABASE_URL}/rest/v1/profiles?email=eq.sameuser%40example.com`)) {
+      return jsonResponse(200, [{ id: 'same-email-user', email: 'sameuser@example.com', line_user_id: null }]);
+    }
+
+    if (String(url).startsWith(`${SUPABASE_URL}/rest/v1/profiles?id=eq.same-email-user`)) {
+      const body = JSON.parse(options.body);
+      assert.equal(body.name, 'LINE 同信箱');
+      assert.equal(body.line_user_id, 'U-email-match');
+      return jsonResponse(200, [{ id: 'same-email-user' }]);
+    }
+
+    if (url === `${SUPABASE_URL}/auth/v1/admin/generate_link`) {
+      const body = JSON.parse(options.body);
+      assert.equal(body.email, 'sameuser@example.com');
+      return jsonResponse(200, { action_link: 'https://www.ecladotaiwan.com/line-callback#access_token=magic' });
+    }
+
+    if (url === `${SUPABASE_URL}/auth/v1/admin/users`) {
+      throw new Error('should not create auth user when email profile exists');
+    }
+
+    if (url === `${SUPABASE_URL}/rest/v1/profiles`) {
+      throw new Error('should not insert profile when email profile exists');
+    }
+
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  const res = createRes();
+
+  try {
+    await lineCallback({ query: { code: 'line-code' } }, res);
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.redirectedTo, 'https://www.ecladotaiwan.com/line-callback#access_token=magic');
+  assert.equal(res.statusCode, 200);
+  assert.ok(calls.some(call => call.url === 'https://api.line.me/oauth2/v2.1/verify'));
+});
+
 test('LINE push 會送出出貨通知', async () => {
   const calls = [];
   const originalFetch = global.fetch;
