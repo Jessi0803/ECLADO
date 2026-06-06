@@ -2198,7 +2198,7 @@ function LoginPage({ setPage }) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { setError(sbError(error.message)); return; }
-      setPage('shop');
+      setPage('account');
     } catch(err) { setError('網路異常，請確認連線'); }
     finally { setLoading(false); }
   }
@@ -3187,7 +3187,7 @@ function App() {
         cleanAuthCallbackFromUrl('/reset-password');
         setPageState('reset-password');
       } else if (event === 'SIGNED_IN' && window.location.pathname === '/line-callback') {
-        setPage('home');
+        setPage('account');
       } else if (event === 'SIGNED_IN' && isEmailVerificationCallback()) {
         if (session?.user) await loadUser(session.user);
         sessionStorage.setItem('eclado_auth_notice', 'email_verified');
