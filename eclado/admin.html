@@ -1148,7 +1148,7 @@ function Members({
             )}
           </div>
           <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
-            {[['all','全部'], ['app_pending','待審核申請'], ['consumer','一般'], ['pro','美容師'], ['instructor','師資'], ['distributor','經銷商'], ['pending','審核中']].map(([val, label]) => (
+            {[['all','全部'], ['app_pending','待審核申請'], ['consumer','一般'], ['pro','美容師'], ['instructor','師資'], ['distributor','經銷商']].map(([val, label]) => (
               <button key={val} onClick={() => setFilter(val)} style={{
                 padding: '8px 16px', border: 'none', fontSize: 12,
                 background: filter === val ? 'var(--dark)' : 'transparent',
