@@ -171,6 +171,8 @@ const NAV_ITEMS = [
   { label: '購物說明', children: ['退換貨說明', '運送方式', '付款說明', '常見問題'] },
 ];
 
+const LINE_LOGIN_PENDING_KEY = 'eclado_line_login_pending';
+
 const PRODUCTS = [
   { id:1, name:'Deep Cleansing Foam', nameZh:'深層清潔泡沫洗面乳', category:'清潔', size:'200ml', price:1280, proPrice:960, isProOnly:false, img:'https://images.unsplash.com/photo-1556228578-dd539282b964?w=600&q=80&fit=crop',
     desc:'輕柔起泡配方，能溶解彩妝與皮脂污垢，同時維持肌膚柔軟與水潤度。富含天然植萃成分，洗後清爽不刺激，不緊繃。', skinType:'全膚質、敏感肌', ingredients:'椰油兩性醋酸鈉、胺基酸系界面活性劑、綠茶萃取、甜菜鹼', features:['溫和低刺激配方','洗後保濕不緊繃','維持肌膚天然皮脂'] },
@@ -2264,13 +2266,14 @@ function LoginPage({ setPage }) {
   function signInWithLine() {
     const state = Math.random().toString(36).substring(2, 15);
     sessionStorage.setItem('line_oauth_state', state);
+    sessionStorage.setItem(LINE_LOGIN_PENDING_KEY, '1');
     const lineRedirectUri = 'https://www.ecladotaiwan.com/api/line-callback';
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: '2010106039',
       redirect_uri: lineRedirectUri,
       state,
-      scope: 'profile openid',
+      scope: 'profile openid email',
       bot_prompt: 'aggressive',
     });
     window.location.href = 'https://access.line.me/oauth2/v2.1/authorize?' + params;
@@ -2414,6 +2417,7 @@ function LoginPage({ setPage }) {
               <span style={{ fontSize:11, color:'var(--dark)', letterSpacing:'0.1em' }}>或</span>
               <div style={{ flex:1, height:1, background:'var(--light)' }} />
             </div>
+            <p style={{ fontSize:11, color:'var(--mid)', lineHeight:1.7, margin:'-8px 0 12px' }}>使用 LINE 登入即表示您同意我們取得 LINE 帳號的 Email，用於會員帳戶識別、避免重複註冊與訂單通知。</p>
             <button onClick={signInWithLine} style={{ width:'100%', background:'#00B900', color:'var(--white)', border:'none', padding:'14px', fontSize:13, letterSpacing:'0.08em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="white"><path d="M10 2C5.6 2 2 5.1 2 8.8c0 2.5 1.6 4.7 4 5.9l-.5 2 2.3-1.2c.7.2 1.4.3 2.2.3 4.4 0 8-3.1 8-6.8C18 5.1 14.4 2 10 2z"/></svg>
               使用 LINE 帳號登入
@@ -2788,7 +2792,7 @@ function LineCallbackPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         done = true;
-        setStatus('LINE 登入成功，正在返回首頁...');
+        setStatus('LINE 登入成功，正在前往會員專區...');
         return;
       }
     });
@@ -2989,7 +2993,7 @@ function PrivacyPage() {
       title: '四、第三方資料分享',
       content: `為提供完整服務，本公司與以下第三方業者共享必要資料：
 
-• LINE Taiwan：用於 LINE 帳號登入驗證及訊息推播，適用 LINE 隱私權政策
+• LINE Taiwan：用於 LINE 帳號登入驗證、Email 取得及訊息推播，適用 LINE 隱私權政策
 • 永豐商業銀行（豐收款）：用於處理線上付款，適用永豐銀行隱私權政策
 • Supabase Inc.：本公司使用之雲端資料庫服務，資料儲存於其安全環境中
 • 順豐物流：提供配送服務，需提供收件人姓名、地址、電話
@@ -3081,7 +3085,11 @@ function pageFromPath(path) {
 function App() {
   const [page, setPageState] = useState(() => {
     if (isPasswordRecoveryUrl()) return 'reset-password';
-    if (hasAuthCallbackInUrl() && !isPasswordRecoveryUrl()) return 'login';
+    if (hasAuthCallbackInUrl() && !isPasswordRecoveryUrl()) {
+      return window.location.pathname === '/line-callback' || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1'
+        ? 'line-callback'
+        : 'login';
+    }
     return pageFromPath(window.location.pathname);
   });
 
@@ -3143,6 +3151,7 @@ function App() {
 
       const authErr = getAuthCallbackErrorMessage();
       if (authErr) {
+        sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
         sessionStorage.setItem('eclado_auth_notice', 'error:' + authErr);
         cleanAuthCallbackFromUrl('/login');
         if (!cancelled) setPageState('login');
@@ -3153,6 +3162,7 @@ function App() {
       if (cancelled) return;
 
       if (error) {
+        sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
         sessionStorage.setItem('eclado_auth_notice', 'error:' + sbError(error.message));
         cleanAuthCallbackFromUrl('/login');
         setPageState('login');
@@ -3165,13 +3175,17 @@ function App() {
         return;
       }
 
+      const isLineLoginCallback = window.location.pathname === '/line-callback'
+        || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1';
+
       if (session?.user) {
         await loadUser(session.user);
         if (isEmailVerificationCallback()) {
           sessionStorage.setItem('eclado_auth_notice', 'email_verified');
           cleanAuthCallbackFromUrl('/login');
           setPageState('login');
-        } else if (window.location.pathname === '/line-callback') {
+        } else if (isLineLoginCallback) {
+          sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
           cleanAuthCallbackFromUrl('/account');
           setPageState('account');
         } else {
@@ -3185,15 +3199,27 @@ function App() {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (cancelled || hasAuthCallbackInUrl()) return;
-      if (session?.user) loadUser(session.user);
+      const isPendingLineLogin = window.location.pathname === '/line-callback'
+        || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1';
+      if (session?.user) {
+        loadUser(session.user);
+        if (isPendingLineLogin) {
+          sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
+          cleanAuthCallbackFromUrl('/account');
+          setPageState('account');
+        }
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'PASSWORD_RECOVERY' || isPasswordRecoveryUrl()) {
         cleanAuthCallbackFromUrl('/reset-password');
         setPageState('reset-password');
-      } else if (event === 'SIGNED_IN' && window.location.pathname === '/line-callback') {
-        setPage('account');
+      } else if (event === 'SIGNED_IN' && (window.location.pathname === '/line-callback' || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1')) {
+        if (session?.user) await loadUser(session.user);
+        sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
+        cleanAuthCallbackFromUrl('/account');
+        setPageState('account');
       } else if (event === 'SIGNED_IN' && isEmailVerificationCallback()) {
         if (session?.user) await loadUser(session.user);
         sessionStorage.setItem('eclado_auth_notice', 'email_verified');
