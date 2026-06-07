@@ -1678,10 +1678,14 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
       minStock: 3,
       isProOnly: false,
       img: '',
+      imageUrls: [],
       desc: '',
       skinType: '',
       ingredients: '',
       features: [],
+      variants: [],
+      sourceFolderName: '',
+      importedFromDrive: false,
       active: true,
       isNew: true,
     });
@@ -1689,6 +1693,41 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
 
   function setF(field) {
     return e => setEditing(prev => ({ ...prev, [field]: e.target.value }));
+  }
+
+  function setImageUrls(e) {
+    const imageUrls = e.target.value.split('\n').map(line => line.trim()).filter(Boolean);
+    setEditing(prev => ({ ...prev, imageUrls }));
+  }
+
+  function variantsToLines(variants = []) {
+    return variants.map(v => [v.size || '', v.price ?? '', v.proPrice ?? v.pro_price ?? '', v.stock ?? ''].join(' | ')).join('\n');
+  }
+
+  function setVariantLines(e) {
+    const variants = e.target.value.split('\n').map((line, index) => {
+      const [size = '', price = '', proPrice = '', stock = ''] = line.split('|').map(part => part.trim());
+      if (!size && !price && !proPrice && !stock) return null;
+      return {
+        id: size || `variant-${index + 1}`,
+        size,
+        price: Number(price) || 0,
+        proPrice: Number(proPrice) || 0,
+        stock: stock === '' ? null : Math.max(0, Number(stock) || 0),
+        isDefault: index === 0,
+      };
+    }).filter(Boolean);
+    const first = variants[0];
+    setEditing(prev => ({
+      ...prev,
+      variants,
+      ...(first ? {
+        size: first.size || prev.size,
+        price: first.price || prev.price,
+        proPrice: first.proPrice || prev.proPrice,
+        stock: first.stock ?? prev.stock,
+      } : {}),
+    }));
   }
 
   async function setImageFile(e) {
@@ -1952,7 +1991,7 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
                 <input type="checkbox" id="isProOnly" checked={editing.isProOnly}
                   onChange={e => setEditing(prev => ({ ...prev, isProOnly: e.target.checked }))}
                   style={{ width: 15, height: 15, cursor: 'pointer' }} />
-                <label htmlFor="isProOnly" style={{ fontSize: 13, color: 'var(--dark)', cursor: 'pointer' }}>院線限定（非專業會員不顯示價格）</label>
+                <label htmlFor="isProOnly" style={{ fontSize: 13, color: 'var(--dark)', cursor: 'pointer' }}>院線限定（一般會員可看介紹，不顯示價格且不可購買）</label>
               </div>
 
               <div style={{ height: 1, background: 'var(--border)' }} />
@@ -1969,6 +2008,17 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
                 {editing.img && (
                   <img src={editing.img} alt={editing.nameZh || '商品圖片預覽'} style={{ width: 84, height: 84, objectFit: 'cover', marginTop: 10, border: '1px solid var(--border)', background: 'var(--off)' }} />
                 )}
+              </div>
+
+              <div>
+                <label htmlFor="productImageUrls" style={lbl}>商品圖庫（一行一個圖片網址）</label>
+                <textarea id="productImageUrls" value={(editing.imageUrls || []).join('\n')} onChange={setImageUrls} style={{ ...ta, minHeight: 84 }} placeholder="https://..." />
+              </div>
+
+              <div>
+                <label htmlFor="productVariants" style={lbl}>多容量規格（一行一個：容量 | 市場價 | 專業價 | 庫存）</label>
+                <textarea id="productVariants" value={variantsToLines(editing.variants || [])} onChange={setVariantLines} style={{ ...ta, minHeight: 96 }} placeholder="500ml | 2150 | 1100 | 10" />
+                <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 6 }}>第一行會同步為商品主規格，前台商品卡會優先顯示第一個規格。</p>
               </div>
 
               <div>
@@ -2416,6 +2466,8 @@ function normalizeOrder(row) {
 }
 
 function normalizeProduct(row) {
+  const imageUrls = Array.isArray(row.image_urls) ? row.image_urls : [];
+  const variants = Array.isArray(row.variants) ? row.variants : [];
   return {
     id: row.id,
     name: row.name || '',
@@ -2428,10 +2480,14 @@ function normalizeProduct(row) {
     minStock: Number(row.min_stock) || 3,
     isProOnly: !!row.is_pro_only,
     img: row.image_url || '',
+    imageUrls,
     desc: row.description || '',
     skinType: row.skin_type || '',
     ingredients: row.ingredients || '',
     features: Array.isArray(row.features) ? row.features : [],
+    variants,
+    sourceFolderName: row.source_folder_name || '',
+    importedFromDrive: !!row.imported_from_drive,
     active: row.active !== false,
   };
 }
@@ -2448,10 +2504,14 @@ function productToRow(product) {
     min_stock: product.minStock === '' || product.minStock == null ? 3 : Math.max(0, Number(product.minStock) || 0),
     is_pro_only: !!product.isProOnly,
     image_url: product.img || null,
+    image_urls: Array.isArray(product.imageUrls) ? product.imageUrls : [],
     description: product.desc || '',
     skin_type: product.skinType || '',
     ingredients: product.ingredients || '',
     features: Array.isArray(product.features) ? product.features : [],
+    variants: Array.isArray(product.variants) ? product.variants : [],
+    source_folder_name: product.sourceFolderName || null,
+    imported_from_drive: !!product.importedFromDrive,
     active: product.active !== false,
   };
 }

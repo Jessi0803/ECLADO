@@ -173,6 +173,7 @@ export type MockEcladoApiOptions = {
   onLinePush?: (body: Record<string, unknown>) => void;
   onPaymentRequest?: (body: Record<string, unknown>) => void;
   productWriteError?: string;
+  orderWriteError?: string;
   promotionWriteError?: string;
   linePushError?: string;
   paymentError?: string;
@@ -180,6 +181,7 @@ export type MockEcladoApiOptions = {
   signInUser?: MockAuthUser;
   signInError?: string;
   products?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
+  productVariants?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
   promotions?: Record<string, unknown>[];
   orders?: Record<string, unknown>[];
   profiles?: Record<string, unknown>[];
@@ -190,6 +192,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   const products = () => typeof options.products === 'function'
     ? options.products()
     : (options.products || mockProducts);
+  const productVariants = () => typeof options.productVariants === 'function'
+    ? options.productVariants()
+    : (options.productVariants || []);
   const promotions = options.promotions || [activePromotion];
   const orders = options.orders || [];
   const profiles = [...(options.profiles || [])];
@@ -225,6 +230,11 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   }
 
   await page.route('**/auth/v1/logout', async route => json(route, {}, 204));
+
+  await page.route('**/rest/v1/product_variants**', async route => {
+    if (route.request().method() === 'GET') return json(route, productVariants());
+    return json(route, []);
+  });
 
   await page.route('**/rest/v1/products**', async route => {
     const method = route.request().method();
@@ -279,11 +289,13 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     if (method === 'POST') {
       const order = route.request().postDataJSON();
       options.onOrderInsert?.(order);
+      if (options.orderWriteError) return json(route, { message: options.orderWriteError }, 400);
       return json(route, [{ ...order, created_at: new Date().toISOString() }], 201);
     }
     if (method === 'PATCH') {
       const body = route.request().postDataJSON();
       options.onOrderUpdate?.(body, route.request().url());
+      if (options.orderWriteError) return json(route, { message: options.orderWriteError }, 400);
       return json(route, [{ ...body }]);
     }
     return json(route, []);

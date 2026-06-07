@@ -13,14 +13,64 @@ create table if not exists public.products (
   min_stock integer not null default 3 check (min_stock >= 0),
   is_pro_only boolean not null default false,
   image_url text,
+  image_urls jsonb not null default '[]'::jsonb,
   description text,
   skin_type text,
   ingredients text,
   features jsonb not null default '[]'::jsonb,
+  variants jsonb not null default '[]'::jsonb,
+  source_folder_name text,
+  imported_from_drive boolean not null default false,
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.products add column if not exists image_urls jsonb not null default '[]'::jsonb;
+alter table public.products add column if not exists variants jsonb not null default '[]'::jsonb;
+alter table public.products add column if not exists source_folder_name text;
+alter table public.products add column if not exists imported_from_drive boolean not null default false;
+
+create table if not exists public.product_variants (
+  id bigserial primary key,
+  product_id integer not null references public.products(id) on delete cascade,
+  sku text,
+  size text not null,
+  price numeric not null default 0,
+  pro_price numeric not null default 0,
+  stock integer check (stock is null or stock >= 0),
+  is_default boolean not null default false,
+  sort_order integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_product_variants_product_id
+  on public.product_variants(product_id);
+
+drop trigger if exists trg_product_variants_updated_at on public.product_variants;
+create trigger trg_product_variants_updated_at
+  before update on public.product_variants
+  for each row execute function public.set_updated_at();
+
+alter table public.product_variants enable row level security;
+
+drop policy if exists "product_variants_select_all" on public.product_variants;
+create policy "product_variants_select_all"
+  on public.product_variants for select
+  using (true);
+
+drop policy if exists "product_variants_insert_all" on public.product_variants;
+create policy "product_variants_insert_all"
+  on public.product_variants for insert
+  with check (true);
+
+drop policy if exists "product_variants_update_all" on public.product_variants;
+create policy "product_variants_update_all"
+  on public.product_variants for update
+  using (true)
+  with check (true);
 
 drop trigger if exists trg_products_updated_at on public.products;
 create trigger trg_products_updated_at
@@ -78,6 +128,11 @@ do $$
 begin
   begin
     alter publication supabase_realtime add table public.products;
+  exception when duplicate_object then
+    null;
+  end;
+  begin
+    alter publication supabase_realtime add table public.product_variants;
   exception when duplicate_object then
     null;
   end;

@@ -60,7 +60,8 @@ test('商城瀏覽、商品詳情、一般會員價格與院線商品限制', as
   await expect(page.getByText('NT$ 3,980').first()).toBeVisible();
 
   await page.getByText('NK細胞活化安瓶').first().click();
-  await expect(page.getByText('院線專業課程')).toBeVisible();
+  await expect(page.getByText('院線專業商品')).toBeVisible();
+  await expect(page.getByText('院線專業集中護理')).toBeVisible();
   await expect(page.getByText('私訊 LINE 官方詢問')).toBeVisible();
   await expect(page.getByRole('button', { name: /加入購物車/ })).toHaveCount(0);
 });
@@ -95,7 +96,8 @@ test('DB 的 is_pro_only=true 會讓原本公開商品變院線限定', async ({
 
   await page.goto('/shop');
   await page.getByText('胜肽修護精華液').first().click();
-  await expect(page.getByText('院線專業課程')).toBeVisible();
+  await expect(page.getByText('院線專業商品')).toBeVisible();
+  await expect(page.getByText('多重胜肽複合修護')).toBeVisible();
   await expect(page.getByRole('button', { name: /加入購物車/ })).toHaveCount(0);
 });
 
@@ -109,6 +111,29 @@ test('DB 的 price 覆蓋寫死的售價', async ({ page }) => {
   await page.goto('/shop');
   await page.getByText('胜肽修護精華液').first().click();
   await expect(page.getByText('NT$ 2,999').first()).toBeVisible();
+});
+
+test('商品多容量規格可切換價格並分開加入購物車', async ({ page }) => {
+  await mockEcladoApis(page, {
+    productVariants: [
+      { id: 201, product_id: 2, size: '30ml', price: 3980, pro_price: 2980, stock: 2, is_default: true, sort_order: 1, active: true },
+      { id: 202, product_id: 2, size: '60ml', price: 6880, pro_price: 5200, stock: 4, is_default: false, sort_order: 2, active: true },
+    ],
+    promotions: [],
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await expect(page.getByText('容量規格')).toBeVisible();
+  await expect(page.getByRole('button', { name: '30ml' })).toBeVisible();
+  await page.getByRole('button', { name: '60ml' }).click();
+  await expect(page.getByText('Peptide Repair Serum · 60ml')).toBeVisible();
+  await expect(page.getByText('NT$ 6,880').first()).toBeVisible();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+  await expect(page.getByText('胜肽修護精華液')).toBeVisible();
+  await expect(page.getByText('60ml')).toBeVisible();
+  await expect(page.getByText('NT$ 6,880').first()).toBeVisible();
 });
 
 test('DB 新增的商品會顯示在商城', async ({ page }) => {
@@ -357,7 +382,7 @@ test('結帳建立付款單但不寫入真實訂單或真金流', async ({ page 
   await page.getByRole('button', { name: /虛擬帳號匯款/ }).click();
   await page.getByRole('button', { name: /建立付款單/ }).click();
 
-  await expect(page.getByText('付款單已建立')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
   await expect(page.getByText('807 永豐銀行')).toBeVisible();
   await expect(page.getByText('8071234567890123')).toBeVisible();
 });
@@ -461,6 +486,34 @@ test('金流建單失敗時顯示錯誤且不進入付款完成畫面', async ({
 
   await expect(page.getByText(/付款單建立失敗.*測試金流暫時不可用/)).toBeVisible();
   await expect(page.getByText('付款單已建立')).toHaveCount(0);
+});
+
+test('金流成功但訂單寫入失敗時顯示提醒', async ({ page }) => {
+  await mockEcladoApis(page, {
+    promotions: [],
+    orderWriteError: '測試訂單寫入失敗',
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+  await page.getByRole('button', { name: /前往結帳/ }).click();
+
+  const checkoutInputs = page.locator('form input');
+  await checkoutInputs.nth(0).fill('訂單寫入失敗測試');
+  await checkoutInputs.nth(1).fill('0912345678');
+  await checkoutInputs.nth(2).fill('order-failed@example.com');
+  await page.getByPlaceholder('縣市').fill('台北市');
+  await page.getByPlaceholder('區域').fill('大安區');
+  await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('測試路 1 號');
+  await page.getByRole('button', { name: /繼續確認付款/ }).click();
+  await page.getByRole('button', { name: /虛擬帳號匯款/ }).click();
+  await page.getByRole('button', { name: /建立付款單/ }).click();
+
+  await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
+  await expect(page.getByText(/付款單已建立，但本站訂單寫入失敗：測試訂單寫入失敗/)).toBeVisible();
+  await expect(page.getByText('8071234567890123')).toBeVisible();
 });
 
 test('購物車只存在瀏覽器記憶體，重新整理會清空', async ({ page }) => {
