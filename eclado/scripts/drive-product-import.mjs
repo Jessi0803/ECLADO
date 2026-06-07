@@ -54,12 +54,14 @@ function parsePrices(text) {
 }
 
 function inferCategory(name) {
-  if (/面膜|膜/.test(name)) return '面膜';
-  if (/眼/.test(name)) return '眼霜';
-  if (/霜/.test(name)) return '面霜';
-  if (/安瓶|精華/.test(name)) return '精華液';
-  if (/潔|卸妝|泡泡|粉/.test(name)) return '清潔';
-  return '精華液';
+  if (/Celvix|水光|煥膚|輪廓/.test(name)) return '院線課程儀器';
+  if (/防曬|BB/.test(name)) return '防曬底妝';
+  if (/爽膚水|凝膠|凍膜/.test(name)) return '化妝水凝膠';
+  if (/面膜|泥膜|膜|金箔/.test(name)) return '面膜護理';
+  if (/霜/.test(name)) return '乳霜修護';
+  if (/安瓶|精華/.test(name)) return '安瓶精華';
+  if (/潔|卸妝|泡泡|粉/.test(name)) return '清潔卸妝';
+  return '安瓶精華';
 }
 
 function productFromText(folderName, text, images, id) {

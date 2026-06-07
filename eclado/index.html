@@ -163,9 +163,9 @@ function useIsMobile() {
 }
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
-const NAV_LINKS = ['清潔', '精華液', '急救安瓶', '面膜', '眼霜', '面霜'];
+const NAV_LINKS = ['清潔卸妝', '化妝水凝膠', '安瓶精華', '乳霜修護', '面膜護理', '防曬底妝', '院線課程儀器'];
 const NAV_ITEMS = [
-  { label: '所有產品', children: ['清潔', '精華液', '急救安瓶', '面膜', '眼霜', '面霜'] },
+  { label: '所有產品', children: NAV_LINKS },
   { label: '會員登錄', children: ['會員登入', '美容師申請'] },
   { label: '品牌故事', children: null },
   { label: '購物說明', children: ['退換貨說明', '運送方式', '付款說明', '常見問題'] },
@@ -1246,7 +1246,7 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
             </div>
             <div style={{ display: isMobile ? 'grid' : 'contents', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : undefined, gap: isMobile ? 12 : undefined }}>
               {[
-                { title:'產品系列', links:['清潔系列','精華液','急救安瓶','面膜','眼霜','面霜'] },
+                { title:'產品系列', links:NAV_LINKS },
                 { title:'服務', links:['關於我們','美容師專區','常見問題'] },
                 { title:'購物說明', links:['訂單查詢','配送說明','退換貨政策','隱私政策'] },
               ].map(col => (
