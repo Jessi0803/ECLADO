@@ -195,12 +195,12 @@ function qpayIv(nonce) {
 }
 
 function encryptQpayMessage(aesKey, nonce, data) {
-  const cipher = crypto.createCipheriv('aes-128-cbc', Buffer.from(aesKey, 'ascii'), Buffer.from(qpayIv(nonce), 'ascii'));
+  const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(aesKey, 'ascii'), Buffer.from(qpayIv(nonce), 'ascii'));
   return Buffer.concat([cipher.update(data, 'utf8'), cipher.final()]).toString('hex').toUpperCase();
 }
 
 function decryptQpayMessage(aesKey, nonce, message) {
-  const decipher = crypto.createDecipheriv('aes-128-cbc', Buffer.from(aesKey, 'ascii'), Buffer.from(qpayIv(nonce), 'ascii'));
+  const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(aesKey, 'ascii'), Buffer.from(qpayIv(nonce), 'ascii'));
   return Buffer.concat([decipher.update(Buffer.from(message, 'hex')), decipher.final()]).toString('utf8');
 }
 
