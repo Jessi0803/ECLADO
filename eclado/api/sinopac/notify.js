@@ -58,6 +58,10 @@ function getAmount(payload) {
   return Number.isFinite(amount) ? amount : null;
 }
 
+function getPayToken(payload) {
+  return firstText(payload, ['PayToken', 'payToken', 'pay_token']);
+}
+
 function amountsMatch(orderTotal, notifiedAmount) {
   if (notifiedAmount === null) return true;
   const total = Number(orderTotal);
@@ -102,6 +106,17 @@ async function supabaseRequest(path, options = {}) {
   }
 
   return body;
+}
+
+async function findOrderByPayToken(payToken) {
+  if (!payToken) return null;
+  const query = [
+    `note=ilike.${encodeURIComponent(`*pay_token:${payToken}*`)}`,
+    'select=id,status,total,user_id,member,email',
+    'limit=1',
+  ].join('&');
+  const orders = await supabaseRequest(`orders?${query}`, { method: 'GET' });
+  return orders?.[0] || null;
 }
 
 function buildPaymentMessage(order) {
@@ -196,24 +211,37 @@ module.exports = async function handler(req, res) {
   }
 
   const payload = pickPayload(req.body);
-  const orderId = getOrderId(payload);
-  if (!orderId) {
-    console.warn('[sinopac notify] missing order id', {
-      keys: payload && typeof payload === 'object' ? Object.keys(payload) : [],
-      payload,
-    });
-    return res.status(400).json({ ok: false, error: 'orderNo required' });
-  }
-  if (isFailedPayment(payload)) {
-    return res.status(200).json({ ok: true, orderId, ignored: true, reason: 'payment not successful' });
-  }
+  let orderId = '';
 
   try {
-    const orders = await supabaseRequest(
-      `orders?id=eq.${encodeURIComponent(orderId)}&select=id,status,total,user_id,member,email`,
-      { method: 'GET' },
-    );
-    const order = orders?.[0];
+    orderId = getOrderId(payload);
+    if (!orderId) {
+      const payToken = getPayToken(payload);
+      const tokenOrder = await findOrderByPayToken(payToken);
+      if (tokenOrder) {
+        orderId = tokenOrder.id;
+        payload.__tokenOrder = tokenOrder;
+      } else {
+        console.warn('[sinopac notify] missing order id', {
+          keys: payload && typeof payload === 'object' ? Object.keys(payload) : [],
+          payToken: payToken || undefined,
+          payload,
+        });
+        return res.status(400).json({ ok: false, error: 'orderNo required' });
+      }
+    }
+    if (isFailedPayment(payload)) {
+      return res.status(200).json({ ok: true, orderId, ignored: true, reason: 'payment not successful' });
+    }
+
+    let order = payload.__tokenOrder;
+    if (!order) {
+      const orders = await supabaseRequest(
+        `orders?id=eq.${encodeURIComponent(orderId)}&select=id,status,total,user_id,member,email`,
+        { method: 'GET' },
+      );
+      order = orders?.[0];
+    }
     if (!order) return res.status(404).json({ ok: false, error: 'order not found', orderId });
 
     const notifiedAmount = getAmount(payload);

@@ -580,6 +580,7 @@ function buildPaymentNotes(methodLabel, response) {
     response?.Status ? `永豐狀態：${response.Status}` : '',
     response?.Description ? `永豐說明：${response.Description}` : '',
     response?.TSNo ? `交易編號：${response.TSNo}` : '',
+    response?.PayToken ? `pay_token:${response.PayToken}` : '',
     response?.ATMParam?.AtmPayNo ? `虛擬帳號：${response.ATMParam.AtmPayNo}` : '',
     response?.ATMParam?.WebAtmURL ? `WebATM：${response.ATMParam.WebAtmURL}` : '',
     response?.QRCodeURL ? `QR Code：${response.QRCodeURL}` : '',

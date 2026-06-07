@@ -188,6 +188,69 @@ test('Sinopac notify accepts cent-based amount from mobile payments', async () =
   assert.equal(calls.length, 2);
 });
 
+test('Sinopac notify resolves mobile payment by PayToken when OrderNo is absent', async () => {
+  const calls = [];
+  const originalFetch = global.fetch;
+  const originalEnv = {
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+  };
+
+  process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  delete process.env.LINE_CHANNEL_ACCESS_TOKEN;
+
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+
+    if (String(url).startsWith(`${SUPABASE_URL}/rest/v1/orders?note=ilike.*pay_token%3APT-APPLE-001*`)) {
+      assert.equal(options.method, 'GET');
+      return jsonResponse(200, [{
+        id: 'APPLE-TOKEN-001',
+        status: 'unpaid',
+        total: 5,
+        user_id: null,
+        member: 'Apple Pay Token 測試',
+        email: '',
+      }]);
+    }
+
+    if (String(url) === `${SUPABASE_URL}/rest/v1/orders?id=eq.APPLE-TOKEN-001`) {
+      assert.equal(options.method, 'PATCH');
+      assert.deepEqual(JSON.parse(options.body), { status: 'paid' });
+      return jsonResponse(200, [{
+        id: 'APPLE-TOKEN-001',
+        status: 'paid',
+        total: 5,
+        user_id: null,
+        member: 'Apple Pay Token 測試',
+        email: '',
+      }]);
+    }
+
+    throw new Error(`Unexpected fetch: ${options.method} ${url}`);
+  };
+
+  const res = createRes();
+
+  try {
+    await sinopacNotify({
+      method: 'POST',
+      body: { ShopNo: 'TESTSHOP', PayToken: 'PT-APPLE-001' },
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.jsonBody.ok, true);
+  assert.equal(res.jsonBody.orderId, 'APPLE-TOKEN-001');
+  assert.equal(res.jsonBody.status, 'paid');
+  assert.equal(calls.length, 2);
+});
+
 test('Sinopac notify sends payment email when member has no LINE binding', async () => {
   const calls = [];
   const originalFetch = global.fetch;

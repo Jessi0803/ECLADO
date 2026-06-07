@@ -349,6 +349,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
           Status: 'S',
           Description: '付款單建立成功',
           TSNo: `E2E${Date.now()}`,
+          PayToken: `PAYTOKEN${Date.now()}`,
           ATMParam: {
             AtmPayNo: '8071234567890123',
           },
