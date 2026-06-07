@@ -874,7 +874,9 @@ function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPag
   }, [maxStart]);
 
   const start = Math.min(active, maxStart);
-  const visible = products.slice(start, start + visibleCount);
+  const gap = isMobile ? 10 : 24;
+  const itemWidth = `calc((100% - ${gap * (visibleCount - 1)}px) / ${visibleCount})`;
+  const slideOffset = `calc(-${start} * (${itemWidth} + ${gap}px))`;
 
   function move(delta) {
     setActive(current => {
@@ -900,10 +902,14 @@ function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPag
           </div>
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : `repeat(${visibleCount}, minmax(0, 1fr))`, gap: isMobile ? 10 : 24 }}>
-          {visible.map(product => (
-            <ProductCard key={product.id} product={product} user={user} onAdd={() => onAdd(product)} onSelect={() => onSelect(product)} promotions={promotions} showFulfillmentLine={false} />
-          ))}
+        <div style={{ overflow:'hidden' }}>
+          <div style={{ display:'flex', gap, transform:`translateX(${slideOffset})`, transition:'transform 0.55s cubic-bezier(0.22, 1, 0.36, 1)', willChange:'transform' }}>
+            {products.map(product => (
+              <div key={product.id} style={{ flex:`0 0 ${itemWidth}`, minWidth:0 }}>
+                <ProductCard product={product} user={user} onAdd={() => onAdd(product)} onSelect={() => onSelect(product)} promotions={promotions} showFulfillmentLine={false} />
+              </div>
+            ))}
+          </div>
         </div>
 
         <div style={{ marginTop:24, display:'flex', justifyContent:'space-between', gap:18, alignItems:'center', flexWrap:'wrap' }}>
