@@ -916,19 +916,28 @@ function MobileNavSection({ item, setPage, user, close }) {
 function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPage, promotions = [] }) {
   const [active, setActive] = useState(0);
   const visibleCount = isMobile ? 2 : 4;
+  const slideStep = isMobile ? 2 : 1;
+  const intervalMs = isMobile ? 2000 : 5200;
   const maxStart = Math.max(0, products.length - visibleCount);
+  const slideStarts = [];
+  for (let index = 0; index <= maxStart; index += slideStep) slideStarts.push(index);
+  if (slideStarts[slideStarts.length - 1] !== maxStart) slideStarts.push(maxStart);
 
   useEffect(() => {
     if (products.length <= visibleCount) return;
     const timer = setInterval(() => {
-      setActive(current => current >= maxStart ? 0 : current + 1);
-    }, 5200);
+      setActive(current => {
+        const currentIndex = slideStarts.indexOf(current);
+        const nextIndex = currentIndex < 0 || currentIndex >= slideStarts.length - 1 ? 0 : currentIndex + 1;
+        return slideStarts[nextIndex] || 0;
+      });
+    }, intervalMs);
     return () => clearInterval(timer);
-  }, [maxStart, products.length, visibleCount]);
+  }, [intervalMs, maxStart, products.length, slideStarts.join('|'), visibleCount]);
 
   useEffect(() => {
-    setActive(current => Math.min(current, maxStart));
-  }, [maxStart]);
+    setActive(current => slideStarts.reduce((closest, item) => Math.abs(item - current) < Math.abs(closest - current) ? item : closest, slideStarts[0] || 0));
+  }, [maxStart, slideStep]);
 
   const start = Math.min(active, maxStart);
   const gap = isMobile ? 10 : 24;
@@ -938,10 +947,12 @@ function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPag
   function move(delta) {
     setActive(current => {
       if (maxStart === 0) return 0;
-      const next = current + delta;
-      if (next < 0) return maxStart;
-      if (next > maxStart) return 0;
-      return next;
+      const currentIndex = slideStarts.indexOf(current);
+      const fallbackIndex = currentIndex < 0 ? 0 : currentIndex;
+      const nextIndex = fallbackIndex + delta;
+      if (nextIndex < 0) return slideStarts[slideStarts.length - 1] || 0;
+      if (nextIndex >= slideStarts.length) return 0;
+      return slideStarts[nextIndex] || 0;
     });
   }
 
@@ -971,8 +982,8 @@ function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPag
 
         <div style={{ marginTop:24, display:'flex', justifyContent:'space-between', gap:18, alignItems:'center', flexWrap:'wrap' }}>
           <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-            {Array.from({ length:maxStart + 1 }).map((_, index) => (
-              <button key={index} aria-label={`查看第 ${index + 1} 組熱門商品`} onClick={() => setActive(index)} style={{ width:index === start ? 28 : 9, height:3, border:'none', background:index === start ? 'var(--black)' : 'var(--light)', cursor:'pointer', padding:0, transition:'all 0.25s' }} />
+            {slideStarts.map((slideStart, index) => (
+              <button key={slideStart} aria-label={`查看第 ${index + 1} 組熱門商品`} onClick={() => setActive(slideStart)} style={{ width:slideStart === start ? 28 : 9, height:3, border:'none', background:slideStart === start ? 'var(--black)' : 'var(--light)', cursor:'pointer', padding:0, transition:'all 0.25s' }} />
             ))}
           </div>
           <button onClick={() => setPage('shop')} style={{ background:'none', border:'none', borderBottom:'1px solid var(--dark)', color:'var(--dark)', cursor:'pointer', fontSize:13, paddingBottom:3 }}>瀏覽全部商品 →</button>
