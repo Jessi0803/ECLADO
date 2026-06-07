@@ -1303,7 +1303,6 @@ function Members({
           {onDeleteMember && !(typeof selected.id === 'string' && selected.id.startsWith('app:')) && (
             <div style={{ marginTop: 24, padding: '16px', border: '1px solid oklch(0.60 0.18 25 / 0.28)', background: 'oklch(0.60 0.18 25 / 0.06)' }}>
               <div style={{ fontSize: 11, color: 'var(--red)', marginBottom: 8, letterSpacing: '0.08em' }}>刪除會員</div>
-              <p style={{ fontSize: 12, color: 'var(--mid)', lineHeight: 1.7, marginBottom: 12 }}>刪除後會同步移除登入帳號與會員資料，歷史訂單仍會保留方便對帳。</p>
               <button
                 type="button"
                 onClick={() => deleteMember(selected)}
