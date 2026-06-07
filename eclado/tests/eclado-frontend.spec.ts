@@ -444,8 +444,10 @@ test('登入會員結帳會寫入訂單 payload 與 user_id，付款前不扣庫
 
 test('信用卡、Apple Pay、Google Pay 會送出對應金流 payType', async ({ page }) => {
   const paymentRequests: Record<string, unknown>[] = [];
+  const orderInserts: Record<string, unknown>[] = [];
   await mockEcladoApis(page, {
     onPaymentRequest: request => paymentRequests.push(request),
+    onOrderInsert: order => orderInserts.push(order),
   });
 
   for (const method of [
@@ -475,6 +477,7 @@ test('信用卡、Apple Pay、Google Pay 會送出對應金流 payType', async (
 
     await expect(page.getByText('付款單已建立')).toBeVisible();
     expect(paymentRequests.at(-1)?.payType).toBe(method.payType);
+    expect(orderInserts.at(-1)?.status).toBe('unpaid');
   }
 });
 

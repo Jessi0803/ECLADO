@@ -519,23 +519,27 @@ const PAYMENT_METHODS = {
   atm: {
     label: '虛擬帳號匯款',
     payType: 'A',
+    pendingStatus: 'awaiting_confirm',
     description: '由永豐產生虛擬帳號，付款後由系統通知店家。',
   },
   card: {
     label: '信用卡',
     payType: 'C',
+    pendingStatus: 'unpaid',
     description: '完成授權後即進入付款流程。',
   },
   apple: {
     label: 'Apple Pay',
     payType: 'M',
     choosePay: 'A',
+    pendingStatus: 'unpaid',
     description: '以 Apple Pay 完成付款。',
   },
   google: {
     label: 'Google Pay',
     payType: 'M',
     choosePay: 'G',
+    pendingStatus: 'unpaid',
     description: '以 Google Pay 完成付款。',
   },
 };
@@ -1986,10 +1990,10 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
     }).catch(error => console.warn('[ECLADO] 訂單 Email 通知送出失敗：', error));
   }
 
-  async function insertOrder(paymentData, methodLabel) {
+  async function insertOrder(paymentData, method) {
     const today = new Date();
     const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    const noteParts = [safeTrim(form.note), buildPaymentNotes(methodLabel, paymentData)].filter(Boolean);
+    const noteParts = [safeTrim(form.note), buildPaymentNotes(method.label, paymentData)].filter(Boolean);
     const order = {
       id: orderNo,
       member: form.name || user?.name || '訪客',
@@ -2012,7 +2016,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
       discount,
       promotion_id: promotion?.id || null,
       promotion_name: promotion?.name || null,
-      status: 'awaiting_confirm',
+      status: method.pendingStatus || 'unpaid',
       date: dateStr,
       address: `${form.city}${form.district}${form.address}`,
       phone: form.phone,
@@ -2075,7 +2079,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
 
       setPaymentSnapshot(cart.map(item => ({ ...item })));
       setPaymentSummary({ subtotal, discount, finalSubtotal, promotion, shipping, total, items: cart.map(item => ({ ...item })) });
-      const insertError = await insertOrder(apiResponse, method.label);
+      const insertError = await insertOrder(apiResponse, method);
       if (insertError) console.error(insertError);
 
       const paymentLink = extractPaymentLink(apiResponse);
