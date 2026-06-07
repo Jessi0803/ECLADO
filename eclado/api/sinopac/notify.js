@@ -47,6 +47,13 @@ function getAmount(payload) {
   return Number.isFinite(amount) ? amount : null;
 }
 
+function amountsMatch(orderTotal, notifiedAmount) {
+  if (notifiedAmount === null) return true;
+  const total = Number(orderTotal);
+  if (!Number.isFinite(total)) return false;
+  return total === notifiedAmount || Math.round(total * 100) === notifiedAmount;
+}
+
 function isFailedPayment(payload) {
   const status = firstText(payload, ['Status', 'status']).toUpperCase();
   const payStatus = firstText(payload, ['PayStatus', 'payStatus', 'pay_status']).toUpperCase();
@@ -195,7 +202,7 @@ module.exports = async function handler(req, res) {
     if (!order) return res.status(404).json({ ok: false, error: 'order not found', orderId });
 
     const notifiedAmount = getAmount(payload);
-    if (notifiedAmount !== null && Number(order.total) !== notifiedAmount) {
+    if (!amountsMatch(order.total, notifiedAmount)) {
       return res.status(400).json({ ok: false, error: 'amount mismatch', orderId });
     }
 
