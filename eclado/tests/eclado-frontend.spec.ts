@@ -478,6 +478,7 @@ test('信用卡、Apple Pay、Google Pay 會送出對應金流 payType', async (
     await expect(page.getByText('付款單已建立')).toBeVisible();
     expect(paymentRequests.at(-1)?.payType).toBe(method.payType);
     expect(paymentRequests.at(-1)?.Param1).toBe(orderInserts.at(-1)?.id);
+    expect(paymentRequests.at(-1)?.backendUrl).toContain(`orderNo=${encodeURIComponent(String(orderInserts.at(-1)?.id))}`);
     expect(orderInserts.at(-1)?.status).toBe('unpaid');
     expect(String(orderInserts.at(-1)?.note || '')).toContain('pay_token:PAYTOKEN');
   }

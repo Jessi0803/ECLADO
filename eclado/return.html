@@ -1977,7 +1977,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
       expireDate: formatDateCompact(expiresAt),
       expireTime: formatTimeCompact(expiresAt),
       returnUrl: `${SINOPAC_PAYMENT_API}/return?orderNo=${encodeURIComponent(orderNo)}`,
-      backendUrl: SINOPAC_NOTIFY_API,
+      backendUrl: `${SINOPAC_NOTIFY_API}?orderNo=${encodeURIComponent(orderNo)}`,
       qrCodeStatus: 'Y',
       memo: safeTrim(form.note),
       Param1: orderNo,

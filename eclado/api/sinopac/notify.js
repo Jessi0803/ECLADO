@@ -21,6 +21,10 @@ function pickPayload(raw) {
   return { ...body, ...(typeof nested === 'object' && nested ? nested : {}) };
 }
 
+function pickQuery(query) {
+  return query && typeof query === 'object' ? query : {};
+}
+
 function payloadValue(payload, key) {
   if (!payload || typeof payload !== 'object') return undefined;
   if (Object.prototype.hasOwnProperty.call(payload, key)) return payload[key];
@@ -210,7 +214,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const payload = pickPayload(req.body);
+  const payload = { ...pickQuery(req.query), ...pickPayload(req.body) };
   let orderId = '';
 
   try {
