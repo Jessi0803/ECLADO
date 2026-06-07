@@ -21,9 +21,18 @@ function pickPayload(raw) {
   return { ...body, ...(typeof nested === 'object' && nested ? nested : {}) };
 }
 
+function payloadValue(payload, key) {
+  if (!payload || typeof payload !== 'object') return undefined;
+  if (Object.prototype.hasOwnProperty.call(payload, key)) return payload[key];
+
+  const wanted = String(key).toLowerCase();
+  const actualKey = Object.keys(payload).find(candidate => candidate.toLowerCase() === wanted);
+  return actualKey ? payload[actualKey] : undefined;
+}
+
 function firstText(payload, keys) {
   for (const key of keys) {
-    const value = payload?.[key];
+    const value = payloadValue(payload, key);
     if (value !== undefined && value !== null && String(value).trim()) {
       return String(value).trim();
     }
@@ -36,12 +45,14 @@ function getOrderId(payload) {
     'orderNo', 'OrderNo', 'order_no',
     'orderId', 'OrderId', 'order_id',
     'MerchantOrderNo', 'merchantOrderNo',
+    'MasterOrderNo', 'masterOrderNo',
+    'MerchantTradeNo', 'merchantTradeNo',
     'Param1', 'param1',
   ]);
 }
 
 function getAmount(payload) {
-  const raw = firstText(payload, ['amount', 'Amount', 'Amt', 'Total', 'total']);
+  const raw = firstText(payload, ['amount', 'Amount', 'Amt', 'Total', 'total', 'PayAmount', 'payAmount']);
   if (!raw) return null;
   const amount = Number(String(raw).replace(/,/g, ''));
   return Number.isFinite(amount) ? amount : null;
@@ -187,6 +198,10 @@ module.exports = async function handler(req, res) {
   const payload = pickPayload(req.body);
   const orderId = getOrderId(payload);
   if (!orderId) {
+    console.warn('[sinopac notify] missing order id', {
+      keys: payload && typeof payload === 'object' ? Object.keys(payload) : [],
+      payload,
+    });
     return res.status(400).json({ ok: false, error: 'orderNo required' });
   }
   if (isFailedPayment(payload)) {
@@ -203,6 +218,12 @@ module.exports = async function handler(req, res) {
 
     const notifiedAmount = getAmount(payload);
     if (!amountsMatch(order.total, notifiedAmount)) {
+      console.warn('[sinopac notify] amount mismatch', {
+        orderId,
+        orderTotal: order.total,
+        notifiedAmount,
+        payload,
+      });
       return res.status(400).json({ ok: false, error: 'amount mismatch', orderId });
     }
 
