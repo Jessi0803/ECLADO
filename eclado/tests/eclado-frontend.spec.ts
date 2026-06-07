@@ -389,11 +389,13 @@ test('結帳建立付款單但不寫入真實訂單或真金流', async ({ page 
 
 test('登入會員結帳會寫入訂單 payload 與 user_id，付款前不扣庫存', async ({ page }) => {
   let capturedOrder: Record<string, unknown> | null = null;
+  const orderEmails: Record<string, unknown>[] = [];
 
   await mockEcladoApis(page, {
     authUser: authUser('buyer@example.com'),
     profiles: [profile('consumer', 'buyer@example.com')],
     onOrderInsert: order => { capturedOrder = order; },
+    onOrderEmail: body => orderEmails.push(body),
   });
 
   await page.goto('/shop');
@@ -424,6 +426,12 @@ test('登入會員結帳會寫入訂單 payload 與 user_id，付款前不扣庫
   expect(capturedOrder?.promotion_name).toBe(activePromotion.name);
   const items = capturedOrder?.items as Array<Record<string, unknown>>;
   expect(items[0].stock_at_order).toBe(2);
+  expect(orderEmails).toContainEqual(expect.objectContaining({
+    type: 'order_placed',
+    email: 'buyer@example.com',
+    memberName: '登入買家',
+    total: 3702,
+  }));
 });
 
 test('信用卡、Apple Pay、Google Pay 會送出對應金流 payType', async ({ page }) => {

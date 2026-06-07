@@ -414,6 +414,19 @@ function Sidebar({ page, setPage, open, onClose, adminEmail, onSignOut }) {
 
       {/* Footer */}
       <div style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+        <button
+          type="button"
+          onClick={() => { window.location.href = '/'; }}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            background: 'rgba(184,169,138,0.12)', border: '1px solid rgba(184,169,138,0.28)',
+            color: 'rgba(255,255,255,0.82)', fontSize: 12, letterSpacing: '0.08em',
+            padding: '9px 0', cursor: 'pointer', marginBottom: 14,
+          }}
+        >
+          <span style={{ fontSize: 14, lineHeight: 1 }}>←</span>
+          返回前台
+        </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: onSignOut ? 10 : 0 }}>
           <div style={{ width: 32, height: 32, background: 'rgba(255,255,255,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#fff' }}>
             {adminEmail ? adminEmail[0].toUpperCase() : 'A'}
@@ -597,9 +610,38 @@ function Orders({ orders, setOrders }) {
   const inStockCount = byStatus.filter(o => !hasPreorder(o)).length;
 
   async function pushLineOrderNotice(order, type, extra = {}) {
+    async function pushEmailOrderNotice(fallbackReason = '') {
+      if (!order?.email) {
+        setLineNotice(fallbackReason || '此訂單沒有 Email，無法發送通知。');
+        return false;
+      }
+      const response = await fetch('/api/order-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type,
+          email: order.email,
+          orderId: order.id,
+          memberName: order.member,
+          total: order.total,
+          ...extra,
+        }),
+      }).catch(e => {
+        setLineNotice('Email 通知送出失敗：' + (e.message || '網路錯誤'));
+        return null;
+      });
+      if (!response) return false;
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        setLineNotice('Email 通知送出失敗：' + (body.error || `HTTP ${response.status}`));
+        return false;
+      }
+      setLineNotice(type === 'payment_paid' ? 'Email 付款完成通知已送出。' : 'Email 出貨通知已送出。');
+      return true;
+    }
+
     if (!order?.user_id) {
-      setLineNotice('此訂單沒有綁定會員，無法發送 LINE 通知。');
-      return false;
+      return pushEmailOrderNotice('此訂單沒有綁定會員與 Email，無法發送通知。');
     }
     const { data: profile, error } = await supabase
       .from('profiles')
@@ -607,12 +649,10 @@ function Orders({ orders, setOrders }) {
       .eq('id', order.user_id)
       .single();
     if (error) {
-      setLineNotice('讀取會員 LINE 資料失敗：' + (error.message || '請稍後再試'));
-      return false;
+      return pushEmailOrderNotice('讀取會員 LINE 資料失敗，Email 通知也無法送出。');
     }
     if (!profile?.line_user_id) {
-      setLineNotice('此會員沒有 LINE 綁定資料，無法發送 LINE 通知。');
-      return false;
+      return pushEmailOrderNotice('此會員沒有 LINE 綁定資料，且訂單沒有 Email，無法發送通知。');
     }
     const response = await fetch('/api/line-push', {
       method: 'POST',

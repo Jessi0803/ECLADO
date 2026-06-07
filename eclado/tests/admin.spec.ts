@@ -141,6 +141,7 @@ test('訂單管理可取消訂單並同步 cancelled 狀態', async ({ page }) =
 
   await page.goto('/admin');
   await openAdminSection(page, /訂單管理/);
+  await page.getByRole('button', { name: '已付款' }).click();
   await page.getByText('E2E-ORDER-001').click();
   page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button', { name: '取消訂單' }).click();
@@ -196,6 +197,34 @@ test('出貨可寫入托運單號並送出 LINE 通知', async ({ page }) => {
     lineUserId: 'U1234567890',
     orderId: 'E2E-ORDER-002',
     tracking: 'SF987654321',
+  }));
+});
+
+test('沒有 LINE 綁定的訂單出貨會送出 Email 通知', async ({ page }) => {
+  const orderUpdates: Record<string, unknown>[] = [];
+  const orderEmails: Record<string, unknown>[] = [];
+  await mockAdminApis(page, {
+    orders: [{ ...adminOrderRows[0], status: 'paid', tracking: '' }],
+    onOrderUpdate: update => orderUpdates.push(update),
+    onOrderEmail: body => orderEmails.push(body),
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByRole('button', { name: '已付款' }).click();
+  await page.getByText('E2E-ORDER-001').click();
+  await page.getByPlaceholder('輸入順豐托運單號（選填）').fill('SF111222333');
+  await page.getByRole('button', { name: '確認出貨' }).click();
+
+  await expect(page.getByText('Email 出貨通知已送出。')).toBeVisible();
+  await expect.poll(() => orderUpdates.some(update =>
+    update.status === 'shipped' && update.tracking === 'SF111222333',
+  )).toBe(true);
+  expect(orderEmails).toContainEqual(expect.objectContaining({
+    type: 'shipment',
+    email: 'member@example.com',
+    orderId: 'E2E-ORDER-001',
+    tracking: 'SF111222333',
   }));
 });
 

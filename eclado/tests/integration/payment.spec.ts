@@ -50,7 +50,7 @@ test.describe('永豐 QPay integration', () => {
     expect(atmNo).toMatch(/^\d{10,}$/);
     expect(extractPaymentLink(response)).toBeTruthy();
     expect(payload.payType).toBe('A');
-    expect(payload.backendUrl).toBe('https://pay.ecladotaiwan.com/api/sinopac/notify');
+    expect(payload.backendUrl).toBe('https://www.ecladotaiwan.com/api/sinopac/notify');
     expect(payload.returnUrl).toContain('https://pay.ecladotaiwan.com/return?orderNo=');
   });
 
@@ -65,7 +65,7 @@ test.describe('永豐 QPay integration', () => {
     expect(response.ATMParam?.AtmPayNo).toBeFalsy();
     expect(extractPaymentLink(response)).toBeTruthy();
     expect(payload.payType).toBe('C');
-    expect(payload.backendUrl).toBe('https://pay.ecladotaiwan.com/api/sinopac/notify');
+    expect(payload.backendUrl).toBe('https://www.ecladotaiwan.com/api/sinopac/notify');
     expect(payload.returnUrl).toContain('https://pay.ecladotaiwan.com/return?orderNo=');
   });
 });
@@ -108,7 +108,7 @@ function buildPayload(payType: 'A' | 'C') {
     expireDate: formatDateCompact(expiresAt),
     expireTime: formatTimeCompact(expiresAt),
     returnUrl: `https://pay.ecladotaiwan.com/return?orderNo=${encodeURIComponent(orderNo)}`,
-    backendUrl: 'https://pay.ecladotaiwan.com/api/sinopac/notify',
+    backendUrl: 'https://www.ecladotaiwan.com/api/sinopac/notify',
     qrCodeStatus: 'Y',
     memo: 'PW',
   };

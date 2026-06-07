@@ -171,6 +171,7 @@ export type MockEcladoApiOptions = {
   onPromotionDelete?: (url: string) => void;
   onApplicationUpdate?: (update: Record<string, unknown>, url: string) => void;
   onLinePush?: (body: Record<string, unknown>) => void;
+  onOrderEmail?: (body: Record<string, unknown>) => void;
   onPaymentRequest?: (body: Record<string, unknown>) => void;
   productWriteError?: string;
   orderWriteError?: string;
@@ -361,5 +362,10 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     options.onLinePush?.(route.request().postDataJSON());
     if (options.linePushError) return json(route, { error: options.linePushError }, 500);
     return json(route, { ok: true });
+  });
+
+  await page.route('**/api/order-email', async route => {
+    options.onOrderEmail?.(route.request().postDataJSON());
+    return json(route, { status: 'sent', id: 'email_mock' });
   });
 }

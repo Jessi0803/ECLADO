@@ -505,6 +505,7 @@ function getPromoDisplayPrice(product, user, promotions) {
 }
 
 const SINOPAC_PAYMENT_API = 'https://pay.ecladotaiwan.com';
+const SINOPAC_NOTIFY_API = 'https://www.ecladotaiwan.com/api/sinopac/notify';
 const PAYMENT_REQUEST_TIMEOUT_MS = 15000;
 
 const PAYMENT_METHODS = {
@@ -1922,6 +1923,21 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
     );
   }
 
+  async function sendOrderPlacedEmail() {
+    if (!form.email || user?.email?.startsWith('line.')) return;
+    await fetch('/api/order-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'order_placed',
+        email: form.email,
+        orderId: orderNo,
+        memberName: form.name || user?.name || '訪客',
+        total,
+      }),
+    }).catch(error => console.warn('[ECLADO] 訂單 Email 通知送出失敗：', error));
+  }
+
   async function insertOrder(paymentData, methodLabel) {
     const today = new Date();
     const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -1958,6 +1974,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
       user_id: user?.uid || null,
     };
     const { error } = await supabase.from('orders').insert(order);
+    if (!error) await sendOrderPlacedEmail();
     return error;
   }
 
@@ -1980,7 +1997,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
       expireDate: formatDateCompact(expiresAt),
       expireTime: formatTimeCompact(expiresAt),
       returnUrl: `${SINOPAC_PAYMENT_API}/return?orderNo=${encodeURIComponent(orderNo)}`,
-      backendUrl: `${SINOPAC_PAYMENT_API}/api/sinopac/notify`,
+      backendUrl: SINOPAC_NOTIFY_API,
       qrCodeStatus: 'Y',
       memo: safeTrim(form.note),
     };
