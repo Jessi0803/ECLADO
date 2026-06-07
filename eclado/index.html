@@ -175,6 +175,12 @@ const POST_LOGIN_PAGE_KEY = 'eclado_post_login';
 const CHECKOUT_LOGIN_REDIRECT_KEY = 'eclado_checkout_login_redirect';
 const LINE_LOGIN_PENDING_KEY = 'eclado_line_login_pending';
 
+function consumeCheckoutLoginRedirectPage() {
+  const nextPage = sessionStorage.getItem(CHECKOUT_LOGIN_REDIRECT_KEY) === 'checkout' ? 'checkout' : 'account';
+  sessionStorage.removeItem(CHECKOUT_LOGIN_REDIRECT_KEY);
+  return nextPage;
+}
+
 async function fetchLatestProApplication(userId) {
   if (!userId) return null;
   const { data } = await supabase
@@ -2502,9 +2508,7 @@ function LoginPage({ setPage }) {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { setError(sbError(error.message)); return; }
-      const nextPage = sessionStorage.getItem(CHECKOUT_LOGIN_REDIRECT_KEY) === 'checkout' ? 'checkout' : 'account';
-      sessionStorage.removeItem(CHECKOUT_LOGIN_REDIRECT_KEY);
-      setPage(nextPage);
+      setPage(consumeCheckoutLoginRedirectPage());
     } catch(err) { setError('網路異常，請確認連線'); }
     finally { setLoading(false); }
   }
@@ -3188,7 +3192,8 @@ function LineCallbackPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         done = true;
-        setStatus('LINE 登入成功，正在前往會員專區...');
+        const nextLabel = sessionStorage.getItem(CHECKOUT_LOGIN_REDIRECT_KEY) === 'checkout' ? '結帳頁' : '會員專區';
+        setStatus(`LINE 登入成功，正在前往${nextLabel}...`);
         return;
       }
     });
@@ -3650,8 +3655,9 @@ function App() {
             setPageState('login');
           } else if (isLineLoginCallback) {
             sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
-            cleanAuthCallbackFromUrl('/account');
-            setPageState('account');
+            const nextPage = consumeCheckoutLoginRedirectPage();
+            cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
+            setPageState(nextPage);
           } else {
             cleanAuthCallbackFromUrl('/login');
             setPageState('login');
@@ -3673,8 +3679,9 @@ function App() {
           loadUser(session.user);
           if (isPendingLineLogin) {
             sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
-            cleanAuthCallbackFromUrl('/account');
-            setPageState('account');
+            const nextPage = consumeCheckoutLoginRedirectPage();
+            cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
+            setPageState(nextPage);
           }
         }
         setAuthReady(true);
@@ -3688,8 +3695,9 @@ function App() {
       } else if (event === 'SIGNED_IN' && (window.location.pathname === '/line-callback' || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1')) {
         if (session?.user) await loadUser(session.user);
         sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
-        cleanAuthCallbackFromUrl('/account');
-        setPageState('account');
+        const nextPage = consumeCheckoutLoginRedirectPage();
+        cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
+        setPageState(nextPage);
       } else if (event === 'SIGNED_IN' && isEmailVerificationCallback()) {
         if (session?.user) await loadUser(session.user);
         sessionStorage.setItem('eclado_auth_notice', 'email_verified');

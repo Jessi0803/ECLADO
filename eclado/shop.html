@@ -174,6 +174,12 @@ const NAV_ITEMS = [
 const CHECKOUT_LOGIN_REDIRECT_KEY = 'eclado_checkout_login_redirect';
 const LINE_LOGIN_PENDING_KEY = 'eclado_line_login_pending';
 
+function consumeCheckoutLoginRedirectPage() {
+  const nextPage = sessionStorage.getItem(CHECKOUT_LOGIN_REDIRECT_KEY) === 'checkout' ? 'checkout' : 'account';
+  sessionStorage.removeItem(CHECKOUT_LOGIN_REDIRECT_KEY);
+  return nextPage;
+}
+
 const PRODUCTS = [
   { id:1, name:'Deep Cleansing Foam', nameZh:'深層清潔泡沫洗面乳', category:'清潔', size:'200ml', price:1280, proPrice:960, isProOnly:false, img:'https://images.unsplash.com/photo-1556228578-dd539282b964?w=600&q=80&fit=crop',
     desc:'輕柔起泡配方，能溶解彩妝與皮脂污垢，同時維持肌膚柔軟與水潤度。富含天然植萃成分，洗後清爽不刺激，不緊繃。', skinType:'全膚質、敏感肌', ingredients:'椰油兩性醋酸鈉、胺基酸系界面活性劑、綠茶萃取、甜菜鹼', features:['溫和低刺激配方','洗後保濕不緊繃','維持肌膚天然皮脂'] },
@@ -2460,9 +2466,7 @@ function LoginPage({ setPage }) {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { setError(sbError(error.message)); return; }
-      const nextPage = sessionStorage.getItem(CHECKOUT_LOGIN_REDIRECT_KEY) === 'checkout' ? 'checkout' : 'account';
-      sessionStorage.removeItem(CHECKOUT_LOGIN_REDIRECT_KEY);
-      setPage(nextPage);
+      setPage(consumeCheckoutLoginRedirectPage());
     } catch(err) { setError('網路異常，請確認連線'); }
     finally { setLoading(false); }
   }
@@ -3054,7 +3058,8 @@ function LineCallbackPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         done = true;
-        setStatus('LINE 登入成功，正在前往會員專區...');
+        const nextLabel = sessionStorage.getItem(CHECKOUT_LOGIN_REDIRECT_KEY) === 'checkout' ? '結帳頁' : '會員專區';
+        setStatus(`LINE 登入成功，正在前往${nextLabel}...`);
         return;
       }
     });
@@ -3447,10 +3452,11 @@ function App() {
           sessionStorage.setItem('eclado_auth_notice', 'email_verified');
           cleanAuthCallbackFromUrl('/login');
           setPageState('login');
-        } else if (isLineLoginCallback) {
-          sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
-          cleanAuthCallbackFromUrl('/account');
-          setPageState('account');
+          } else if (isLineLoginCallback) {
+            sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
+            const nextPage = consumeCheckoutLoginRedirectPage();
+            cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
+            setPageState(nextPage);
         } else {
           cleanAuthCallbackFromUrl('/login');
           setPageState('login');
@@ -3466,10 +3472,11 @@ function App() {
         || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1';
       if (session?.user) {
         loadUser(session.user);
-        if (isPendingLineLogin) {
-          sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
-          cleanAuthCallbackFromUrl('/account');
-          setPageState('account');
+          if (isPendingLineLogin) {
+            sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
+            const nextPage = consumeCheckoutLoginRedirectPage();
+            cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
+            setPageState(nextPage);
         }
       }
     });
@@ -3481,8 +3488,9 @@ function App() {
       } else if (event === 'SIGNED_IN' && (window.location.pathname === '/line-callback' || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1')) {
         if (session?.user) await loadUser(session.user);
         sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
-        cleanAuthCallbackFromUrl('/account');
-        setPageState('account');
+        const nextPage = consumeCheckoutLoginRedirectPage();
+        cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
+        setPageState(nextPage);
       } else if (event === 'SIGNED_IN' && isEmailVerificationCallback()) {
         if (session?.user) await loadUser(session.user);
         sessionStorage.setItem('eclado_auth_notice', 'email_verified');
