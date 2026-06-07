@@ -1979,6 +1979,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
       backendUrl: SINOPAC_NOTIFY_API,
       qrCodeStatus: 'Y',
       memo: safeTrim(form.note),
+      Param1: orderNo,
     };
     if (method.choosePay) payload.choosePay = method.choosePay;
 
