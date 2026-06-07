@@ -1,4 +1,7 @@
+const crypto = require('crypto');
+
 const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
+const DEFAULT_QPAY_API_BASE = 'https://apisbx.sinopac.com/funBIZ-Sbx/QPay.WebAPI/api/';
 
 const INVENTORY_ACTIVE_STATUSES = new Set(['paid', 'preparing', 'shipped', 'delivered']);
 
@@ -66,6 +69,10 @@ function getPayToken(payload) {
   return firstText(payload, ['PayToken', 'payToken', 'pay_token']);
 }
 
+function getShopNo(payload) {
+  return firstText(payload, ['ShopNo', 'shopNo', 'shop_no']) || process.env.SINOPAC_SHOP_NO || '';
+}
+
 function amountsMatch(orderTotal, notifiedAmount) {
   if (notifiedAmount === null) return true;
   const total = Number(orderTotal);
@@ -112,6 +119,11 @@ async function supabaseRequest(path, options = {}) {
   return body;
 }
 
+async function readJsonResponse(response) {
+  const text = await response.text();
+  return text ? JSON.parse(text) : {};
+}
+
 async function findOrderByPayToken(payToken) {
   if (!payToken) return null;
   const query = [
@@ -121,6 +133,171 @@ async function findOrderByPayToken(payToken) {
   ].join('&');
   const orders = await supabaseRequest(`orders?${query}`, { method: 'GET' });
   return orders?.[0] || null;
+}
+
+function getQpayHashKeys() {
+  const raw = process.env.SINOPAC_QPAY_HASH_KEYS || process.env.SINOPAC_HASH_KEYS || '';
+  return raw.split(',').map(key => key.trim().toLowerCase()).filter(Boolean);
+}
+
+function xorBuffers(a, b) {
+  return Buffer.from(a.map((value, index) => value ^ b[index]));
+}
+
+function getAesKey() {
+  const keys = getQpayHashKeys();
+  if (keys.length < 4) return '';
+
+  const parts = keys.slice(0, 4).map(key => Buffer.from(key.replace(/-/g, '').slice(0, 16), 'hex'));
+  if (parts.some(part => part.length !== 8)) return '';
+
+  return Buffer.concat([
+    xorBuffers(parts[0], parts[1]),
+    xorBuffers(parts[2], parts[3]),
+  ]).toString('hex').toUpperCase();
+}
+
+function hasOrderPayQueryConfig() {
+  return Boolean(
+    process.env.SINOPAC_PAYMENT_QUERY_URL
+    || process.env.SINOPAC_ORDER_PAY_QUERY_URL
+    || (
+      (process.env.SINOPAC_QPAY_X_KEY_ID || process.env.SINOPAC_QPAY_APIM_AUTH || process.env.SINOPAC_APIM_AUTH)
+      && getAesKey()
+    ),
+  );
+}
+
+function signString(record) {
+  return Object.keys(record)
+    .filter(key => {
+      const value = record[key];
+      return value !== undefined
+        && value !== null
+        && typeof value !== 'object'
+        && String(value).trim();
+    })
+    .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+    .map(key => `${key}=${record[key]}`)
+    .join('&');
+}
+
+function generateQpaySign(record, aesKey, nonce) {
+  return crypto
+    .createHash('sha256')
+    .update(`${signString(record)}${nonce}${aesKey}`, 'utf8')
+    .digest('hex')
+    .toUpperCase();
+}
+
+function qpayIv(nonce) {
+  return crypto.createHash('sha256').update(nonce).digest('hex').toUpperCase().slice(-16);
+}
+
+function encryptQpayMessage(aesKey, nonce, data) {
+  const cipher = crypto.createCipheriv('aes-128-cbc', Buffer.from(aesKey, 'ascii'), Buffer.from(qpayIv(nonce), 'ascii'));
+  return Buffer.concat([cipher.update(data, 'utf8'), cipher.final()]).toString('hex').toUpperCase();
+}
+
+function decryptQpayMessage(aesKey, nonce, message) {
+  const decipher = crypto.createDecipheriv('aes-128-cbc', Buffer.from(aesKey, 'ascii'), Buffer.from(qpayIv(nonce), 'ascii'));
+  return Buffer.concat([decipher.update(Buffer.from(message, 'hex')), decipher.final()]).toString('utf8');
+}
+
+function normalizeOrderPayQueryResult(body) {
+  const root = body?.response || body?.Response || body?.data || body?.Data || body;
+  if (!root || typeof root !== 'object') return null;
+
+  const content = root.TSResultContent || root.tsResultContent || root.result || root.Result || root;
+  if (!content || typeof content !== 'object') return null;
+
+  return {
+    ...content,
+    PayToken: content.PayToken || root.PayToken,
+    __orderPayQuery: root,
+  };
+}
+
+async function queryOrderPayViaProxy(shopNo, payToken) {
+  const url = process.env.SINOPAC_PAYMENT_QUERY_URL || process.env.SINOPAC_ORDER_PAY_QUERY_URL;
+  if (!url) return null;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ShopNo: shopNo, PayToken: payToken }),
+  });
+  const body = await readJsonResponse(response).catch(() => ({}));
+  if (!response.ok || body?.ok === false) {
+    throw new Error(body?.error || body?.message || `OrderPayQuery proxy HTTP ${response.status}`);
+  }
+  return normalizeOrderPayQueryResult(body);
+}
+
+async function queryOrderPayDirect(shopNo, payToken) {
+  const aesKey = getAesKey();
+  const xKeyId = process.env.SINOPAC_QPAY_X_KEY_ID || process.env.SINOPAC_QPAY_APIM_AUTH || process.env.SINOPAC_APIM_AUTH || '';
+  if (!shopNo || !payToken || !aesKey || !xKeyId) return null;
+
+  const apiBase = (process.env.SINOPAC_QPAY_API_BASE || DEFAULT_QPAY_API_BASE).replace(/\/?$/, '/');
+  const headers = { 'Content-Type': 'application/json', 'X-KeyID': xKeyId };
+
+  const nonceResponse = await fetch(`${apiBase}Nonce`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ ShopNo: shopNo }),
+  });
+  const nonceBody = await readJsonResponse(nonceResponse).catch(() => ({}));
+  if (!nonceResponse.ok || !nonceBody?.Nonce) {
+    throw new Error(nonceBody?.Description || nonceBody?.error || `QPay Nonce HTTP ${nonceResponse.status}`);
+  }
+
+  const request = { ShopNo: shopNo, PayToken: payToken };
+  const nonce = nonceBody.Nonce;
+  const message = {
+    Version: '1.0.0',
+    ShopNo: shopNo,
+    APIService: 'OrderPayQuery',
+    Nonce: nonce,
+    Message: encryptQpayMessage(aesKey, nonce, JSON.stringify(request)),
+    Sign: generateQpaySign(request, aesKey, nonce),
+  };
+
+  const response = await fetch(`${apiBase}Order`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(message),
+  });
+  const body = await readJsonResponse(response).catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(body?.Description || body?.error || `QPay OrderPayQuery HTTP ${response.status}`);
+  }
+  if (!body?.Message || !body?.Nonce) {
+    throw new Error('QPay OrderPayQuery response missing encrypted message');
+  }
+
+  const decoded = JSON.parse(decryptQpayMessage(aesKey, body.Nonce, body.Message));
+  const expectedSign = generateQpaySign(decoded, aesKey, body.Nonce);
+  if (body.Sign && expectedSign !== body.Sign) {
+    throw new Error('QPay OrderPayQuery response sign validate failed');
+  }
+
+  return normalizeOrderPayQueryResult(decoded);
+}
+
+async function queryOrderPay(shopNo, payToken) {
+  if (!shopNo || !payToken) return null;
+
+  const attempts = [
+    () => queryOrderPayViaProxy(shopNo, payToken),
+    () => queryOrderPayDirect(shopNo, payToken),
+  ];
+
+  for (const attempt of attempts) {
+    const result = await attempt();
+    if (result) return result;
+  }
+  return null;
 }
 
 function buildPaymentMessage(order) {
@@ -218,9 +395,30 @@ module.exports = async function handler(req, res) {
   let orderId = '';
 
   try {
+    const payToken = getPayToken(payload);
+    const shopNo = getShopNo(payload);
+    if (payToken) {
+      try {
+        const orderPayResult = await queryOrderPay(shopNo, payToken);
+        if (orderPayResult) {
+          Object.assign(payload, orderPayResult);
+        } else if (hasOrderPayQueryConfig()) {
+          console.warn('[sinopac notify] OrderPayQuery skipped or unavailable', {
+            shopNo: shopNo || undefined,
+            payToken,
+          });
+        }
+      } catch (error) {
+        console.warn('[sinopac notify] OrderPayQuery failed; falling back to local token lookup', {
+          shopNo: shopNo || undefined,
+          payToken,
+          error: error.message || String(error),
+        });
+      }
+    }
+
     orderId = getOrderId(payload);
     if (!orderId) {
-      const payToken = getPayToken(payload);
       const tokenOrder = await findOrderByPayToken(payToken);
       if (tokenOrder) {
         orderId = tokenOrder.id;

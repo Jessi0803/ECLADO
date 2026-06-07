@@ -343,13 +343,15 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       const request = route.request().postDataJSON();
       options.onPaymentRequest?.(request);
       if (options.paymentError) return json(route, { ok: false, error: options.paymentError }, 502);
+      const payToken = `PAYTOKEN${Date.now()}`;
       return json(route, {
         ok: true,
         response: {
           Status: 'S',
           Description: '付款單建立成功',
           TSNo: `E2E${Date.now()}`,
-          PayToken: `PAYTOKEN${Date.now()}`,
+          PayToken: request.payType === 'C' ? undefined : payToken,
+          CardParam: request.payType === 'C' ? { PayToken: payToken } : undefined,
           ATMParam: {
             AtmPayNo: '8071234567890123',
           },

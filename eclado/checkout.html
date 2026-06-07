@@ -600,13 +600,26 @@ function extractPaymentLink(response) {
   return candidates.find(url => typeof url === 'string' && url.startsWith('http') && !url.includes('QRCode')) || '';
 }
 
+function getPaymentToken(response) {
+  if (!response || typeof response !== 'object') return '';
+  const candidates = [
+    response.PayToken,
+    response?.CardParam?.PayToken,
+    response?.MobileParam?.PayToken,
+    response?.WalletParam?.PayToken,
+    response?.ATMParam?.PayToken,
+  ];
+  return candidates.find(token => typeof token === 'string' && token.trim()) || '';
+}
+
 function buildPaymentNotes(methodLabel, response) {
+  const payToken = getPaymentToken(response);
   const lines = [
     `付款方式：${methodLabel}`,
     response?.Status ? `永豐狀態：${response.Status}` : '',
     response?.Description ? `永豐說明：${response.Description}` : '',
     response?.TSNo ? `交易編號：${response.TSNo}` : '',
-    response?.PayToken ? `pay_token:${response.PayToken}` : '',
+    payToken ? `pay_token:${payToken}` : '',
     response?.ATMParam?.AtmPayNo ? `虛擬帳號：${response.ATMParam.AtmPayNo}` : '',
     response?.ATMParam?.WebAtmURL ? `WebATM：${response.ATMParam.WebAtmURL}` : '',
     response?.QRCodeURL ? `QR Code：${response.QRCodeURL}` : '',
