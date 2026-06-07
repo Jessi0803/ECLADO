@@ -34,6 +34,14 @@ async function openCart(page: import('@playwright/test').Page) {
   await page.locator('nav').getByRole('button', { name: /^購物車/ }).click();
 }
 
+async function proceedToCheckout(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: /前往結帳/ }).click();
+  const guestCheckout = page.getByRole('button', { name: /訪客結帳/ });
+  if (await guestCheckout.isVisible({ timeout: 1000 }).catch(() => false)) {
+    await guestCheckout.click();
+  }
+}
+
 async function triggerProductsRealtime(page: import('@playwright/test').Page) {
   await page.evaluate(() => {
     const client = (window as any).supabase;
@@ -367,7 +375,7 @@ test('結帳建立付款單但不寫入真實訂單或真金流', async ({ page 
   await page.getByText('胜肽修護精華液').first().click();
   await page.getByRole('button', { name: /加入購物車/ }).click();
   await openCart(page);
-  await page.getByRole('button', { name: /前往結帳/ }).click();
+  await proceedToCheckout(page);
 
   const checkoutInputs = page.locator('form input');
   await checkoutInputs.nth(0).fill('E2E 測試');
@@ -402,7 +410,7 @@ test('登入會員結帳會寫入訂單 payload 與 user_id，付款前不扣庫
   await page.getByText('胜肽修護精華液').first().click();
   await page.getByRole('button', { name: /加入購物車/ }).click();
   await openCart(page);
-  await page.getByRole('button', { name: /前往結帳/ }).click();
+  await proceedToCheckout(page);
 
   const checkoutInputs = page.locator('form input');
   await checkoutInputs.nth(0).fill('登入買家');
@@ -452,7 +460,7 @@ test('信用卡、Apple Pay、Google Pay 會送出對應金流 payType', async (
       .getByRole('button', { name: /加入購物車/ })
       .click();
     await openCart(page);
-    await page.getByRole('button', { name: /前往結帳/ }).click();
+    await proceedToCheckout(page);
 
     const checkoutInputs = page.locator('form input');
     await checkoutInputs.nth(0).fill('付款測試');
@@ -480,7 +488,7 @@ test('金流建單失敗時顯示錯誤且不進入付款完成畫面', async ({
   await page.getByText('胜肽修護精華液').first().click();
   await page.getByRole('button', { name: /加入購物車/ }).click();
   await openCart(page);
-  await page.getByRole('button', { name: /前往結帳/ }).click();
+  await proceedToCheckout(page);
 
   const checkoutInputs = page.locator('form input');
   await checkoutInputs.nth(0).fill('金流失敗測試');
@@ -506,7 +514,7 @@ test('金流成功但訂單寫入失敗時顯示提醒', async ({ page }) => {
   await page.getByText('胜肽修護精華液').first().click();
   await page.getByRole('button', { name: /加入購物車/ }).click();
   await openCart(page);
-  await page.getByRole('button', { name: /前往結帳/ }).click();
+  await proceedToCheckout(page);
 
   const checkoutInputs = page.locator('form input');
   await checkoutInputs.nth(0).fill('訂單寫入失敗測試');
@@ -580,7 +588,7 @@ test('手機版購物到結帳建立付款單可完成', async ({ page, isMobile
   await page.getByText('胜肽修護精華液').first().click();
   await page.getByRole('button', { name: /加入購物車/ }).click();
   await openCart(page);
-  await page.getByRole('button', { name: /前往結帳/ }).click();
+  await proceedToCheckout(page);
 
   const checkoutInputs = page.locator('form input');
   await checkoutInputs.nth(0).fill('Mobile E2E');
