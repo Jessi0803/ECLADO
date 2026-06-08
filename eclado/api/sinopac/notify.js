@@ -484,3 +484,18 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ ok: false, error: error.message || String(error), orderId });
   }
 };
+
+// 內部函式匯出，僅供測試使用（Vercel 只會把預設匯出當 handler 呼叫，附加屬性不影響）。
+module.exports.__test = {
+  getAesKey,
+  qpayIv,
+  encryptQpayMessage,
+  decryptQpayMessage,
+  generateQpaySign,
+  signString,
+  isFailedPayment,
+  getAmount,
+  amountsMatch,
+  getOrderId,
+  getPayToken,
+};
