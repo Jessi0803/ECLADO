@@ -1,0 +1,16 @@
+{
+  "name": "eclado-payment-api",
+  "version": "1.0.0",
+  "description": "ECLADO 永豐豐收款(QPay) 金流代理：建立付款、ReturnURL、付款通知。部署於 Vultr (pay.ecladotaiwan.com)。",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0"
+  }
+}
