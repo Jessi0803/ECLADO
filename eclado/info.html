@@ -164,8 +164,9 @@ function useIsMobile() {
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 const NAV_LINKS = ['清潔卸妝', '化妝水凝膠', '安瓶精華', '乳霜修護', '面膜護理', '防曬底妝', '院線課程儀器'];
+const PRODUCT_NAV_LINKS = ['所有產品', ...NAV_LINKS];
 const NAV_ITEMS = [
-  { label: '所有產品', children: NAV_LINKS },
+  { label: '所有產品', children: PRODUCT_NAV_LINKS },
   { label: '會員登錄' },
   { label: '品牌故事', children: null },
   { label: '購物說明', children: ['退換貨說明', '運送方式', '付款說明', '常見問題'] },
@@ -685,7 +686,7 @@ function NavItem({ item, scrolled, setPage }) {
     <div ref={ref} style={{ position:'relative' }}
       onMouseEnter={() => item.children && setOpen(true)}
       onMouseLeave={() => setOpen(false)}>
-      <button onClick={() => item.children ? setOpen(o=>!o) : go()} style={{
+      <button onClick={() => item.label === '所有產品' ? go('所有產品') : item.children ? setOpen(o=>!o) : go()} style={{
         background:'none', border:'none', cursor:'pointer',
         fontFamily:'var(--font-body)', fontSize:13, fontWeight:400,
         letterSpacing:'0.06em', color:col, padding:'8px 18px',
@@ -842,7 +843,7 @@ function MobileNavSection({ item, setPage, close }) {
   function go(page) { setPage(page); close(); }
   return (
     <div style={{ borderBottom:'1px solid var(--light)' }}>
-      <button onClick={() => item.children ? setOpen(o=>!o) : go(
+      <button onClick={() => item.label === '所有產品' ? go('shop') : item.children ? setOpen(o=>!o) : go(
         item.label === '品牌故事' ? 'about'
         : item.label === '會員登錄' ? 'login'
         : item.label === '所有產品' ? 'shop'
@@ -1607,10 +1608,11 @@ function PromoSection({ promo, user, addToCart, onSelect, isMobile, promotions =
 }
 
 // ─── SHOP PAGE ────────────────────────────────────────────────────────────────
-function ShopPage({ user, cart, setCart, promotions = [], products = PRODUCTS }) {
-  const [activeCategory, setActiveCategory] = useState('全部');
+function ShopPage({ user, cart, setCart, promotions = [], products = PRODUCTS, salesStats = emptySalesStats() }) {
+  const [activeCategory, setActiveCategory] = useState('所有產品');
+  const [sortBy, setSortBy] = useState('sales-desc');
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const categories = ['全部', ...NAV_LINKS];
+  const categories = PRODUCT_NAV_LINKS;
   const isMobile = useIsMobile();
 
   function addToCart(product) {
@@ -1632,8 +1634,19 @@ function ShopPage({ user, cart, setCart, promotions = [], products = PRODUCTS })
   }, [products, selectedProduct]);
 
   const filtered = products.filter(p => {
-    if (activeCategory === '全部') return true;
+    if (activeCategory === '所有產品' || activeCategory === '全部') return true;
     return p.category === activeCategory;
+  });
+  const originalIndex = new Map(products.map((product, index) => [product.id, index]));
+  const sortedProducts = [...filtered].sort((a, b) => {
+    if (sortBy === 'price-asc' || sortBy === 'price-desc') {
+      const diff = getMemberPrice(a, user) - getMemberPrice(b, user);
+      return sortBy === 'price-asc'
+        ? diff || (originalIndex.get(a.id) || 0) - (originalIndex.get(b.id) || 0)
+        : -diff || (originalIndex.get(a.id) || 0) - (originalIndex.get(b.id) || 0);
+    }
+    const salesDiff = getProductSalesCount(b, salesStats) - getProductSalesCount(a, salesStats);
+    return salesDiff || (originalIndex.get(a.id) || 0) - (originalIndex.get(b.id) || 0);
   });
 
   if (selectedProduct) {
@@ -1676,7 +1689,8 @@ function ShopPage({ user, cart, setCart, promotions = [], products = PRODUCTS })
       </div>
       {/* 分類篩選列 */}
       <div className="filter-tabs" style={{ background:'var(--off-white)', borderBottom:'1px solid var(--light)', padding: isMobile ? '0 16px' : '0 32px' }}>
-        <div style={{ maxWidth:1280, margin:'0 auto', display:'flex' }}>
+        <div style={{ maxWidth:1280, margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
+          <div style={{ display:'flex' }}>
           {categories.map(cat => (
             <button key={cat} onClick={() => setActiveCategory(cat)} style={{
               background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12,
@@ -1686,14 +1700,28 @@ function ShopPage({ user, cart, setCart, promotions = [], products = PRODUCTS })
               fontWeight: activeCategory===cat ? 500 : 300, transition:'all 0.2s',
             }}>{cat}</button>
           ))}
+          </div>
+          <label style={{ display:'flex', alignItems:'center', gap:10, padding: isMobile ? '0 0 14px' : '0', fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', whiteSpace:'nowrap' }}>
+            排序
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{
+              appearance:'none', background:'var(--white)', border:'1px solid var(--light)', color:'var(--black)',
+              padding:'9px 34px 9px 12px', fontFamily:'var(--font-body)', fontSize:12, letterSpacing:'0.06em', cursor:'pointer',
+              backgroundImage:'linear-gradient(45deg, transparent 50%, var(--dark) 50%), linear-gradient(135deg, var(--dark) 50%, transparent 50%)',
+              backgroundPosition:'calc(100% - 16px) 50%, calc(100% - 11px) 50%', backgroundSize:'5px 5px, 5px 5px', backgroundRepeat:'no-repeat',
+            }}>
+              <option value="sales-desc">銷售量高到低</option>
+              <option value="price-asc">價格低到高</option>
+              <option value="price-desc">價格高到低</option>
+            </select>
+          </label>
         </div>
       </div>
       <div style={{ maxWidth:1280, margin:'0 auto', padding: isMobile ? '40px 20px' : '60px 32px' }}>
         {false && null /* pro banner moved to header */}
         <div className="g4lg">
-          {filtered.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} promotions={promotions} />)}
+          {sortedProducts.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} promotions={promotions} />)}
         </div>
-        {filtered.length === 0 && <div style={{ textAlign:'center', padding:'80px 0', color:'var(--dark)', fontSize:14 }}>此分類目前無商品</div>}
+        {sortedProducts.length === 0 && <div style={{ textAlign:'center', padding:'80px 0', color:'var(--dark)', fontSize:14 }}>此分類目前無商品</div>}
       </div>
     </div>
   );
@@ -3585,7 +3613,7 @@ function App() {
   function renderPage() {
     switch (page) {
       case 'home':     return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
-      case 'shop':     return <ShopPage user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} />;
+      case 'shop':     return <ShopPage user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
       case 'cart':     return <CartPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
       case 'checkout': return <CheckoutPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
       case 'login':    return <LoginPage setPage={setPage} />;
