@@ -72,7 +72,7 @@ test('LINE 登入結帳回來後會回到結帳頁', async ({ page }) => {
     window.sessionStorage.setItem('eclado_line_login_pending', '1');
   });
 
-  await page.goto('/line-callback');
+  await page.goto('/line-callback#access_token=mock-access-token&refresh_token=mock-refresh-token&expires_in=3600&token_type=bearer&type=magiclink');
 
   await expect(page).toHaveURL(/\/checkout$/);
   await expect(page.getByRole('heading', { name: '結帳' })).toBeVisible();

@@ -3653,6 +3653,25 @@ function App() {
   // 監聽 Supabase 登入狀態（驗證信 / 重設密碼回傳須先完成 session 交換，再清 URL）
   useEffect(() => {
     let cancelled = false;
+    const startedAsLineLoginCallback = window.location.pathname === '/line-callback'
+      || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1';
+    let lineLoginRedirectDone = false;
+    let lineLoginNextPage = null;
+
+    function getLineLoginNextPage() {
+      if (!lineLoginNextPage) lineLoginNextPage = consumeCheckoutLoginRedirectPage();
+      return lineLoginNextPage;
+    }
+
+    async function finishLineLoginRedirect(session) {
+      if (lineLoginRedirectDone) return;
+      lineLoginRedirectDone = true;
+      if (session?.user) await loadUser(session.user);
+      sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
+      const nextPage = getLineLoginNextPage();
+      cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
+      setPageState(nextPage);
+    }
 
     async function finishAuthCallback() {
       if (!hasAuthCallbackInUrl()) return;
@@ -3684,19 +3703,19 @@ function App() {
         }
 
         const isLineLoginCallback = window.location.pathname === '/line-callback'
-          || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1';
+          || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1'
+          || startedAsLineLoginCallback;
 
         if (session?.user) {
+          if (isLineLoginCallback) {
+            await finishLineLoginRedirect(session);
+            return;
+          }
           await loadUser(session.user);
           if (isEmailVerificationCallback()) {
             sessionStorage.setItem('eclado_auth_notice', 'email_verified');
             cleanAuthCallbackFromUrl('/login');
             setPageState('login');
-          } else if (isLineLoginCallback) {
-            sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
-            const nextPage = consumeCheckoutLoginRedirectPage();
-            cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
-            setPageState(nextPage);
           } else {
             cleanAuthCallbackFromUrl('/login');
             setPageState('login');
@@ -3713,14 +3732,13 @@ function App() {
       if (cancelled) return;
       if (!hasAuthCallbackInUrl()) {
         const isPendingLineLogin = window.location.pathname === '/line-callback'
-          || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1';
+          || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1'
+          || startedAsLineLoginCallback;
         if (session?.user) {
-          loadUser(session.user);
           if (isPendingLineLogin) {
-            sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
-            const nextPage = consumeCheckoutLoginRedirectPage();
-            cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
-            setPageState(nextPage);
+            finishLineLoginRedirect(session);
+          } else {
+            loadUser(session.user);
           }
         }
         setAuthReady(true);
@@ -3731,12 +3749,8 @@ function App() {
       if (event === 'PASSWORD_RECOVERY' || isPasswordRecoveryUrl()) {
         cleanAuthCallbackFromUrl('/reset-password');
         setPageState('reset-password');
-      } else if (event === 'SIGNED_IN' && (window.location.pathname === '/line-callback' || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1')) {
-        if (session?.user) await loadUser(session.user);
-        sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
-        const nextPage = consumeCheckoutLoginRedirectPage();
-        cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
-        setPageState(nextPage);
+      } else if (event === 'SIGNED_IN' && (startedAsLineLoginCallback || window.location.pathname === '/line-callback' || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1')) {
+        await finishLineLoginRedirect(session);
       } else if (event === 'SIGNED_IN' && isEmailVerificationCallback()) {
         if (session?.user) await loadUser(session.user);
         sessionStorage.setItem('eclado_auth_notice', 'email_verified');
