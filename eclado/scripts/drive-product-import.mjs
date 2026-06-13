@@ -64,6 +64,13 @@ function inferCategory(name) {
   return '安瓶精華';
 }
 
+function sortProductImages(a, b) {
+  const aIsHero = a.name.includes('首圖');
+  const bIsHero = b.name.includes('首圖');
+  if (aIsHero !== bIsHero) return aIsHero ? -1 : 1;
+  return a.name.localeCompare(b.name, 'zh-Hant');
+}
+
 function productFromText(folderName, text, images, id) {
   const clean = normalizeSpaces(text);
   const description = pickSection(clean, '介紹', ['成分', '容量', '適合膚況', '價格']);
@@ -155,6 +162,7 @@ async function main() {
     const text = await fs.readFile(path.join(folderPath, txt.name), 'utf8');
     const images = files
       .filter(file => file.isFile() && IMAGE_EXTENSIONS.has(path.extname(file.name).toLowerCase()))
+      .sort(sortProductImages)
       .map(file => path.join(folderPath, file.name));
     products.push(productFromText(folder.name, text, images, index + 100));
   }
