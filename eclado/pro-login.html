@@ -929,7 +929,7 @@ function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPag
 
         <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : `repeat(${visibleCount}, minmax(0, 1fr))`, gap: isMobile ? 10 : 24 }}>
           {visible.map(product => (
-            <ProductCard key={product.id} product={product} user={user} onAdd={() => onAdd(product)} onSelect={() => onSelect(product)} promotions={promotions} showFulfillmentLine={false} />
+            <ProductCard key={product.id} product={product} user={user} onAdd={() => onAdd(product)} onSelect={() => onSelect(product)} promotions={promotions} />
           ))}
         </div>
 
@@ -1196,7 +1196,7 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
             <button onClick={() => setPage('shop')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'var(--dark)', fontFamily:'var(--font-body)', borderBottom:'1px solid var(--dark)', paddingBottom:2, whiteSpace:'nowrap' }}>全部商品 →</button>
           </div>
           <div className="g4">
-            {featured.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} promotions={promotions} showFulfillmentLine={false} />)}
+            {featured.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} promotions={promotions} />)}
           </div>
         </div>
       </section>
@@ -1503,7 +1503,7 @@ function ProductDetail({ product, user, onAdd, onBack, promotions = [] }) {
 }
 
 // ─── PRODUCT CARD ─────────────────────────────────────────────────────────────
-function ProductCard({ product, user, onAdd, onSelect, promotions = [], showFulfillmentLine = true }) {
+function ProductCard({ product, user, onAdd, onSelect, promotions = [] }) {
   const [hovered, setHovered] = useState(false);
   const canPurchase = !product.isProOnly || isProfessionalMember(user);
   const showPrice = getMemberPrice(product, user);
@@ -1511,16 +1511,12 @@ function ProductCard({ product, user, onAdd, onSelect, promotions = [], showFulf
   const hasTierPrice = isProfessionalMember(user);
   const onPromo = promotions.some(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));
   const promoDisplay = getPromoDisplayPrice(product, user, promotions);
-  const fulfillment = getFulfillmentInfo(product);
   return (
     <div onClick={onSelect} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ cursor:'pointer', position:'relative' }}>
       {onPromo && (
         <div style={{ position:'absolute', top:10, right:10, zIndex:3, background:'var(--gold)', color:'var(--white)', fontSize:10, padding:'3px 9px', letterSpacing:'0.1em', fontWeight:500 }}>活動中</div>
       )}
       <div style={{ position:'relative', overflow:'hidden', marginBottom:14 }}>
-        {canPurchase && (
-          <div style={{ position:'absolute', top:10, left:10, zIndex:3, background: fulfillment.type === 'preorder' ? 'var(--gold)' : fulfillment.type === 'loading' ? 'rgba(12,12,10,0.55)' : 'rgba(12,12,10,0.86)', color:'var(--white)', fontSize:10, padding:'3px 9px', letterSpacing:'0.1em', fontWeight:500 }}>{fulfillment.shortLabel}</div>
-        )}
         <img src={getProductImage(product)} alt={product.nameZh} style={{ width:'100%', height:260, objectFit:'cover', display:'block', transition:'transform 0.5s', transform: hovered?'scale(1.04)':'scale(1)' }} />
         <div style={{ position:'absolute', bottom:0, left:0, right:0, background:'var(--black)', padding:'10px', transform: hovered?'translateY(0)':'translateY(100%)', transition:'transform 0.25s' }}>
           {canPurchase ? (
@@ -1531,11 +1527,7 @@ function ProductCard({ product, user, onAdd, onSelect, promotions = [], showFulf
         </div>
       </div>
       <div>
-        <p style={{ fontSize:10, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', marginBottom:5 }}>{product.category}</p>
         <p style={{ fontSize:12, color:'var(--dark)', marginBottom:8 }}>{product.nameZh} · {product.size}</p>
-        {canPurchase && showFulfillmentLine && (
-          <p style={{ fontSize:11, color:'var(--dark)', marginBottom:8, lineHeight:1.5 }}>{fulfillment.type === 'loading' ? '庫存資料載入中' : `${fulfillment.label} · ${fulfillment.shipping.replace('出貨時間為 ', '')}`}</p>
-        )}
         {canPurchase ? (
           <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
             {promoDisplay ? (
@@ -1598,7 +1590,7 @@ function PromoSection({ promo, user, addToCart, onSelect, isMobile, promotions =
         <div className="g4">
           {items.map(p => (
             <div key={p.id} style={{ background:'var(--off-white)', color:'var(--black)', padding:14, border:'1px solid var(--light)' }}>
-              <ProductCard product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => onSelect(p)} promotions={promotions} showFulfillmentLine={false} />
+              <ProductCard product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => onSelect(p)} promotions={promotions} />
             </div>
           ))}
         </div>
