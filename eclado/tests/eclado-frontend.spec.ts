@@ -62,6 +62,22 @@ test('主要路徑可開啟且不白屏', async ({ page }) => {
   }
 });
 
+test('LINE 登入結帳回來後會回到結帳頁', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: authUser('line-checkout@example.com'),
+    profiles: [profile('consumer', 'line-checkout@example.com')],
+  });
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem('eclado_checkout_login_redirect', 'checkout');
+    window.sessionStorage.setItem('eclado_line_login_pending', '1');
+  });
+
+  await page.goto('/line-callback');
+
+  await expect(page).toHaveURL(/\/checkout$/);
+  await expect(page.getByRole('heading', { name: '結帳' })).toBeVisible();
+});
+
 test('商城瀏覽、商品詳情、一般會員價格與院線商品限制', async ({ page }) => {
   await page.goto('/shop');
   await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();

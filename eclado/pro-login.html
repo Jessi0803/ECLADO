@@ -172,7 +172,14 @@ const NAV_ITEMS = [
   { label: '購物說明', children: ['退換貨說明', '運送方式', '付款說明', '常見問題'] },
 ];
 
+const CHECKOUT_LOGIN_REDIRECT_KEY = 'eclado_checkout_login_redirect';
 const LINE_LOGIN_PENDING_KEY = 'eclado_line_login_pending';
+
+function consumeCheckoutLoginRedirectPage() {
+  const nextPage = sessionStorage.getItem(CHECKOUT_LOGIN_REDIRECT_KEY) === 'checkout' ? 'checkout' : 'account';
+  sessionStorage.removeItem(CHECKOUT_LOGIN_REDIRECT_KEY);
+  return nextPage;
+}
 
 const PRODUCTS = [
   { id:1, name:'Deep Cleansing Foam', nameZh:'深層清潔泡沫洗面乳', category:'清潔', size:'200ml', price:1280, proPrice:960, isProOnly:false, img:'https://images.unsplash.com/photo-1556228578-dd539282b964?w=600&q=80&fit=crop',
@@ -3023,7 +3030,8 @@ function LineCallbackPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         done = true;
-        setStatus('LINE 登入成功，正在前往會員專區...');
+        const nextLabel = sessionStorage.getItem(CHECKOUT_LOGIN_REDIRECT_KEY) === 'checkout' ? '結帳頁' : '會員專區';
+        setStatus('LINE 登入成功，正在前往' + nextLabel + '...');
         return;
       }
     });
@@ -3418,8 +3426,9 @@ function App() {
           setPageState('login');
         } else if (isLineLoginCallback) {
           sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
-          cleanAuthCallbackFromUrl('/account');
-          setPageState('account');
+          const nextPage = consumeCheckoutLoginRedirectPage();
+          cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
+          setPageState(nextPage);
         } else {
           cleanAuthCallbackFromUrl('/login');
           setPageState('login');
@@ -3437,8 +3446,9 @@ function App() {
         loadUser(session.user);
         if (isPendingLineLogin) {
           sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
-          cleanAuthCallbackFromUrl('/account');
-          setPageState('account');
+          const nextPage = consumeCheckoutLoginRedirectPage();
+          cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
+          setPageState(nextPage);
         }
       }
     });
@@ -3450,8 +3460,9 @@ function App() {
       } else if (event === 'SIGNED_IN' && (window.location.pathname === '/line-callback' || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1')) {
         if (session?.user) await loadUser(session.user);
         sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
-        cleanAuthCallbackFromUrl('/account');
-        setPageState('account');
+        const nextPage = consumeCheckoutLoginRedirectPage();
+        cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
+        setPageState(nextPage);
       } else if (event === 'SIGNED_IN' && isEmailVerificationCallback()) {
         if (session?.user) await loadUser(session.user);
         sessionStorage.setItem('eclado_auth_notice', 'email_verified');
