@@ -289,14 +289,33 @@ function normalizeProductVariant(variant) {
   };
 }
 
+const PRODUCT_IMAGE_ZOOM_NAMES = new Set([
+  '亮白光采霜', '完美潔面卸妝膏', '記憶抗皺眼霜', 'PHA溫和煥膚',
+  '急救安瓶-水合複合', '平衡爽膚水', '急救安瓶-積雪草毛孔', '急救安瓶-維他命美白', '亮顏防曬BB霜',
+  '乳酸菌亮白面膜', '乳酸菌亮白⾯膜', '保濕補水霜', '精萃凝膠', '氧氣泡泡',
+]);
+
+const PRODUCT_PRIMARY_IMAGE_OVERRIDES = {
+  '平衡爽膚水': 1,
+};
+
+function getProductImageScale(product) {
+  return PRODUCT_IMAGE_ZOOM_NAMES.has(product?.nameZh) ? 1.08 : 1;
+}
+
 function getProductImage(product, width = 600) {
-  const image = product?.img || normalizeJsonArray(product?.imageUrls)[0] || '';
+  const image = getProductImages(product)[0] || '';
   return image.includes('w=600') ? image.replace('w=600', 'w=' + width) : image;
 }
 
 function getProductImages(product) {
   const images = [product?.img, ...normalizeJsonArray(product?.imageUrls)].filter(Boolean);
-  return [...new Set(images)];
+  const uniqueImages = [...new Set(images)];
+  const primaryIndex = PRODUCT_PRIMARY_IMAGE_OVERRIDES[product?.nameZh];
+  if (Number.isInteger(primaryIndex) && uniqueImages[primaryIndex]) {
+    return [uniqueImages[primaryIndex], ...uniqueImages.filter((_, index) => index !== primaryIndex)];
+  }
+  return uniqueImages;
 }
 
 function getProductVariants(product) {
@@ -1450,7 +1469,7 @@ function ProductDetail({ product, user, onAdd, onBack, promotions = [] }) {
           {/* 左：圖片 */}
           <div style={{ position: isMobile ? 'static' : 'sticky', top:90 }}>
             <div style={{ position:'relative' }}>
-              <img src={images[activeImage] || getProductImage(product, 900)} alt={product.nameZh} style={{ width:'100%', aspectRatio:'1', objectFit:'contain', background:'var(--off-white)', display:'block' }} />
+              <img src={images[activeImage] || getProductImage(product, 900)} alt={product.nameZh} style={{ width:'100%', aspectRatio:'1', objectFit:'contain', background:'var(--off-white)', display:'block', transform:'scale(' + getProductImageScale(product) + ')' }} />
             </div>
             {images.length > 1 && (
               <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8, marginTop:10 }}>
@@ -1591,7 +1610,7 @@ function ProductCard({ product, user, onAdd, onSelect, promotions = [] }) {
         <div style={{ position:'absolute', top:10, right:10, zIndex:3, background:'var(--gold)', color:'var(--white)', fontSize:10, padding:'3px 9px', letterSpacing:'0.1em', fontWeight:500 }}>活動中</div>
       )}
       <div style={{ position:'relative', overflow:'hidden', marginBottom:14 }}>
-        <img src={getProductImage(product)} alt={product.nameZh} style={{ width:'100%', height:260, objectFit:'contain', background:'var(--off-white)', display:'block' }} />
+        <img src={getProductImage(product)} alt={product.nameZh} style={{ width:'100%', height:260, objectFit:'contain', background:'var(--off-white)', display:'block', transform:'scale(' + getProductImageScale(product) + ')' }} />
         <div style={{ position:'absolute', bottom:0, left:0, right:0, background:'var(--black)', padding:'10px', transform: hovered?'translateY(0)':'translateY(100%)', transition:'transform 0.25s' }}>
           {canPurchase ? (
             <button onClick={e => { e.stopPropagation(); onAdd(); }} style={{ width:'100%', background:'none', border:'none', cursor:'pointer', color:'var(--white)', fontSize:11, letterSpacing:'0.15em', textTransform:'uppercase', fontFamily:'var(--font-body)', padding:'3px 0' }}>加入購物車</button>
