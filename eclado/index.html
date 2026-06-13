@@ -299,8 +299,13 @@ const PRODUCT_PRIMARY_IMAGE_OVERRIDES = {
   '平衡爽膚水': 1,
 };
 
+const PRODUCT_IMAGE_SCALE_OVERRIDES = {
+  '亮白光采霜': 1.24,
+  '完美潔面卸妝膏': 1.22,
+};
+
 function getProductImageScale(product) {
-  return PRODUCT_IMAGE_ZOOM_NAMES.has(product?.nameZh) ? 1.08 : 1;
+  return PRODUCT_IMAGE_SCALE_OVERRIDES[product?.nameZh] || (PRODUCT_IMAGE_ZOOM_NAMES.has(product?.nameZh) ? 1.08 : 1);
 }
 
 function getProductImage(product, width = 600) {
