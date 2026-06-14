@@ -257,16 +257,16 @@ test('商品庫存可依庫存狀態篩選', async ({ page }) => {
   await expect(table.getByText('胜肽修護精華液')).toBeVisible();
   await expect(table.getByText('NK細胞活化安瓶')).toBeVisible();
 
-  await page.getByRole('button', { name: /低庫存 \(1\)/ }).click();
+  await page.getByLabel('庫存狀態篩選').selectOption('low');
   await expect(table.getByText('胜肽修護精華液')).toBeVisible();
   await expect(table.getByText('深層清潔泡沫洗面乳')).toHaveCount(0);
   await expect(table.getByText('NK細胞活化安瓶')).toHaveCount(0);
 
-  await page.getByRole('button', { name: /缺貨 \(1\)/ }).click();
+  await page.getByLabel('庫存狀態篩選').selectOption('out');
   await expect(table.getByText('NK細胞活化安瓶')).toBeVisible();
   await expect(table.getByText('胜肽修護精華液')).toHaveCount(0);
 
-  await page.getByRole('button', { name: /正常 \(1\)/ }).click();
+  await page.getByLabel('庫存狀態篩選').selectOption('ok');
   await expect(table.getByText('深層清潔泡沫洗面乳')).toBeVisible();
   await expect(table.getByText('NK細胞活化安瓶')).toHaveCount(0);
 });
