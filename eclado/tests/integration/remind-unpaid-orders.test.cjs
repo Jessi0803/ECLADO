@@ -2,6 +2,27 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const remindUnpaidOrders = require('../../api/remind-unpaid-orders.js');
 
+test('remind unpaid orders - reminder delay defaults to 5 minutes', () => {
+  const originalEnv = {
+    ORDER_PAYMENT_REMIND_MINUTES: process.env.ORDER_PAYMENT_REMIND_MINUTES,
+    ORDER_PAYMENT_REMIND_HOURS: process.env.ORDER_PAYMENT_REMIND_HOURS,
+  };
+
+  try {
+    delete process.env.ORDER_PAYMENT_REMIND_MINUTES;
+    delete process.env.ORDER_PAYMENT_REMIND_HOURS;
+    assert.equal(remindUnpaidOrders.__test.getReminderDelayMs(), 5 * 60 * 1000);
+
+    process.env.ORDER_PAYMENT_REMIND_HOURS = '3';
+    assert.equal(remindUnpaidOrders.__test.getReminderDelayMs(), 3 * 60 * 60 * 1000);
+
+    process.env.ORDER_PAYMENT_REMIND_MINUTES = '10';
+    assert.equal(remindUnpaidOrders.__test.getReminderDelayMs(), 10 * 60 * 1000);
+  } finally {
+    restoreEnv(originalEnv);
+  }
+});
+
 test('remind unpaid orders - sends LINE first and marks reminded', async () => {
   const calls = [];
   const originalFetch = global.fetch;
@@ -11,6 +32,7 @@ test('remind unpaid orders - sends LINE first and marks reminded', async () => {
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
     LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
+    ORDER_PAYMENT_REMIND_MINUTES: process.env.ORDER_PAYMENT_REMIND_MINUTES,
     ORDER_PAYMENT_REMIND_HOURS: process.env.ORDER_PAYMENT_REMIND_HOURS,
   };
 
@@ -18,6 +40,7 @@ test('remind unpaid orders - sends LINE first and marks reminded', async () => {
   process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   process.env.LINE_CHANNEL_ACCESS_TOKEN = 'test-line-token';
   process.env.RESEND_API_KEY = 'test-resend-key';
+  delete process.env.ORDER_PAYMENT_REMIND_MINUTES;
   delete process.env.ORDER_PAYMENT_REMIND_HOURS;
   Date.now = () => Date.parse('2026-05-21T12:00:00.000Z');
 
@@ -26,7 +49,7 @@ test('remind unpaid orders - sends LINE first and marks reminded', async () => {
 
     if (String(url).includes('/rest/v1/orders?') && options.method === 'GET') {
       assert.match(String(url), /status=in\.\(awaiting_confirm,unpaid\)/);
-      assert.match(String(url), /created_at=lte\.2026-05-21T09%3A00%3A00\.000Z/);
+      assert.match(String(url), /created_at=lte\.2026-05-21T11%3A55%3A00\.000Z/);
       assert.match(String(url), /payment_reminded_at=is\.null/);
       return jsonResponse(200, [
         {
@@ -97,11 +120,15 @@ test('remind unpaid orders - falls back to email when LINE is unavailable', asyn
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
     LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
+    ORDER_PAYMENT_REMIND_MINUTES: process.env.ORDER_PAYMENT_REMIND_MINUTES,
+    ORDER_PAYMENT_REMIND_HOURS: process.env.ORDER_PAYMENT_REMIND_HOURS,
   };
 
   process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   process.env.RESEND_API_KEY = 'test-resend-key';
   delete process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  delete process.env.ORDER_PAYMENT_REMIND_MINUTES;
+  delete process.env.ORDER_PAYMENT_REMIND_HOURS;
   Date.now = () => Date.parse('2026-05-21T12:00:00.000Z');
 
   global.fetch = async (url, options = {}) => {

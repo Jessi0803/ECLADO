@@ -1,6 +1,28 @@
 const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
-const REMIND_HOURS = Number(process.env.ORDER_PAYMENT_REMIND_HOURS || 3);
-const BATCH_LIMIT = Math.max(1, Number(process.env.ORDER_PAYMENT_REMIND_BATCH_LIMIT || 50));
+const DEFAULT_REMIND_MINUTES = 5;
+
+function positiveNumber(value, fallback) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : fallback;
+}
+
+function getReminderDelayMs() {
+  const configuredMinutes = process.env.ORDER_PAYMENT_REMIND_MINUTES;
+  if (configuredMinutes !== undefined) {
+    return positiveNumber(configuredMinutes, DEFAULT_REMIND_MINUTES) * 60 * 1000;
+  }
+
+  const configuredHours = process.env.ORDER_PAYMENT_REMIND_HOURS;
+  if (configuredHours !== undefined) {
+    return positiveNumber(configuredHours, DEFAULT_REMIND_MINUTES / 60) * 60 * 60 * 1000;
+  }
+
+  return DEFAULT_REMIND_MINUTES * 60 * 1000;
+}
+
+function getBatchLimit() {
+  return Math.floor(positiveNumber(process.env.ORDER_PAYMENT_REMIND_BATCH_LIMIT || 50, 50));
+}
 
 function getAuthHeader(req) {
   return req.headers.authorization || req.headers.Authorization || '';
@@ -159,7 +181,7 @@ module.exports = async function handler(req, res) {
 
   if (!requireCronAuth(req, res)) return;
 
-  const remindMs = REMIND_HOURS * 60 * 60 * 1000;
+  const remindMs = getReminderDelayMs();
   const cutoff = new Date(Date.now() - remindMs).toISOString();
   const statuses = ['awaiting_confirm', 'unpaid'];
 
@@ -170,7 +192,7 @@ module.exports = async function handler(req, res) {
       'payment_reminded_at=is.null',
       'select=id,status,created_at,total,user_id,member,email,payment_reminded_at',
       'order=created_at.asc',
-      `limit=${encodeURIComponent(String(BATCH_LIMIT))}`,
+      `limit=${encodeURIComponent(String(getBatchLimit()))}`,
     ].join('&');
 
     const orders = await supabaseRequest(`orders?${query}`, { method: 'GET' });
@@ -211,4 +233,5 @@ module.exports = async function handler(req, res) {
 module.exports.__test = {
   buildReminderMessage,
   buildReminderEmail,
+  getReminderDelayMs,
 };
