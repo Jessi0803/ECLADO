@@ -136,6 +136,7 @@ test('訂單管理可依狀態與預購庫存篩選', async ({ page }) => {
 test('訂單管理可取消訂單並同步 cancelled 狀態', async ({ page }) => {
   const orderUpdates: Record<string, unknown>[] = [];
   await mockAdminApis(page, {
+    orders: [{ ...adminOrderRows[0], status: 'paid' }],
     onOrderUpdate: update => orderUpdates.push(update),
   });
 
@@ -243,6 +244,31 @@ test('商品庫存可在後台修改並同步 products 更新', async ({ page })
 
   await expect(page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr').getByText('12')).toBeVisible();
   await expect.poll(() => productUpdates.some(update => update.stock === 12)).toBe(true);
+});
+
+test('商品庫存可依庫存狀態篩選', async ({ page }) => {
+  await mockAdminApis(page);
+
+  await page.goto('/admin');
+  await openAdminSection(page, /商品 & 庫存/);
+
+  const table = page.locator('.table-scroll').first();
+  await expect(table.getByText('深層清潔泡沫洗面乳')).toBeVisible();
+  await expect(table.getByText('胜肽修護精華液')).toBeVisible();
+  await expect(table.getByText('NK細胞活化安瓶')).toBeVisible();
+
+  await page.getByRole('button', { name: /低庫存 \(1\)/ }).click();
+  await expect(table.getByText('胜肽修護精華液')).toBeVisible();
+  await expect(table.getByText('深層清潔泡沫洗面乳')).toHaveCount(0);
+  await expect(table.getByText('NK細胞活化安瓶')).toHaveCount(0);
+
+  await page.getByRole('button', { name: /缺貨 \(1\)/ }).click();
+  await expect(table.getByText('NK細胞活化安瓶')).toBeVisible();
+  await expect(table.getByText('胜肽修護精華液')).toHaveCount(0);
+
+  await page.getByRole('button', { name: /正常 \(1\)/ }).click();
+  await expect(table.getByText('深層清潔泡沫洗面乳')).toBeVisible();
+  await expect(table.getByText('NK細胞活化安瓶')).toHaveCount(0);
 });
 
 test('商品管理可編輯名稱、價格與院線限定並同步 products 更新', async ({ page }) => {

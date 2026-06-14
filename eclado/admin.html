@@ -1679,11 +1679,20 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
   const [stockVal, setStockVal] = useState('');
   const [editing, setEditing] = useState(null); // product being edited (draft copy)
   const [listMode, setListMode] = useState('active');
+  const [stockFilter, setStockFilter] = useState('all');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const activeProducts = products.filter(p => p.active !== false);
   const archivedProducts = products.filter(p => p.active === false);
-  const shownProducts = listMode === 'archived' ? archivedProducts : activeProducts;
+  const baseProducts = listMode === 'archived' ? archivedProducts : activeProducts;
+  const getStockStatus = p => p.stock === 0 ? 'out' : p.stock <= p.minStock ? 'low' : 'ok';
+  const shownProducts = stockFilter === 'all' ? baseProducts : baseProducts.filter(p => getStockStatus(p) === stockFilter);
+  const stockCounts = {
+    all: baseProducts.length,
+    ok: baseProducts.filter(p => getStockStatus(p) === 'ok').length,
+    low: baseProducts.filter(p => getStockStatus(p) === 'low').length,
+    out: baseProducts.filter(p => getStockStatus(p) === 'out').length,
+  };
   const lowStock = activeProducts.filter(p => p.stock <= p.minStock);
 
   const lbl = { fontSize: 11, letterSpacing: '0.1em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 6 };
@@ -1868,6 +1877,28 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
         ))}
       </div>
 
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+        <span style={{ fontSize: 11, color: 'var(--mid)', letterSpacing: '0.08em', marginRight: 2 }}>庫存狀態</span>
+        {[
+          ['all', '全部'],
+          ['ok', '正常'],
+          ['low', '低庫存'],
+          ['out', '缺貨'],
+        ].map(([value, label]) => (
+          <button key={value} onClick={() => { setStockFilter(value); setEditing(null); }} style={{
+            padding: '7px 13px',
+            border: `1px solid ${stockFilter === value ? 'var(--dark)' : 'var(--border)'}`,
+            background: stockFilter === value ? 'var(--dark)' : 'var(--white)',
+            color: stockFilter === value ? '#fff' : 'var(--mid)',
+            fontSize: 12,
+            cursor: 'pointer',
+            minWidth: 74,
+          }}>
+            {label} ({stockCounts[value]})
+          </button>
+        ))}
+      </div>
+
       {/* Low stock warning */}
       {lowStock.length > 0 && (
         <div style={{ background: 'oklch(0.60 0.18 25 / 0.05)', border: '1px solid oklch(0.60 0.18 25 / 0.2)', padding: '14px 20px', marginBottom: 20 }}>
@@ -1899,7 +1930,9 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
                 {shownProducts.length === 0 && (
                   <tr>
                     <td colSpan={9} style={{ padding: 40, textAlign: 'center', color: 'var(--mid)', fontSize: 13 }}>
-                      {listMode === 'archived' ? '目前沒有已下架商品' : '目前沒有上架商品'}
+                      {stockFilter === 'all'
+                        ? (listMode === 'archived' ? '目前沒有已下架商品' : '目前沒有上架商品')
+                        : '目前沒有符合此庫存狀態的商品'}
                     </td>
                   </tr>
                 )}
@@ -2055,7 +2088,7 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
               </div>
 
               <div>
-                <label htmlFor="productVariants" style={lbl}>多容量規格（一行一個：容量 | 市場價 | 專業價 | 庫存）</label>
+                <label htmlFor="productVariants" style={lbl}>多容量設定（一行一個：容量 | 市場價 | 專業價 | 庫存）</label>
                 <textarea id="productVariants" value={variantsToLines(editing.variants || [])} onChange={setVariantLines} style={{ ...ta, minHeight: 96 }} placeholder="500ml | 2150 | 1100 | 10" />
                 <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 6 }}>第一行會同步為商品主規格，前台商品卡會優先顯示第一個規格。</p>
               </div>
