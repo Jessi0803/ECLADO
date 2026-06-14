@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const remindUnpaidOrders = require('../../api/remind-unpaid-orders.js');
 
-test('remind unpaid orders - reminder delay defaults to 5 minutes', () => {
+test('remind unpaid orders - reminder delay defaults to 3 hours', () => {
   const originalEnv = {
     ORDER_PAYMENT_REMIND_MINUTES: process.env.ORDER_PAYMENT_REMIND_MINUTES,
     ORDER_PAYMENT_REMIND_HOURS: process.env.ORDER_PAYMENT_REMIND_HOURS,
@@ -11,7 +11,7 @@ test('remind unpaid orders - reminder delay defaults to 5 minutes', () => {
   try {
     delete process.env.ORDER_PAYMENT_REMIND_MINUTES;
     delete process.env.ORDER_PAYMENT_REMIND_HOURS;
-    assert.equal(remindUnpaidOrders.__test.getReminderDelayMs(), 5 * 60 * 1000);
+    assert.equal(remindUnpaidOrders.__test.getReminderDelayMs(), 3 * 60 * 60 * 1000);
 
     process.env.ORDER_PAYMENT_REMIND_HOURS = '3';
     assert.equal(remindUnpaidOrders.__test.getReminderDelayMs(), 3 * 60 * 60 * 1000);
@@ -49,7 +49,7 @@ test('remind unpaid orders - sends LINE first and marks reminded', async () => {
 
     if (String(url).includes('/rest/v1/orders?') && options.method === 'GET') {
       assert.match(String(url), /status=in\.\(awaiting_confirm,unpaid\)/);
-      assert.match(String(url), /created_at=lte\.2026-05-21T11%3A55%3A00\.000Z/);
+      assert.match(String(url), /created_at=lte\.2026-05-21T09%3A00%3A00\.000Z/);
       assert.match(String(url), /payment_reminded_at=is\.null/);
       return jsonResponse(200, [
         {

@@ -1,5 +1,5 @@
 const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
-const DEFAULT_REMIND_MINUTES = 5;
+const DEFAULT_REMIND_MINUTES = 180;
 
 function positiveNumber(value, fallback) {
   const number = Number(value);
