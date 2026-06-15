@@ -336,7 +336,7 @@ function analyzeTransparentImageBounds(src) {
 
 function ProductAutoImage({ src, alt, product, mode, style }) {
   const imgRef = useRef(null);
-  const manualScale = normalizeProductImageScale(mode === 'detail' ? product?.detailImageScale : product?.listImageScale);
+  const manualScale = mode === 'list' ? normalizeProductImageScale(product?.listImageScale) : null;
   const fallbackScale = manualScale || getDefaultProductImageScale(product);
   const [fit, setFit] = useState({ scale: fallbackScale, x: 0, y: 0 });
 
@@ -504,7 +504,6 @@ function mergeProductsWithStock(baseProducts, stockRows) {
       ingredients: row.ingredients || product.ingredients || '',
       features: Array.isArray(row.features) ? row.features : (product.features || []),
       listImageScale: normalizeProductImageScale(row.product_list_image_scale ?? product.listImageScale),
-      detailImageScale: normalizeProductImageScale(row.product_detail_image_scale ?? product.detailImageScale),
       active: row.active != null ? row.active : product.active,
     };
   });

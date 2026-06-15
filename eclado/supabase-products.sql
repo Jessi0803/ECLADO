@@ -20,7 +20,6 @@ create table if not exists public.products (
   features jsonb not null default '[]'::jsonb,
   variants jsonb not null default '[]'::jsonb,
   product_list_image_scale numeric,
-  product_detail_image_scale numeric,
   source_folder_name text,
   imported_from_drive boolean not null default false,
   active boolean not null default true,
@@ -31,7 +30,6 @@ create table if not exists public.products (
 alter table public.products add column if not exists image_urls jsonb not null default '[]'::jsonb;
 alter table public.products add column if not exists variants jsonb not null default '[]'::jsonb;
 alter table public.products add column if not exists product_list_image_scale numeric;
-alter table public.products add column if not exists product_detail_image_scale numeric;
 alter table public.products add column if not exists source_folder_name text;
 alter table public.products add column if not exists imported_from_drive boolean not null default false;
 

@@ -1681,7 +1681,6 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
   const [listMode, setListMode] = useState('active');
   const [stockFilter, setStockFilter] = useState('all');
   const [bulkListScale, setBulkListScale] = useState('');
-  const [bulkDetailScale, setBulkDetailScale] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const activeProducts = products.filter(p => p.active !== false);
@@ -1737,7 +1736,6 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
       sourceFolderName: '',
       importedFromDrive: false,
       listImageScale: null,
-      detailImageScale: null,
       active: true,
       isNew: true,
     });
@@ -1820,7 +1818,6 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
       stock: Math.max(0, Number(editing.stock) || 0),
       minStock: Math.max(0, Number(editing.minStock) || 0),
       listImageScale: normalizeProductImageScale(editing.listImageScale),
-      detailImageScale: normalizeProductImageScale(editing.detailImageScale),
     };
     if (editing.isNew) {
       setSaving(true);
@@ -1906,7 +1903,7 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dark)', marginBottom: 4 }}>批次圖片縮放</div>
-            <div style={{ fontSize: 11, color: 'var(--mid)' }}>透明背景圖片會自動校正商品本體大小；填數值會改為手動覆寫。1 為原尺寸，大於 1 放大，小於 1 縮小。</div>
+            <div style={{ fontSize: 11, color: 'var(--mid)' }}>透明背景圖片會自動校正商品本體大小；填數值會改為手動覆寫商品列表圖。1 為原尺寸，大於 1 放大，小於 1 縮小。</div>
           </div>
           <div style={{ display: 'flex', gap: 14, alignItems: 'end', flexWrap: 'wrap' }}>
             <div>
@@ -1915,14 +1912,6 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
                 <input id="bulkListScale" type="number" min="0.1" max="3" step="0.01" value={bulkListScale} onChange={e => setBulkListScale(e.target.value)} style={{ ...inp, width: 92, border: '1px solid var(--border)', padding: '7px 9px' }} placeholder="1.08" />
                 <button onClick={() => applyBulkImageScale('listImageScale', bulkListScale, '商品列表圖片')} style={{ padding: '7px 12px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 11, cursor: 'pointer' }}>套用</button>
                 <button onClick={() => clearBulkImageScale('listImageScale', '商品列表圖片')} style={{ padding: '7px 12px', background: 'none', color: 'var(--mid)', border: '1px solid var(--border)', fontSize: 11, cursor: 'pointer' }}>自動</button>
-              </div>
-            </div>
-            <div>
-              <label htmlFor="bulkDetailScale" style={{ ...lbl, marginBottom: 5 }}>商品詳情主圖</label>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <input id="bulkDetailScale" type="number" min="0.1" max="3" step="0.01" value={bulkDetailScale} onChange={e => setBulkDetailScale(e.target.value)} style={{ ...inp, width: 92, border: '1px solid var(--border)', padding: '7px 9px' }} placeholder="1" />
-                <button onClick={() => applyBulkImageScale('detailImageScale', bulkDetailScale, '商品詳情主圖')} style={{ padding: '7px 12px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 11, cursor: 'pointer' }}>套用</button>
-                <button onClick={() => clearBulkImageScale('detailImageScale', '商品詳情主圖')} style={{ padding: '7px 12px', background: 'none', color: 'var(--mid)', border: '1px solid var(--border)', fontSize: 11, cursor: 'pointer' }}>自動</button>
               </div>
             </div>
           </div>
@@ -2143,14 +2132,10 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
                 <textarea id="productImageUrls" value={(editing.imageUrls || []).join('\n')} onChange={setImageUrls} style={{ ...ta, minHeight: 84 }} placeholder="https://..." />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div>
                 <div>
                   <label htmlFor="productListImageScale" style={lbl}>商品列表圖片縮放</label>
                   <input id="productListImageScale" type="number" min="0.1" max="3" step="0.01" value={editing.listImageScale ?? ''} onChange={setF('listImageScale')} style={inp} placeholder="空白自動校正" />
-                </div>
-                <div>
-                  <label htmlFor="productDetailImageScale" style={lbl}>商品詳情主圖縮放</label>
-                  <input id="productDetailImageScale" type="number" min="0.1" max="3" step="0.01" value={editing.detailImageScale ?? ''} onChange={setF('detailImageScale')} style={inp} placeholder="空白自動校正" />
                 </div>
               </div>
 
@@ -2608,7 +2593,6 @@ function normalizeProduct(row) {
   const imageUrls = Array.isArray(row.image_urls) ? row.image_urls : [];
   const variants = Array.isArray(row.variants) ? row.variants : [];
   const listImageScale = normalizeProductImageScale(row.product_list_image_scale);
-  const detailImageScale = normalizeProductImageScale(row.product_detail_image_scale);
   return {
     id: row.id,
     name: row.name || '',
@@ -2630,7 +2614,6 @@ function normalizeProduct(row) {
     sourceFolderName: row.source_folder_name || '',
     importedFromDrive: !!row.imported_from_drive,
     listImageScale,
-    detailImageScale,
     active: row.active !== false,
   };
 }
@@ -2661,7 +2644,6 @@ function productToRow(product) {
     source_folder_name: product.sourceFolderName || null,
     imported_from_drive: !!product.importedFromDrive,
     product_list_image_scale: normalizeProductImageScale(product.listImageScale),
-    product_detail_image_scale: normalizeProductImageScale(product.detailImageScale),
     active: product.active !== false,
   };
 }
