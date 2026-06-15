@@ -96,6 +96,12 @@ create table if not exists public.products (
   skin_type text,
   ingredients text,
   features jsonb not null default '[]'::jsonb,
+  image_urls jsonb not null default '[]'::jsonb,
+  variants jsonb not null default '[]'::jsonb,
+  product_list_image_scale numeric,
+  product_detail_image_scale numeric,
+  source_folder_name text,
+  imported_from_drive boolean not null default false,
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -105,6 +111,13 @@ drop trigger if exists trg_products_updated_at on public.products;
 create trigger trg_products_updated_at
   before update on public.products
   for each row execute function public.set_updated_at();
+
+alter table public.products add column if not exists image_urls jsonb not null default '[]'::jsonb;
+alter table public.products add column if not exists variants jsonb not null default '[]'::jsonb;
+alter table public.products add column if not exists product_list_image_scale numeric;
+alter table public.products add column if not exists product_detail_image_scale numeric;
+alter table public.products add column if not exists source_folder_name text;
+alter table public.products add column if not exists imported_from_drive boolean not null default false;
 
 -- 訂單資料
 create table if not exists public.orders (
