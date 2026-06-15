@@ -1726,7 +1726,7 @@ function ProductCard({ product, user, onAdd, onSelect, promotions = [] }) {
         <div style={{ position:'absolute', top:10, right:10, zIndex:3, background:'var(--gold)', color:'var(--white)', fontSize:10, padding:'3px 9px', letterSpacing:'0.1em', fontWeight:500 }}>活動中</div>
       )}
       <div style={{ position:'relative', overflow:'hidden', marginBottom:14 }}>
-        <ProductAutoImage src={getProductImage(product)} alt={product.nameZh} product={product} mode="list" style={{ width:'100%', height:260, objectFit:'contain', background:'var(--off-white)', display:'block' }} />
+        <ProductAutoImage src={getProductImage(product)} alt={product.nameZh} product={product} mode="list" style={{ width:'100%', aspectRatio:'1', height:'auto', objectFit:'contain', background:'var(--off-white)', display:'block' }} />
         <div style={{ position:'absolute', bottom:0, left:0, right:0, background:'var(--black)', padding:'10px', transform: hovered?'translateY(0)':'translateY(100%)', transition:'transform 0.25s' }}>
           {canPurchase ? (
             <button onClick={e => { e.stopPropagation(); onAdd(); }} style={{ width:'100%', background:'none', border:'none', cursor:'pointer', color:'var(--white)', fontSize:11, letterSpacing:'0.15em', textTransform:'uppercase', fontFamily:'var(--font-body)', padding:'3px 0' }}>加入購物車</button>
