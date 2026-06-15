@@ -1849,6 +1849,13 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
     setEditing(prev => prev ? { ...prev, [field]: scale } : prev);
   }
 
+  function clearBulkImageScale(field, label) {
+    setError('');
+    if (!confirm(`確定將所有商品的「${label}」恢復為自動校正嗎？`)) return;
+    setProducts(prev => prev.map(product => ({ ...product, [field]: null })));
+    setEditing(prev => prev ? { ...prev, [field]: null } : prev);
+  }
+
   async function archiveProduct(p) {
     if (!confirm(`確定要下架商品「${p.nameZh}」嗎？下架後前台將不顯示此商品。`)) return;
     setError('');
@@ -1899,7 +1906,7 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dark)', marginBottom: 4 }}>批次圖片縮放</div>
-            <div style={{ fontSize: 11, color: 'var(--mid)' }}>1 為原尺寸；大於 1 放大，小於 1 縮小。會套用到全部商品，單品仍可再調整。</div>
+            <div style={{ fontSize: 11, color: 'var(--mid)' }}>透明背景圖片會自動校正商品本體大小；填數值會改為手動覆寫。1 為原尺寸，大於 1 放大，小於 1 縮小。</div>
           </div>
           <div style={{ display: 'flex', gap: 14, alignItems: 'end', flexWrap: 'wrap' }}>
             <div>
@@ -1907,6 +1914,7 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
               <div style={{ display: 'flex', gap: 6 }}>
                 <input id="bulkListScale" type="number" min="0.1" max="3" step="0.01" value={bulkListScale} onChange={e => setBulkListScale(e.target.value)} style={{ ...inp, width: 92, border: '1px solid var(--border)', padding: '7px 9px' }} placeholder="1.08" />
                 <button onClick={() => applyBulkImageScale('listImageScale', bulkListScale, '商品列表圖片')} style={{ padding: '7px 12px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 11, cursor: 'pointer' }}>套用</button>
+                <button onClick={() => clearBulkImageScale('listImageScale', '商品列表圖片')} style={{ padding: '7px 12px', background: 'none', color: 'var(--mid)', border: '1px solid var(--border)', fontSize: 11, cursor: 'pointer' }}>自動</button>
               </div>
             </div>
             <div>
@@ -1914,6 +1922,7 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
               <div style={{ display: 'flex', gap: 6 }}>
                 <input id="bulkDetailScale" type="number" min="0.1" max="3" step="0.01" value={bulkDetailScale} onChange={e => setBulkDetailScale(e.target.value)} style={{ ...inp, width: 92, border: '1px solid var(--border)', padding: '7px 9px' }} placeholder="1" />
                 <button onClick={() => applyBulkImageScale('detailImageScale', bulkDetailScale, '商品詳情主圖')} style={{ padding: '7px 12px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 11, cursor: 'pointer' }}>套用</button>
+                <button onClick={() => clearBulkImageScale('detailImageScale', '商品詳情主圖')} style={{ padding: '7px 12px', background: 'none', color: 'var(--mid)', border: '1px solid var(--border)', fontSize: 11, cursor: 'pointer' }}>自動</button>
               </div>
             </div>
           </div>
@@ -2137,11 +2146,11 @@ function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onR
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <label htmlFor="productListImageScale" style={lbl}>商品列表圖片縮放</label>
-                  <input id="productListImageScale" type="number" min="0.1" max="3" step="0.01" value={editing.listImageScale ?? ''} onChange={setF('listImageScale')} style={inp} placeholder="空白使用預設" />
+                  <input id="productListImageScale" type="number" min="0.1" max="3" step="0.01" value={editing.listImageScale ?? ''} onChange={setF('listImageScale')} style={inp} placeholder="空白自動校正" />
                 </div>
                 <div>
                   <label htmlFor="productDetailImageScale" style={lbl}>商品詳情主圖縮放</label>
-                  <input id="productDetailImageScale" type="number" min="0.1" max="3" step="0.01" value={editing.detailImageScale ?? ''} onChange={setF('detailImageScale')} style={inp} placeholder="空白使用預設" />
+                  <input id="productDetailImageScale" type="number" min="0.1" max="3" step="0.01" value={editing.detailImageScale ?? ''} onChange={setF('detailImageScale')} style={inp} placeholder="空白自動校正" />
                 </div>
               </div>
 
