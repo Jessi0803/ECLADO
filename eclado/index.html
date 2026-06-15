@@ -1811,7 +1811,7 @@ function PromoSection({ promo, user, addToCart, onSelect, isMobile, promotions =
 // ─── SHOP PAGE ────────────────────────────────────────────────────────────────
 function ShopPage({ user, cart, setCart, promotions = [], products = PRODUCTS, salesStats = emptySalesStats() }) {
   const [activeCategory, setActiveCategory] = useState('所有產品');
-  const [sortBy, setSortBy] = useState('sales-desc');
+  const [sortBy, setSortBy] = useState('default');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const categories = PRODUCT_NAV_LINKS;
   const isMobile = useIsMobile();
@@ -1840,14 +1840,16 @@ function ShopPage({ user, cart, setCart, promotions = [], products = PRODUCTS, s
   });
   const originalIndex = new Map(products.map((product, index) => [product.id, index]));
   const sortedProducts = [...filtered].sort((a, b) => {
+    const fixedOrder = (Number(a.id) - Number(b.id)) || (originalIndex.get(a.id) || 0) - (originalIndex.get(b.id) || 0);
     if (sortBy === 'price-asc' || sortBy === 'price-desc') {
       const diff = getMemberPrice(a, user) - getMemberPrice(b, user);
-      return sortBy === 'price-asc'
-        ? diff || (originalIndex.get(a.id) || 0) - (originalIndex.get(b.id) || 0)
-        : -diff || (originalIndex.get(a.id) || 0) - (originalIndex.get(b.id) || 0);
+      return sortBy === 'price-asc' ? diff || fixedOrder : -diff || fixedOrder;
     }
-    const salesDiff = getProductSalesCount(b, salesStats) - getProductSalesCount(a, salesStats);
-    return salesDiff || (originalIndex.get(a.id) || 0) - (originalIndex.get(b.id) || 0);
+    if (sortBy === 'sales-desc') {
+      const salesDiff = getProductSalesCount(b, salesStats) - getProductSalesCount(a, salesStats);
+      return salesDiff || fixedOrder;
+    }
+    return fixedOrder;
   });
 
   if (selectedProduct) {
@@ -1910,6 +1912,7 @@ function ShopPage({ user, cart, setCart, promotions = [], products = PRODUCTS, s
               backgroundImage:'linear-gradient(45deg, transparent 50%, var(--dark) 50%), linear-gradient(135deg, var(--dark) 50%, transparent 50%)',
               backgroundPosition:'calc(100% - 16px) 50%, calc(100% - 11px) 50%', backgroundSize:'5px 5px, 5px 5px', backgroundRepeat:'no-repeat',
             }}>
+              <option value="default">商品編號排序</option>
               <option value="sales-desc">銷售量高到低</option>
               <option value="price-asc">價格低到高</option>
               <option value="price-desc">價格高到低</option>
@@ -3950,7 +3953,7 @@ function App() {
     let alive = true;
 
     async function loadProducts() {
-      const { data, error } = await sb.from('products').select('*');
+      const { data, error } = await sb.from('products').select('*').order('id', { ascending: true });
       const { data: variantRows, error: variantError } = await sb.from('product_variants').select('*').order('sort_order', { ascending: true });
       if (!alive) return;
       if (error) {
