@@ -172,6 +172,19 @@ const NAV_ITEMS = [
   { label: '購物說明', children: ['退換貨說明', '運送方式', '付款說明', '常見問題'] },
 ];
 
+const INFO_SECTION_STORAGE_KEY = 'eclado_info_section';
+function getPendingInfoSection() {
+  try { return sessionStorage.getItem(INFO_SECTION_STORAGE_KEY) || ''; } catch { return ''; }
+}
+function clearPendingInfoSection() {
+  try { sessionStorage.removeItem(INFO_SECTION_STORAGE_KEY); } catch {}
+}
+function goInfoSection(section, setPage) {
+  try { sessionStorage.setItem(INFO_SECTION_STORAGE_KEY, section); } catch {}
+  setPage('info');
+  setTimeout(() => window.dispatchEvent(new CustomEvent('eclado-info-section', { detail: { section } })), 0);
+}
+
 const CHECKOUT_LOGIN_REDIRECT_KEY = 'eclado_checkout_login_redirect';
 const LINE_LOGIN_PENDING_KEY = 'eclado_line_login_pending';
 
@@ -820,7 +833,7 @@ function NavItem({ item, scrolled, setPage }) {
     if (item.label === '所有產品') setPage('shop');
     else if (item.label === '會員登錄') setPage('login');
     else if (item.label === '品牌故事') setPage('about');
-    else if (item.label === '購物說明') setPage('info');
+    else if (item.label === '購物說明') goInfoSection(child || '退換貨說明', setPage);
   }
 
   const col = scrolled ? 'var(--dark)' : 'rgba(255,255,255,0.88)';
@@ -1003,7 +1016,7 @@ function MobileNavSection({ item, setPage, close }) {
             <button key={c} onClick={() => {
               if (item.label === '所有產品') go('shop');
               else if (item.label === '會員登錄') go('login');
-              else if (item.label === '購物說明') go('info');
+              else if (item.label === '購物說明') { goInfoSection(c, setPage); close(); }
             }} style={{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:13, color:'var(--dark)', padding:'10px 16px', letterSpacing:'0.04em' }}>
               {c}
             </button>
@@ -3076,7 +3089,8 @@ function AboutPage() {
 
 // ─── INFO PAGE ────────────────────────────────────────────────────────────────
 function InfoPage() {
-  const [active, setActive] = useState('退換貨說明');
+  const [active, setActive] = useState(getPendingInfoSection() || '退換貨說明');
+  const infoContentRef = useRef(null);
   const isMobile = useIsMobile();
   const sections = {
     '退換貨說明': { title:'退換貨說明', content:[
@@ -3108,6 +3122,21 @@ function InfoPage() {
       { q:'商品可以退款嗎？', a:'商品未拆封且在 7 天內，如有品質問題可申請退款。請透過 LINE 聯繫客服處理。' },
     ]},
   };
+  useEffect(() => {
+    function showSection(section, shouldScroll = true) {
+      if (!sections[section]) return;
+      setActive(section);
+      clearPendingInfoSection();
+      if (shouldScroll) {
+        setTimeout(() => infoContentRef.current?.scrollIntoView({ behavior:'smooth', block:'start' }), 80);
+      }
+    }
+    const pending = getPendingInfoSection();
+    if (pending) showSection(pending);
+    const handler = event => showSection(event.detail?.section);
+    window.addEventListener('eclado-info-section', handler);
+    return () => window.removeEventListener('eclado-info-section', handler);
+  }, []);
   const current = sections[active];
   return (
     <div style={{ paddingTop:68 }}>
@@ -3122,7 +3151,7 @@ function InfoPage() {
           </div>
         </div>
       </div>
-      <div style={{ maxWidth:900, margin:'0 auto', padding: isMobile ? '40px 20px' : '60px 32px' }}>
+      <div ref={infoContentRef} id="info-section-content" style={{ maxWidth:900, margin:'0 auto', padding: isMobile ? '40px 20px' : '60px 32px' }}>
         <h2 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 22 : 28, fontWeight:300, marginBottom:32, color:'var(--black)' }}>{current.title}</h2>
         {current.content.map((item,i) => (
           <div key={i} style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '180px 1fr', gap: isMobile ? 8 : 32, padding:'24px 0', borderBottom:'1px solid var(--light)' }}>
