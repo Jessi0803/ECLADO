@@ -1863,14 +1863,13 @@ function ShopPage({ user, cart, setCart, promotions = [], products = PRODUCTS, s
           ))}
           </div>
           <label style={{ display:'flex', alignItems:'center', gap:10, padding: isMobile ? '0 0 14px' : '0', fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', whiteSpace:'nowrap' }}>
-            排序
             <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{
               appearance:'none', background:'var(--white)', border:'1px solid var(--light)', color:'var(--black)',
               padding:'9px 34px 9px 12px', fontFamily:'var(--font-body)', fontSize:12, letterSpacing:'0.06em', cursor:'pointer',
               backgroundImage:'linear-gradient(45deg, transparent 50%, var(--dark) 50%), linear-gradient(135deg, var(--dark) 50%, transparent 50%)',
               backgroundPosition:'calc(100% - 16px) 50%, calc(100% - 11px) 50%', backgroundSize:'5px 5px, 5px 5px', backgroundRepeat:'no-repeat',
             }}>
-              <option value="default">商品編號排序</option>
+              <option value="default">商品編號</option>
               <option value="sales-desc">銷售量高到低</option>
               <option value="price-asc">價格低到高</option>
               <option value="price-desc">價格高到低</option>
