@@ -901,7 +901,7 @@ function MobileNavSection({ item, setPage, close }) {
   function go(page) { setPage(page); close(); }
   return (
     <div style={{ borderBottom:'1px solid var(--light)' }}>
-      <button onClick={() => item.label === '所有產品' ? go('shop') : item.children ? setOpen(o=>!o) : go(
+      <button onClick={() => item.children ? setOpen(o=>!o) : go(
         item.label === '品牌故事' ? 'about'
         : item.label === '會員登錄' ? 'login'
         : item.label === '所有產品' ? 'shop'
