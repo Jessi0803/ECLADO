@@ -58,10 +58,6 @@
   .gcart    { display: grid; grid-template-columns: 1fr 320px; gap: 48px; }
   .gcheckout{ display: grid; grid-template-columns: 1fr 320px; gap: 60px; }
   .gstats   { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 360px; }
-  .hero-stats { position: absolute; left: 10vw; right: 10vw; bottom: 122px; display: grid; grid-template-columns: repeat(4, minmax(0, 138px)); gap: 22px; align-items: end; z-index: 2; }
-  .hero-stat { border-top: 1px solid rgba(255,255,255,0.28); padding-top: 14px; }
-  .hero-stat-number { font-family: var(--font-display); font-size: clamp(24px, 3vw, 38px); line-height: 1; color: var(--white); font-weight: 400; }
-  .hero-stat-label { margin-top: 7px; font-size: 12px; letter-spacing: 0.08em; color: rgba(255,255,255,0.68); white-space: nowrap; }
   .gabout   { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; margin-bottom: 80px; }
 
   /* Nav */
@@ -93,10 +89,6 @@
     .gcart      { grid-template-columns: 1fr !important; }
     .gcheckout  { grid-template-columns: 1fr !important; }
     .gstats     { max-width: 100% !important; }
-    .hero-stats { left: 6vw; right: 6vw; bottom: 116px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; }
-    .hero-stat { padding-top: 8px; }
-    .hero-stat-number { font-size: 23px; }
-    .hero-stat-label { font-size: 11px; }
     .nav-desktop{ display: none !important; }
     .nav-right  { display: none !important; }
     .nav-hamburger { display: flex !important; align-items: center; gap: 16px; }
@@ -109,7 +101,6 @@
     .g3     { grid-template-columns: 1fr !important; }
     .gfooter{ grid-template-columns: 1fr !important; gap: 20px !important; margin-bottom: 20px !important; }
     .px-page{ padding-left: 20px !important; padding-right: 20px !important; }
-    .hero-stats { bottom: 108px; gap: 8px 14px; }
   }
 </style>
 </head>
@@ -841,14 +832,6 @@ const HERO_SLIDES = [
   { headline:'Glow\nBeyond Limits.', sub:'自1998年創立，深耕專業院線皮膚管理28年，足跡遍佈全球23個國家，以147支完整療程系列支援每一位皮膚管理師，台灣獨家代理。', cta:'探索系列', img:'assets/images/hero-cover-3.jpg', mobilePosition:'58% center', layout:'split', accent:'ECLADO LABORATORY' },
 ];
 
-const HERO_STATS = [
-  ['10+', '年研發經驗'],
-  ['50+', '院線合作診所'],
-  ['95%', '顧客回購率'],
-  ['KFDA', '認證通過'],
-];
-
-
 const TRUST_BADGES = ['韓國原廠直送','皮膚科醫師驗證','專業美容師御用'];
 
 function TrustBadges({ isMobile = false, compact = false }) {
@@ -1418,15 +1401,6 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
           <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)', letterSpacing:'0.1em' }}>
             {String(slide+1).padStart(2,'0')} / {String(HERO_SLIDES.length).padStart(2,'0')}
           </span>
-        </div>
-
-        <div className="hero-stats" aria-label="ECLADO 品牌數據">
-          {HERO_STATS.map(([num,label]) => (
-            <div className="hero-stat" key={label}>
-              <div className="hero-stat-number">{num}</div>
-              <div className="hero-stat-label">{label}</div>
-            </div>
-          ))}
         </div>
 
         {/* Scroll hint — hide on mobile */}
