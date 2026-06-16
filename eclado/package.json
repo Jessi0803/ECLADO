@@ -5,8 +5,10 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
     "test:integration": "RUN_STAGING_INTEGRATION=1 RUN_PAYMENT_INTEGRATION=1 playwright test tests/integration --project=chromium",
-    "test:line": "node --test tests/integration/line-handler.test.cjs",
-    "test:cron": "node --test tests/integration/cancel-expired-orders.test.cjs"
+    "test:line": "node --test tests/integration/line-handler.test.cjs tests/integration/line-webhook.test.cjs",
+    "test:cron": "node --test tests/integration/cancel-expired-orders.test.cjs",
+    "test:notify:real": "NOTIFY_TEST_DB_MODE=supabase node scripts/real-notification-test.cjs",
+    "test:notify:real:mock": "node scripts/real-notification-test.cjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0"

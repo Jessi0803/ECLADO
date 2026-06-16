@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { assertStagingSupabaseUrl } from '../support/staging-safety';
 
 type StagingEnv = { url: string; serviceRoleKey: string };
 type AppRow = { id: string; status: string; studio_name: string; source: string };
@@ -20,6 +21,8 @@ test.describe('professional_applications 審核流程 (staging Supabase)', () =>
 
   test('美容師申請可寫入並以 pending 狀態讀回', async ({}, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium', 'Run staging integration once on chromium only.');
+    expect(stagingEnv).not.toBeNull();
+    assertStagingSupabaseUrl(stagingEnv!.url);
 
     const sb = new SupabaseRest(stagingEnv!);
     const appId = await insertTestApp(sb, 'read-test');
@@ -38,6 +41,8 @@ test.describe('professional_applications 審核流程 (staging Supabase)', () =>
 
   test('核准申請：status 更新為 approved', async ({}, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium', 'Run staging integration once on chromium only.');
+    expect(stagingEnv).not.toBeNull();
+    assertStagingSupabaseUrl(stagingEnv!.url);
 
     const sb = new SupabaseRest(stagingEnv!);
     const appId = await insertTestApp(sb, 'approve-test');
@@ -55,6 +60,8 @@ test.describe('professional_applications 審核流程 (staging Supabase)', () =>
 
   test('拒絕申請：status 更新為 rejected', async ({}, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium', 'Run staging integration once on chromium only.');
+    expect(stagingEnv).not.toBeNull();
+    assertStagingSupabaseUrl(stagingEnv!.url);
 
     const sb = new SupabaseRest(stagingEnv!);
     const appId = await insertTestApp(sb, 'reject-test');
@@ -72,6 +79,8 @@ test.describe('professional_applications 審核流程 (staging Supabase)', () =>
 
   test('status 不接受非法值（DB constraint）', async ({}, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium', 'Run staging integration once on chromium only.');
+    expect(stagingEnv).not.toBeNull();
+    assertStagingSupabaseUrl(stagingEnv!.url);
 
     const sb = new SupabaseRest(stagingEnv!);
     const appId = await insertTestApp(sb, 'constraint-test');
@@ -89,6 +98,8 @@ test.describe('professional_applications 審核流程 (staging Supabase)', () =>
 
   test('standalone source 寫入正常', async ({}, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium', 'Run staging integration once on chromium only.');
+    expect(stagingEnv).not.toBeNull();
+    assertStagingSupabaseUrl(stagingEnv!.url);
 
     const sb = new SupabaseRest(stagingEnv!);
     const rows = await sb.post<AppRow[]>('/professional_applications', {

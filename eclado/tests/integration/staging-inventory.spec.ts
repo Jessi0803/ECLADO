@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { assertStagingSupabaseUrl } from '../support/staging-safety';
 
 type StagingEnv = {
   url: string;
@@ -25,6 +26,7 @@ test.describe('staging Supabase inventory trigger', () => {
   test('付款後扣庫存，出貨流程不補回，退貨才補回', async ({}, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium', 'Run staging integration once on chromium only.');
     expect(stagingEnv).not.toBeNull();
+    assertStagingSupabaseUrl(stagingEnv!.url);
 
     const supabase = new SupabaseRest(stagingEnv!);
     const productId = Math.floor(1_000_000_000 + Math.random() * 500_000_000);

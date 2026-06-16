@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { assertStagingSupabaseUrl } from '../support/staging-safety';
 
 type StagingEnv = {
   url: string;
@@ -35,6 +36,7 @@ test.describe('Email 寄送驗證 (Resend + staging Supabase)', () => {
     test.skip(testInfo.project.name !== 'chromium', 'Run email integration once on chromium only.');
 
     const env = stagingEnv!;
+    assertStagingSupabaseUrl(env.url);
     const testEmail = `test-eclado-reg-${Date.now()}@example.com`;
     let userId: string | null = null;
 
@@ -68,6 +70,7 @@ test.describe('Email 寄送驗證 (Resend + staging Supabase)', () => {
     test.skip(testInfo.project.name !== 'chromium', 'Run email integration once on chromium only.');
 
     const env = stagingEnv!;
+    assertStagingSupabaseUrl(env.url);
     const testEmail = `test-eclado-reset-${Date.now()}@example.com`;
     let userId: string | null = null;
 

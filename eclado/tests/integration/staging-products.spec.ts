@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { assertStagingSupabaseUrl } from '../support/staging-safety';
 
 type StagingEnv = {
   url: string;
@@ -13,7 +14,6 @@ type ProductRow = {
   active: boolean;
 };
 
-const PROD_PROJECT_REF = 'ilvdvlkdpntwmaijncaz';
 const envPath = join(process.cwd(), '.env.staging');
 const shouldRun = process.env.RUN_STAGING_INTEGRATION === '1';
 const stagingEnv = loadStagingEnv();
@@ -28,7 +28,7 @@ test.describe('products 新增與上下架 (staging Supabase)', () => {
   test('新增商品可保存圖片欄位，並可下架及重新上架', async ({}, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium', 'Run staging integration once on chromium only.');
     expect(stagingEnv).not.toBeNull();
-    assertNotProduction(stagingEnv!);
+    assertStagingSupabaseUrl(stagingEnv!.url);
 
     const supabase = new SupabaseRest(stagingEnv!);
     const productId = Math.floor(1_500_000_000 + Math.random() * 500_000_000);
@@ -65,12 +65,6 @@ test.describe('products 新增與上下架 (staging Supabase)', () => {
     }
   });
 });
-
-function assertNotProduction(env: StagingEnv) {
-  if (new URL(env.url).hostname.includes(PROD_PROJECT_REF)) {
-    throw new Error('Refusing to write product integration data to the production Supabase project.');
-  }
-}
 
 function loadStagingEnv(): StagingEnv | null {
   const fromFile = existsSync(envPath) ? parseEnvFile(readFileSync(envPath, 'utf8')) : {};

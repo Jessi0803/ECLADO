@@ -90,31 +90,32 @@
 
 | 測試檔 | 對應範圍 | 目前涵蓋的功能 |
 |--------|----------|----------------|
-| `tests/eclado-frontend.spec.ts` | Mock E2E | 1、2（pro／instructor／distributor 價格）、3（含預購可下單及 realtime 庫存更新）、4（商品下架、價格與院線限制 realtime 同步）、5（折扣順序與排程邊界/生效/不生效）、6（訂單 payload / user_id）、7（虛擬帳號、信用卡、Apple Pay、Google Pay payType 與失敗提示）、17、26、27、28 |
+| `tests/eclado-frontend.spec.ts` | Mock E2E | 1、2（pro／instructor／distributor 價格）、3（含預購可下單及 realtime 庫存更新）、4（商品下架、價格與院線限制 realtime 同步）、5（折扣順序與排程邊界/生效/不生效）、6（訂單 payload / user_id、訂單寫入失敗提醒）、7（虛擬帳號、信用卡、Apple Pay、Google Pay payType 與失敗提示）、17、26、27、28 |
 | `tests/inventory-sql.spec.ts` | 本地 SQL / 文件檢查 | 8、9 的文字與 trigger 規則一致性 |
 | `tests/auth-email.spec.ts` | Mock E2E | 12（Email 驗證成功通知）、13（驗證後登入頁提示）、14（忘記密碼表單、送出成功/失敗）、15（密碼錯誤、未驗證 Email）、重設密碼頁密碼驗證與成功更新 |
 | `tests/professional-registration.spec.ts` | Mock E2E | 18（一般會員登入後填 `professional-apply.html` 並寫入 `professional_applications`）、19（pending／pro 不能重複申請）、一般會員註冊不觸發申請 |
 | `tests/admin.spec.ts` | Mock Admin E2E | 10、20（核准申請同步 `profiles.role`）、21、22、23（托運單號 + LINE push payload）、24（新增商品、本機圖片上傳驗證與寫入失敗、下架／重新上架與失敗狀態、庫存）、25（含排程時間倒置驗證） |
 | `tests/integration/payment.spec.ts` | 永豐 QPay integration | 7 |
-| `tests/integration/staging-inventory.spec.ts` | staging Supabase integration | 8、9 的真實資料庫 trigger 驗證 |
+| `tests/integration/staging-inventory.spec.ts` | staging Supabase integration | 8、9 的真實資料庫 trigger 驗證；執行前拒絕正式 Supabase project |
 | `tests/integration/staging-products.spec.ts` | staging Supabase integration | 24（新增商品的 `image_url` 寫入、下架與重新上架的 `active` 讀寫；拒絕正式 Supabase project） |
-| `tests/integration/professional-applications.spec.ts` | staging Supabase integration | 18、20（申請寫入、核准／拒絕流程、status constraint、standalone source） |
-| `tests/integration/email.spec.ts` | Resend + staging Supabase integration | 12（驗證信確實寄出）、14（忘記密碼信確實寄出）— 透過 Resend API 驗證 |
+| `tests/integration/professional-applications.spec.ts` | staging Supabase integration | 18、20（申請寫入、核准／拒絕流程、status constraint、standalone source）；執行前拒絕正式 Supabase project |
+| `tests/integration/email.spec.ts` | Resend + staging Supabase integration | 12（驗證信確實寄出）、14（忘記密碼信確實寄出）— 透過 Resend API 驗證；執行前拒絕正式 Supabase project |
 | `tests/integration/line-handler.test.cjs` | 完全隔離 LINE handler 測試 | 16、23 的後端核心邏輯 |
-| `tests/integration/cancel-expired-orders.test.cjs` | 完全隔離 Cron handler 測試 | 11（24 小時未付款自動取消：授權、查詢條件、批次取消） |
-| `tests/integration/email-click.spec.ts` | Playwright + Resend + staging Supabase | 13（驗證信連結點擊 → `email_confirmed_at` 寫入）、14（重設密碼連結點擊 → 填新密碼 → 成功） |
+| `tests/integration/line-webhook.test.cjs` | 完全隔離 LINE webhook 測試 | Webhook health check、method guard、簽章驗證、follow event |
+| `tests/integration/cancel-expired-orders.test.cjs` | 完全隔離 Cron handler 測試 | 11（24 小時未付款自動取消：授權、查詢條件、無逾期訂單、批次取消、缺 service key、Supabase 失敗） |
+| `tests/integration/email-click.spec.ts` | Playwright + Resend + staging Supabase | 13（驗證信連結點擊 → `email_confirmed_at` 寫入）、14（重設密碼連結點擊 → 填新密碼 → 成功）；執行前拒絕正式 Supabase project |
 
 ### 預計補齊
 
 | 測試檔 | 建議範圍 | 對應功能 |
 |--------|----------|----------|
-| `tests/integration/line.spec.ts` | LINE 登入與 LINE 推播 | 16、23 |
+| `tests/integration/line.spec.ts` | 真實 LINE test channel 登入與推播 | 16、23 |
 
 ### 分層原則
 
 - `npm run test:e2e`：跑最快、最安全的本地測試，主要驗前台流程與 SQL / 文件一致性。
 - `npm run test:integration`：跑 staging Supabase 連線測試，專門驗資料庫 trigger 與外部整合。會包含永豐 QPay 測試，前提是 `RUN_PAYMENT_INTEGRATION=1`。
-- `npm run test:line`：完全隔離的 LINE 後端測試，只驗 `api/line-callback.js` 和 `api/line-push.js`，不打正式 LINE 服務。
+- `npm run test:line`：完全隔離的 LINE 後端測試，驗 `api/line-callback.js`、`api/line-push.js`、`api/line-webhook.js`，不打正式 LINE 服務。
 - 外部服務測試不要混在同一支檔案，避免失敗原因難查，也方便分開開關與排錯。
 
 ---

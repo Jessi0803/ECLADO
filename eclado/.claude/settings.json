@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "file=$(jq -r '.tool_input.file_path // empty'); echo \"$file\" | grep -qE '\\.(html|ts)$' && cd /Users/jc/Desktop/jc/化妝品網站2/eclado && npx playwright test --reporter=line 2>&1 || true",
+            "timeout": 300,
+            "statusMessage": "執行 Playwright 測試中..."
+          }
+        ]
+      }
+    ]
+  }
+}

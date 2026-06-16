@@ -186,8 +186,10 @@ function goInfoSection(section, setPage) {
 }
 
 const POST_LOGIN_PAGE_KEY = 'eclado_post_login';
+const LOGIN_NOTICE_KEY = 'eclado_login_notice';
 const CHECKOUT_LOGIN_REDIRECT_KEY = 'eclado_checkout_login_redirect';
 const LINE_LOGIN_PENDING_KEY = 'eclado_line_login_pending';
+const PROFESSIONAL_LOGIN_NOTICE = '請先登入／註冊後再申請美容師會員。';
 
 function consumeCheckoutLoginRedirectPage() {
   const nextPage = sessionStorage.getItem(CHECKOUT_LOGIN_REDIRECT_KEY) === 'checkout' ? 'checkout' : 'account';
@@ -210,6 +212,7 @@ async function fetchLatestProApplication(userId) {
 async function goProfessionalApply(user, setPage) {
   if (!user?.uid) {
     sessionStorage.setItem(POST_LOGIN_PAGE_KEY, 'professional-apply');
+    sessionStorage.setItem(LOGIN_NOTICE_KEY, PROFESSIONAL_LOGIN_NOTICE);
     setPage('login');
     return;
   }
@@ -995,9 +998,8 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
                 </button>
               </div>
             ) : null}
-            <button onClick={() => setPage('cart')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)', letterSpacing:'0.04em', position:'relative', padding:'4px 0', whiteSpace:'nowrap', display:'inline-flex', alignItems:'center', gap:6 }}>
+            <button onClick={() => setPage('cart')} aria-label="購物車" style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)', letterSpacing:'0.04em', position:'relative', padding:'4px 0', whiteSpace:'nowrap', display:'inline-flex', alignItems:'center', gap:6 }}>
               <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h8.86a2 2 0 0 0 1.95-1.57L21 7H5.12" /></svg>
-              <span>購物車</span>
               {cartCount > 0 && <span style={{ position:'absolute', top:-4, right:-14, background:'var(--black)', color:'var(--white)', fontSize:9, width:16, height:16, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center' }}>{cartCount}</span>}
             </button>
           </div>
@@ -1010,9 +1012,8 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
                 <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user.name}</span>
               </button>
             )}
-            <button onClick={() => setPage('cart')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color: drawerOpen ? 'var(--dark)' : iconCol, fontFamily:'var(--font-body)', position:'relative', padding:'4px 0', display:'inline-flex', alignItems:'center', gap:6 }}>
+            <button onClick={() => setPage('cart')} aria-label="購物車" style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color: drawerOpen ? 'var(--dark)' : iconCol, fontFamily:'var(--font-body)', position:'relative', padding:'4px 0', display:'inline-flex', alignItems:'center', gap:6 }}>
               <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h8.86a2 2 0 0 0 1.95-1.57L21 7H5.12" /></svg>
-              <span>購物車</span>
               {cartCount > 0 && <span style={{ position:'absolute', top:-4, right:-14, background:'var(--black)', color:'var(--white)', fontSize:9, width:16, height:16, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center' }}>{cartCount}</span>}
             </button>
             <button onClick={() => setDrawerOpen(o => !o)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', flexDirection:'column', gap:5, padding:4 }}>
@@ -2202,21 +2203,6 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
     );
   }
 
-  async function sendOrderPlacedEmail() {
-    if (!form.email || user?.email?.startsWith('line.')) return;
-    await fetch('/api/order-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'order_placed',
-        email: form.email,
-        orderId: orderNo,
-        memberName: form.name || user?.name || '訪客',
-        total,
-      }),
-    }).catch(error => console.warn('[ECLADO] 訂單 Email 通知送出失敗：', error));
-  }
-
   async function insertOrder(paymentData, method) {
     const today = new Date();
     const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -2253,7 +2239,6 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
       user_id: user?.uid || null,
     };
     const { error } = await supabase.from('orders').insert(order);
-    if (!error) await sendOrderPlacedEmail();
     return error;
   }
 
@@ -2669,8 +2654,9 @@ function LoginPage({ setPage }) {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
   const [success, setSuccess]   = useState('');
+  const [notice, setNotice]     = useState('');
 
-  function reset() { setError(''); setSuccess(''); }
+  function reset() { setError(''); setSuccess(''); setNotice(''); }
 
   useEffect(() => {
     const lineError = getLineLoginErrorMessage();
@@ -2689,6 +2675,12 @@ function LoginPage({ setPage }) {
       sessionStorage.removeItem('eclado_auth_notice');
       setView('login');
       setError(notice.slice(6));
+    }
+    const loginNotice = sessionStorage.getItem(LOGIN_NOTICE_KEY);
+    if (loginNotice) {
+      sessionStorage.removeItem(LOGIN_NOTICE_KEY);
+      setView('login');
+      setNotice(loginNotice);
     }
   }, []);
 
@@ -2820,6 +2812,11 @@ function LoginPage({ setPage }) {
         {/* 成功訊息 */}
         {success && (
           <div style={{ background:'#f0faf0', border:'1px solid #b7ddb7', padding:'14px 16px', marginBottom:20, fontSize:13, color:'#2d6a2d', lineHeight:1.7 }}>{success}</div>
+        )}
+
+        {/* 提醒訊息 */}
+        {notice && (
+          <div style={{ background:'#fffbf0', border:'1px solid #e8d9b0', padding:'14px 16px', marginBottom:20, fontSize:13, color:'#5a4a1e', lineHeight:1.7 }}>{notice}</div>
         )}
 
         {/* 錯誤訊息 */}
@@ -3044,6 +3041,7 @@ function ProfessionalApplicationPage({ setPage, user, authReady, onUserUpdated }
     async function checkAccess() {
       if (!user?.uid) {
         sessionStorage.setItem(POST_LOGIN_PAGE_KEY, 'professional-apply');
+        sessionStorage.setItem(LOGIN_NOTICE_KEY, PROFESSIONAL_LOGIN_NOTICE);
         setPage('login');
         return;
       }
@@ -3077,6 +3075,7 @@ function ProfessionalApplicationPage({ setPage, user, authReady, onUserUpdated }
     e.preventDefault();
     if (!user?.uid) {
       sessionStorage.setItem(POST_LOGIN_PAGE_KEY, 'professional-apply');
+      sessionStorage.setItem(LOGIN_NOTICE_KEY, PROFESSIONAL_LOGIN_NOTICE);
       setPage('login');
       return;
     }

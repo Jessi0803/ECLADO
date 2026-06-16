@@ -83,6 +83,125 @@ test('cancel expired orders - cancels awaiting_confirm and unpaid orders older t
   assert.equal(calls.length, 2);
 });
 
+test('cancel expired orders - rejects unsupported methods', async () => {
+  const res = createRes();
+
+  await cancelExpiredOrders({ method: 'PUT', headers: {}, body: {} }, res);
+
+  assert.equal(res.statusCode, 405);
+  assert.deepEqual(res.jsonBody, { error: 'Method not allowed' });
+});
+
+test('cancel expired orders - returns zero when no expired orders exist', async () => {
+  const calls = [];
+  const originalFetch = global.fetch;
+  const originalNow = Date.now;
+  const originalEnv = {
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+
+  process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  Date.now = () => Date.parse('2026-05-21T12:00:00.000Z');
+
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+    assert.equal(options.method, 'GET');
+    return jsonResponse(200, []);
+  };
+
+  const res = createRes();
+
+  try {
+    await cancelExpiredOrders({
+      method: 'POST',
+      headers: { 'x-vercel-cron': '1' },
+      body: {},
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    Date.now = originalNow;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.jsonBody.ok, true);
+  assert.equal(res.jsonBody.cancelled, 0);
+  assert.equal(res.jsonBody.message, 'No expired unpaid orders');
+  assert.equal(calls.length, 1);
+});
+
+test('cancel expired orders - returns 500 when service key is missing', async () => {
+  const originalEnv = {
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+  const originalError = console.error;
+  console.error = () => {};
+  delete process.env.SUPABASE_SERVICE_KEY;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  const res = createRes();
+
+  try {
+    await cancelExpiredOrders({
+      method: 'POST',
+      headers: { 'x-vercel-cron': '1' },
+      body: {},
+    }, res);
+  } finally {
+    console.error = originalError;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.statusCode, 500);
+  assert.deepEqual(res.jsonBody, { ok: false, error: 'SUPABASE_SERVICE_KEY not set' });
+});
+
+test('cancel expired orders - returns 500 when Supabase update fails', async () => {
+  const originalFetch = global.fetch;
+  const originalError = console.error;
+  const originalEnv = {
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+
+  process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  console.error = () => {};
+
+  global.fetch = async (url, options = {}) => {
+    if (options.method === 'GET') {
+      return jsonResponse(200, [
+        { id: 'OLD-003', status: 'awaiting_confirm', created_at: '2026-05-20T10:00:00.000Z' },
+      ]);
+    }
+    if (options.method === 'PATCH') {
+      assert.match(String(url), /id=in\.\(OLD-003\)/);
+      return jsonResponse(500, { message: 'staging update failed' });
+    }
+    throw new Error(`Unexpected fetch ${options.method} ${url}`);
+  };
+
+  const res = createRes();
+
+  try {
+    await cancelExpiredOrders({
+      method: 'POST',
+      headers: { 'x-vercel-cron': '1' },
+      body: {},
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    console.error = originalError;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.statusCode, 500);
+  assert.deepEqual(res.jsonBody, { ok: false, error: 'staging update failed' });
+});
+
 function createRes() {
   return {
     statusCode: 200,

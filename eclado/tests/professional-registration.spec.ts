@@ -63,6 +63,14 @@ test.describe('美容師欄位顯示', () => {
     await mockEcladoApis(page);
   });
 
+  test('未登入點擊美容師申請會導到登入頁並顯示提醒', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: '申請美容師會員' }).click();
+
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(page.getByText('請先登入／註冊後再申請美容師會員。')).toBeVisible();
+  });
+
   test('一般會員註冊表單不顯示美容師申請欄位', async ({ page }) => {
     await page.goto('/login');
     await page.getByRole('button', { name: '註冊' }).click();
