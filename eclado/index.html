@@ -1456,6 +1456,19 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
               <p style={{ fontSize:14, lineHeight:1.9, color:'#666', maxWidth:480, marginBottom:28 }}>
                 ECLADO 是源自韓國醫美院線的頂級保養品牌，每一款產品皆由皮膚科醫師與研究團隊共同研發，以臨床驗證的有效成分，帶給您診所級的保養體驗。
               </p>
+              <div className="gstats" style={{ maxWidth: isMobile ? '100%' : 520, gap: isMobile ? '18px 20px' : '24px 32px', marginTop: isMobile ? 28 : 34 }}>
+                {[
+                  ['8,000+', '家皮膚管理中心御用'],
+                  ['150', '所韓國美容學院指定品牌'],
+                  ['23', '個國家據點遍佈全球'],
+                  ['28', '年品牌歷史'],
+                ].map(([num,label]) => (
+                  <div key={label} style={{ borderTop:'1px solid rgba(0,0,0,0.12)', paddingTop:14 }}>
+                    <div style={{ fontFamily:'var(--font-display)', fontSize:'clamp(28px,3vw,42px)', fontWeight:300, color:'var(--black)', lineHeight:1 }}>{num}</div>
+                    <div style={{ fontSize:12, color:'var(--dark)', letterSpacing:'0.06em', lineHeight:1.6, marginTop:8 }}>{label}</div>
+                  </div>
+                ))}
+              </div>
             </div>
             <img src="assets/images/about-eclado-clinic.jpg" alt="" style={{ width:'100%', height: isMobile ? 280 : 480, objectFit:'cover', display:'block' }} />
           </div>
