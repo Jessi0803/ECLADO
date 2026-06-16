@@ -1647,7 +1647,7 @@ function ProductDetail({ product, user, onAdd, onBack, promotions = [] }) {
             { label:'適合膚質', content: product.skinType },
           ].map(({ label, content }) => (
             <div key={label} style={{ background:'var(--white)', padding: isMobile ? '28px 20px' : '36px 32px' }}>
-              <p style={{ fontSize:11, letterSpacing:'0.24em', color:'var(--dark)', textTransform:'uppercase', marginBottom:14 }}>{label}</p>
+              <p style={{ fontSize:12, fontWeight:600, letterSpacing:'0.24em', color:'var(--dark)', textTransform:'uppercase', marginBottom:14 }}>{label}</p>
               <p style={{ fontSize:14, color:'#555', lineHeight:1.9 }}>{content}</p>
             </div>
           ))}
