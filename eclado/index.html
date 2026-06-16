@@ -833,7 +833,7 @@ const HERO_SLIDES = [
 ];
 
 
-const TRUST_BADGES = ['韓國原廠直送','KFDA 認證','皮膚科醫師驗證','專業美容師御用'];
+const TRUST_BADGES = ['韓國原廠直送','皮膚科醫師驗證','專業美容師御用'];
 
 function TrustBadges({ isMobile = false, compact = false }) {
   return (
@@ -1458,7 +1458,7 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
                 ECLADO 是源自韓國醫美院線的頂級保養品牌，每一款產品皆由皮膚科醫師與研究團隊共同研發，以臨床驗證的有效成分，帶給您診所級的保養體驗。
               </p>
               <div className="gstats">
-                {[['10+','年研發經驗'],['50+','院線合作診所'],['95%','顧客回購率'],['KFDA','認證通過']].map(([num,label]) => (
+                {[['10+','年研發經驗'],['50+','院線合作診所'],['95%','顧客回購率']].map(([num,label]) => (
                   <div key={label}>
                     <div style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:400, color:'var(--black)', lineHeight:1 }}>{num}</div>
                     <div style={{ fontSize:12, color:'var(--dark)', letterSpacing:'0.06em', marginTop:4 }}>{label}</div>
