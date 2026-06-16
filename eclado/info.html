@@ -290,7 +290,7 @@ function getDefaultProductImageScale(product) {
   return PRODUCT_IMAGE_SCALE_OVERRIDES[product?.nameZh] || (PRODUCT_IMAGE_ZOOM_NAMES.has(product?.nameZh) ? 1.08 : 1);
 }
 
-const PRODUCT_AUTO_IMAGE_TARGETS = { list: 0.78, detail: 0.86 };
+const PRODUCT_AUTO_IMAGE_TARGETS = { list: 0.78, detail: 0.72 };
 const PRODUCT_IMAGE_BOUNDS_CACHE = new Map();
 
 function getImageAnalysisSrc(src) {
@@ -356,7 +356,7 @@ function analyzeTransparentImageBounds(src) {
 function ProductAutoImage({ src, alt, product, mode, style }) {
   const imgRef = useRef(null);
   const manualScale = mode === 'list' ? normalizeProductImageScale(product?.listImageScale) : null;
-  const fallbackScale = manualScale || getDefaultProductImageScale(product);
+  const fallbackScale = manualScale || getDefaultProductImageScale(product) * (mode === 'detail' ? 0.84 : 1);
   const [fit, setFit] = useState({ scale: fallbackScale, x: 0, y: 0 });
 
   useEffect(() => {
