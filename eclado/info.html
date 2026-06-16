@@ -1557,7 +1557,7 @@ function ProductDetail({ product, user, onAdd, onBack, promotions = [] }) {
           {/* 左：圖片 */}
           <div style={{ position: isMobile ? 'static' : 'sticky', top:90 }}>
             <div style={{ position:'relative', overflow:'hidden' }}>
-              <ProductAutoImage src={images[activeImage] || getProductImage(product, 900)} alt={product.nameZh} product={product} mode="detail" style={{ width:'100%', aspectRatio:'1', objectFit:'contain', background:'var(--off-white)', display:'block' }} />
+              <img src={images[activeImage] || getProductImage(product, 900)} alt={product.nameZh} style={{ width:'100%', aspectRatio:'1', objectFit:'contain', background:'var(--off-white)', display:'block' }} />
             </div>
             {images.length > 1 && (
               <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8, marginTop:10 }}>
