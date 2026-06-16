@@ -794,6 +794,31 @@ const HERO_SLIDES = [
 ];
 
 
+const TRUST_BADGES = ['韓國原廠直送','KFDA 認證','皮膚科醫師驗證','專業美容師培訓'];
+
+function TrustBadges({ isMobile = false, compact = false }) {
+  return (
+    <div style={{
+      maxWidth:1280,
+      margin:'0 auto',
+      padding: compact ? 0 : '0 24px',
+      display:'grid',
+      gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, max-content)',
+      justifyContent:'center',
+      gap: isMobile ? '10px 12px' : 56,
+      alignItems:'center'
+    }}>
+      {TRUST_BADGES.map(item => (
+        <div key={item} style={{ display:'flex', alignItems:'center', gap:8, minWidth:0 }}>
+          <div style={{ width:4, height:4, background:'var(--gold)', borderRadius:'50%', flexShrink:0 }} />
+          <span style={{ fontSize: isMobile ? 12 : 11, letterSpacing:'0.08em', color: compact ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.5)', whiteSpace:'nowrap' }}>{item}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
 const JOURNAL_ARTICLES = [
   {
     category:'成分學',
@@ -1322,9 +1347,13 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
               </div>
             </div>
           </>
-        )}
+        )}{isMobile && (
+  <div style={{ position:'absolute', left:'6vw', right:'6vw', top:82, zIndex:2 }}>
+    <TrustBadges isMobile={isMobile} compact />
+  </div>
+)}
 
-        {/* Slide dots */}
+{/* Slide dots */}
         <div style={{ position:'absolute', bottom:32, left: isMobile ? '6vw' : '10vw', display:'flex', alignItems:'center', gap:16 }}>
           <div style={{ display:'flex', gap:8 }}>
             {HERO_SLIDES.map((_,i) => (
@@ -1347,16 +1376,11 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
       </section>
 
       {/* BRAND STRIP */}
-      <section style={{ background:'var(--black)', padding:'18px 0' }}>
-        <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px', display:'flex', justifyContent:'center', gap: isMobile ? 24 : 56, alignItems:'center', flexWrap:'wrap' }}>
-          {['韓國原廠直送','KFDA 認證','皮膚科醫師驗證','專業美容師培訓'].map(item => (
-            <div key={item} style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <div style={{ width:4, height:4, background:'var(--gold)', borderRadius:'50%', flexShrink:0 }} />
-              <span style={{ fontSize:11, letterSpacing:'0.1em', color:'rgba(255,255,255,0.5)' }}>{item}</span>
-            </div>
-          ))}
-        </div>
-      </section>
+      {!isMobile && (
+        <section style={{ background:'var(--black)', padding:'18px 0' }}>
+          <TrustBadges isMobile={isMobile} />
+        </section>
+      )}
 
       {/* LIVE PROMOTIONS */}
       <div id="eclado-promotions">
@@ -3117,7 +3141,7 @@ function AboutPage() {
 
         {/* 品牌哲學 */}
         <div className="gabout" style={{ marginTop: isMobile ? 56 : 96 }}>
-          <img src="https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=800&q=85&fit=crop" alt="" style={{ width:'100%', height: isMobile ? 240 : 420, objectFit:'cover' }} />
+          <img src="assets/images/philosophy-subimage-1.png" alt="" style={{ width:'100%', height: isMobile ? 240 : 420, objectFit:'cover' }} />
           <div>
             <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--dark)', textTransform:'uppercase', marginBottom:14 }}>Our Philosophy</p>
             <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(24px,3.5vw,40px)', fontWeight:300, lineHeight:1.2, marginBottom:24, color:'var(--black)' }}>為專業人士設計<br />的完整療程系統</h2>
