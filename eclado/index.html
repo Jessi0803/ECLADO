@@ -1390,11 +1390,7 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
               </div>
             </div>
           </>
-        )}{isMobile && (
-  <div style={{ position:'absolute', left:'6vw', right:'6vw', top:82, zIndex:2 }}>
-    <TrustBadges isMobile={isMobile} compact />
-  </div>
-)}
+        )}
 
 {/* Slide dots */}
         <div style={{ position:'absolute', bottom:32, left: isMobile ? '6vw' : '10vw', display:'flex', alignItems:'center', gap:16 }}>
@@ -1419,11 +1415,9 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
       </section>
 
       {/* BRAND STRIP */}
-      {!isMobile && (
-        <section style={{ background:'var(--black)', padding:'18px 0' }}>
-          <TrustBadges isMobile={isMobile} />
-        </section>
-      )}
+      <section style={{ background:'var(--black)', padding:'18px 0' }}>
+        <TrustBadges isMobile={isMobile} />
+      </section>
 
       {/* LIVE PROMOTIONS */}
       <div id="eclado-promotions">
