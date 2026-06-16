@@ -645,9 +645,9 @@ function getSinopacPaymentError(response) {
 }
 
 const HERO_SLIDES = [
-  { headline:'Korea\'s\nNo.1 Pro Brand.', sub:'28年陪伴韓國8,000+皮膚管理中心成長，從問題肌修復、敏弱調理到抗老管理，147支系列打造完整院線療程邏輯，而非單一明星產品。', cta:'探索系列', img:'assets/images/hero-cover.jpg', layout:'left', accent:'28 Years · 23 Countries' },
-  { headline:'Human\nClinical Proven.', sub:'每一款產品皆通過人體臨床實驗，無一例外。韓國美容業中擁有最多人體研究數據，150所美容學院指定品牌。', cta:'查看臨床實證', img:'assets/images/hero-cover-2.png', layout:'center', accent:'人體實驗 · 無一例外' },
-  { headline:'Glow\nBeyond Limits.', sub:'自1998年創立，深耕專業院線皮膚管理28年，足跡遍佈全球23個國家，以147支完整療程系列支援每一位皮膚管理師，台灣獨家代理。', cta:'探索系列', img:'assets/images/hero-cover-3.jpg', layout:'split', accent:'ECLADO LABORATORY' },
+  { headline:'Korea\'s\nNo.1 Pro Brand.', sub:'28年陪伴韓國8,000+皮膚管理中心成長，從問題肌修復、敏弱調理到抗老管理，147支系列打造完整院線療程邏輯，而非單一明星產品。', cta:'探索系列', img:'assets/images/hero-cover.jpg', mobilePosition:'62% center', layout:'left', accent:'28 Years · 23 Countries' },
+  { headline:'Human\nClinical Proven.', sub:'每一款產品皆通過人體臨床實驗，無一例外。韓國美容業中擁有最多人體研究數據，150所美容學院指定品牌。', cta:'查看臨床實證', img:'assets/images/hero-cover-2.png', mobilePosition:'50% center', layout:'center', accent:'人體實驗 · 無一例外' },
+  { headline:'Glow\nBeyond Limits.', sub:'自1998年創立，深耕專業院線皮膚管理28年，足跡遍佈全球23個國家，以147支完整療程系列支援每一位皮膚管理師，台灣獨家代理。', cta:'探索系列', img:'assets/images/hero-cover-3.jpg', mobilePosition:'58% center', layout:'split', accent:'ECLADO LABORATORY' },
 ];
 
 
@@ -1110,19 +1110,19 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
       {/* HERO */}
       <section style={{ height:'100vh', position:'relative', overflow:'hidden', background:'#1a1a18' }}>
         {HERO_SLIDES.map((s,i) => (
-          <img key={i} src={s.img} alt="" style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', objectFit:'cover', opacity: i===slide ? 1 : 0, transition:'opacity 0.9s ease', pointerEvents:'none' }} />
+          <img key={i} src={s.img} alt="" style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', objectFit:'cover', objectPosition: isMobile ? (s.mobilePosition || 'center') : (s.position || 'center'), opacity: i===slide ? 1 : 0, transition:'opacity 0.9s ease', pointerEvents:'none' }} />
         ))}
 
         {/* Layout 1: left */}
         {HERO_SLIDES[slide].layout === 'left' && (
           <>
             <div style={{ position:'absolute', inset:0, background:'linear-gradient(to right, rgba(14,14,12,0.88) 45%, rgba(14,14,12,0.15))' }} />
-            <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', justifyContent:'center', padding:heroPad, maxWidth: isMobile ? '100%' : 780, opacity: animating?0:1, transition:'opacity 0.45s' }}>
+            <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', justifyContent:'center', padding:heroPad, maxWidth: isMobile ? '92vw' : 780, opacity: animating?0:1, transition:'opacity 0.45s' }}>
               <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
                 <div style={{ width:28, height:1, background:'var(--gold)' }} />
                 <span style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase', fontFamily:'var(--font-body)' }}>{HERO_SLIDES[slide].accent}</span>
               </div>
-              <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(40px,7.5vw,104px)', fontWeight:300, color:'var(--white)', lineHeight:1.0, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
+              <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,44px)' : 'clamp(40px,7.5vw,104px)', fontWeight:300, color:'var(--white)', lineHeight:1.0, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
               <p style={{ fontSize:15, color:'rgba(255,255,255,0.65)', letterSpacing:'0.06em', marginBottom:36, fontWeight:300, lineHeight:1.8, maxWidth:560 }}>{HERO_SLIDES[slide].sub}</p>
               <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
                 <button onClick={() => setPage('shop')} style={{ background:'var(--white)', color:'var(--black)', border:'none', padding:'13px 28px', fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}
@@ -1144,7 +1144,7 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
                 <span style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase' }}>{HERO_SLIDES[slide].accent}</span>
                 <div style={{ width:20, height:1, background:'var(--gold)' }} />
               </div>
-              <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(38px,8vw,112px)', fontWeight:300, color:'var(--white)', lineHeight:1.0, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
+              <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,46px)' : 'clamp(38px,8vw,112px)', fontWeight:300, color:'var(--white)', lineHeight:1.0, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
               <p style={{ fontSize:15, color:'rgba(255,255,255,0.6)', letterSpacing:'0.06em', marginBottom:40, fontWeight:300, maxWidth:520, lineHeight:1.8 }}>{HERO_SLIDES[slide].sub}</p>
               <button onClick={() => setPage('shop')} style={{ background:'transparent', color:'var(--white)', border:'1px solid rgba(255,255,255,0.6)', padding:'14px 40px', fontSize:11, letterSpacing:'0.14em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', whiteSpace:'nowrap' }}
                 onMouseEnter={e=>{e.target.style.background='var(--white)';e.target.style.color='var(--black)';}}
@@ -1164,7 +1164,7 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
                   <span style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase' }}>{HERO_SLIDES[slide].accent}</span>
                   <div style={{ width:28, height:1, background:'var(--gold)' }} />
                 </div>
-                <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(36px,6.5vw,92px)', fontWeight:300, color:'var(--white)', lineHeight:1.05, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
+                <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,44px)' : 'clamp(36px,6.5vw,92px)', fontWeight:300, color:'var(--white)', lineHeight:1.05, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
                 <p style={{ fontSize:15, color:'rgba(255,255,255,0.6)', letterSpacing:'0.06em', marginBottom:36, fontWeight:300, lineHeight:1.8 }}>{HERO_SLIDES[slide].sub}</p>
                 <button onClick={() => setPage('login')} style={{ background:'var(--gold)', color:'var(--white)', border:'none', padding:'13px 28px', fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}
                   onMouseEnter={e=>e.target.style.opacity='0.85'}
