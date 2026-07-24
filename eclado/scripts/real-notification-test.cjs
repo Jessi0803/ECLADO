@@ -17,7 +17,7 @@ const config = {
     || env.SUPABASE_SERVICE_ROLE_KEY
     || env.SUPABASE_SERVICE_KEY
     || '',
-  email: env.NOTIFY_TEST_EMAIL || 'baby90522@gmail.com',
+  email: env.NOTIFY_TEST_EMAIL || 'k0919933386@gmail.com',
   member: env.NOTIFY_TEST_MEMBER || 'Jessie',
   userId: env.NOTIFY_TEST_USER_ID || '53181d26-ace2-44bc-8ac5-150a6b49a791',
   lineUserId: env.NOTIFY_TEST_LINE_USER_ID || 'U6f71cfa36c3fb2188f54396a5cb58882',
