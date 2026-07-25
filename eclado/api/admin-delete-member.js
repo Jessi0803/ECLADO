@@ -4,6 +4,7 @@ const DEFAULT_SUPABASE_ANON = 'sb_publishable_BasrQNdstdbX_InrQWmCuw_Jb1Lscnl';
 const ADMIN_EMAILS = [
   'baby90522@gmail.com',
   'ecladotaiwan@gmail.com',
+  'k0919933386@gmail.com',
   'line.u6f71cfa36c3fb2188f54396a5cb58882@ecladotaiwan.com',
 ];
 
