@@ -1,0 +1,88 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --white: #fafaf9;
+    --off-white: #f4f3f1;
+    --light: #ebebea;
+    --mid: #c8c7c5;
+    --dark: #2a2a28;
+    --black: #141412;
+    --gold: #b8a98a;
+    --font-display: 'Gilda Display', 'Noto Serif TC', Georgia, serif;
+    --font-body: 'Jost', 'Noto Serif TC', Helvetica, sans-serif;
+    --font-zh: 'Noto Serif TC', serif;
+  }
+  html { font-size: 16px; scroll-behavior: smooth; }
+  body { background: var(--white); color: var(--dark); font-family: 'Jost', 'Noto Serif TC', Helvetica, sans-serif; font-weight: 300; -webkit-font-smoothing: antialiased; }
+  h1, h2, h3 { font-family: 'Gilda Display', 'Noto Serif TC', Georgia, serif; }
+  p, span, button, a, label, input, textarea { font-family: 'Jost', 'Noto Serif TC', sans-serif; }
+  #root { min-height: 100vh; }
+
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .img-placeholder {
+    background-color: var(--light);
+    background-image: repeating-linear-gradient(-45deg, transparent, transparent 4px, var(--mid) 4px, var(--mid) 5px);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--mid); font-size: 11px; letter-spacing: 0.08em; text-align: center; padding: 8px;
+  }
+
+  /* ── Responsive grid classes ── */
+  .g4   { display: grid; grid-template-columns: repeat(4,1fr); gap: 24px; }
+  .g4lg { display: grid; grid-template-columns: repeat(4,1fr); gap: 32px; }
+  .g2   { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+  .g3   { display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; }
+  .gfooter { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
+  .gcart    { display: grid; grid-template-columns: 1fr 320px; gap: 48px; }
+  .gcheckout{ display: grid; grid-template-columns: 1fr 320px; gap: 60px; }
+  .gstats   { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 360px; }
+  .gabout   { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; margin-bottom: 80px; }
+
+  /* Nav */
+  .nav-desktop { display: flex; gap: 0; align-items: center; }
+  .nav-right    { display: flex; gap: 20px; align-items: center; }
+  .nav-hamburger{ display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+  .mobile-drawer{
+    position: fixed; top: 68px; left: 0; right: 0; bottom: 0;
+    background: var(--white); z-index: 99; overflow-y: auto;
+    animation: slideDown 0.22s ease; padding: 24px 28px 48px;
+  }
+
+  /* Filter tabs scroll on mobile */
+  .filter-tabs { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .filter-tabs::-webkit-scrollbar { display: none; }
+  .filter-tabs button { white-space: nowrap; flex-shrink: 0; }
+
+  /* Info tabs scroll */
+  .info-tabs { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .info-tabs::-webkit-scrollbar { display: none; }
+  .info-tabs button { white-space: nowrap; flex-shrink: 0; }
+
+  /* ── Tablet ── */
+  @media (max-width: 900px) {
+    .g4, .g4lg { grid-template-columns: repeat(2,1fr) !important; gap: 16px !important; }
+    .g2         { gap: 40px !important; }
+    .gabout     { grid-template-columns: 1fr !important; gap: 40px !important; margin-bottom: 48px !important; }
+    .gfooter    { grid-template-columns: 1fr 1fr !important; gap: 28px !important; }
+    .gcart      { grid-template-columns: 1fr !important; }
+    .gcheckout  { grid-template-columns: 1fr !important; }
+    .gstats     { max-width: 100% !important; }
+    .nav-desktop{ display: none !important; }
+    .nav-right  { display: none !important; }
+    .nav-hamburger { display: flex !important; align-items: center; gap: 16px; }
+    .login-visual { display: none !important; }
+  }
+
+  /* ── Mobile ── */
+  @media (max-width: 540px) {
+    .g2     { grid-template-columns: 1fr !important; }
+    .g3     { grid-template-columns: 1fr !important; }
+    .gfooter{ grid-template-columns: 1fr !important; gap: 20px !important; margin-bottom: 20px !important; }
+    .px-page{ padding-left: 20px !important; padding-right: 20px !important; }
+  }

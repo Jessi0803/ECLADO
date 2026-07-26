@@ -5,3 +5,4 @@
 !.env.staging.example
 .playwright/
 node_modules/
+dist/

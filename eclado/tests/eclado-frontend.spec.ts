@@ -62,6 +62,16 @@ test('主要路徑可開啟且不白屏', async ({ page }) => {
   }
 });
 
+test('聯絡我們與隱私權由前台 SPA 路由呈現', async ({ page }) => {
+  await page.goto('/contact');
+  await expect(page).toHaveURL(/\/contact$/);
+  await expect(page.getByRole('heading', { name: '聯絡我們' })).toBeVisible();
+
+  await page.goto('/privacy');
+  await expect(page).toHaveURL(/\/privacy$/);
+  await expect(page.getByRole('heading', { name: '隱私權政策' })).toBeVisible();
+});
+
 test('LINE 登入結帳回來後會回到結帳頁', async ({ page }) => {
   await mockEcladoApis(page, {
     authUser: authUser('line-checkout@example.com'),
@@ -435,6 +445,7 @@ test('登入會員結帳會寫入訂單 payload 與 user_id，付款前不扣庫
   await page.getByPlaceholder('縣市').fill('台北市');
   await page.getByPlaceholder('區域').fill('信義區');
   await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('測試路 99 號');
+  await page.getByRole('button', { name: '×' }).click();
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
   await page.getByRole('button', { name: /虛擬帳號匯款/ }).click();
   await page.getByRole('button', { name: /建立付款單/ }).click();

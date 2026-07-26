@@ -20,7 +20,7 @@ export default defineConfig({
   webServer: process.env.BASE_URL
     ? undefined
     : {
-        command: `node tests/support/static-server.mjs --port ${port}`,
+        command: `npm run dev -- --host 127.0.0.1 --port ${port}`,
         url: baseURL,
         reuseExistingServer: !process.env.CI,
       },

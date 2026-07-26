@@ -94,7 +94,7 @@ test.describe('professional_applications 審核流程 (staging Supabase)', () =>
     }
   });
 
-  // ── standalone 來源（professional-apply.html 頁面）───────────────────────────
+  // ── standalone 來源（/professional-apply SPA 頁面）──────────────────────────
 
   test('standalone source 寫入正常', async ({}, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium', 'Run staging integration once on chromium only.');

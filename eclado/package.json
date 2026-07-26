@@ -1,5 +1,8 @@
 {
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "npm run test:e2e",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
@@ -10,7 +13,13 @@
     "test:notify:real": "NOTIFY_TEST_DB_MODE=supabase node scripts/real-notification-test.cjs",
     "test:notify:real:mock": "node scripts/real-notification-test.cjs"
   },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.53.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
   "devDependencies": {
-    "@playwright/test": "^1.52.0"
+    "@playwright/test": "^1.52.0",
+    "vite": "^7.0.0"
   }
 }

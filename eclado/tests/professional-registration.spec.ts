@@ -134,7 +134,7 @@ test('一般會員註冊：signUp metadata 攜帶 role=consumer，不觸發 prof
   expect(appInsertCalled).toBe(false);
 });
 
-// ─── professional-apply.html 獨立申請表單 ──────────────────────────────────
+// ─── /professional-apply SPA 申請頁 ────────────────────────────────────────
 
 test('美容師申請頁（professional-apply）：送出後 professional_applications POST 帶正確資料', async ({ page }) => {
   let capturedApplicationBody: Record<string, unknown> | null = null;

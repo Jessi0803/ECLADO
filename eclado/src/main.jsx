@@ -1,144 +1,26 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" type="image/png" href="assets/images/favicon.png">
-<link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
-<title>ECLADO — 韓國醫美院線保養</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Gilda+Display&family=Jost:wght@200;300;400;500;600&family=Noto+Serif+TC:wght@200;300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --white: #fafaf9;
-    --off-white: #f4f3f1;
-    --light: #ebebea;
-    --mid: #c8c7c5;
-    --dark: #2a2a28;
-    --black: #141412;
-    --gold: #b8a98a;
-    --font-display: 'Gilda Display', 'Noto Serif TC', Georgia, serif;
-    --font-body: 'Jost', 'Noto Serif TC', Helvetica, sans-serif;
-    --font-zh: 'Noto Serif TC', serif;
-  }
-  html { font-size: 16px; scroll-behavior: smooth; }
-  body { background: var(--white); color: var(--dark); font-family: 'Jost', 'Noto Serif TC', Helvetica, sans-serif; font-weight: 300; -webkit-font-smoothing: antialiased; }
-  h1, h2, h3 { font-family: 'Gilda Display', 'Noto Serif TC', Georgia, serif; }
-  p, span, button, a, label, input, textarea { font-family: 'Jost', 'Noto Serif TC', sans-serif; }
-  #root { min-height: 100vh; }
+import React, { useEffect, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { createClient } from '@supabase/supabase-js';
+import './styles.css';
 
-  @keyframes fadeInDown {
-    from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
-    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
-  }
-  @keyframes slideDown {
-    from { opacity: 0; transform: translateY(-8px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
+const SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_BasrQNdstdbX_InrQWmCuw_Jb1Lscnl';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
+  auth: { detectSessionInUrl: true, persistSession: true },
+});
+window.supabase = supabase;
 
-  .img-placeholder {
-    background-color: var(--light);
-    background-image: repeating-linear-gradient(-45deg, transparent, transparent 4px, var(--mid) 4px, var(--mid) 5px);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--mid); font-size: 11px; letter-spacing: 0.08em; text-align: center; padding: 8px;
-  }
-
-  /* ── Responsive grid classes ── */
-  .g4   { display: grid; grid-template-columns: repeat(4,1fr); gap: 24px; }
-  .g4lg { display: grid; grid-template-columns: repeat(4,1fr); gap: 32px; }
-  .g2   { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
-  .g3   { display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; }
-  .gfooter { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
-  .gcart    { display: grid; grid-template-columns: 1fr 320px; gap: 48px; }
-  .gcheckout{ display: grid; grid-template-columns: 1fr 320px; gap: 60px; }
-  .gstats   { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 360px; }
-  .gabout   { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; margin-bottom: 80px; }
-
-  /* Nav */
-  .nav-desktop { display: flex; gap: 0; align-items: center; }
-  .nav-right    { display: flex; gap: 20px; align-items: center; }
-  .nav-hamburger{ display: none; background: none; border: none; cursor: pointer; padding: 8px; }
-  .mobile-drawer{
-    position: fixed; top: 68px; left: 0; right: 0; bottom: 0;
-    background: var(--white); z-index: 99; overflow-y: auto;
-    animation: slideDown 0.22s ease; padding: 24px 28px 48px;
-  }
-
-  /* Filter tabs scroll on mobile */
-  .filter-tabs { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .filter-tabs::-webkit-scrollbar { display: none; }
-  .filter-tabs button { white-space: nowrap; flex-shrink: 0; }
-
-  /* Info tabs scroll */
-  .info-tabs { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .info-tabs::-webkit-scrollbar { display: none; }
-  .info-tabs button { white-space: nowrap; flex-shrink: 0; }
-
-  /* ── Tablet ── */
-  @media (max-width: 900px) {
-    .g4, .g4lg { grid-template-columns: repeat(2,1fr) !important; gap: 16px !important; }
-    .g2         { gap: 40px !important; }
-    .gabout     { grid-template-columns: 1fr !important; gap: 40px !important; margin-bottom: 48px !important; }
-    .gfooter    { grid-template-columns: 1fr 1fr !important; gap: 28px !important; }
-    .gcart      { grid-template-columns: 1fr !important; }
-    .gcheckout  { grid-template-columns: 1fr !important; }
-    .gstats     { max-width: 100% !important; }
-    .nav-desktop{ display: none !important; }
-    .nav-right  { display: none !important; }
-    .nav-hamburger { display: flex !important; align-items: center; gap: 16px; }
-    .login-visual { display: none !important; }
-  }
-
-  /* ── Mobile ── */
-  @media (max-width: 540px) {
-    .g2     { grid-template-columns: 1fr !important; }
-    .g3     { grid-template-columns: 1fr !important; }
-    .gfooter{ grid-template-columns: 1fr !important; gap: 20px !important; margin-bottom: 20px !important; }
-    .px-page{ padding-left: 20px !important; padding-right: 20px !important; }
-  }
-</style>
-</head>
-<body>
-<div id="root"></div>
-
-<!-- ★ 填入你的 Supabase 專案設定 ★ -->
-<script>
-  const SUPABASE_URL  = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
-  const SUPABASE_ANON = 'sb_publishable_BasrQNdstdbX_InrQWmCuw_Jb1Lscnl';
-  // UMD：全域為 { createClient }，建立實例後覆寫為 client（與官方範例一致）
-  (function () {
-    const lib = window.supabase;
-    if (!lib || typeof lib.createClient !== 'function') {
-      console.error('[ECLADO] Supabase JS 未正確載入，請檢查 CDN script');
-      window.supabase = null;
-      return;
-    }
-    window.supabase = lib.createClient(SUPABASE_URL, SUPABASE_ANON, {
-      auth: { detectSessionInUrl: true, persistSession: true },
-    });
-  })();
-
-  function sbError(msg) {
-    if (!msg) return '發生錯誤，請再試一次';
-    if (msg.includes('Invalid login credentials'))   return 'Email 或密碼錯誤';
-    if (msg.includes('Email not confirmed'))         return '請先驗證您的電子郵件，再登入';
-    if (msg.includes('User already registered'))     return '此 Email 已被註冊';
-    if (msg.includes('Password should be at least')) return '密碼至少需要 6 個字元';
-    if (msg.includes('Unable to validate email'))    return 'Email 格式不正確';
-    if (msg.includes('For security purposes'))       return '請稍後再試';
-    if (msg.includes('rate limit'))                  return '寄信次數過多，請稍後再試';
-    return msg;
-  }
-</script>
-
-<script type="text/babel">
-const { useState, useEffect, useRef } = React;
+function sbError(msg) {
+  if (!msg) return '發生錯誤，請再試一次';
+  if (msg.includes('Invalid login credentials')) return 'Email 或密碼錯誤';
+  if (msg.includes('Email not confirmed')) return '請先驗證您的電子郵件，再登入';
+  if (msg.includes('User already registered')) return '此 Email 已被註冊';
+  if (msg.includes('Password should be at least')) return '密碼至少需要 6 個字元';
+  if (msg.includes('Unable to validate email')) return 'Email 格式不正確';
+  if (msg.includes('For security purposes')) return '請稍後再試';
+  if (msg.includes('rate limit')) return '寄信次數過多，請稍後再試';
+  return msg;
+}
 
 const ADMIN_EMAILS = [
   'baby90522@gmail.com',
@@ -170,7 +52,7 @@ const NAV_LINKS = ['清潔卸妝', '化妝水凝膠', '安瓶精華', '乳霜修
 const PRODUCT_NAV_LINKS = ['所有產品', ...NAV_LINKS];
 const NAV_ITEMS = [
   { label: '所有產品', children: PRODUCT_NAV_LINKS },
-  { label: '會員登錄' },
+  { label: '會員登錄', children: ['會員登入', '美容師申請'] },
   { label: '品牌故事', children: null },
   { label: '購物說明', children: ['退換貨說明', '運送方式', '付款說明', '常見問題'] },
 ];
@@ -188,13 +70,52 @@ function goInfoSection(section, setPage) {
   setTimeout(() => window.dispatchEvent(new CustomEvent('eclado-info-section', { detail: { section } })), 0);
 }
 
+const POST_LOGIN_PAGE_KEY = 'eclado_post_login';
+const LOGIN_NOTICE_KEY = 'eclado_login_notice';
 const CHECKOUT_LOGIN_REDIRECT_KEY = 'eclado_checkout_login_redirect';
 const LINE_LOGIN_PENDING_KEY = 'eclado_line_login_pending';
+const PROFESSIONAL_LOGIN_NOTICE = '請先登入／註冊後再申請美容師會員。';
 
 function consumeCheckoutLoginRedirectPage() {
   const nextPage = sessionStorage.getItem(CHECKOUT_LOGIN_REDIRECT_KEY) === 'checkout' ? 'checkout' : 'account';
   sessionStorage.removeItem(CHECKOUT_LOGIN_REDIRECT_KEY);
   return nextPage;
+}
+
+async function fetchLatestProApplication(userId) {
+  if (!userId) return null;
+  const { data } = await supabase
+    .from('professional_applications')
+    .select('status')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data;
+}
+
+async function goProfessionalApply(user, setPage) {
+  if (!user?.uid) {
+    sessionStorage.setItem(POST_LOGIN_PAGE_KEY, 'professional-apply');
+    sessionStorage.setItem(LOGIN_NOTICE_KEY, PROFESSIONAL_LOGIN_NOTICE);
+    setPage('login');
+    return;
+  }
+  const role = getMemberRole(user);
+  if (['pro', 'instructor', 'distributor'].includes(role)) {
+    setPage('account');
+    return;
+  }
+  if (role === 'pending') {
+    setPage('account');
+    return;
+  }
+  const app = await fetchLatestProApplication(user.uid);
+  if (app?.status === 'pending') {
+    setPage('account');
+    return;
+  }
+  setPage('professional-apply');
 }
 
 const PRODUCTS = [
@@ -499,28 +420,43 @@ function getFulfillmentInfo(product) {
 }
 
 function mergeProductsWithStock(baseProducts, stockRows) {
-  const rowMap = new Map((stockRows || []).map(row => [Number(row.id), row]));
-  return baseProducts.map(product => {
-    const row = rowMap.get(Number(product.id));
-    if (!row) return { ...product, stock: null };
+  const productMap = new Map(baseProducts.map(product => [Number(product.id), product]));
+  return (stockRows || []).filter(row => row.active !== false).map(row => {
+    const product = productMap.get(Number(row.id)) || {};
+    const rowImages = normalizeJsonArray(row.image_urls).filter(Boolean);
+    const fallbackImages = normalizeJsonArray(product.imageUrls).filter(Boolean);
+    const imageUrls = rowImages.length ? rowImages : fallbackImages;
+    const variants = normalizeJsonArray(row.variants).map(normalizeProductVariant).filter(variant => variant.size || variant.price || variant.proPrice);
+    const primaryVariant = variants.find(variant => variant.isDefault) || variants[0] || null;
     return {
       ...product,
-      stock: Number(row.stock ?? 0),
+      id: Number(row.id),
+      name: row.name || product.name || '',
+      nameZh: row.name_zh || product.nameZh || '',
+      category: row.category || product.category || '',
+      size: primaryVariant?.size || row.size || product.size || '',
+      stock: primaryVariant?.stock != null ? primaryVariant.stock : Number(row.stock ?? 0),
       isProOnly: row.is_pro_only != null ? !!row.is_pro_only : product.isProOnly,
-      price: row.price != null ? Number(row.price) : product.price,
-      proPrice: row.pro_price != null ? Number(row.pro_price) : product.proPrice,
+      price: primaryVariant?.price || (row.price != null ? Number(row.price) : product.price),
+      proPrice: primaryVariant?.proPrice || (row.pro_price != null ? Number(row.pro_price) : product.proPrice),
+      img: row.image_url || imageUrls[0] || product.img || '',
+      imageUrls,
+      variants,
+      desc: row.description || product.desc || '',
+      skinType: row.skin_type || product.skinType || '',
+      ingredients: row.ingredients || product.ingredients || '',
+      features: Array.isArray(row.features) ? row.features : (product.features || []),
       listImageScale: normalizeProductImageScale(row.product_list_image_scale ?? product.listImageScale),
       active: row.active != null ? row.active : product.active,
     };
   });
 }
 
-
-const SALES_COUNTED_STATUSES = new Set(["paid", "preparing", "shipped", "delivered"]);
+const SALES_COUNTED_STATUSES = new Set(['paid', 'preparing', 'shipped', 'delivered']);
 const DEFAULT_POPULAR_PRODUCT_LIMIT = 8;
 
 function normalizeSalesName(value) {
-  return String(value || "").replace(/\s+/g, "").toLowerCase();
+  return String(value || '').replace(/\s+/g, '').toLowerCase();
 }
 
 function emptySalesStats() {
@@ -656,23 +592,27 @@ const PAYMENT_METHODS = {
   atm: {
     label: '虛擬帳號匯款',
     payType: 'A',
+    pendingStatus: 'awaiting_confirm',
     description: '由永豐產生虛擬帳號，付款後由系統通知店家。',
   },
   card: {
     label: '信用卡',
     payType: 'C',
+    pendingStatus: 'unpaid',
     description: '完成授權後即進入付款流程。',
   },
   apple: {
     label: 'Apple Pay',
     payType: 'M',
     choosePay: 'A',
+    pendingStatus: 'unpaid',
     description: '以 Apple Pay 完成付款。',
   },
   google: {
     label: 'Google Pay',
     payType: 'M',
     choosePay: 'G',
+    pendingStatus: 'unpaid',
     description: '以 Google Pay 完成付款。',
   },
 };
@@ -770,13 +710,12 @@ function getSinopacPaymentError(response) {
 }
 
 const HERO_SLIDES = [
-  { headline:'Glow\nBeyond Limits.', sub:'自1998年創立，深耕專業院線皮膚管理28年，足跡遍佈全球23個國家，以147支完整療程系列支援每一位皮膚管理師，台灣獨家代理。', cta:'探索系列', img:'assets/images/hero-cover.jpg', mobilePosition:'62% center', layout:'left', accent:'ECLADO LABORATORY' },
+  { headline:'Korea\'s\nNo.1 Pro Brand.', sub:'28年陪伴韓國8,000+皮膚管理中心成長，從問題肌修復、敏弱調理到抗老管理，147支系列打造完整院線療程邏輯，而非單一明星產品。', cta:'探索系列', img:'assets/images/hero-cover.jpg', mobilePosition:'62% center', layout:'left', accent:'28 Years · 23 Countries' },
   { headline:'Human\nClinical Proven.', sub:'每一款產品皆通過人體臨床實驗，無一例外。韓國美容業中擁有最多人體研究數據，150所美容學院指定品牌。', cta:'查看臨床實證', img:'assets/images/hero-cover-2.png', mobilePosition:'50% center', layout:'center', accent:'人體實驗 · 無一例外' },
-  { headline:'Korea\'s\nNo.1 Pro Brand.', sub:'28年陪伴韓國8,000+皮膚管理中心成長，從問題肌修復、敏弱調理到抗老管理，147支系列打造完整院線療程邏輯，而非單一明星產品。', cta:'探索系列', img:'assets/images/hero-cover-3.jpg', mobilePosition:'58% center', layout:'split', accent:'28 Years · 23 Countries' },
+  { headline:'Glow\nBeyond Limits.', sub:'自1998年創立，深耕專業院線皮膚管理28年，足跡遍佈全球23個國家，以147支完整療程系列支援每一位皮膚管理師，台灣獨家代理。', cta:'探索系列', img:'assets/images/hero-cover-3.jpg', mobilePosition:'58% center', layout:'split', accent:'ECLADO LABORATORY' },
 ];
 
-
-const TRUST_BADGES = ['韓國原廠直送','KFDA 認證','皮膚科醫師驗證','專業美容師培訓'];
+const TRUST_BADGES = ['韓國原廠直送','皮膚科醫師驗證','專業美容師御用'];
 
 function TrustBadges({ isMobile = false, compact = false }) {
   return (
@@ -785,15 +724,15 @@ function TrustBadges({ isMobile = false, compact = false }) {
       margin:'0 auto',
       padding: compact ? 0 : '0 24px',
       display:'grid',
-      gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, max-content)',
+      gridTemplateColumns: isMobile ? 'repeat(3, max-content)' : 'repeat(4, max-content)',
       justifyContent:'center',
-      gap: isMobile ? '10px 12px' : 56,
+      gap: isMobile ? 10 : 56,
       alignItems:'center'
     }}>
       {TRUST_BADGES.map(item => (
         <div key={item} style={{ display:'flex', alignItems:'center', gap:8, minWidth:0 }}>
           <div style={{ width:4, height:4, background:'var(--gold)', borderRadius:'50%', flexShrink:0 }} />
-          <span style={{ fontSize: isMobile ? 12 : 11, letterSpacing:'0.08em', color: compact ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.5)', whiteSpace:'nowrap' }}>{item}</span>
+          <span style={{ fontSize: isMobile ? 11 : 11, letterSpacing: isMobile ? '0.02em' : '0.08em', color: compact ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.5)', whiteSpace:'nowrap' }}>{item}</span>
         </div>
       ))}
     </div>
@@ -847,7 +786,7 @@ const JOURNAL_ARTICLES = [
 ];
 
 // ─── NAV ITEM (desktop dropdown) ─────────────────────────────────────────────
-function NavItem({ item, scrolled, setPage }) {
+function NavItem({ item, scrolled, setPage, user }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
@@ -856,11 +795,13 @@ function NavItem({ item, scrolled, setPage }) {
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  function go(child) {
+  async function go(child) {
     setOpen(false);
     if (item.label === '所有產品') setPage('shop');
-    else if (item.label === '會員登錄') setPage('login');
-    else if (item.label === '品牌故事') setPage('about');
+    else if (item.label === '會員登錄') {
+      if (child === '美容師申請') await goProfessionalApply(user, setPage);
+      else setPage(user ? 'account' : 'login');
+    } else if (item.label === '品牌故事') setPage('about');
     else if (item.label === '購物說明') goInfoSection(child || '退換貨說明', setPage);
   }
 
@@ -951,7 +892,7 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
 
           {/* Desktop nav */}
           <div className="nav-desktop">
-            {NAV_ITEMS.map(item => <NavItem key={item.label} item={item} scrolled={darkMode} setPage={setPage} />)}
+            {NAV_ITEMS.map(item => <NavItem key={item.label} item={item} scrolled={darkMode} setPage={setPage} user={user} />)}
           </div>
 
           {/* Desktop right */}
@@ -966,9 +907,8 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
                 </button>
               </div>
             ) : null}
-            <button onClick={() => setPage('cart')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)', letterSpacing:'0.04em', position:'relative', padding:'4px 0', whiteSpace:'nowrap', display:'inline-flex', alignItems:'center', gap:6 }}>
+            <button onClick={() => setPage('cart')} aria-label="購物車" style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)', letterSpacing:'0.04em', position:'relative', padding:'4px 0', whiteSpace:'nowrap', display:'inline-flex', alignItems:'center', gap:6 }}>
               <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h8.86a2 2 0 0 0 1.95-1.57L21 7H5.12" /></svg>
-              <span>購物車</span>
               {cartCount > 0 && <span style={{ position:'absolute', top:-4, right:-14, background:'var(--black)', color:'var(--white)', fontSize:9, width:16, height:16, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center' }}>{cartCount}</span>}
             </button>
           </div>
@@ -981,9 +921,8 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
                 <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user.name}</span>
               </button>
             )}
-            <button onClick={() => setPage('cart')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color: drawerOpen ? 'var(--dark)' : iconCol, fontFamily:'var(--font-body)', position:'relative', padding:'4px 0', display:'inline-flex', alignItems:'center', gap:6 }}>
+            <button onClick={() => setPage('cart')} aria-label="購物車" style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color: drawerOpen ? 'var(--dark)' : iconCol, fontFamily:'var(--font-body)', position:'relative', padding:'4px 0', display:'inline-flex', alignItems:'center', gap:6 }}>
               <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h8.86a2 2 0 0 0 1.95-1.57L21 7H5.12" /></svg>
-              <span>購物車</span>
               {cartCount > 0 && <span style={{ position:'absolute', top:-4, right:-14, background:'var(--black)', color:'var(--white)', fontSize:9, width:16, height:16, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center' }}>{cartCount}</span>}
             </button>
             <button onClick={() => setDrawerOpen(o => !o)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', flexDirection:'column', gap:5, padding:4 }}>
@@ -1005,7 +944,7 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
       {drawerOpen && (
         <div className="mobile-drawer">
           {NAV_ITEMS.map(item => (
-            <MobileNavSection key={item.label} item={item} setPage={setPage} close={() => setDrawerOpen(false)} />
+            <MobileNavSection key={item.label} item={item} setPage={setPage} user={user} close={() => setDrawerOpen(false)} />
           ))}
           <div style={{ borderTop:'1px solid var(--light)', paddingTop:24, marginTop:8, display:'flex', flexDirection:'column', gap:16 }}>
             {user ? (
@@ -1021,14 +960,18 @@ function Nav({ setPage, cartCount, user, setUser, page }) {
   );
 }
 
-function MobileNavSection({ item, setPage, close }) {
+function MobileNavSection({ item, setPage, user, close }) {
   const [open, setOpen] = useState(false);
   function go(page) { setPage(page); close(); }
+  async function goMemberChild(child) {
+    if (child === '美容師申請') await goProfessionalApply(user, setPage);
+    else go(user ? 'account' : 'login');
+  }
   return (
     <div style={{ borderBottom:'1px solid var(--light)' }}>
       <button onClick={() => item.children ? setOpen(o=>!o) : go(
         item.label === '品牌故事' ? 'about'
-        : item.label === '會員登錄' ? 'login'
+        : item.label === '會員登錄' ? (user ? 'account' : 'login')
         : item.label === '所有產品' ? 'shop'
         : 'info'
       )} style={{
@@ -1041,9 +984,9 @@ function MobileNavSection({ item, setPage, close }) {
       {item.children && open && (
         <div style={{ paddingBottom:8 }}>
           {item.children.map(c => (
-            <button key={c} onClick={() => {
+            <button key={c} onClick={async () => {
               if (item.label === '所有產品') go('shop');
-              else if (item.label === '會員登錄') go('login');
+              else if (item.label === '會員登錄') await goMemberChild(c);
               else if (item.label === '購物說明') { goInfoSection(c, setPage); close(); }
             }} style={{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:13, color:'var(--dark)', padding:'10px 16px', letterSpacing:'0.04em' }}>
               {c}
@@ -1082,7 +1025,9 @@ function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPag
   }, [maxStart, slideStep]);
 
   const start = Math.min(active, maxStart);
-  const visible = products.slice(start, start + visibleCount);
+  const gap = isMobile ? 10 : 24;
+  const itemWidth = `calc((100% - ${gap * (visibleCount - 1)}px) / ${visibleCount})`;
+  const slideOffset = `calc(-${start} * (${itemWidth} + ${gap}px))`;
 
   function move(delta) {
     setActive(current => {
@@ -1110,10 +1055,14 @@ function TopProductsCarousel({ products, user, onAdd, onSelect, isMobile, setPag
           </div>
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : `repeat(${visibleCount}, minmax(0, 1fr))`, gap: isMobile ? 10 : 24 }}>
-          {visible.map(product => (
-            <ProductCard key={product.id} product={product} user={user} onAdd={() => onAdd(product)} onSelect={() => onSelect(product)} promotions={promotions} />
-          ))}
+        <div style={{ overflow:'hidden' }}>
+          <div style={{ display:'flex', gap, transform:`translateX(${slideOffset})`, transition:'transform 0.55s cubic-bezier(0.22, 1, 0.36, 1)', willChange:'transform' }}>
+            {products.map(product => (
+              <div key={product.id} style={{ flex:`0 0 ${itemWidth}`, minWidth:0 }}>
+                <ProductCard product={product} user={user} onAdd={() => onAdd(product)} onSelect={() => onSelect(product)} promotions={promotions} />
+              </div>
+            ))}
+          </div>
         </div>
 
         <div style={{ marginTop:24, display:'flex', justifyContent:'space-between', gap:18, alignItems:'center', flexWrap:'wrap' }}>
@@ -1232,7 +1181,7 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
   useEffect(() => {
     if (!selectedProduct) return;
     const fresh = products.find(product => product.id === selectedProduct.id);
-    if (fresh && fresh.stock !== selectedProduct.stock) {
+    if (fresh && fresh !== selectedProduct) {
       setSelectedProduct(fresh);
     }
   }, [products, selectedProduct]);
@@ -1323,13 +1272,9 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
               </div>
             </div>
           </>
-        )}{isMobile && (
-  <div style={{ position:'absolute', left:'6vw', right:'6vw', top:82, zIndex:2 }}>
-    <TrustBadges isMobile={isMobile} compact />
-  </div>
-)}
+        )}
 
-{/* Slide dots */}
+        {/* Slide dots */}
         <div style={{ position:'absolute', bottom:32, left: isMobile ? '6vw' : '10vw', display:'flex', alignItems:'center', gap:16 }}>
           <div style={{ display:'flex', gap:8 }}>
             {HERO_SLIDES.map((_,i) => (
@@ -1352,11 +1297,9 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
       </section>
 
       {/* BRAND STRIP */}
-      {!isMobile && (
-        <section style={{ background:'var(--black)', padding:'18px 0' }}>
-          <TrustBadges isMobile={isMobile} />
-        </section>
-      )}
+      <section style={{ background:'var(--black)', padding:'18px 0' }}>
+        <TrustBadges isMobile={isMobile} />
+      </section>
 
       {/* LIVE PROMOTIONS */}
       <div id="eclado-promotions">
@@ -1396,11 +1339,16 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
               <p style={{ fontSize:14, lineHeight:1.9, color:'#666', maxWidth:480, marginBottom:28 }}>
                 ECLADO 是源自韓國醫美院線的頂級保養品牌，每一款產品皆由皮膚科醫師與研究團隊共同研發，以臨床驗證的有效成分，帶給您診所級的保養體驗。
               </p>
-              <div className="gstats">
-                {[['10+','年研發經驗'],['50+','院線合作診所'],['95%','顧客回購率'],['KFDA','認證通過']].map(([num,label]) => (
-                  <div key={label}>
-                    <div style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:400, color:'var(--black)', lineHeight:1 }}>{num}</div>
-                    <div style={{ fontSize:12, color:'var(--dark)', letterSpacing:'0.06em', marginTop:4 }}>{label}</div>
+              <div className="gstats" style={{ maxWidth: isMobile ? '100%' : 520, gap: isMobile ? '18px 20px' : '24px 32px', marginTop: isMobile ? 28 : 34 }}>
+                {[
+                  ['8,000+', '家皮膚管理中心御用'],
+                  ['150', '所韓國美容學院指定品牌'],
+                  ['23', '個國家據點遍佈全球'],
+                  ['28', '年品牌歷史'],
+                ].map(([num,label]) => (
+                  <div key={label} style={{ borderTop:'1px solid rgba(0,0,0,0.12)', paddingTop:14 }}>
+                    <div style={{ fontFamily:'var(--font-display)', fontSize:'clamp(28px,3vw,42px)', fontWeight:300, color:'var(--black)', lineHeight:1 }}>{num}</div>
+                    <div style={{ fontSize:12, color:'var(--dark)', letterSpacing:'0.06em', lineHeight:1.6, marginTop:8 }}>{label}</div>
                   </div>
                 ))}
               </div>
@@ -1428,7 +1376,7 @@ function HomePage({ setPage, user, cart, setCart, promotions = [], products = PR
               </div>
             ))}
           </div>
-          <button onClick={() => setPage('professional-apply')} style={{ background:'transparent', border:'1px solid var(--gold)', color:'var(--gold)', padding:'13px 40px', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', transition:'all 0.25s' }}
+          <button onClick={() => goProfessionalApply(user, setPage)} style={{ background:'transparent', border:'1px solid var(--gold)', color:'var(--gold)', padding:'13px 40px', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', transition:'all 0.25s' }}
             onMouseEnter={e=>{e.target.style.background='var(--gold)';e.target.style.color='var(--black)';}}
             onMouseLeave={e=>{e.target.style.background='transparent';e.target.style.color='var(--gold)';}}
           >申請美容師會員</button>
@@ -1904,11 +1852,45 @@ function ShopPage({ user, cart, setCart, promotions = [], products = PRODUCTS, s
   );
 }
 
+function CheckoutChoiceModal({ onClose, onLoginCheckout, onGuestCheckout }) {
+  return (
+    <div onClick={onClose} role="presentation" style={{ position:'fixed', inset:0, background:'rgba(20,20,18,0.48)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="checkout-choice-title" onClick={e => e.stopPropagation()} style={{ width:'100%', maxWidth:460, background:'var(--white)', padding:'32px 28px 28px', boxShadow:'0 22px 60px rgba(0,0,0,0.18)', position:'relative' }}>
+        <button type="button" aria-label="關閉" onClick={onClose} style={{ position:'absolute', top:16, right:16, width:28, height:28, border:'1px solid var(--light)', background:'none', color:'var(--dark)', cursor:'pointer', fontSize:18, lineHeight:1 }}>×</button>
+        <p style={{ fontSize:10, letterSpacing:'0.24em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>Checkout</p>
+        <h2 id="checkout-choice-title" style={{ fontFamily:'var(--font-display)', fontSize:28, fontWeight:300, color:'var(--black)', marginBottom:12 }}>請選擇結帳方式</h2>
+        <p style={{ fontSize:13, color:'var(--dark)', lineHeight:1.8, marginBottom:24 }}>註冊會員享有不定時優惠。</p>
+        <div style={{ display:'grid', gap:12 }}>
+          <button type="button" onClick={onLoginCheckout} style={{ width:'100%', background:'var(--black)', color:'var(--white)', border:'none', padding:'15px', fontSize:12, letterSpacing:'0.16em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500 }}>登入會員結帳</button>
+          <button type="button" onClick={onGuestCheckout} style={{ width:'100%', background:'var(--white)', color:'var(--black)', border:'1px solid var(--black)', padding:'15px', fontSize:12, letterSpacing:'0.16em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500 }}>訪客結帳</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── CART PAGE ────────────────────────────────────────────────────────────────
 function CartPage({ cart, setCart, setPage, user, promotions = [] }) {
   const isMobile = useIsMobile();
+  const [showCheckoutChoice, setShowCheckoutChoice] = useState(false);
   function updateQty(key, delta) {
     setCart(prev => prev.map(i => getCartKey(i) === key ? { ...i, qty: Math.max(0, i.qty+delta) } : i).filter(i => i.qty>0));
+  }
+  function handleCheckoutClick() {
+    if (user) {
+      setPage('checkout');
+      return;
+    }
+    setShowCheckoutChoice(true);
+  }
+  function handleLoginCheckout() {
+    sessionStorage.setItem(CHECKOUT_LOGIN_REDIRECT_KEY, 'checkout');
+    setShowCheckoutChoice(false);
+    setPage('login');
+  }
+  function handleGuestCheckout() {
+    setShowCheckoutChoice(false);
+    setPage('checkout');
   }
   const { subtotal, discount, finalSubtotal, promotion } = calculateDiscount(cart, promotions, user);
   const shipping = cart.every(i => i.id === 9) ? 0 : 120;
@@ -1977,7 +1959,7 @@ function CartPage({ cart, setCart, setPage, user, promotions = [] }) {
                 <span style={{ fontSize:14 }}>合計</span>
                 <span style={{ fontFamily:'var(--font-display)', fontSize:18 }}>NT$ {grandTotal.toLocaleString()}</span>
               </div>
-              <button onClick={() => setPage('checkout')} style={{ width:'100%', background:'var(--black)', color:'var(--white)', border:'none', padding:'15px', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500 }}
+              <button onClick={handleCheckoutClick} style={{ width:'100%', background:'var(--black)', color:'var(--white)', border:'none', padding:'15px', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500 }}
                 onMouseEnter={e=>e.target.style.background='#333'}
                 onMouseLeave={e=>e.target.style.background='var(--black)'}
               >前往結帳</button>
@@ -1986,6 +1968,13 @@ function CartPage({ cart, setCart, setPage, user, promotions = [] }) {
           </div>
         )}
       </div>
+      {showCheckoutChoice && (
+        <CheckoutChoiceModal
+          onClose={() => setShowCheckoutChoice(false)}
+          onLoginCheckout={handleLoginCheckout}
+          onGuestCheckout={handleGuestCheckout}
+        />
+      )}
     </div>
   );
 }
@@ -2121,10 +2110,10 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
     );
   }
 
-  async function insertOrder(paymentData, methodLabel) {
+  async function insertOrder(paymentData, method) {
     const today = new Date();
     const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    const noteParts = [safeTrim(form.note), buildPaymentNotes(methodLabel, paymentData)].filter(Boolean);
+    const noteParts = [safeTrim(form.note), buildPaymentNotes(method.label, paymentData)].filter(Boolean);
     const order = {
       id: orderNo,
       member: form.name || user?.name || '訪客',
@@ -2147,7 +2136,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
       discount,
       promotion_id: promotion?.id || null,
       promotion_name: promotion?.name || null,
-      status: 'awaiting_confirm',
+      status: method.pendingStatus || 'unpaid',
       date: dateStr,
       address: `${form.city}${form.district}${form.address}`,
       phone: form.phone,
@@ -2210,7 +2199,7 @@ function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
 
       setPaymentSnapshot(cart.map(item => ({ ...item })));
       setPaymentSummary({ subtotal, discount, finalSubtotal, promotion, shipping, total, items: cart.map(item => ({ ...item })) });
-      const insertError = await insertOrder(apiResponse, method.label);
+      const insertError = await insertOrder(apiResponse, method);
       if (insertError) console.error(insertError);
 
       const paymentLink = extractPaymentLink(apiResponse);
@@ -2572,8 +2561,9 @@ function LoginPage({ setPage }) {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
   const [success, setSuccess]   = useState('');
+  const [notice, setNotice]     = useState('');
 
-  function reset() { setError(''); setSuccess(''); }
+  function reset() { setError(''); setSuccess(''); setNotice(''); }
 
   useEffect(() => {
     const lineError = getLineLoginErrorMessage();
@@ -2593,15 +2583,21 @@ function LoginPage({ setPage }) {
       setView('login');
       setError(notice.slice(6));
     }
+    const loginNotice = sessionStorage.getItem(LOGIN_NOTICE_KEY);
+    if (loginNotice) {
+      sessionStorage.removeItem(LOGIN_NOTICE_KEY);
+      setView('login');
+      setNotice(loginNotice);
+    }
   }, []);
 
   // ── 登入 ──
   async function handleSignIn(e) {
     e.preventDefault(); reset(); setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { setError(sbError(error.message)); return; }
-      setPage('account');
+      setPage(consumeCheckoutLoginRedirectPage());
     } catch(err) { setError('網路異常，請確認連線'); }
     finally { setLoading(false); }
   }
@@ -2723,6 +2719,11 @@ function LoginPage({ setPage }) {
         {/* 成功訊息 */}
         {success && (
           <div style={{ background:'#f0faf0', border:'1px solid #b7ddb7', padding:'14px 16px', marginBottom:20, fontSize:13, color:'#2d6a2d', lineHeight:1.7 }}>{success}</div>
+        )}
+
+        {/* 提醒訊息 */}
+        {notice && (
+          <div style={{ background:'#fffbf0', border:'1px solid #e8d9b0', padding:'14px 16px', marginBottom:20, fontSize:13, color:'#5a4a1e', lineHeight:1.7 }}>{notice}</div>
         )}
 
         {/* 錯誤訊息 */}
@@ -2923,7 +2924,7 @@ function ResetPasswordPage({ setPage }) {
 }
 
 // ─── PROFESSIONAL APPLICATION PAGE ────────────────────────────────────────────
-function ProfessionalApplicationPage({ setPage, user }) {
+function ProfessionalApplicationPage({ setPage, user, authReady, onUserUpdated }) {
   const [form, setForm] = useState({
     studioName: '',
     contactName: user?.name || '',
@@ -2933,12 +2934,92 @@ function ProfessionalApplicationPage({ setPage, user }) {
     certificate: '',
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [gateLoading, setGateLoading] = useState(true);
+  const [blocked, setBlocked] = useState(null); // 'login' | 'pro' | 'pending'
   const isMobile = useIsMobile();
   const inputStyle = { width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--black)', boxSizing:'border-box' };
   const field = key => e => setForm(prev => ({ ...prev, [key]: e.target.value }));
 
-  function handleSubmit(e) {
+  useEffect(() => {
+    if (!authReady) return;
+    let alive = true;
+    async function checkAccess() {
+      if (!user?.uid) {
+        sessionStorage.setItem(POST_LOGIN_PAGE_KEY, 'professional-apply');
+        sessionStorage.setItem(LOGIN_NOTICE_KEY, PROFESSIONAL_LOGIN_NOTICE);
+        setPage('login');
+        return;
+      }
+      const role = getMemberRole(user);
+      if (['pro', 'instructor', 'distributor'].includes(role)) {
+        if (alive) { setBlocked('pro'); setGateLoading(false); }
+        return;
+      }
+      if (role === 'pending') {
+        if (alive) { setBlocked('pending'); setGateLoading(false); }
+        return;
+      }
+      const app = await fetchLatestProApplication(user.uid);
+      if (!alive) return;
+      if (app?.status === 'pending') {
+        setBlocked('pending');
+      }
+      setGateLoading(false);
+    }
+    checkAccess();
+    return () => { alive = false; };
+  }, [authReady, user?.uid, user?.role]);
+
+  useEffect(() => {
+    if (user?.name && !form.contactName) {
+      setForm(prev => ({ ...prev, contactName: user.name }));
+    }
+  }, [user?.name]);
+
+  async function handleSubmit(e) {
     e.preventDefault();
+    if (!user?.uid) {
+      sessionStorage.setItem(POST_LOGIN_PAGE_KEY, 'professional-apply');
+      sessionStorage.setItem(LOGIN_NOTICE_KEY, PROFESSIONAL_LOGIN_NOTICE);
+      setPage('login');
+      return;
+    }
+    setSubmitting(true);
+    setSubmitError('');
+    const sb = window.supabase;
+    if (!sb) {
+      setSubmitError('系統尚未就緒，請重新整理後再試。');
+      setSubmitting(false);
+      return;
+    }
+    const existing = await fetchLatestProApplication(user.uid);
+    if (existing?.status === 'pending') {
+      setSubmitError('您已有審核中的申請，請至會員專區查看。');
+      setSubmitting(false);
+      return;
+    }
+    const { error } = await sb.from('professional_applications').insert({
+      studio_name: form.studioName,
+      contact_name: form.contactName,
+      phone: form.phone,
+      address: form.address,
+      social_media: form.socialMedia,
+      certificate: form.certificate,
+      user_id: user.uid,
+      user_email: user.email || null,
+      status: 'pending',
+      source: 'standalone',
+    });
+    if (error) {
+      setSubmitError('送出失敗，請稍後再試。');
+      setSubmitting(false);
+      return;
+    }
+    await sb.from('profiles').update({ role: 'pending' }).eq('id', user.uid);
+    if (onUserUpdated) await onUserUpdated();
+    setSubmitting(false);
     setSubmitted(true);
     window.scrollTo(0, 0);
   }
@@ -2951,8 +3032,7 @@ function ProfessionalApplicationPage({ setPage, user }) {
       <div style={{ background:'var(--black)', padding: isMobile ? '40px 20px' : '52px 32px', color:'var(--white)' }}>
         <div style={{ maxWidth:900, margin:'0 auto' }}>
           <div style={{ display:'flex', gap:18, flexWrap:'wrap', marginBottom:24 }}>
-            <button onClick={() => setPage('login')} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.78)', cursor:'pointer', fontSize:12, letterSpacing:'0.08em', fontFamily:'var(--font-body)', padding:0 }}>← 返回會員登入</button>
-            <button onClick={() => setPage('home')} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.58)', cursor:'pointer', fontSize:12, letterSpacing:'0.08em', fontFamily:'var(--font-body)', padding:0 }}>返回首頁</button>
+            <button onClick={() => window.history.back()} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.78)', cursor:'pointer', fontSize:12, letterSpacing:'0.08em', fontFamily:'var(--font-body)', padding:0 }}>← 返回</button>
           </div>
           <p style={{ fontSize:10, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:12 }}>Professional Membership</p>
           <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(22px,3vw,34px)', fontWeight:300, lineHeight:1.2, marginBottom:14 }}>申請成為專業會員</h1>
@@ -2961,11 +3041,25 @@ function ProfessionalApplicationPage({ setPage, user }) {
       </div>
 
       <div style={{ maxWidth:900, margin:'0 auto', padding: isMobile ? '36px 20px 60px' : '48px 32px 72px' }}>
-        {submitted ? (
+        {!authReady || gateLoading ? (
+          <p style={{ fontSize:14, color:'var(--dark)', padding:'24px 0' }}>載入中…</p>
+        ) : blocked === 'pro' ? (
+          <div style={{ border:'1px solid var(--light)', background:'var(--off-white)', padding:'28px' }}>
+            <h2 style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:300, marginBottom:10 }}>您已是專業會員</h2>
+            <p style={{ fontSize:14, lineHeight:1.8, marginBottom:20, color:'var(--dark)' }}>無需重複申請，可至會員專區查看帳戶資訊。</p>
+            <button type="button" onClick={() => setPage('account')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 28px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>前往會員專區</button>
+          </div>
+        ) : blocked === 'pending' ? (
+          <div style={{ border:'1px solid var(--gold)', background:'#fffdf5', padding:'28px' }}>
+            <h2 style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:300, marginBottom:10 }}>申請審核中</h2>
+            <p style={{ fontSize:14, lineHeight:1.8, marginBottom:20, color:'var(--dark)' }}>我們正在審核您的美容師會員申請，通過後將自動開通專業價與院線商品購買資格。</p>
+            <button type="button" onClick={() => setPage('account')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 28px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>前往會員專區</button>
+          </div>
+        ) : submitted ? (
           <div style={{ border:'1px solid #b7ddb7', background:'#f0faf0', padding:'28px', color:'#2d6a2d' }}>
             <h2 style={{ fontFamily:'var(--font-display)', fontSize:24, fontWeight:300, color:'#1f5f1f', marginBottom:10 }}>申請資料已送出</h2>
-            <p style={{ fontSize:14, lineHeight:1.8, marginBottom:20 }}>我們已收到您的專業會員申請資料，將盡快與您聯繫並協助開立客戶資料。</p>
-            <button onClick={() => setPage('home')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'13px 28px', fontSize:12, letterSpacing:'0.14em', cursor:'pointer', fontFamily:'var(--font-body)' }}>返回首頁</button>
+            <p style={{ fontSize:14, lineHeight:1.8, marginBottom:20 }}>我們已收到您的專業會員申請資料，審核通過後將開通美容師會員功能。</p>
+            <button type="button" onClick={() => setPage('account')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 28px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>前往會員專區</button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:28 }}>
@@ -3020,8 +3114,9 @@ function ProfessionalApplicationPage({ setPage, user }) {
                 style={{ ...inputStyle, resize:'vertical', border:'1px solid var(--light)', padding:'12px', lineHeight:1.7, borderBottom:'1px solid var(--light)' }} />
             </div>
 
+            {submitError && <p style={{ fontSize:13, color:'#c0392b', marginTop:4 }}>{submitError}</p>}
             <div style={{ display:'flex', gap:12, flexWrap:'wrap', paddingTop:8 }}>
-              <button type="submit" style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'15px 40px', fontSize:12, letterSpacing:'0.18em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500 }}>送出申請</button>
+              <button type="submit" disabled={submitting} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'15px 40px', fontSize:12, letterSpacing:'0.18em', cursor:submitting?'not-allowed':'pointer', fontFamily:'var(--font-body)', fontWeight:500, opacity:submitting?0.6:1 }}>{submitting ? '送出中…' : '送出申請'}</button>
               <button type="button" onClick={() => setPage('login')} style={{ background:'none', color:'var(--dark)', border:'1px solid var(--light)', padding:'15px 32px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>返回會員登入</button>
             </div>
           </form>
@@ -3209,7 +3304,7 @@ function LineCallbackPage() {
       if (session?.user) {
         done = true;
         const nextLabel = sessionStorage.getItem(CHECKOUT_LOGIN_REDIRECT_KEY) === 'checkout' ? '結帳頁' : '會員專區';
-        setStatus('LINE 登入成功，正在前往' + nextLabel + '...');
+        setStatus(`LINE 登入成功，正在前往${nextLabel}...`);
         return;
       }
     });
@@ -3241,6 +3336,18 @@ function AccountPage({ user, setPage, onSignOut }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [proAppStatus, setProAppStatus] = useState(null); // null | 'pending' | 'approved' | 'rejected'
+
+  useEffect(() => {
+    if (!user?.uid || isProfessionalMember(user)) return;
+    supabase.from('professional_applications')
+      .select('status')
+      .eq('user_id', user.uid)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => { if (data) setProAppStatus(data.status); });
+  }, [user?.uid]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -3310,6 +3417,28 @@ function AccountPage({ user, setPage, onSignOut }) {
                 <div style={{ fontSize:11, color:'var(--dark)', marginBottom:4 }}>會員類型</div>
                 <div style={{ fontSize:15, color:'var(--black)' }}>{getMemberTier(user).label}</div>
               </div>
+              {!isProfessionalMember(user) && (
+                <div style={{ marginTop:4, padding:'16px', background:'var(--off-white)', borderLeft:'2px solid var(--gold)' }}>
+                  {proAppStatus === 'pending' ? (
+                    <>
+                      <div style={{ fontSize:11, letterSpacing:'0.1em', color:'var(--gold)', textTransform:'uppercase', marginBottom:6 }}>美容師申請審核中</div>
+                      <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7 }}>我們正在審核您的申請，通過後將自動開通專業會員功能。</p>
+                    </>
+                  ) : proAppStatus === 'rejected' ? (
+                    <>
+                      <div style={{ fontSize:11, letterSpacing:'0.1em', color:'#c0392b', textTransform:'uppercase', marginBottom:6 }}>申請未通過</div>
+                      <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7, marginBottom:10 }}>如有疑問請透過 LINE 聯繫客服。</p>
+                      <button onClick={() => goProfessionalApply(user, setPage)} style={{ background:'none', border:'none', padding:0, fontSize:12, color:'var(--dark)', cursor:'pointer', fontFamily:'var(--font-body)', textDecoration:'underline', letterSpacing:'0.04em' }}>重新申請 →</button>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize:11, letterSpacing:'0.1em', color:'var(--gold)', textTransform:'uppercase', marginBottom:6 }}>成為認證美容師</div>
+                      <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7, marginBottom:10 }}>享有院線商品購買資格及專業折扣。</p>
+                      <button onClick={() => goProfessionalApply(user, setPage)} style={{ background:'none', border:'none', padding:0, fontSize:12, color:'var(--black)', cursor:'pointer', fontFamily:'var(--font-body)', letterSpacing:'0.08em', fontWeight:500 }}>申請專業會員 →</button>
+                    </>
+                  )}
+                </div>
+              )}
               {isAdminUser(user) && (
                 <button onClick={openAdmin} style={{ marginTop:8, width:'fit-content', background:'var(--black)', color:'var(--white)', border:'1px solid var(--black)', padding:'10px 18px', fontSize:12, letterSpacing:'0.08em', cursor:'pointer', fontFamily:'var(--font-body)' }}>進入後台</button>
               )}
@@ -3370,6 +3499,63 @@ function AccountPage({ user, setPage, onSignOut }) {
               })}
             </div>
           </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── CONTACT PAGE ────────────────────────────────────────────────────────────
+function ContactPage() {
+  const isMobile = useIsMobile();
+  const channels = [
+    {
+      name: '電子郵件',
+      description: 'ecladotaiwan@gmail.com',
+      action: '發送郵件 →',
+      href: 'mailto:ecladotaiwan@gmail.com',
+    },
+    {
+      name: 'LINE 官方帳號',
+      description: '產品諮詢、訂單問題、售後服務。',
+      action: '開啟 LINE →',
+      href: 'https://lin.ee/5RLUjni',
+    },
+    {
+      name: 'Instagram',
+      description: '追蹤最新產品資訊、保養知識與品牌動態。',
+      action: '前往 Instagram →',
+      href: 'https://www.instagram.com/eclado_tw?igsh=MWt3OWl5OWd0dm1vMQ%3D%3D&utm_source=qr',
+    },
+  ];
+
+  return (
+    <div style={{ paddingTop:68, minHeight:'80vh' }}>
+      <div style={{ background:'var(--off-white)', padding:isMobile ? '48px 20px 36px' : '64px 32px 48px', borderBottom:'1px solid var(--light)' }}>
+        <div style={{ maxWidth:860, margin:'0 auto' }}>
+          <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>Contact</p>
+          <h1 style={{ fontFamily:'var(--font-display)', fontSize:isMobile ? 30 : 44, fontWeight:300, color:'var(--black)', marginBottom:12 }}>聯絡我們</h1>
+          <p style={{ fontSize:14, color:'var(--dark)', lineHeight:1.8 }}>有任何問題、諮詢或合作需求，歡迎透過以下方式與我們聯繫。</p>
+        </div>
+      </div>
+      <div style={{ maxWidth:860, margin:'0 auto', padding:isMobile ? '48px 20px 72px' : '64px 32px 96px' }}>
+        <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : 'repeat(3, 1fr)', gap:24 }}>
+          {channels.map(channel => {
+            const external = channel.href.startsWith('http');
+            return (
+              <a
+                key={channel.name}
+                href={channel.href}
+                target={external ? '_blank' : undefined}
+                rel={external ? 'noopener noreferrer' : undefined}
+                style={{ border:'1px solid var(--light)', padding:isMobile ? '32px 24px' : '40px 32px', textDecoration:'none', display:'flex', flexDirection:'column', gap:16, color:'inherit' }}
+              >
+                <div style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:300, color:'var(--black)' }}>{channel.name}</div>
+                <div style={{ fontSize:13, color:'var(--dark)', lineHeight:1.8, flex:1 }}>{channel.description}</div>
+                <div style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase' }}>{channel.action}</div>
+              </a>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -3490,7 +3676,7 @@ const PAGE_PATHS = {
   home: '/', shop: '/shop', cart: '/cart', checkout: '/checkout',
   login: '/login', 'pro-login': '/pro-login', 'reset-password': '/reset-password',
   'professional-apply': '/professional-apply', account: '/account', about: '/about', info: '/info',
-  'line-callback': '/line-callback', privacy: '/privacy',
+  'line-callback': '/line-callback', privacy: '/privacy', contact: '/contact',
 };
 const PATH_PAGES = Object.fromEntries(Object.entries(PAGE_PATHS).map(([k, v]) => [v, k]));
 function pageFromPath(path) {
@@ -3522,6 +3708,8 @@ function App() {
   const [salesStats, setSalesStats] = useState(emptySalesStats);
   const [promoFetchStatus, setPromoFetchStatus] = useState('loading'); // 先顯示載入中，避免空白誤判
   const [promoFetchError, setPromoFetchError] = useState('');
+  const [showProBanner, setShowProBanner] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
   const cartCount = cart.reduce((sum,i) => sum+i.qty, 0);
 
   // 從 profiles 表讀取角色
@@ -3538,14 +3726,45 @@ function App() {
       || supabaseUser.email?.split('@')[0]
       || 'LINE 用戶';
 
+    const role = data?.role || 'consumer';
     setUser({
       name: displayName,
       email: supabaseUser.email || '',
-      role: data?.role || 'consumer',
-      isPro: data?.role === 'pro',
+      role,
+      isPro: role === 'pro',
       uid: supabaseUser.id,
     });
+    // 一次性浮動提示：consumer 且未看過，且未有申請紀錄
+    if (role === 'consumer') {
+      const seenKey = `eclado_pro_banner_${supabaseUser.id}`;
+      if (!localStorage.getItem(seenKey)) {
+        const { data: appData } = await supabase
+          .from('professional_applications')
+          .select('id')
+          .eq('user_id', supabaseUser.id)
+          .limit(1)
+          .maybeSingle();
+        if (!appData) setShowProBanner(true);
+      }
+    }
   }
+
+  async function refreshUser() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) await loadUser(session.user);
+  }
+
+  // 登入後導向美容師申請（從導覽「美容師申請」未登入時進入）
+  useEffect(() => {
+    if (!user?.uid) return;
+    if (sessionStorage.getItem(POST_LOGIN_PAGE_KEY) !== 'professional-apply') return;
+    let cancelled = false;
+    (async () => {
+      sessionStorage.removeItem(POST_LOGIN_PAGE_KEY);
+      if (!cancelled) await goProfessionalApply(user, setPage);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.uid]);
 
   // 瀏覽器返回 / 前進
   useEffect(() => {
@@ -3563,71 +3782,95 @@ function App() {
   // 監聽 Supabase 登入狀態（驗證信 / 重設密碼回傳須先完成 session 交換，再清 URL）
   useEffect(() => {
     let cancelled = false;
+    const startedAsLineLoginCallback = window.location.pathname === '/line-callback'
+      || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1';
+    let lineLoginRedirectDone = false;
+    let lineLoginNextPage = null;
+
+    function getLineLoginNextPage() {
+      if (!lineLoginNextPage) lineLoginNextPage = consumeCheckoutLoginRedirectPage();
+      return lineLoginNextPage;
+    }
+
+    async function finishLineLoginRedirect(session) {
+      if (lineLoginRedirectDone) return;
+      lineLoginRedirectDone = true;
+      if (session?.user) await loadUser(session.user);
+      sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
+      const nextPage = getLineLoginNextPage();
+      cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
+      setPageState(nextPage);
+    }
 
     async function finishAuthCallback() {
       if (!hasAuthCallbackInUrl()) return;
-
-      const authErr = getAuthCallbackErrorMessage();
-      if (authErr) {
-        sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
-        sessionStorage.setItem('eclado_auth_notice', 'error:' + authErr);
-        cleanAuthCallbackFromUrl('/login');
-        if (!cancelled) setPageState('login');
-        return;
-      }
-
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (cancelled) return;
-
-      if (error) {
-        sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
-        sessionStorage.setItem('eclado_auth_notice', 'error:' + sbError(error.message));
-        cleanAuthCallbackFromUrl('/login');
-        setPageState('login');
-        return;
-      }
-
-      if (isPasswordRecoveryUrl()) {
-        cleanAuthCallbackFromUrl('/reset-password');
-        setPageState('reset-password');
-        return;
-      }
-
-      const isLineLoginCallback = window.location.pathname === '/line-callback'
-        || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1';
-
-      if (session?.user) {
-        await loadUser(session.user);
-        if (isEmailVerificationCallback()) {
-          sessionStorage.setItem('eclado_auth_notice', 'email_verified');
-          cleanAuthCallbackFromUrl('/login');
-          setPageState('login');
-        } else if (isLineLoginCallback) {
+      try {
+        const authErr = getAuthCallbackErrorMessage();
+        if (authErr) {
           sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
-          const nextPage = consumeCheckoutLoginRedirectPage();
-          cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
-          setPageState(nextPage);
-        } else {
+          sessionStorage.setItem('eclado_auth_notice', 'error:' + authErr);
+          cleanAuthCallbackFromUrl('/login');
+          if (!cancelled) setPageState('login');
+          return;
+        }
+
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (cancelled) return;
+
+        if (error) {
+          sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
+          sessionStorage.setItem('eclado_auth_notice', 'error:' + sbError(error.message));
           cleanAuthCallbackFromUrl('/login');
           setPageState('login');
+          return;
         }
+
+        if (isPasswordRecoveryUrl()) {
+          cleanAuthCallbackFromUrl('/reset-password');
+          setPageState('reset-password');
+          return;
+        }
+
+        const isLineLoginCallback = window.location.pathname === '/line-callback'
+          || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1'
+          || startedAsLineLoginCallback;
+
+        if (session?.user) {
+          if (isLineLoginCallback) {
+            await finishLineLoginRedirect(session);
+            return;
+          }
+          await loadUser(session.user);
+          if (isEmailVerificationCallback()) {
+            sessionStorage.setItem('eclado_auth_notice', 'email_verified');
+            cleanAuthCallbackFromUrl('/login');
+            setPageState('login');
+          } else {
+            cleanAuthCallbackFromUrl('/login');
+            setPageState('login');
+          }
+        }
+      } finally {
+        if (!cancelled) setAuthReady(true);
       }
     }
 
     finishAuthCallback();
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (cancelled || hasAuthCallbackInUrl()) return;
-      const isPendingLineLogin = window.location.pathname === '/line-callback'
-        || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1';
-      if (session?.user) {
-        loadUser(session.user);
-        if (isPendingLineLogin) {
-          sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
-          const nextPage = consumeCheckoutLoginRedirectPage();
-          cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
-          setPageState(nextPage);
+      if (cancelled) return;
+      if (!hasAuthCallbackInUrl()) {
+        const isPendingLineLogin = window.location.pathname === '/line-callback'
+          || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1'
+          || startedAsLineLoginCallback;
+        if (session?.user) {
+          if (isPendingLineLogin) {
+            finishLineLoginRedirect(session);
+          } else {
+            loadUser(session.user);
+          }
         }
+        setAuthReady(true);
       }
     });
 
@@ -3635,12 +3878,8 @@ function App() {
       if (event === 'PASSWORD_RECOVERY' || isPasswordRecoveryUrl()) {
         cleanAuthCallbackFromUrl('/reset-password');
         setPageState('reset-password');
-      } else if (event === 'SIGNED_IN' && (window.location.pathname === '/line-callback' || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1')) {
-        if (session?.user) await loadUser(session.user);
-        sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
-        const nextPage = consumeCheckoutLoginRedirectPage();
-        cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
-        setPageState(nextPage);
+      } else if (event === 'SIGNED_IN' && (startedAsLineLoginCallback || window.location.pathname === '/line-callback' || sessionStorage.getItem(LINE_LOGIN_PENDING_KEY) === '1')) {
+        await finishLineLoginRedirect(session);
       } else if (event === 'SIGNED_IN' && isEmailVerificationCallback()) {
         if (session?.user) await loadUser(session.user);
         sessionStorage.setItem('eclado_auth_notice', 'email_verified');
@@ -3649,6 +3888,7 @@ function App() {
       }
       if (session?.user) loadUser(session.user);
       else if (event === 'SIGNED_OUT') setUser(null);
+      if (!hasAuthCallbackInUrl()) setAuthReady(true);
     });
 
     return () => { cancelled = true; subscription.unsubscribe(); };
@@ -3697,25 +3937,36 @@ function App() {
     return () => { if (ch) sb.removeChannel(ch); };
   }, []);
 
-  // 載入商品庫存（保留前端既有商品資料，只覆寫 stock）
+  // 載入商品資料；資料庫控制上架商品，既有靜態資料作為舊商品顯示 fallback。
   useEffect(() => {
     if (!window.supabase || typeof window.supabase.from !== 'function') return;
     const sb = window.supabase;
     let alive = true;
 
     async function loadProducts() {
-      const { data, error } = await sb.from('products').select('id, stock, is_pro_only, price, pro_price, product_list_image_scale, active').order('id', { ascending: true });
+      const { data, error } = await sb.from('products').select('*').order('id', { ascending: true });
+      const { data: variantRows, error: variantError } = await sb.from('product_variants').select('*').order('sort_order', { ascending: true });
       if (!alive) return;
       if (error) {
         console.error('[ECLADO] 無法載入 products：', error.message, error);
         setProducts(PRODUCTS.map(product => ({ ...product, stock: null })));
         return;
       }
-      setProducts(mergeProductsWithStock(PRODUCTS, data || []));
-      setCart(prev => prev.map(item => {
-        const stockRow = (data || []).find(row => Number(row.id) === Number(item.id));
-        return stockRow ? { ...item, stock: Number(stockRow.stock ?? 0) } : item;
+      if (variantError) console.warn('[ECLADO] 無法載入 product_variants（改用 products.variants）：', variantError.message || variantError);
+      const variantMap = groupProductVariants(variantError ? [] : variantRows);
+      const rowsWithVariants = (data || []).map(row => ({
+        ...row,
+        variants: normalizeJsonArray(row.variants).length ? row.variants : (variantMap.get(Number(row.id)) || []),
       }));
+      const loadedProducts = mergeProductsWithStock(PRODUCTS, rowsWithVariants);
+      setProducts(loadedProducts);
+      setCart(prev => prev.map(item => {
+        const product = loadedProducts.find(current => Number(current.id) === Number(item.id));
+        if (!product || (product.isProOnly && !isProfessionalMember(user))) return null;
+        const variant = getVariantForCartItem(product, item);
+        const nextProduct = applyVariantToProduct(product, variant);
+        return { ...nextProduct, cartKey: getCartKey(item), qty: item.qty };
+      }).filter(Boolean));
     }
 
     loadProducts();
@@ -3735,23 +3986,23 @@ function App() {
       alive = false;
       if (ch) sb.removeChannel(ch);
     };
-  }, []);
+  }, [user?.role]);
 
   // 依已付款/出貨流程中的訂單 items 統計首頁熱門商品。
   useEffect(() => {
-    if (!window.supabase || typeof window.supabase.from !== "function") return;
+    if (!window.supabase || typeof window.supabase.from !== 'function') return;
     const sb = window.supabase;
     let alive = true;
 
     async function loadSalesStats() {
       const { data, error } = await sb
-        .from("orders")
-        .select("status, items")
-        .in("status", Array.from(SALES_COUNTED_STATUSES))
+        .from('orders')
+        .select('status, items')
+        .in('status', Array.from(SALES_COUNTED_STATUSES))
         .limit(1000);
       if (!alive) return;
       if (error) {
-        console.warn("[ECLADO] 無法載入熱門商品銷售統計（改用商品清單 fallback）：", error.message || error);
+        console.warn('[ECLADO] 無法載入熱門商品銷售統計（改用商品清單 fallback）：', error.message || error);
         setSalesStats(emptySalesStats());
         return;
       }
@@ -3763,11 +4014,11 @@ function App() {
     let ch = null;
     try {
       ch = sb
-        .channel("popular-products-realtime")
-        .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, loadSalesStats)
+        .channel('popular-products-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, loadSalesStats)
         .subscribe();
     } catch (e) {
-      console.warn("[ECLADO] popular products Realtime 訂閱失敗（不影響讀取）", e);
+      console.warn('[ECLADO] popular products Realtime 訂閱失敗（不影響讀取）', e);
     }
 
     return () => {
@@ -3799,12 +4050,13 @@ function App() {
       case 'login':    return <LoginPage setPage={setPage} />;
       case 'pro-login': return <LoginPage setPage={setPage} />;
       case 'reset-password': return <ResetPasswordPage setPage={setPage} />;
-      case 'professional-apply': return <ProfessionalApplicationPage setPage={setPage} user={user} />;
+      case 'professional-apply': return <ProfessionalApplicationPage setPage={setPage} user={user} authReady={authReady} onUserUpdated={refreshUser} />;
       case 'account':  return <AccountPage user={user} setPage={setPage} onSignOut={handleSignOut} />;
       case 'about':    return <AboutPage />;
       case 'info':     return <InfoPage />;
       case 'line-callback': return <LineCallbackPage />;
       case 'privacy':  return <PrivacyPage />;
+      case 'contact':  return <ContactPage />;
       default:         return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
     }
   }
@@ -3812,18 +4064,31 @@ function App() {
   const authPage = page === 'login' || page === 'pro-login' || page === 'reset-password' || page === 'line-callback';
   const showPromoBar = !authPage;
 
+  function dismissProBanner() {
+    const seenKey = user?.uid ? `eclado_pro_banner_${user.uid}` : null;
+    if (seenKey) localStorage.setItem(seenKey, '1');
+    setShowProBanner(false);
+  }
+
   return (
     <>
       {!authPage && <Nav setPage={setPage} cartCount={cartCount} user={user} setUser={handleSignOut} page={page} />}
       {showPromoBar && (
         <PromoDiagnosticBar status={promoFetchStatus} errorText={promoFetchError} />
       )}
+      {showProBanner && !authPage && (
+        <div style={{ position:'fixed', bottom:24, left:'50%', transform:'translateX(-50%)', zIndex:200, background:'var(--black)', color:'var(--white)', padding:'16px 20px', display:'flex', alignItems:'center', gap:16, boxShadow:'0 4px 24px rgba(0,0,0,0.25)', maxWidth:'calc(100vw - 32px)', width:440 }}>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--gold)', textTransform:'uppercase', marginBottom:4 }}>美容師專業會員</div>
+            <div style={{ fontSize:13, lineHeight:1.6 }}>您是美容師嗎？申請專業會員享有院線商品與專業折扣。</div>
+          </div>
+          <button onClick={() => { dismissProBanner(); goProfessionalApply(user, setPage); }} style={{ background:'var(--gold)', color:'var(--black)', border:'none', padding:'9px 16px', fontSize:11, letterSpacing:'0.1em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}>立即申請</button>
+          <button onClick={dismissProBanner} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.4)', fontSize:20, cursor:'pointer', lineHeight:1, padding:'0 4px', flexShrink:0 }}>×</button>
+        </div>
+      )}
       {renderPage()}
     </>
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-</script>
-</body>
-</html>
+createRoot(document.getElementById('root')).render(<App />);
