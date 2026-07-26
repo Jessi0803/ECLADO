@@ -1,0 +1,142 @@
+import React, { useEffect, useState } from 'react';
+import useIsMobile from '../hooks/useIsMobile.js';
+import { PRODUCT_NAV_LINKS } from '../app/navigation.js';
+import ProductCard from '../components/product/ProductCard.jsx';
+import ProductDetail from '../components/product/ProductDetail.jsx';
+import PromoSection from '../components/product/PromoSection.jsx';
+import {
+  PRODUCTS,
+  getCartKey,
+  getMemberPrice,
+  getMemberTier,
+  isProfessionalMember,
+} from '../domain/catalog.jsx';
+import {
+  emptySalesStats,
+  getProductSalesCount,
+} from '../domain/sales.js';
+import {
+  isPromotionLive,
+} from '../domain/promotions.js';
+
+export default function ShopPage({ user, cart, setCart, promotions = [], products = PRODUCTS, salesStats = emptySalesStats() }) {
+  const [activeCategory, setActiveCategory] = useState('所有產品');
+  const [sortBy, setSortBy] = useState('default');
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const categories = PRODUCT_NAV_LINKS;
+  const isMobile = useIsMobile();
+
+  function addToCart(product) {
+    if (product.isProOnly && !isProfessionalMember(user)) return;
+    setCart(prev => {
+      const cartKey = getCartKey(product);
+      const ex = prev.find(i => getCartKey(i) === cartKey);
+      if (ex) return prev.map(i => getCartKey(i) === cartKey ? { ...i, qty: i.qty+1 } : i);
+      return [...prev, { ...product, cartKey, qty:1 }];
+    });
+  }
+
+  useEffect(() => {
+    if (!selectedProduct) return;
+    const fresh = products.find(product => product.id === selectedProduct.id);
+    if (fresh && fresh.stock !== selectedProduct.stock) {
+      setSelectedProduct(fresh);
+    }
+  }, [products, selectedProduct]);
+
+  const filtered = products.filter(p => {
+    if (activeCategory === '所有產品' || activeCategory === '全部') return true;
+    return p.category === activeCategory;
+  });
+  const originalIndex = new Map(products.map((product, index) => [product.id, index]));
+  const sortedProducts = [...filtered].sort((a, b) => {
+    const fixedOrder = (Number(a.id) - Number(b.id)) || (originalIndex.get(a.id) || 0) - (originalIndex.get(b.id) || 0);
+    if (sortBy === 'price-asc' || sortBy === 'price-desc') {
+      const diff = getMemberPrice(a, user) - getMemberPrice(b, user);
+      return sortBy === 'price-asc' ? diff || fixedOrder : -diff || fixedOrder;
+    }
+    if (sortBy === 'sales-desc') {
+      const salesDiff = getProductSalesCount(b, salesStats) - getProductSalesCount(a, salesStats);
+      return salesDiff || fixedOrder;
+    }
+    return fixedOrder;
+  });
+
+  if (selectedProduct) {
+    return <ProductDetail product={selectedProduct} user={user} onAdd={addToCart} onBack={() => setSelectedProduct(null)} promotions={promotions} />;
+  }
+
+  const livePromosShop = promotions.filter(isPromotionLive);
+
+  return (
+    <div style={{ paddingTop:68 }}>
+      {livePromosShop.length > 0 && (
+        <div style={{
+          background:'var(--off-white)', borderBottom:'1px solid var(--light)',
+          padding:'14px 20px', textAlign:'center',
+        }}>
+          <span style={{ fontSize:13, color:'var(--dark)', letterSpacing:'0.04em', lineHeight:1.6 }}>
+            限時優惠進行中：購物車內含活動商品時會自動折抵。
+          </span>
+        </div>
+      )}
+      {/* 頂部 header */}
+      <div style={{ position:'relative', height: isMobile ? 180 : 240, overflow:'hidden' }}>
+        <img src="https://images.unsplash.com/photo-1631730359585-38a4935cbec4?w=1600&q=80&fit=crop" alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 60%' }} />
+        <div style={{ position:'absolute', inset:0, background:'rgba(12,12,10,0.58)' }} />
+        <div style={{ position:'relative', height:'100%', maxWidth:1280, margin:'0 auto', padding: isMobile ? '0 24px' : '0 32px', display:'flex', alignItems:'flex-end', justifyContent:'space-between', flexWrap:'wrap', gap:12, paddingBottom: isMobile ? 28 : 36 }}>
+          <div>
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
+              <div style={{ width:28, height:1, background:'var(--gold)' }} />
+              <p style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase', margin:0 }}>Shop</p>
+            </div>
+            <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 28 : 42, fontWeight:300, color:'var(--white)', lineHeight:1.1, margin:0 }}>全部商品</h1>
+          </div>
+          {isProfessionalMember(user) && (
+            <div style={{ display:'flex', alignItems:'center', gap:8, paddingBottom:4 }}>
+              <span style={{ fontSize:10, background:'var(--gold)', color:'var(--black)', padding:'3px 8px', letterSpacing:'0.12em', fontWeight:600 }}>{getMemberTier(user).badge}</span>
+              <span style={{ fontSize:12, color:'rgba(255,255,255,0.6)', letterSpacing:'0.04em' }}>{getMemberTier(user).priceLabel}已啟用</span>
+            </div>
+          )}
+        </div>
+      </div>
+      {/* 分類篩選列 */}
+      <div className="filter-tabs" style={{ background:'var(--off-white)', borderBottom:'1px solid var(--light)', padding: isMobile ? '0 16px' : '0 32px' }}>
+        <div style={{ maxWidth:1280, margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
+          <div style={{ display:'flex' }}>
+          {categories.map(cat => (
+            <button key={cat} onClick={() => setActiveCategory(cat)} style={{
+              background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12,
+              color: activeCategory===cat ? 'var(--black)' : 'var(--dark)',
+              padding:'16px 20px', letterSpacing:'0.08em', textTransform:'uppercase',
+              borderBottom: activeCategory===cat ? '2px solid var(--black)' : '2px solid transparent',
+              fontWeight: activeCategory===cat ? 500 : 300, transition:'all 0.2s',
+            }}>{cat}</button>
+          ))}
+          </div>
+          <label style={{ display:'flex', alignItems:'center', gap:10, padding: isMobile ? '0 0 14px' : '0', fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', whiteSpace:'nowrap' }}>
+            排序
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{
+              appearance:'none', background:'var(--white)', border:'1px solid var(--light)', color:'var(--black)',
+              padding:'9px 34px 9px 12px', fontFamily:'var(--font-body)', fontSize:12, letterSpacing:'0.06em', cursor:'pointer',
+              backgroundImage:'linear-gradient(45deg, transparent 50%, var(--dark) 50%), linear-gradient(135deg, var(--dark) 50%, transparent 50%)',
+              backgroundPosition:'calc(100% - 16px) 50%, calc(100% - 11px) 50%', backgroundSize:'5px 5px, 5px 5px', backgroundRepeat:'no-repeat',
+            }}>
+              <option value="default">商品編號排序</option>
+              <option value="sales-desc">銷售量高到低</option>
+              <option value="price-asc">價格低到高</option>
+              <option value="price-desc">價格高到低</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div style={{ maxWidth:1280, margin:'0 auto', padding: isMobile ? '40px 20px' : '60px 32px' }}>
+        {false && null /* pro banner moved to header */}
+        <div className="g4lg">
+          {sortedProducts.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} promotions={promotions} />)}
+        </div>
+        {sortedProducts.length === 0 && <div style={{ textAlign:'center', padding:'80px 0', color:'var(--dark)', fontSize:14 }}>此分類目前無商品</div>}
+      </div>
+    </div>
+  );
+}
