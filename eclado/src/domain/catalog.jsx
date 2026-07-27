@@ -44,11 +44,14 @@ export function normalizeJsonArray(value) {
 export function normalizeProductVariant(variant) {
   return {
     id: variant.id || variant.size || '',
+    sku: variant.sku || '',
     size: variant.size || '',
     price: Number(variant.price ?? variant.marketPrice ?? variant.market_price ?? 0),
     proPrice: Number(variant.proPrice ?? variant.pro_price ?? 0),
     stock: variant.stock == null ? null : Number(variant.stock),
-    isDefault: !!variant.isDefault,
+    isDefault: !!(variant.isDefault ?? variant.is_default),
+    sortOrder: Number(variant.sortOrder ?? variant.sort_order ?? 0),
+    active: variant.active !== false,
   };
 }
 
@@ -183,21 +186,19 @@ export function getVariantForCartItem(product, item) {
 }
 
 export function groupProductVariants(rows) {
-  return (rows || []).reduce((map, row) => {
+  const grouped = (rows || []).reduce((map, row) => {
+    if (row.active === false) return map;
     const productId = Number(row.product_id);
     if (!productId) return map;
-    const variant = normalizeProductVariant({
-      id: row.id || row.sku || row.size,
-      size: row.size,
-      price: row.price,
-      proPrice: row.pro_price,
-      stock: row.stock,
-      isDefault: row.is_default,
-    });
+    const variant = normalizeProductVariant(row);
     if (!map.has(productId)) map.set(productId, []);
     map.get(productId).push(variant);
     return map;
   }, new Map());
+  grouped.forEach(variants => variants.sort((left, right) => (
+    left.sortOrder - right.sortOrder || String(left.id).localeCompare(String(right.id))
+  )));
+  return grouped;
 }
 
 export function getFulfillmentInfo(product) {
@@ -239,14 +240,17 @@ export function getFulfillmentInfo(product) {
   };
 }
 
-export function mergeProductsWithStock(baseProducts, stockRows) {
+export function mergeProductsWithStock(baseProducts, stockRows, variantMap) {
   const productMap = new Map(baseProducts.map(product => [Number(product.id), product]));
   return (stockRows || []).filter(row => row.active !== false).map(row => {
     const product = productMap.get(Number(row.id)) || {};
     const rowImages = normalizeJsonArray(row.image_urls).filter(Boolean);
     const fallbackImages = normalizeJsonArray(product.imageUrls).filter(Boolean);
     const imageUrls = rowImages.length ? rowImages : fallbackImages;
-    const variants = normalizeJsonArray(row.variants).map(normalizeProductVariant).filter(variant => variant.size || variant.price || variant.proPrice);
+    const variantSource = variantMap?.get(Number(row.id)) || [];
+    const variants = variantSource
+      .map(normalizeProductVariant)
+      .filter(variant => variant.active && (variant.size || variant.price || variant.proPrice));
     const primaryVariant = variants.find(variant => variant.isDefault) || variants[0] || null;
     return {
       ...product,

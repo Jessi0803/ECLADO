@@ -7,21 +7,40 @@ import PromoSection from '../components/product/PromoSection.jsx';
 import {
   PRODUCTS,
   getCartKey,
-  getMemberPrice,
   getMemberTier,
   isProfessionalMember,
 } from '../domain/catalog.jsx';
 import {
-  emptySalesStats,
-  getProductSalesCount,
-} from '../domain/sales.js';
-import {
   isPromotionLive,
 } from '../domain/promotions.js';
 
-export default function ShopPage({ user, cart, setCart, promotions = [], products = PRODUCTS, salesStats = emptySalesStats() }) {
+const PROFESSIONAL_CATEGORY = '院線課程儀器（含試用包）';
+
+function isProfessionalCatalogProduct(product) {
+  const category = String(product.category || '');
+  return product.isProOnly || /院線|課程|儀器|試用包/.test(category);
+}
+
+function isProductInCategory(product, category) {
+  if (category === '所有產品' || category === '全部') return true;
+
+  const productCategory = String(product.category || '');
+  const isProfessional = isProfessionalCatalogProduct(product);
+  if (category === PROFESSIONAL_CATEGORY) return isProfessional;
+  if (isProfessional) return false;
+
+  if (category === '清潔卸妝') return /清潔|卸妝/.test(productCategory);
+  if (category === '化妝水') return /化妝水/.test(productCategory);
+  if (category === '安瓶精華') return /安瓶|精華/.test(productCategory);
+  if (category === '乳霜') return /乳霜|面霜|眼霜/.test(productCategory);
+  if (category === '面膜') return /面膜/.test(productCategory);
+  if (category === '防曬底妝') return /防曬|底妝/.test(productCategory);
+  if (category === '其他') return productCategory === '其他';
+  return false;
+}
+
+export default function ShopPage({ user, cart, setCart, promotions = [], products = PRODUCTS }) {
   const [activeCategory, setActiveCategory] = useState('所有產品');
-  const [sortBy, setSortBy] = useState('default');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const categories = PRODUCT_NAV_LINKS;
   const isMobile = useIsMobile();
@@ -44,23 +63,7 @@ export default function ShopPage({ user, cart, setCart, promotions = [], product
     }
   }, [products, selectedProduct]);
 
-  const filtered = products.filter(p => {
-    if (activeCategory === '所有產品' || activeCategory === '全部') return true;
-    return p.category === activeCategory;
-  });
-  const originalIndex = new Map(products.map((product, index) => [product.id, index]));
-  const sortedProducts = [...filtered].sort((a, b) => {
-    const fixedOrder = (Number(a.id) - Number(b.id)) || (originalIndex.get(a.id) || 0) - (originalIndex.get(b.id) || 0);
-    if (sortBy === 'price-asc' || sortBy === 'price-desc') {
-      const diff = getMemberPrice(a, user) - getMemberPrice(b, user);
-      return sortBy === 'price-asc' ? diff || fixedOrder : -diff || fixedOrder;
-    }
-    if (sortBy === 'sales-desc') {
-      const salesDiff = getProductSalesCount(b, salesStats) - getProductSalesCount(a, salesStats);
-      return salesDiff || fixedOrder;
-    }
-    return fixedOrder;
-  });
+  const filtered = products.filter(product => isProductInCategory(product, activeCategory));
 
   if (selectedProduct) {
     return <ProductDetail product={selectedProduct} user={user} onAdd={addToCart} onBack={() => setSelectedProduct(null)} promotions={promotions} />;
@@ -102,7 +105,7 @@ export default function ShopPage({ user, cart, setCart, promotions = [], product
       </div>
       {/* 分類篩選列 */}
       <div className="filter-tabs" style={{ background:'var(--off-white)', borderBottom:'1px solid var(--light)', padding: isMobile ? '0 16px' : '0 32px' }}>
-        <div style={{ maxWidth:1280, margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
+        <div style={{ maxWidth:1280, margin:'0 auto', display:'flex', alignItems:'center' }}>
           <div style={{ display:'flex' }}>
           {categories.map(cat => (
             <button key={cat} onClick={() => setActiveCategory(cat)} style={{
@@ -114,28 +117,14 @@ export default function ShopPage({ user, cart, setCart, promotions = [], product
             }}>{cat}</button>
           ))}
           </div>
-          <label style={{ display:'flex', alignItems:'center', gap:10, padding: isMobile ? '0 0 14px' : '0', fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', whiteSpace:'nowrap' }}>
-            排序
-            <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{
-              appearance:'none', background:'var(--white)', border:'1px solid var(--light)', color:'var(--black)',
-              padding:'9px 34px 9px 12px', fontFamily:'var(--font-body)', fontSize:12, letterSpacing:'0.06em', cursor:'pointer',
-              backgroundImage:'linear-gradient(45deg, transparent 50%, var(--dark) 50%), linear-gradient(135deg, var(--dark) 50%, transparent 50%)',
-              backgroundPosition:'calc(100% - 16px) 50%, calc(100% - 11px) 50%', backgroundSize:'5px 5px, 5px 5px', backgroundRepeat:'no-repeat',
-            }}>
-              <option value="default">商品編號排序</option>
-              <option value="sales-desc">銷售量高到低</option>
-              <option value="price-asc">價格低到高</option>
-              <option value="price-desc">價格高到低</option>
-            </select>
-          </label>
         </div>
       </div>
       <div style={{ maxWidth:1280, margin:'0 auto', padding: isMobile ? '40px 20px' : '60px 32px' }}>
         {false && null /* pro banner moved to header */}
         <div className="g4lg">
-          {sortedProducts.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} promotions={promotions} />)}
+          {filtered.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} promotions={promotions} />)}
         </div>
-        {sortedProducts.length === 0 && <div style={{ textAlign:'center', padding:'80px 0', color:'var(--dark)', fontSize:14 }}>此分類目前無商品</div>}
+        {filtered.length === 0 && <div style={{ textAlign:'center', padding:'80px 0', color:'var(--dark)', fontSize:14 }}>此分類目前無商品</div>}
       </div>
     </div>
   );

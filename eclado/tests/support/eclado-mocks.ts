@@ -164,6 +164,7 @@ export type MockEcladoApiOptions = {
   onOrderUpdate?: (update: Record<string, unknown>, url: string) => void;
   onProductInsert?: (product: Record<string, unknown>) => void;
   onProductUpdate?: (update: Record<string, unknown>, url: string) => void;
+  onProductWithVariantsSave?: (request: Record<string, unknown>) => void;
   onProfileUpdate?: (update: Record<string, unknown>, url: string) => void;
   onMemberDelete?: (memberId: string) => void;
   onPromotionInsert?: (promotion: Record<string, unknown>) => void;
@@ -286,6 +287,17 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     return json(route, []);
   });
 
+  await page.route('**/rest/v1/rpc/save_product_with_variants', async route => {
+    const request = route.request().postDataJSON();
+    options.onProductWithVariantsSave?.(request);
+    if (options.productWriteError) return json(route, { message: options.productWriteError }, 400);
+    return json(route, {
+      product_id: Number(request?.p_product?.id || 999),
+      default_variant_id: Number(request?.p_variants?.[0]?.id || 9991),
+      variants: request?.p_variants || [],
+    });
+  });
+
   await page.route('**/rest/v1/rpc/create_order_with_pricing', async route => {
     const request = route.request().postDataJSON();
     if (options.orderWriteError) {
@@ -366,7 +378,11 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       .sort((a, b) => b.discount - a.discount);
     const selectedPromotion = promotionCandidates[0] || null;
     const discount = selectedPromotion?.discount || 0;
-    const shipping = authoritativeItems.every(item => item.product_id === 9) ? 0 : 120;
+    const discountedSubtotal = Math.max(0, subtotal - discount);
+    const professionalRole = ['pro', 'instructor', 'distributor'].includes(role);
+    const shipping = professionalRole && discountedSubtotal >= 10000
+      ? 0
+      : (authoritativeItems.every(item => item.product_id === 9) ? 0 : 120);
     const orderId = `ECL-E2E-${Date.now()}`;
     const status = request.p_payment_method === 'atm' ? 'awaiting_confirm' : 'unpaid';
     const result = {

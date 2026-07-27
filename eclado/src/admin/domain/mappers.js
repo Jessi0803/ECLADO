@@ -40,12 +40,42 @@ export function normalizeProductImageScale(value) {
   return Number.isFinite(scale) && scale > 0 ? scale : null;
 }
 
-export function normalizeProduct(row) {
+export function normalizeProductCategory(value, isProOnly = false) {
+  const category = String(value || '').trim();
+  if (isProOnly || /院線|課程|儀器|試用包/.test(category)) return '院線課程儀器（含試用包）';
+  if (/清潔|卸妝/.test(category)) return '清潔卸妝';
+  if (/化妝水/.test(category)) return '化妝水';
+  if (/安瓶|精華/.test(category)) return '安瓶精華';
+  if (/乳霜|面霜|眼霜/.test(category)) return '乳霜';
+  if (/面膜/.test(category)) return '面膜';
+  if (/防曬|底妝/.test(category)) return '防曬底妝';
+  if (category === '其他') return '其他';
+  return category;
+}
+
+export function normalizeProductVariant(row, index = 0) {
+  return {
+    id: row.id == null ? `new-${index}` : String(row.id),
+    sku: row.sku || '',
+    size: row.size || '',
+    price: Number(row.price) || 0,
+    proPrice: Number(row.pro_price ?? row.proPrice) || 0,
+    stock: Math.max(0, Number(row.stock) || 0),
+    isDefault: !!(row.is_default ?? row.isDefault),
+    sortOrder: Math.max(0, Number(row.sort_order ?? row.sortOrder) || index),
+    active: row.active !== false,
+  };
+}
+
+export function normalizeProduct(row, variantRows = null) {
+  const variants = Array.isArray(variantRows)
+    ? variantRows.map(normalizeProductVariant)
+    : (Array.isArray(row.variants) ? row.variants.map(normalizeProductVariant) : []);
   return {
     id: row.id,
     name: row.name || '',
     nameZh: row.name_zh || '',
-    category: row.category || '',
+    category: normalizeProductCategory(row.category, !!row.is_pro_only),
     size: row.size || '',
     price: Number(row.price) || 0,
     proPrice: Number(row.pro_price) || 0,
@@ -58,7 +88,7 @@ export function normalizeProduct(row) {
     skinType: row.skin_type || '',
     ingredients: row.ingredients || '',
     features: Array.isArray(row.features) ? row.features : [],
-    variants: Array.isArray(row.variants) ? row.variants : [],
+    variants,
     sourceFolderName: row.source_folder_name || '',
     importedFromDrive: !!row.imported_from_drive,
     listImageScale: normalizeProductImageScale(row.product_list_image_scale),

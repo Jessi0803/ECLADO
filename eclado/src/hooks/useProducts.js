@@ -7,7 +7,6 @@ import {
   groupProductVariants,
   isProfessionalMember,
   mergeProductsWithStock,
-  normalizeJsonArray,
 } from '../domain/catalog.jsx';
 import { fetchProductRows } from '../services/catalogData.js';
 import {
@@ -32,19 +31,13 @@ export default function useProducts(user, setCart) {
         return;
       }
       if (variantError) {
-        console.warn(
-          '[ECLADO] 無法載入 product_variants（改用 products.variants）：',
-          variantError.message || variantError,
-        );
+        console.error('[ECLADO] 無法載入 product_variants：', variantError.message || variantError);
+        setProducts([]);
+        setCart([]);
+        return;
       }
-      const variantMap = groupProductVariants(variantError ? [] : variantRows);
-      const rowsWithVariants = (data || []).map(row => ({
-        ...row,
-        variants: normalizeJsonArray(row.variants).length
-          ? row.variants
-          : (variantMap.get(Number(row.id)) || []),
-      }));
-      const loadedProducts = mergeProductsWithStock(PRODUCTS, rowsWithVariants);
+      const variantMap = groupProductVariants(variantRows);
+      const loadedProducts = mergeProductsWithStock(PRODUCTS, data || [], variantMap);
       setProducts(loadedProducts);
       setCart(previous => previous.map(item => {
         const product = loadedProducts.find(current => (

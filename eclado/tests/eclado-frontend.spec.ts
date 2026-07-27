@@ -1,5 +1,14 @@
 import { expect, test } from '@playwright/test';
-import { activePromotion, mockEcladoApis, mockProducts, type MockAuthUser } from './support/eclado-mocks';
+import {
+  activePromotion,
+  adminApplicationRows,
+  adminOrderRows,
+  adminProductRows,
+  adminProfileRows,
+  mockEcladoApis,
+  mockProducts,
+  type MockAuthUser,
+} from './support/eclado-mocks';
 
 test.beforeEach(async ({ page }) => {
   await mockEcladoApis(page);
@@ -100,10 +109,85 @@ test('商城瀏覽、商品詳情、一般會員價格與院線商品限制', as
   await expect(page.getByRole('button', { name: /加入購物車/ })).toHaveCount(0);
 });
 
+test('商品新分類正確，院線商品不重複出現在一般分類', async ({ page }) => {
+  await page.goto('/shop');
+
+  await page.getByRole('button', { name: '安瓶精華', exact: true }).click();
+  await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();
+  await expect(page.getByText('急救修護安瓶組').first()).toBeVisible();
+  await expect(page.getByText('NK細胞活化安瓶').first()).toHaveCount(0);
+
+  await page.getByRole('button', { name: '院線課程儀器（含試用包）', exact: true }).click();
+  await expect(page.getByText('NK細胞活化安瓶').first()).toBeVisible();
+  await expect(page.getByText('急救修護安瓶組').first()).toHaveCount(0);
+
+  await page.getByRole('button', { name: '其他', exact: true }).click();
+  await expect(page.getByText('此分類目前無商品')).toBeVisible();
+});
+
+test('後台以規格表格與交易式 RPC 儲存商品', async ({ page }) => {
+  let savedRequest: Record<string, any> | null = null;
+  const admin = authUser('ecladotaiwan@gmail.com');
+  await mockEcladoApis(page, {
+    authUser: admin,
+    products: adminProductRows,
+    productVariants: [
+      {
+        id: 201,
+        product_id: 2,
+        sku: 'SERUM-30',
+        size: '30ml',
+        price: 3980,
+        pro_price: 2980,
+        stock: 2,
+        is_default: true,
+        sort_order: 0,
+        active: true,
+      },
+    ],
+    orders: adminOrderRows,
+    profiles: adminProfileRows,
+    applications: adminApplicationRows,
+    onProductWithVariantsSave: request => { savedRequest = request; },
+  });
+
+  await page.goto('/admin');
+    await page.getByRole('button', { name: /商品 & 庫存/ }).click();
+  const productRow = page.getByRole('row').filter({ hasText: '胜肽修護精華液' });
+  await productRow.getByRole('button', { name: '編輯' }).click();
+
+  await expect(page.getByText('商品規格', { exact: true })).toBeVisible();
+  await expect(page.locator('#productSize')).toHaveCount(0);
+  await expect(page.locator('#productPrice')).toHaveCount(0);
+  await expect(page.locator('#productStock')).toHaveCount(0);
+
+  await page.getByRole('button', { name: '+ 新增規格' }).click();
+  await page.getByLabel('規格 2 名稱').fill('100ml');
+  await page.getByLabel('規格 2 SKU').fill('SERUM-100');
+  await page.getByLabel('規格 2 市場價').fill('8800');
+  await page.getByLabel('規格 2 專業價').fill('6600');
+  await page.getByLabel('規格 2 庫存').fill('5');
+  await page.getByRole('button', { name: '儲存', exact: true }).click();
+
+  await expect.poll(() => savedRequest).not.toBeNull();
+  expect(savedRequest?.p_product?.id).toBe(2);
+  expect(savedRequest?.p_variants).toHaveLength(2);
+  expect(savedRequest?.p_variants?.[1]).toMatchObject({
+    sku: 'SERUM-100',
+    size: '100ml',
+    price: 8800,
+    pro_price: 6600,
+    stock: 5,
+    is_default: false,
+    sort_order: 1,
+    active: true,
+  });
+});
+
 for (const scenario of [
-  { role: 'pro', label: '專業價', priceLabel: 'NT$ 2,980', proOnlyButton: true },
-  { role: 'instructor', label: '師資價・專業價7折', priceLabel: 'NT$ 2,086', proOnlyButton: true },
-  { role: 'distributor', label: '經銷價・專業價65折', priceLabel: 'NT$ 1,937', proOnlyButton: true },
+  { role: 'pro', noticeLabel: '美容師', label: '專業價', priceLabel: 'NT$ 2,980', proOnlyButton: true },
+  { role: 'instructor', noticeLabel: '師資', label: '師資價・專業價7折', priceLabel: 'NT$ 2,086', proOnlyButton: true },
+  { role: 'distributor', noticeLabel: '經銷商', label: '經銷價・專業價65折', priceLabel: 'NT$ 1,937', proOnlyButton: true },
 ]) {
   test(`會員角色價格：${scenario.role} 看到對應價格並可購買院線商品`, async ({ page }) => {
     await mockEcladoApis(page, {
@@ -118,8 +202,49 @@ for (const scenario of [
     await page.getByText('NK細胞活化安瓶').first().click();
     await expect(page.getByText('院線專業集中護理')).toBeVisible();
     await expect(page.getByRole('button', { name: /加入購物車/ })).toBeVisible();
+
+    await page.goto('/info');
+    await expect(page.getByRole('button', { name: '會員購物須知', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: '會員購物須知', exact: true }).click();
+    await expect(page.getByRole('heading', { name: `${scenario.noticeLabel}－購物規範` })).toBeVisible();
   });
 }
+
+test('一般會員不顯示會員購物須知', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: authUser('consumer@example.com'),
+    profiles: [profile('consumer', 'consumer@example.com')],
+  });
+
+  await page.goto('/info');
+  await expect(page.getByRole('button', { name: '會員購物須知', exact: true })).toHaveCount(0);
+});
+
+test('專業會員購物車即時提示最低訂購與免運門檻', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: authUser('pro@example.com'),
+    profiles: [profile('pro', 'pro@example.com')],
+    promotions: [],
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+
+  await expect(page.getByRole('status')).toHaveText('尚差 NT$2,020 可達最低訂購門檻。');
+  await expect(page.getByRole('button', { name: '前往結帳' })).toBeDisabled();
+
+  const increaseQuantity = page.getByRole('button', { name: '+' });
+  await increaseQuantity.click();
+  await expect(page.getByRole('status')).toHaveText('已符合下單資格，再消費 NT$4,040 即享免運。');
+
+  await increaseQuantity.click();
+  await increaseQuantity.click();
+  await expect(page.getByRole('status')).toHaveText('✓ 已享免運優惠。');
+  await expect(page.getByText('免運', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '前往結帳' })).toBeEnabled();
+});
 
 test('DB 的 is_pro_only=true 會讓原本公開商品變院線限定', async ({ page }) => {
   // 商品 id=2（胜肽修護精華液）在 PRODUCTS 常數裡 isProOnly=false
@@ -149,9 +274,16 @@ test('DB 的 price 覆蓋寫死的售價', async ({ page }) => {
 
 test('商品多容量規格可切換價格並分開加入購物車', async ({ page }) => {
   await mockEcladoApis(page, {
+    products: mockProducts.map(product => product.id === 2 ? {
+      ...product,
+      variants: [
+        { id: 'legacy-json', size: '舊 JSON 規格', price: 9999, proPrice: 8888, stock: 99, isDefault: true },
+      ],
+    } : product),
     productVariants: [
       { id: 201, product_id: 2, size: '30ml', price: 3980, pro_price: 2980, stock: 2, is_default: true, sort_order: 1, active: true },
       { id: 202, product_id: 2, size: '60ml', price: 6880, pro_price: 5200, stock: 4, is_default: false, sort_order: 2, active: true },
+      { id: 203, product_id: 2, size: '停用規格', price: 1, pro_price: 1, stock: 1, is_default: false, sort_order: 3, active: false },
     ],
     promotions: [],
   });
@@ -160,6 +292,8 @@ test('商品多容量規格可切換價格並分開加入購物車', async ({ pa
   await page.getByText('胜肽修護精華液').first().click();
   await expect(page.getByText('容量規格')).toBeVisible();
   await expect(page.getByRole('button', { name: '30ml' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '舊 JSON 規格' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '停用規格' })).toHaveCount(0);
   await page.getByRole('button', { name: '60ml' }).click();
   await expect(page.getByText('Peptide Repair Serum · 60ml')).toBeVisible();
   await expect(page.getByText('NT$ 6,880').first()).toBeVisible();

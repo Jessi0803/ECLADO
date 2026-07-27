@@ -100,7 +100,6 @@ declare
   requested_item record;
   product_row public.products%rowtype;
   variant_row public.product_variants%rowtype;
-  json_variant jsonb;
   requested_variant text;
   quantity integer;
   list_price numeric;
@@ -178,12 +177,15 @@ begin
     end if;
 
     requested_variant := nullif(trim(requested_item.value ->> 'variant_id'), '');
-    list_price := product_row.price;
-    professional_price := product_row.pro_price;
-    item_stock := greatest(coalesce(product_row.stock, 0), 0);
-    item_size := product_row.size;
-
-    if requested_variant is not null then
+    if requested_variant is null then
+      select *
+        into variant_row
+        from public.product_variants
+        where product_id = product_row.id
+          and active = true
+          and is_default = true
+        limit 1;
+    else
       select *
         into variant_row
         from public.product_variants
@@ -191,45 +193,23 @@ begin
           and active = true
           and (
             id::text = requested_variant
-            or coalesce(sku, '') = requested_variant
+            or sku = requested_variant
             or size = requested_variant
           )
         order by is_default desc, sort_order asc, id asc
         limit 1;
-
-      if found then
-        list_price := variant_row.price;
-        professional_price := variant_row.pro_price;
-        item_stock := greatest(coalesce(variant_row.stock, product_row.stock, 0), 0);
-        item_size := variant_row.size;
-      else
-        select value
-          into json_variant
-          from jsonb_array_elements(coalesce(product_row.variants, '[]'::jsonb))
-          where coalesce(value ->> 'id', value ->> 'size', '') = requested_variant
-          limit 1;
-
-        if json_variant is null then
-          raise exception 'Product variant not found' using errcode = 'P0002';
-        end if;
-
-        list_price := coalesce(
-          nullif(json_variant ->> 'price', '')::numeric,
-          product_row.price
-        );
-        professional_price := coalesce(
-          nullif(json_variant ->> 'proPrice', '')::numeric,
-          nullif(json_variant ->> 'pro_price', '')::numeric,
-          product_row.pro_price
-        );
-        item_stock := greatest(coalesce(
-          nullif(json_variant ->> 'stock', '')::integer,
-          product_row.stock,
-          0
-        ), 0);
-        item_size := coalesce(nullif(json_variant ->> 'size', ''), product_row.size);
-      end if;
     end if;
+
+    if not found then
+      raise exception 'Active product variant not found for product %', product_row.id
+        using errcode = 'P0002';
+    end if;
+
+    requested_variant := variant_row.id::text;
+    list_price := variant_row.price;
+    professional_price := variant_row.pro_price;
+    item_stock := greatest(coalesce(variant_row.stock, 0), 0);
+    item_size := variant_row.size;
 
     if tier.professional_price_multiplier is null then
       unit_price := list_price;
@@ -340,12 +320,25 @@ begin
     selected_promotion_final_subtotal := 0;
   end if;
 
-  shipping_amount := public.calculate_order_shipping(order_items);
-
   discount_amount := least(greatest(coalesce(discount_amount, 0), 0), subtotal_amount);
+  if member_role in ('pro', 'instructor', 'distributor')
+    and subtotal_amount - discount_amount < 5000
+  then
+    raise exception 'Professional member order minimum is TWD 5000'
+      using errcode = '22023';
+  end if;
+
+  if member_role in ('pro', 'instructor', 'distributor')
+    and subtotal_amount - discount_amount >= 10000
+  then
+    shipping_amount := 0;
+  else
+    shipping_amount := public.calculate_order_shipping(order_items);
+  end if;
+
   total_amount := subtotal_amount - discount_amount + shipping_amount;
   pricing_snapshot := jsonb_build_object(
-    'version', 1,
+    'version', 2,
     'calculated_at', clock_timestamp(),
     'currency', 'TWD',
     'member_role', member_role,
@@ -367,9 +360,14 @@ begin
     'discount', discount_amount,
     'final_subtotal', subtotal_amount - discount_amount,
     'shipping_rule', jsonb_build_object(
-      'version', 1,
-      'code', 'test-product-only-free',
+      'version', 2,
+      'code', case
+        when member_role in ('pro', 'instructor', 'distributor') then 'professional-threshold'
+        else 'standard'
+      end,
       'standard_fee', 120,
+      'professional_minimum', 5000,
+      'professional_free_shipping_threshold', 10000,
       'free_product_id', 9
     ),
     'shipping', shipping_amount,

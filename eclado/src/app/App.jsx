@@ -105,7 +105,7 @@ export default function App() {
       case 'professional-apply': return <ProfessionalApplicationPage setPage={setPage} user={user} authReady={authReady} onUserUpdated={refreshUser} />;
       case 'account':  return <AccountPage user={user} setPage={setPage} onSignOut={handleSignOut} />;
       case 'about':    return <AboutPage />;
-      case 'info':     return <InfoPage />;
+      case 'info':     return <InfoPage user={user} />;
       case 'line-callback': return <LineCallbackPage />;
       case 'privacy':  return <PrivacyPage />;
       case 'contact':  return <ContactPage />;

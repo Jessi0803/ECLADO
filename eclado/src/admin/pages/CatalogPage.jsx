@@ -1,13 +1,10 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { supabase } from '../../services/supabase.js';
+import React, { useState } from 'react';
 import { normalizeProductImageScale } from '../domain/mappers.js';
 
-const PRODUCT_CATEGORIES = ['清潔卸妝', '化妝水凝膠', '安瓶精華', '乳霜修護', '面膜護理', '防曬底妝', '院線課程儀器'];
+const PRODUCT_CATEGORIES = ['清潔卸妝', '化妝水', '安瓶精華', '乳霜', '面膜', '防曬底妝', '其他', '院線課程儀器（含試用包）'];
 const MAX_PRODUCT_IMAGE_BYTES = 2 * 1024 * 1024;
 
-export default function Catalog({ products, setProducts, onCreateProduct, onArchiveProduct, onRestoreProduct }) {
-  const [stockEditId, setStockEditId] = useState(null);
-  const [stockVal, setStockVal] = useState('');
+export default function Catalog({ products, setProducts, onSaveProduct, onArchiveProduct, onRestoreProduct }) {
   const [editing, setEditing] = useState(null); // product being edited (draft copy)
   const [listMode, setListMode] = useState('active');
   const [stockFilter, setStockFilter] = useState('all');
@@ -31,17 +28,12 @@ export default function Catalog({ products, setProducts, onCreateProduct, onArch
   const inp = { width: '100%', border: 'none', borderBottom: '1px solid var(--border)', padding: '8px 0', fontSize: 13, background: 'none', color: 'var(--dark)', outline: 'none', boxSizing: 'border-box' };
   const ta  = { ...inp, resize: 'vertical', minHeight: 72, padding: '6px 0' };
 
-  function saveStock(id) {
-    const val = parseInt(stockVal);
-    if (!isNaN(val) && val >= 0) {
-      setProducts(prev => prev.map(p => p.id === id ? { ...p, stock: val } : p));
-    }
-    setStockEditId(null);
-  }
-
   function openEdit(p) {
     setError('');
-    setEditing({ ...p });
+    setEditing({
+      ...p,
+      variants: (p.variants || []).map(variant => ({ ...variant })),
+    });
   }
 
   function openNew() {
@@ -51,10 +43,6 @@ export default function Catalog({ products, setProducts, onCreateProduct, onArch
       name: '',
       nameZh: '',
       category: PRODUCT_CATEGORIES[0],
-      size: '',
-      price: 0,
-      proPrice: 0,
-      stock: 0,
       minStock: 3,
       isProOnly: false,
       img: '',
@@ -63,7 +51,17 @@ export default function Catalog({ products, setProducts, onCreateProduct, onArch
       skinType: '',
       ingredients: '',
       features: [],
-      variants: [],
+      variants: [{
+        id: `new-${Date.now()}`,
+        sku: '',
+        size: '',
+        price: 0,
+        proPrice: 0,
+        stock: 0,
+        isDefault: true,
+        sortOrder: 0,
+        active: true,
+      }],
       sourceFolderName: '',
       importedFromDrive: false,
       listImageScale: null,
@@ -81,34 +79,67 @@ export default function Catalog({ products, setProducts, onCreateProduct, onArch
     setEditing(prev => ({ ...prev, imageUrls }));
   }
 
-  function variantsToLines(variants = []) {
-    return variants.map(v => [v.size || '', v.price ?? '', v.proPrice ?? v.pro_price ?? '', v.stock ?? ''].join(' | ')).join('\n');
-  }
-
-  function setVariantLines(e) {
-    const variants = e.target.value.split('\n').map((line, index) => {
-      const [size = '', price = '', proPrice = '', stock = ''] = line.split('|').map(part => part.trim());
-      if (!size && !price && !proPrice && !stock) return null;
-      return {
-        id: size || `variant-${index + 1}`,
-        size,
-        price: Number(price) || 0,
-        proPrice: Number(proPrice) || 0,
-        stock: stock === '' ? null : Math.max(0, Number(stock) || 0),
-        isDefault: index === 0,
-      };
-    }).filter(Boolean);
-    const first = variants[0];
+  function updateVariant(index, field, value) {
     setEditing(prev => ({
       ...prev,
-      variants,
-      ...(first ? {
-        size: first.size || prev.size,
-        price: first.price || prev.price,
-        proPrice: first.proPrice || prev.proPrice,
-        stock: first.stock ?? prev.stock,
-      } : {}),
+      variants: prev.variants.map((variant, variantIndex) => (
+        variantIndex === index ? { ...variant, [field]: value } : variant
+      )),
     }));
+  }
+
+  function addVariant() {
+    setEditing(prev => ({
+      ...prev,
+      variants: [
+        ...prev.variants,
+        {
+          id: `new-${Date.now()}-${prev.variants.length}`,
+          sku: '',
+          size: '',
+          price: 0,
+          proPrice: 0,
+          stock: 0,
+          isDefault: prev.variants.length === 0,
+          sortOrder: prev.variants.length,
+          active: true,
+        },
+      ],
+    }));
+  }
+
+  function removeVariant(index) {
+    setEditing(prev => {
+      const removed = prev.variants[index];
+      const variants = prev.variants.filter((_, variantIndex) => variantIndex !== index);
+      if (removed?.isDefault && variants.length > 0) {
+        const firstActive = variants.findIndex(variant => variant.active !== false);
+        const nextDefault = firstActive >= 0 ? firstActive : 0;
+        variants[nextDefault] = { ...variants[nextDefault], active: true, isDefault: true };
+      }
+      return { ...prev, variants };
+    });
+  }
+
+  function setDefaultVariant(index) {
+    setEditing(prev => ({
+      ...prev,
+      variants: prev.variants.map((variant, variantIndex) => ({
+        ...variant,
+        active: variantIndex === index ? true : variant.active,
+        isDefault: variantIndex === index,
+      })),
+    }));
+  }
+
+  function moveVariant(index, direction) {
+    setEditing(prev => {
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= prev.variants.length) return prev;
+      const variants = [...prev.variants];
+      [variants[index], variants[nextIndex]] = [variants[nextIndex], variants[index]];
+      return { ...prev, variants };
+    });
   }
 
   async function setImageFile(e) {
@@ -142,26 +173,51 @@ export default function Catalog({ products, setProducts, onCreateProduct, onArch
       setError('請輸入中文名稱、英文名稱並選擇商品圖片');
       return;
     }
+    if (!editing.variants.length) {
+      setError('商品至少需要一個規格');
+      return;
+    }
+    const normalizedVariants = editing.variants.map((variant, index) => ({
+      ...variant,
+      sku: String(variant.sku || '').trim(),
+      size: String(variant.size || '').trim(),
+      price: Number(variant.price) || 0,
+      proPrice: Number(variant.proPrice) || 0,
+      stock: Math.max(0, Number(variant.stock) || 0),
+      sortOrder: index,
+      active: variant.active !== false,
+    }));
+    const invalidVariant = normalizedVariants.find(variant => (
+      !variant.sku || !variant.size || variant.price < 0 || variant.proPrice < 0 || variant.stock < 0
+    ));
+    if (invalidVariant) {
+      setError('每個規格都必須填寫 SKU、規格名稱、非負價格與庫存');
+      return;
+    }
+    const activeDefaults = normalizedVariants.filter(variant => variant.active && variant.isDefault);
+    if (activeDefaults.length !== 1) {
+      setError('請指定一個啟用中的預設規格');
+      return;
+    }
+    const normalizedSkus = normalizedVariants.map(variant => variant.sku.toLowerCase());
+    if (new Set(normalizedSkus).size !== normalizedSkus.length) {
+      setError('同一商品的 SKU 不可重複');
+      return;
+    }
+
     const updated = {
       ...editing,
-      price: Number(editing.price) || 0,
-      proPrice: Number(editing.proPrice) || 0,
-      stock: Math.max(0, Number(editing.stock) || 0),
+      variants: normalizedVariants,
       minStock: Math.max(0, Number(editing.minStock) || 0),
       listImageScale: normalizeProductImageScale(editing.listImageScale),
     };
-    if (editing.isNew) {
-      setSaving(true);
-      const saveError = await onCreateProduct(updated);
-      setSaving(false);
-      if (saveError) {
-        setError(saveError);
-        return;
-      }
-      setEditing(null);
+    setSaving(true);
+    const saveError = await onSaveProduct(updated);
+    setSaving(false);
+    if (saveError) {
+      setError(saveError);
       return;
     }
-    setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
     setEditing(null);
   }
 
@@ -331,18 +387,7 @@ export default function Catalog({ products, setProducts, onCreateProduct, onArch
                         </span>
                       </td>
                       <td style={{ padding: '13px 14px' }}>
-                        {stockEditId === p.id ? (
-                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                            <input type="number" value={stockVal} onChange={e => setStockVal(e.target.value)}
-                              style={{ width: 60, padding: '4px 8px', border: '1px solid var(--dark)', fontSize: 13, outline: 'none' }}
-                              autoFocus
-                              onKeyDown={e => { if (e.key === 'Enter') saveStock(p.id); if (e.key === 'Escape') setStockEditId(null); }} />
-                            <button onClick={() => saveStock(p.id)} style={{ padding: '4px 8px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 11, cursor: 'pointer' }}>✓</button>
-                            <button onClick={() => setStockEditId(null)} style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--border)', fontSize: 11, cursor: 'pointer', color: 'var(--mid)' }}>✗</button>
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: 15, fontWeight: 600, color: p.stock === 0 ? 'var(--red)' : isLow ? 'var(--yellow)' : 'var(--dark)' }}>{p.stock}</span>
-                        )}
+                        <span style={{ fontSize: 15, fontWeight: 600, color: p.stock === 0 ? 'var(--red)' : isLow ? 'var(--yellow)' : 'var(--dark)' }}>{p.stock}</span>
                       </td>
                       <td style={{ padding: '13px 14px' }}>
                         {p.active === false
@@ -355,8 +400,6 @@ export default function Catalog({ products, setProducts, onCreateProduct, onArch
                       </td>
                       <td style={{ padding: '13px 14px' }}>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          <button onClick={() => { setStockEditId(p.id); setStockVal(String(p.stock)); }}
-                            style={{ padding: '5px 12px', fontSize: 11, background: 'none', border: '1px solid var(--border)', color: 'var(--dark)', cursor: 'pointer' }}>修改庫存</button>
                           <button onClick={() => openEdit(p)}
                             style={{ padding: '5px 12px', fontSize: 11, background: isEditing ? 'var(--dark)' : 'none', border: '1px solid var(--border)', color: isEditing ? '#fff' : 'var(--dark)', cursor: 'pointer' }}>編輯</button>
                           {p.active === false ? (
@@ -408,28 +451,6 @@ export default function Catalog({ products, setProducts, onCreateProduct, onArch
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="productSize" style={lbl}>規格</label>
-                  <input id="productSize" value={editing.size} onChange={setF('size')} style={inp} />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <label htmlFor="productPrice" style={lbl}>售價 (NT$)</label>
-                  <input id="productPrice" type="number" value={editing.price} onChange={setF('price')} style={inp} />
-                </div>
-                <div>
-                  <label htmlFor="productProPrice" style={lbl}>專業價 (NT$)</label>
-                  <input id="productProPrice" type="number" value={editing.proPrice} onChange={setF('proPrice')} style={inp} />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <label htmlFor="productStock" style={lbl}>庫存數量</label>
-                  <input id="productStock" type="number" min="0" value={editing.stock} onChange={setF('stock')} style={inp} />
-                </div>
-                <div>
                   <label htmlFor="productMinStock" style={lbl}>低庫存警示值</label>
                   <input id="productMinStock" type="number" min="0" value={editing.minStock} onChange={setF('minStock')} style={inp} />
                 </div>
@@ -471,9 +492,78 @@ export default function Catalog({ products, setProducts, onCreateProduct, onArch
               </div>
 
               <div>
-                <label htmlFor="productVariants" style={lbl}>多容量設定（一行一個：容量 | 市場價 | 專業價 | 庫存）</label>
-                <textarea id="productVariants" value={variantsToLines(editing.variants || [])} onChange={setVariantLines} style={{ ...ta, minHeight: 96 }} placeholder="500ml | 2150 | 1100 | 10" />
-                <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 6 }}>第一行會同步為商品主規格，前台商品卡會優先顯示第一個規格。</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                  <div>
+                    <div style={{ ...lbl, marginBottom: 4 }}>商品規格</div>
+                    <p style={{ fontSize: 11, color: 'var(--mid)', margin: 0 }}>價格與庫存以規格資料為準；師資與經銷價由專業價套用會員倍率。</p>
+                  </div>
+                  <button type="button" onClick={addVariant}
+                    style={{ padding: '7px 12px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    + 新增規格
+                  </button>
+                </div>
+
+                <div style={{ overflowX: 'auto', border: '1px solid var(--border)' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
+                    <thead>
+                      <tr style={{ background: 'var(--off)', borderBottom: '1px solid var(--border)' }}>
+                        {['順序', '規格', 'SKU', '市場價', '專業價', '庫存', '預設', '啟用', '操作'].map(header => (
+                          <th key={header} style={{ padding: '9px 8px', textAlign: 'left', fontSize: 10, color: 'var(--mid)', fontWeight: 500, whiteSpace: 'nowrap' }}>{header}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {editing.variants.map((variant, index) => (
+                        <tr key={variant.id || index} style={{ borderBottom: '1px solid var(--border)', opacity: variant.active === false ? 0.55 : 1 }}>
+                          <td style={{ padding: '8px' }}>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button type="button" aria-label={`規格 ${index + 1} 上移`} disabled={index === 0} onClick={() => moveVariant(index, -1)}
+                                style={{ border: '1px solid var(--border)', background: 'none', cursor: index === 0 ? 'not-allowed' : 'pointer', color: 'var(--mid)', padding: '3px 6px' }}>↑</button>
+                              <button type="button" aria-label={`規格 ${index + 1} 下移`} disabled={index === editing.variants.length - 1} onClick={() => moveVariant(index, 1)}
+                                style={{ border: '1px solid var(--border)', background: 'none', cursor: index === editing.variants.length - 1 ? 'not-allowed' : 'pointer', color: 'var(--mid)', padding: '3px 6px' }}>↓</button>
+                            </div>
+                          </td>
+                          <td style={{ padding: '8px' }}>
+                            <input aria-label={`規格 ${index + 1} 名稱`} value={variant.size} onChange={e => updateVariant(index, 'size', e.target.value)}
+                              style={{ ...inp, minWidth: 110 }} placeholder="例如 500ml" />
+                          </td>
+                          <td style={{ padding: '8px' }}>
+                            <input aria-label={`規格 ${index + 1} SKU`} value={variant.sku || ''} onChange={e => updateVariant(index, 'sku', e.target.value)}
+                              style={{ ...inp, minWidth: 120 }} placeholder="例如 PHA-500" />
+                          </td>
+                          <td style={{ padding: '8px' }}>
+                            <input aria-label={`規格 ${index + 1} 市場價`} type="number" min="0" value={variant.price} onChange={e => updateVariant(index, 'price', e.target.value)}
+                              style={{ ...inp, width: 82 }} />
+                          </td>
+                          <td style={{ padding: '8px' }}>
+                            <input aria-label={`規格 ${index + 1} 專業價`} type="number" min="0" value={variant.proPrice} onChange={e => updateVariant(index, 'proPrice', e.target.value)}
+                              style={{ ...inp, width: 82 }} />
+                          </td>
+                          <td style={{ padding: '8px' }}>
+                            <input aria-label={`規格 ${index + 1} 庫存`} type="number" min="0" value={variant.stock} onChange={e => updateVariant(index, 'stock', e.target.value)}
+                              style={{ ...inp, width: 70 }} />
+                          </td>
+                          <td style={{ padding: '8px', textAlign: 'center' }}>
+                            <input aria-label={`規格 ${index + 1} 設為預設`} type="radio" name="defaultVariant" checked={!!variant.isDefault}
+                              onChange={() => setDefaultVariant(index)} />
+                          </td>
+                          <td style={{ padding: '8px', textAlign: 'center' }}>
+                            <input aria-label={`規格 ${index + 1} 啟用`} type="checkbox" checked={variant.active !== false}
+                              disabled={!!variant.isDefault}
+                              onChange={e => updateVariant(index, 'active', e.target.checked)} />
+                          </td>
+                          <td style={{ padding: '8px' }}>
+                            <button type="button" onClick={() => removeVariant(index)} disabled={editing.variants.length === 1}
+                              style={{ padding: '5px 9px', background: 'none', border: '1px solid var(--border)', color: 'var(--mid)', fontSize: 10, cursor: editing.variants.length === 1 ? 'not-allowed' : 'pointer' }}>
+                              移除
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 7 }}>移除既有規格後，資料庫會將它停用並保留歷史紀錄；預設規格不可停用。</p>
               </div>
 
               <div>

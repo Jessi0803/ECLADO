@@ -11,6 +11,7 @@ import {
   calculateDiscount,
   isPromotionLive,
 } from '../domain/promotions.js';
+import { getProfessionalOrderProgress } from '../domain/memberShopping.js';
 import { calculateShipping } from '../domain/shipping.js';
 
 // ─── CART PAGE ────────────────────────────────────────────────────────────────
@@ -37,7 +38,8 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
     setPage('checkout');
   }
   const { subtotal, discount, finalSubtotal, promotion } = calculateDiscount(cart, promotions, user);
-  const shipping = calculateShipping(cart);
+  const professionalProgress = getProfessionalOrderProgress(finalSubtotal, user);
+  const shipping = calculateShipping(cart, user, finalSubtotal);
   const grandTotal = finalSubtotal + shipping;
 
   return (
@@ -87,6 +89,22 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
             </div>
             <div style={{ background:'var(--off-white)', padding:'28px', height:'fit-content' }}>
               <h3 style={{ fontFamily:'var(--font-display)', fontSize:18, fontWeight:400, marginBottom:20 }}>訂單摘要</h3>
+              {professionalProgress && (
+                <div
+                  role="status"
+                  style={{
+                    border:`1px solid ${professionalProgress.eligible ? 'var(--gold)' : '#b87855'}`,
+                    background:'var(--white)',
+                    padding:'12px 14px',
+                    marginBottom:18,
+                    fontSize:12,
+                    lineHeight:1.65,
+                    color: professionalProgress.eligible ? 'var(--dark)' : '#8a4c2d',
+                  }}
+                >
+                  {professionalProgress.message}
+                </div>
+              )}
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13 }}><span>小計</span><span style={{ fontFamily:'var(--font-display)' }}>NT$ {subtotal.toLocaleString()}</span></div>
               {discount > 0 && promotion && (
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13, color:'var(--gold)' }}>
@@ -103,9 +121,9 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
                 <span style={{ fontSize:14 }}>合計</span>
                 <span style={{ fontFamily:'var(--font-display)', fontSize:18 }}>NT$ {grandTotal.toLocaleString()}</span>
               </div>
-              <button onClick={handleCheckoutClick} style={{ width:'100%', background:'var(--black)', color:'var(--white)', border:'none', padding:'15px', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500 }}
-                onMouseEnter={e=>e.target.style.background='#333'}
-                onMouseLeave={e=>e.target.style.background='var(--black)'}
+              <button disabled={professionalProgress?.eligible === false} onClick={handleCheckoutClick} style={{ width:'100%', background: professionalProgress?.eligible === false ? 'var(--mid)' : 'var(--black)', color:'var(--white)', border:'none', padding:'15px', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: professionalProgress?.eligible === false ? 'not-allowed' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500 }}
+                onMouseEnter={e=>e.target.style.background=professionalProgress?.eligible === false ? 'var(--mid)' : '#333'}
+                onMouseLeave={e=>e.target.style.background=professionalProgress?.eligible === false ? 'var(--mid)' : 'var(--black)'}
               >前往結帳</button>
               <p style={{ textAlign:'center', fontSize:11, color:'var(--dark)', marginTop:14 }}>支援：虛擬帳號匯款 / 信用卡 / Apple Pay / Google Pay</p>
             </div>

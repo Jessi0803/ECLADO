@@ -46,10 +46,11 @@ export default function AdminApp({ adminEmail, onSignOut }) {
   async function fetchAll() {
     setApplicationsLoading(true);
     try {
-      const [ordersRes, profilesRes, productsRes, applicationsRes] = await Promise.all([
+      const [ordersRes, profilesRes, productsRes, variantsRes, applicationsRes] = await Promise.all([
         supabase.from('orders').select('*').order('created_at', { ascending: false }),
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
         supabase.from('products').select('*').order('id', { ascending: true }),
+        supabase.from('product_variants').select('*').order('sort_order', { ascending: true }),
         supabase.from('professional_applications').select('*').order('created_at', { ascending: false }),
       ]);
       if (ordersRes.error) throw ordersRes.error;
@@ -84,7 +85,23 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       setMembers(allMembers.length > 0 ? allMembers : INIT_MEMBERS);
 
       if (!productsRes.error) {
-        setProducts((productsRes.data || []).map(normalizeProduct));
+        const variantsByProduct = (variantsRes.error ? [] : (variantsRes.data || [])).reduce((map, variant) => {
+          const productId = Number(variant.product_id);
+          if (!map.has(productId)) map.set(productId, []);
+          map.get(productId).push(variant);
+          return map;
+        }, new Map());
+        setProducts((productsRes.data || []).map(row => (
+          normalizeProduct(row, variantsRes.error ? null : (variantsByProduct.get(Number(row.id)) || []))
+        )));
+      }
+      if (productsRes.error) {
+        setLoadError('商品庫存尚未連接 Supabase products 表，請先執行 supabase-products.sql；目前顯示本機示範庫存。');
+      } else if (variantsRes.error) {
+        console.error('product variants fetch failed', variantsRes.error);
+        setLoadError('無法載入商品規格：' + (variantsRes.error.message || '請確認已執行規格資料表 migration'));
+      } else {
+        setLoadError('');
       }
       if (applicationsRes.error) {
         console.error('applications fetch failed', applicationsRes.error);
@@ -95,7 +112,6 @@ export default function AdminApp({ adminEmail, onSignOut }) {
         setApplicationsError('');
       }
 
-      setLoadError(productsRes.error ? '商品庫存尚未連接 Supabase products 表，請先執行 supabase-products.sql；目前顯示本機示範庫存。' : '');
     } catch (err) {
       console.error('fetch failed', err);
       setLoadError('無法連接 Supabase（' + (err.message || '') + '），目前顯示本機示範資料。');
@@ -112,6 +128,7 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'product_variants' }, () => fetchAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'professional_applications' }, () => fetchAll())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -157,24 +174,47 @@ export default function AdminApp({ adminEmail, onSignOut }) {
     });
   }
 
-  async function createProduct(product) {
-    const { data: latestProducts, error: idError } = await supabase
-      .from('products')
-      .select('id')
-      .order('id', { ascending: false })
-      .limit(1);
-    if (idError) {
-      return '新增商品失敗：無法取得商品編號。';
-    }
-    const nextId = Number(latestProducts?.[0]?.id || 0) + 1;
-    const created = { ...product, id: nextId, active: true };
-    delete created.isNew;
-    const { error } = await supabase.from('products').insert({ id: nextId, ...productToRow(created) });
+  async function saveProductWithVariants(product) {
+    const productPayload = {
+      ...(product.id ? { id: product.id } : {}),
+      name: product.name || '',
+      name_zh: product.nameZh || '',
+      category: product.category || '',
+      min_stock: Math.max(0, Number(product.minStock) || 0),
+      is_pro_only: !!product.isProOnly,
+      image_url: product.img || null,
+      image_urls: Array.isArray(product.imageUrls) ? product.imageUrls : [],
+      description: product.desc || '',
+      skin_type: product.skinType || '',
+      ingredients: product.ingredients || '',
+      features: Array.isArray(product.features) ? product.features : [],
+      source_folder_name: product.sourceFolderName || null,
+      imported_from_drive: !!product.importedFromDrive,
+      product_list_image_scale: product.listImageScale || null,
+      active: product.active !== false,
+    };
+    const variantsPayload = (product.variants || []).map((variant, index) => ({
+      ...(/^[0-9]+$/.test(String(variant.id || '')) ? { id: String(variant.id) } : {}),
+      sku: String(variant.sku || '').trim(),
+      size: String(variant.size || '').trim(),
+      price: Number(variant.price) || 0,
+      pro_price: Number(variant.proPrice) || 0,
+      stock: Math.max(0, Number(variant.stock) || 0),
+      is_default: !!variant.isDefault,
+      sort_order: index,
+      active: variant.active !== false,
+    }));
+
+    const { data, error } = await supabase.rpc('save_product_with_variants', {
+      p_product: productPayload,
+      p_variants: variantsPayload,
+    });
     if (error) {
-      return '新增商品失敗：' + (error.message || '請稍後再試');
+      console.error('save product with variants failed', error);
+      return '儲存商品失敗：' + (error.message || '請稍後再試');
     }
-    setProducts(prev => [...prev, created].sort((a, b) => a.id - b.id));
-    return '';
+    await fetchAll();
+    return data?.product_id ? '' : '儲存商品失敗：後端回傳格式不完整';
   }
 
   async function archiveProduct(product) {
@@ -248,10 +288,10 @@ export default function AdminApp({ adminEmail, onSignOut }) {
     switch (page) {
       case 'dashboard': return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} />;
       case 'orders': return <Orders orders={orders} setOrders={setOrdersWithSync} />;
-      case 'catalog': return <Catalog products={products} setProducts={setProductsWithSync} onCreateProduct={createProduct} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} />;
+      case 'catalog': return <Catalog products={products} setProducts={setProductsWithSync} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} />;
       // 舊路徑相容，避免有人記住 /admin#products 之類的
       case 'products':
-      case 'inventory': return <Catalog products={products} setProducts={setProductsWithSync} onCreateProduct={createProduct} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} />;
+      case 'inventory': return <Catalog products={products} setProducts={setProductsWithSync} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} />;
       case 'promotions': return <Promotions products={activeProducts} />;
       case 'members': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onDeleteMember={deleteMemberWithSync} defaultFilter={membersDefaultFilter} />;
       case 'applications': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onDeleteMember={deleteMemberWithSync} defaultFilter="app_pending" />;

@@ -4,13 +4,39 @@ import {
   clearPendingInfoSection,
   getPendingInfoSection,
 } from '../app/infoNavigation.js';
+import { getProfessionalShoppingNotice } from '../domain/memberShopping.js';
 
 // ─── INFO PAGE ────────────────────────────────────────────────────────────────
-export default function InfoPage() {
-  const [active, setActive] = useState(getPendingInfoSection() || '退換貨說明');
+export default function InfoPage({ user }) {
+  const memberNotice = getProfessionalShoppingNotice(user);
+  const requestedSection = getPendingInfoSection();
+  const [active, setActive] = useState(
+    requestedSection === '會員購物須知' && !memberNotice
+      ? '退換貨說明'
+      : (requestedSection || '退換貨說明'),
+  );
   const infoContentRef = useRef(null);
   const isMobile = useIsMobile();
   const sections = {
+    ...(memberNotice ? {
+      '會員購物須知': {
+        title: `${memberNotice.label}－購物規範`,
+        content: [
+          {
+            q: '最低訂購金額',
+            a: `每筆訂單折扣後商品小計最低 NT$${memberNotice.minimum.toLocaleString()}，未達門檻時無法進入結帳。`,
+          },
+          {
+            q: '免運門檻',
+            a: `單筆訂單折扣後商品小計滿 NT$${memberNotice.freeShippingThreshold.toLocaleString()} 享免運優惠。`,
+          },
+          {
+            q: '會員優惠',
+            a: `${memberNotice.label}會員價格與專業會員優惠依公司公告為準；購物車會依目前資格即時計算價格與訂購門檻。`,
+          },
+        ],
+      },
+    } : {}),
     '退換貨說明': { title:'退換貨說明', content:[
       { q:'【商品驗收】', a:'為保障您我雙方權益，建議您於收到商品時，全程錄影開箱（一鏡到底），並確認商品內容物是否完整、外觀是否有異常。如有商品瑕疵、缺件、配送錯誤等情形，請於收到商品後 7 日內聯繫客服，以利協助處理。' },
       { q:'【退貨政策】', a:'依《消費者保護法》規定，消費者享有商品到貨次日起 7 日猶豫期（鑑賞期） 之權益（含例假日）。\n\n提醒您：猶豫期並非試用期。\n\n若您欲辦理退貨，請保持以下條件：\n商品為全新未使用狀態。\n商品本體、配件、贈品、包裝、說明書、保卡等內容完整。\n商品不得有人為使用痕跡、刮傷、髒污、異味、拆解或其他影響再次販售之情形。\n如因個人因素退貨，請妥善包裝後寄回，以避免運送途中造成商品損壞。' },
@@ -22,7 +48,12 @@ export default function InfoPage() {
     ]},
     '運送方式': { title:'運送方式', content:[
       { q:'配送方式', a:'全台宅配（順豐物流）。' },
-      { q:'運費說明', a:'全站統一運費 NT$ 120（宅配到府，順豐物流）。' },
+      {
+        q:'運費說明',
+        a: memberNotice
+          ? `${memberNotice.label}會員單筆訂單折扣後商品小計滿 NT$${memberNotice.freeShippingThreshold.toLocaleString()} 免運；未達免運門檻收取 NT$ 120。`
+          : '全站統一運費 NT$ 120（宅配到府，順豐物流）。',
+      },
       { q:'出貨時間', a:'現貨商品於確認付款後 5 個工作天內出貨，每週二統一出貨。\n\n預購商品：下單後約 7-14 個工作天出貨，實際時間視備貨及運輸狀況而定。' },
       { q:'出貨通知', a:'商品出貨後系統將自動透過 LINE 發送出貨通知，內含物流追蹤連結。' },
     ]},
@@ -53,8 +84,8 @@ export default function InfoPage() {
     const handler = event => showSection(event.detail?.section);
     window.addEventListener('eclado-info-section', handler);
     return () => window.removeEventListener('eclado-info-section', handler);
-  }, []);
-  const current = sections[active];
+  }, [memberNotice?.label]);
+  const current = sections[active] || sections['退換貨說明'];
   return (
     <div style={{ paddingTop:68 }}>
       <div style={{ background:'var(--off-white)', padding: isMobile ? '48px 20px 0' : '64px 32px 0', borderBottom:'1px solid var(--light)' }}>

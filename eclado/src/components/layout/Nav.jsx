@@ -5,6 +5,7 @@ import {
   getMemberTier,
   isProfessionalMember,
 } from '../../domain/catalog.jsx';
+import { hasProfessionalOrderRules } from '../../domain/memberShopping.js';
 import {
   isAdminUser,
   openAdmin,
@@ -19,6 +20,11 @@ export default function Nav({ setPage, cartCount, user, setUser, page }) {
   const [productDetailOpen, setProductDetailOpen] = useState(false);
   const isMobile = useIsMobile();
   const darkMode = scrolled || page !== 'home' || productDetailOpen;
+  const navItems = NAV_ITEMS.map(item => (
+    item.label === '購物說明' && hasProfessionalOrderRules(user)
+      ? { ...item, children: ['會員購物須知', ...item.children] }
+      : item
+  ));
 
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 40);
@@ -56,7 +62,7 @@ export default function Nav({ setPage, cartCount, user, setUser, page }) {
 
           {/* Desktop nav */}
           <div className="nav-desktop">
-            {NAV_ITEMS.map(item => <DesktopNavItem key={item.label} item={item} scrolled={darkMode} setPage={setPage} user={user} />)}
+            {navItems.map(item => <DesktopNavItem key={item.label} item={item} scrolled={darkMode} setPage={setPage} user={user} />)}
           </div>
 
           {/* Desktop right */}
@@ -107,7 +113,7 @@ export default function Nav({ setPage, cartCount, user, setUser, page }) {
       {/* Mobile drawer */}
       {drawerOpen && (
         <div className="mobile-drawer">
-          {NAV_ITEMS.map(item => (
+          {navItems.map(item => (
             <MobileNavSection key={item.label} item={item} setPage={setPage} user={user} close={() => setDrawerOpen(false)} />
           ))}
           <div style={{ borderTop:'1px solid var(--light)', paddingTop:24, marginTop:8, display:'flex', flexDirection:'column', gap:16 }}>

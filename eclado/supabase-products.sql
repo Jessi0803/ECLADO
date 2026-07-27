@@ -36,13 +36,13 @@ alter table public.products add column if not exists imported_from_drive boolean
 create table if not exists public.product_variants (
   id bigserial primary key,
   product_id integer not null references public.products(id) on delete cascade,
-  sku text,
-  size text not null,
-  price numeric not null default 0,
-  pro_price numeric not null default 0,
-  stock integer check (stock is null or stock >= 0),
+  sku text not null,
+  size text not null check (btrim(size) <> ''),
+  price numeric not null default 0 check (price >= 0),
+  pro_price numeric not null default 0 check (pro_price >= 0),
+  stock integer not null default 0 check (stock >= 0),
   is_default boolean not null default false,
-  sort_order integer not null default 0,
+  sort_order integer not null default 0 check (sort_order >= 0),
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -50,6 +50,13 @@ create table if not exists public.product_variants (
 
 create index if not exists idx_product_variants_product_id
   on public.product_variants(product_id);
+
+create unique index if not exists product_variants_product_sku_unique
+  on public.product_variants (product_id, lower(sku));
+
+create unique index if not exists product_variants_one_default_per_product
+  on public.product_variants (product_id)
+  where is_default is true;
 
 drop trigger if exists trg_product_variants_updated_at on public.product_variants;
 create trigger trg_product_variants_updated_at

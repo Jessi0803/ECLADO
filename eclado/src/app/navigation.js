@@ -1,4 +1,4 @@
-export const NAV_LINKS = ['清潔卸妝', '化妝水凝膠', '安瓶精華', '乳霜修護', '面膜護理', '防曬底妝', '院線課程儀器'];
+export const NAV_LINKS = ['清潔卸妝', '化妝水', '安瓶精華', '乳霜', '面膜', '防曬底妝', '其他', '院線課程儀器（含試用包）'];
 export const PRODUCT_NAV_LINKS = ['所有產品', ...NAV_LINKS];
 export const NAV_ITEMS = [
   { label: '所有產品', children: PRODUCT_NAV_LINKS },

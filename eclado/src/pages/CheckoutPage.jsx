@@ -50,7 +50,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   // chooses the single best live promotion before any payment request is made.
   const { subtotal, discount, finalSubtotal, promotion } =
     calculateDiscount(cart, promotions, user);
-  const shipping = calculateShipping(cart);
+  const shipping = calculateShipping(cart, user, finalSubtotal);
   const total = finalSubtotal + shipping;
 
   const STEPS = ['收件資訊', '確認付款', '完成'];
