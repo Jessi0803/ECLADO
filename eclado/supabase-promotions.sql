@@ -31,34 +31,68 @@ create trigger trg_promotions_updated_at
   before update on public.promotions
   for each row execute function public.set_updated_at();
 
--- 2) RLS：所有人可讀可寫
---    注意：這個策略假設後台入口用密碼閘保護，
---    且一般人不知道 /admin 這個網址。如果要更嚴格，
---    之後可改為 service_role 或正規 Supabase 登入。
+-- 2) RLS：前台可讀，只有已登入的 ECLADO 管理員可寫
+create or replace function public.is_eclado_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, auth
+as $$
+  select lower(coalesce(auth.jwt() ->> 'email', '')) = any(array[
+    'baby90522@gmail.com',
+    'ecladotaiwan@gmail.com',
+    'k0919933386@gmail.com',
+    'line.u6f71cfa36c3fb2188f54396a5cb58882@ecladotaiwan.com'
+  ]);
+$$;
+
+revoke all on function public.is_eclado_admin() from public;
+grant execute on function public.is_eclado_admin() to authenticated;
+
 alter table public.promotions enable row level security;
 
 drop policy if exists "promotions_select_all" on public.promotions;
-create policy "promotions_select_all"
+drop policy if exists "promotions_select_live" on public.promotions;
+drop policy if exists "promotions_select_admin" on public.promotions;
+create policy "promotions_select_live"
   on public.promotions for select
-  using (true);
+  to anon, authenticated
+  using (
+    active = true
+    and (start_at is null or start_at <= now())
+    and (end_at is null or end_at > now())
+  );
+
+create policy "promotions_select_admin"
+  on public.promotions for select
+  to authenticated
+  using (public.is_eclado_admin());
 
 drop policy if exists "promotions_insert_auth" on public.promotions;
 drop policy if exists "promotions_insert_all" on public.promotions;
-create policy "promotions_insert_all"
+drop policy if exists "promotions_insert_admin" on public.promotions;
+create policy "promotions_insert_admin"
   on public.promotions for insert
-  with check (true);
+  to authenticated
+  with check (public.is_eclado_admin());
 
 drop policy if exists "promotions_update_auth" on public.promotions;
 drop policy if exists "promotions_update_all" on public.promotions;
-create policy "promotions_update_all"
+drop policy if exists "promotions_update_admin" on public.promotions;
+create policy "promotions_update_admin"
   on public.promotions for update
-  using (true) with check (true);
+  to authenticated
+  using (public.is_eclado_admin())
+  with check (public.is_eclado_admin());
 
 drop policy if exists "promotions_delete_auth" on public.promotions;
 drop policy if exists "promotions_delete_all" on public.promotions;
-create policy "promotions_delete_all"
+drop policy if exists "promotions_delete_admin" on public.promotions;
+create policy "promotions_delete_admin"
   on public.promotions for delete
-  using (true);
+  to authenticated
+  using (public.is_eclado_admin());
 
 -- 3) 開啟 realtime
 alter publication supabase_realtime add table public.promotions;

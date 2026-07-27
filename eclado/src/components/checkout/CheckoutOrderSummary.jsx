@@ -18,7 +18,9 @@ export default function CheckoutOrderSummary({ items, summary, user }) {
       )}
       <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:18 }}>
         {items.map(item => {
-          const unitPrice = getMemberPrice(item, user);
+          const unitPrice = item.unit_price == null
+            ? getMemberPrice(item, user)
+            : Number(item.unit_price);
           const fulfillment = getFulfillmentInfo(item);
           return (
             <div key={getCartKey(item)} style={{ display:'flex', gap:12, alignItems:'center' }}>

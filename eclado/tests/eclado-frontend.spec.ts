@@ -328,7 +328,7 @@ test('活動折扣可先減金額再打折', async ({ page }) => {
   await expect(page.getByText('NT$ 3,224')).toBeVisible();
 });
 
-test('活動不受 active 欄位影響，只依排程時間顯示活動商品', async ({ page }) => {
+test('active=false 的停用活動不會顯示或套用折扣', async ({ page }) => {
   await mockEcladoApis(page, {
     promotions: [{
       ...activePromotion,
@@ -341,8 +341,41 @@ test('活動不受 active 欄位影響，只依排程時間顯示活動商品', 
 
   await page.goto('/shop');
   await page.getByText('胜肽修護精華液').first().click();
-  await expect(page.getByText('限時優惠')).toBeVisible();
-  await expect(page.getByText('NT$ 3,582')).toBeVisible();
+  await expect(page.getByText('限時優惠')).toHaveCount(0);
+  await expect(page.getByText('NT$ 3,980').first()).toBeVisible();
+});
+
+test('多個活動符合時套用折抵金額最高的一個', async ({ page }) => {
+  await mockEcladoApis(page, {
+    promotions: [
+      { ...activePromotion, id: 'promo-rate', name: '九折活動', discount_rate: 0.9, discount_amount: 0 },
+      { ...activePromotion, id: 'promo-amount', name: '折五百活動', discount_rate: 1, discount_amount: 500 },
+    ],
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await expect(page.getByText('NT$ 3,480')).toBeVisible();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+  await expect(page.getByText('折五百活動')).toBeVisible();
+  await expect(page.getByText('NT$ 3,600')).toBeVisible();
+});
+
+test('異常折扣率與負折抵活動會被忽略', async ({ page }) => {
+  await mockEcladoApis(page, {
+    promotions: [{
+      ...activePromotion,
+      name: '異常折扣活動',
+      discount_rate: -1,
+      discount_amount: -100,
+    }],
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await expect(page.getByText('限時優惠')).toHaveCount(0);
+  await expect(page.getByText('NT$ 3,980').first()).toBeVisible();
 });
 
 test('尚未開始與已結束的活動不會套用折扣', async ({ page }) => {
@@ -421,6 +454,39 @@ test('結帳建立付款單但不寫入真實訂單或真金流', async ({ page 
   await expect(page.getByText('8071234567890123')).toBeVisible();
 });
 
+test('後端成交價與預覽不同時必須再次確認才建立付款單', async ({ page }) => {
+  const paymentRequests: Record<string, unknown>[] = [];
+  await mockEcladoApis(page, {
+    authoritativePriceDelta: 100,
+    onPaymentRequest: request => paymentRequests.push(request),
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+  await proceedToCheckout(page);
+
+  const checkoutInputs = page.locator('form input');
+  await checkoutInputs.nth(0).fill('價差確認測試');
+  await checkoutInputs.nth(1).fill('0912345678');
+  await checkoutInputs.nth(2).fill('price-change@example.com');
+  await page.getByPlaceholder('縣市').fill('台北市');
+  await page.getByPlaceholder('區域').fill('大安區');
+  await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('價差路 1 號');
+  await page.getByRole('button', { name: /繼續確認付款/ }).click();
+
+  await page.getByRole('button', { name: /^建立付款單$/ }).click();
+  await expect(page.getByRole('alert')).toContainText('成交金額已由後端更新');
+  await expect(page.getByText('付款單已建立')).toHaveCount(0);
+  expect(paymentRequests).toHaveLength(0);
+
+  await page.getByRole('button', { name: /確認更新後金額並建立付款單/ }).click();
+  await expect(page.getByText('付款單已建立')).toBeVisible();
+  expect(paymentRequests).toHaveLength(1);
+  expect(paymentRequests[0].amount).toBe(3792);
+});
+
 test('登入會員結帳會寫入訂單 payload 與 user_id，付款前不扣庫存', async ({ page }) => {
   let capturedOrder: Record<string, unknown> | null = null;
   const orderEmails: Record<string, unknown>[] = [];
@@ -458,7 +524,7 @@ test('登入會員結帳會寫入訂單 payload 與 user_id，付款前不扣庫
   expect(capturedOrder?.address).toContain('台北市');
   expect(capturedOrder?.status).toBe('awaiting_confirm');
   expect(capturedOrder?.total).toBe(3702);
-  expect(capturedOrder?.promotion_name).toBe(activePromotion.name);
+  expect(capturedOrder?.promotion_name).toBe('E2E 測試活動');
   const items = capturedOrder?.items as Array<Record<string, unknown>>;
   expect(items[0].stock_at_order).toBe(2);
   expect(orderEmails).toEqual([]);
@@ -501,8 +567,8 @@ test('信用卡、Apple Pay、Google Pay 會送出對應金流 payType', async (
     expect(paymentRequests.at(-1)?.payType).toBe(method.payType);
     expect(paymentRequests.at(-1)?.Param1).toBe(orderInserts.at(-1)?.id);
     expect(paymentRequests.at(-1)?.backendUrl).toContain(`orderNo=${encodeURIComponent(String(orderInserts.at(-1)?.id))}`);
+    expect(paymentRequests.at(-1)?.amount).toBe(orderInserts.at(-1)?.total);
     expect(orderInserts.at(-1)?.status).toBe('unpaid');
-    expect(String(orderInserts.at(-1)?.note || '')).toContain('pay_token:PAYTOKEN');
   }
 });
 
@@ -532,10 +598,12 @@ test('金流建單失敗時顯示錯誤且不進入付款完成畫面', async ({
   await expect(page.getByText('付款單已建立')).toHaveCount(0);
 });
 
-test('金流成功但訂單寫入失敗時顯示提醒', async ({ page }) => {
+test('權威訂單建立失敗時不建立付款單', async ({ page }) => {
+  const paymentRequests: Record<string, unknown>[] = [];
   await mockEcladoApis(page, {
     promotions: [],
     orderWriteError: '測試訂單寫入失敗',
+    onPaymentRequest: request => paymentRequests.push(request),
   });
 
   await page.goto('/shop');
@@ -555,9 +623,9 @@ test('金流成功但訂單寫入失敗時顯示提醒', async ({ page }) => {
   await page.getByRole('button', { name: /虛擬帳號匯款/ }).click();
   await page.getByRole('button', { name: /建立付款單/ }).click();
 
-  await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
-  await expect(page.getByText(/付款單已建立，但本站訂單寫入失敗：測試訂單寫入失敗/)).toBeVisible();
-  await expect(page.getByText('8071234567890123')).toBeVisible();
+  await expect(page.getByText(/付款單建立失敗.*測試訂單寫入失敗/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: '付款單已建立' })).toHaveCount(0);
+  expect(paymentRequests).toHaveLength(0);
 });
 
 test('購物車只存在瀏覽器記憶體，重新整理會清空', async ({ page }) => {

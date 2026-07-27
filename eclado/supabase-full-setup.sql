@@ -12,8 +12,7 @@
 -- 注意：
 --   1) Auth 使用者在 auth.users，不是 public 表。若要保留會員密碼，
 --      請用 Supabase 備份/CLI 搬 auth schema，不要只匯 profiles。
---   2) 目前前台與 admin.html 都使用 anon key 直接讀寫資料，所以 RLS
---      依照現有網站行為開放。之後若後台改成正式登入，建議再收緊 policy。
+--   2) 前台使用 anon key 讀取公開資料；後台必須以 Supabase Auth 管理員登入。
 -- ============================================================================
 
 create extension if not exists pgcrypto;
@@ -62,7 +61,7 @@ begin
     new.email,
     coalesce(new.raw_user_meta_data ->> 'name', split_part(new.email, '@', 1)),
     new.raw_user_meta_data ->> 'phone',
-    coalesce(new.raw_user_meta_data ->> 'role', 'consumer')
+    'consumer'
   )
   on conflict (id) do update set
     email = excluded.email,
@@ -138,6 +137,7 @@ create table if not exists public.orders (
   tracking text,
   user_id uuid references auth.users(id) on delete set null,
   payment_reminded_at timestamptz,
+  pricing_snapshot jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -178,6 +178,59 @@ alter table public.orders
   add column if not exists promotion_id uuid references public.promotions(id) on delete set null,
   add column if not exists promotion_name text;
 
+create or replace function public.protect_order_pricing_snapshot()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.items is distinct from old.items
+    or new.total is distinct from old.total
+    or new.subtotal is distinct from old.subtotal
+    or new.discount is distinct from old.discount
+    or new.type is distinct from old.type
+    or new.promotion_name is distinct from old.promotion_name
+    or new.pricing_snapshot is distinct from old.pricing_snapshot
+  then
+    raise exception 'Order pricing snapshot is immutable'
+      using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_protect_order_pricing_snapshot on public.orders;
+create trigger trg_protect_order_pricing_snapshot
+  before update on public.orders
+  for each row execute function public.protect_order_pricing_snapshot();
+
+comment on column public.orders.pricing_snapshot is
+  'Immutable versioned snapshot of authoritative item prices, promotion formula, shipping and total.';
+
+create or replace function public.calculate_order_shipping(p_items jsonb)
+returns numeric
+language sql
+immutable
+strict
+set search_path = public
+as $$
+  select case
+    when jsonb_array_length(p_items) > 0
+      and not exists (
+        select 1
+        from jsonb_array_elements(p_items) item
+        where (item ->> 'product_id')::integer <> 9
+      )
+    then 0::numeric
+    else 120::numeric
+  end;
+$$;
+
+revoke all on function public.calculate_order_shipping(jsonb) from public;
+
+comment on function public.calculate_order_shipping(jsonb) is
+  'Authoritative shipping rule v1: carts containing only product 9 are free; all other carts cost TWD 120.';
+
 -- 美容師專業會員申請
 create table if not exists public.professional_applications (
   id uuid primary key default gen_random_uuid(),
@@ -205,7 +258,26 @@ create trigger trg_professional_applications_updated_at
   before update on public.professional_applications
   for each row execute function public.set_updated_at();
 
--- RLS：依照目前網站架構開放 anon 讀寫
+-- 管理員權限由登入 JWT 的 email 在資料庫端判定，不能信任前端畫面。
+create or replace function public.is_eclado_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, auth
+as $$
+  select lower(coalesce(auth.jwt() ->> 'email', '')) = any(array[
+    'baby90522@gmail.com',
+    'ecladotaiwan@gmail.com',
+    'k0919933386@gmail.com',
+    'line.u6f71cfa36c3fb2188f54396a5cb58882@ecladotaiwan.com'
+  ]);
+$$;
+
+revoke all on function public.is_eclado_admin() from public;
+grant execute on function public.is_eclado_admin() to authenticated;
+
+-- RLS
 alter table public.profiles enable row level security;
 alter table public.products enable row level security;
 alter table public.orders enable row level security;
@@ -213,87 +285,117 @@ alter table public.promotions enable row level security;
 alter table public.professional_applications enable row level security;
 
 drop policy if exists "profiles_select_all" on public.profiles;
-create policy "profiles_select_all"
-  on public.profiles for select
-  using (true);
-
 drop policy if exists "profiles_insert_all" on public.profiles;
-create policy "profiles_insert_all"
-  on public.profiles for insert
-  with check (true);
-
 drop policy if exists "profiles_update_all" on public.profiles;
-create policy "profiles_update_all"
-  on public.profiles for update
-  using (true) with check (true);
+drop policy if exists "profiles_delete_all" on public.profiles;
+drop policy if exists "profiles_select_own" on public.profiles;
+drop policy if exists "profiles_select_admin" on public.profiles;
+create policy "profiles_select_own"
+  on public.profiles for select to authenticated
+  using (id = auth.uid());
+create policy "profiles_select_admin"
+  on public.profiles for select to authenticated
+  using (public.is_eclado_admin());
 
 drop policy if exists "products_select_all" on public.products;
-create policy "products_select_all"
-  on public.products for select
-  using (true);
-
 drop policy if exists "products_insert_all" on public.products;
-create policy "products_insert_all"
-  on public.products for insert
-  with check (true);
-
 drop policy if exists "products_update_all" on public.products;
-create policy "products_update_all"
-  on public.products for update
-  using (true) with check (true);
+drop policy if exists "products_delete_all" on public.products;
+drop policy if exists "products_select_active" on public.products;
+drop policy if exists "products_select_admin" on public.products;
+drop policy if exists "products_insert_admin" on public.products;
+drop policy if exists "products_update_admin" on public.products;
+create policy "products_select_active"
+  on public.products for select to anon, authenticated
+  using (active is true);
+create policy "products_select_admin"
+  on public.products for select to authenticated
+  using (public.is_eclado_admin());
+create policy "products_insert_admin"
+  on public.products for insert to authenticated
+  with check (public.is_eclado_admin());
+create policy "products_update_admin"
+  on public.products for update to authenticated
+  using (public.is_eclado_admin())
+  with check (public.is_eclado_admin());
 
 drop policy if exists "orders_select_all" on public.orders;
-create policy "orders_select_all"
-  on public.orders for select
-  using (true);
-
 drop policy if exists "orders_insert_all" on public.orders;
-create policy "orders_insert_all"
-  on public.orders for insert
-  with check (true);
-
 drop policy if exists "orders_update_all" on public.orders;
-create policy "orders_update_all"
-  on public.orders for update
-  using (true) with check (true);
+drop policy if exists "orders_delete_all" on public.orders;
+drop policy if exists "orders_select_own" on public.orders;
+drop policy if exists "orders_select_admin" on public.orders;
+drop policy if exists "orders_update_admin" on public.orders;
+create policy "orders_select_own"
+  on public.orders for select to authenticated
+  using (user_id = auth.uid());
+create policy "orders_select_admin"
+  on public.orders for select to authenticated
+  using (public.is_eclado_admin());
+create policy "orders_update_admin"
+  on public.orders for update to authenticated
+  using (public.is_eclado_admin())
+  with check (public.is_eclado_admin());
 
 drop policy if exists "promotions_select_all" on public.promotions;
-create policy "promotions_select_all"
+drop policy if exists "promotions_select_live" on public.promotions;
+drop policy if exists "promotions_select_admin" on public.promotions;
+create policy "promotions_select_live"
   on public.promotions for select
-  using (true);
+  to anon, authenticated
+  using (
+    active = true
+    and (start_at is null or start_at <= now())
+    and (end_at is null or end_at > now())
+  );
+
+create policy "promotions_select_admin"
+  on public.promotions for select
+  to authenticated
+  using (public.is_eclado_admin());
 
 drop policy if exists "promotions_insert_auth" on public.promotions;
 drop policy if exists "promotions_insert_all" on public.promotions;
-create policy "promotions_insert_all"
+drop policy if exists "promotions_insert_admin" on public.promotions;
+create policy "promotions_insert_admin"
   on public.promotions for insert
-  with check (true);
+  to authenticated
+  with check (public.is_eclado_admin());
 
 drop policy if exists "promotions_update_auth" on public.promotions;
 drop policy if exists "promotions_update_all" on public.promotions;
-create policy "promotions_update_all"
+drop policy if exists "promotions_update_admin" on public.promotions;
+create policy "promotions_update_admin"
   on public.promotions for update
-  using (true) with check (true);
+  to authenticated
+  using (public.is_eclado_admin())
+  with check (public.is_eclado_admin());
 
 drop policy if exists "promotions_delete_auth" on public.promotions;
 drop policy if exists "promotions_delete_all" on public.promotions;
-create policy "promotions_delete_all"
+drop policy if exists "promotions_delete_admin" on public.promotions;
+create policy "promotions_delete_admin"
   on public.promotions for delete
-  using (true);
+  to authenticated
+  using (public.is_eclado_admin());
 
 drop policy if exists "professional_applications_select_all" on public.professional_applications;
-create policy "professional_applications_select_all"
-  on public.professional_applications for select
-  using (true);
-
 drop policy if exists "professional_applications_insert_all" on public.professional_applications;
-create policy "professional_applications_insert_all"
-  on public.professional_applications for insert
-  with check (true);
-
 drop policy if exists "professional_applications_update_all" on public.professional_applications;
-create policy "professional_applications_update_all"
-  on public.professional_applications for update
-  using (true) with check (true);
+drop policy if exists "professional_applications_delete_all" on public.professional_applications;
+drop policy if exists "professional_applications_select_own" on public.professional_applications;
+drop policy if exists "professional_applications_select_admin" on public.professional_applications;
+drop policy if exists "professional_applications_update_admin" on public.professional_applications;
+create policy "professional_applications_select_own"
+  on public.professional_applications for select to authenticated
+  using (user_id = auth.uid());
+create policy "professional_applications_select_admin"
+  on public.professional_applications for select to authenticated
+  using (public.is_eclado_admin());
+create policy "professional_applications_update_admin"
+  on public.professional_applications for update to authenticated
+  using (public.is_eclado_admin())
+  with check (public.is_eclado_admin());
 
 -- Realtime：如果已加入 publication，第二次執行可能會提示已存在，可忽略。
 do $$

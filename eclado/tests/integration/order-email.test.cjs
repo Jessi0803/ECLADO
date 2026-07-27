@@ -8,10 +8,12 @@ test('order email sends order placed notice through Resend', async () => {
   const originalEnv = {
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     ORDER_EMAIL_FROM: process.env.ORDER_EMAIL_FROM,
+    INTERNAL_API_KEY: process.env.INTERNAL_API_KEY,
   };
 
   process.env.RESEND_API_KEY = 'test-resend-key';
   process.env.ORDER_EMAIL_FROM = 'ECLADO Test <test@example.com>';
+  process.env.INTERNAL_API_KEY = 'test-internal-key';
   global.fetch = async (url, options = {}) => {
     calls.push({ url: String(url), options });
     assert.equal(String(url), 'https://api.resend.com/emails');
@@ -31,6 +33,7 @@ test('order email sends order placed notice through Resend', async () => {
   try {
     await orderEmail({
       method: 'POST',
+      headers: { 'x-internal-api-key': 'test-internal-key' },
       body: {
         type: 'order_placed',
         email: 'buyer@example.com',
@@ -53,9 +56,11 @@ test('order email sends shipment notice with tracking link', async () => {
   const originalFetch = global.fetch;
   const originalEnv = {
     RESEND_API_KEY: process.env.RESEND_API_KEY,
+    INTERNAL_API_KEY: process.env.INTERNAL_API_KEY,
   };
 
   process.env.RESEND_API_KEY = 'test-resend-key';
+  process.env.INTERNAL_API_KEY = 'test-internal-key';
   global.fetch = async (url, options = {}) => {
     assert.equal(String(url), 'https://api.resend.com/emails');
     const body = JSON.parse(options.body);
@@ -71,6 +76,7 @@ test('order email sends shipment notice with tracking link', async () => {
   try {
     await orderEmail({
       method: 'POST',
+      headers: { 'x-internal-api-key': 'test-internal-key' },
       body: {
         type: 'shipment',
         email: 'buyer@example.com',
@@ -85,6 +91,97 @@ test('order email sends shipment notice with tracking link', async () => {
 
   assert.equal(res.statusCode, 200);
   assert.equal(res.jsonBody.status, 'sent');
+});
+
+test('order email rejects unauthenticated callers', async () => {
+  const originalKey = process.env.INTERNAL_API_KEY;
+  delete process.env.INTERNAL_API_KEY;
+  const res = createRes();
+
+  try {
+    await orderEmail({
+      method: 'POST',
+      headers: {},
+      body: { email: 'buyer@example.com', orderId: 'ORDER-DENIED-001' },
+    }, res);
+  } finally {
+    if (originalKey === undefined) delete process.env.INTERNAL_API_KEY;
+    else process.env.INTERNAL_API_KEY = originalKey;
+  }
+
+  assert.equal(res.statusCode, 401);
+  assert.deepEqual(res.jsonBody, { error: 'Unauthorized' });
+});
+
+test('order email accepts a verified administrator access token', async () => {
+  const originalFetch = global.fetch;
+  const originalEnv = {
+    INTERNAL_API_KEY: process.env.INTERNAL_API_KEY,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+  };
+  delete process.env.INTERNAL_API_KEY;
+  process.env.RESEND_API_KEY = 'test-resend-key';
+
+  global.fetch = async (url, options = {}) => {
+    if (String(url).endsWith('/auth/v1/user')) {
+      assert.equal(options.headers.Authorization, 'Bearer admin-access-token');
+      return textJsonResponse(200, { email: 'ecladotaiwan@gmail.com' });
+    }
+    if (String(url).endsWith('/rest/v1/rpc/is_eclado_admin')) {
+      assert.equal(options.headers.Authorization, 'Bearer admin-access-token');
+      return textJsonResponse(200, true);
+    }
+    if (String(url) === 'https://api.resend.com/emails') {
+      return textJsonResponse(200, { id: 'email_admin_001' });
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  const res = createRes();
+  try {
+    await orderEmail({
+      method: 'POST',
+      headers: { authorization: 'Bearer admin-access-token' },
+      body: { email: 'buyer@example.com', orderId: 'ORDER-ADMIN-001' },
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.jsonBody.id, 'email_admin_001');
+});
+
+test('order email rejects a signed-in non-administrator', async () => {
+  const originalFetch = global.fetch;
+  const originalKey = process.env.INTERNAL_API_KEY;
+  delete process.env.INTERNAL_API_KEY;
+  global.fetch = async url => {
+    if (String(url).endsWith('/auth/v1/user')) {
+      return textJsonResponse(200, { email: 'member@example.com' });
+    }
+    if (String(url).endsWith('/rest/v1/rpc/is_eclado_admin')) {
+      return textJsonResponse(200, false);
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  const res = createRes();
+  try {
+    await orderEmail({
+      method: 'POST',
+      headers: { authorization: 'Bearer member-access-token' },
+      body: { email: 'buyer@example.com', orderId: 'ORDER-FORBIDDEN-001' },
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    if (originalKey === undefined) delete process.env.INTERNAL_API_KEY;
+    else process.env.INTERNAL_API_KEY = originalKey;
+  }
+
+  assert.equal(res.statusCode, 403);
+  assert.deepEqual(res.jsonBody, { error: 'Forbidden' });
 });
 
 function createRes() {
@@ -109,6 +206,19 @@ function jsonResponse(status, body) {
   return {
     ok: status >= 200 && status < 300,
     status,
+    async json() {
+      return body;
+    },
+  };
+}
+
+function textJsonResponse(status, body) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    async text() {
+      return JSON.stringify(body);
+    },
     async json() {
       return body;
     },

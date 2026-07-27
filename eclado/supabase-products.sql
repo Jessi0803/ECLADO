@@ -59,20 +59,21 @@ create trigger trg_product_variants_updated_at
 alter table public.product_variants enable row level security;
 
 drop policy if exists "product_variants_select_all" on public.product_variants;
-create policy "product_variants_select_all"
-  on public.product_variants for select
-  using (true);
-
 drop policy if exists "product_variants_insert_all" on public.product_variants;
-create policy "product_variants_insert_all"
-  on public.product_variants for insert
-  with check (true);
-
 drop policy if exists "product_variants_update_all" on public.product_variants;
-create policy "product_variants_update_all"
-  on public.product_variants for update
-  using (true)
-  with check (true);
+drop policy if exists "product_variants_delete_all" on public.product_variants;
+drop policy if exists "product_variants_select_active" on public.product_variants;
+create policy "product_variants_select_active"
+  on public.product_variants for select to anon, authenticated
+  using (
+    active is true
+    and exists (
+      select 1
+      from public.products product
+      where product.id = product_variants.product_id
+        and product.active is true
+    )
+  );
 
 drop trigger if exists trg_products_updated_at on public.products;
 create trigger trg_products_updated_at
@@ -82,20 +83,13 @@ create trigger trg_products_updated_at
 alter table public.products enable row level security;
 
 drop policy if exists "products_select_all" on public.products;
-create policy "products_select_all"
-  on public.products for select
-  using (true);
-
 drop policy if exists "products_insert_all" on public.products;
-create policy "products_insert_all"
-  on public.products for insert
-  with check (true);
-
 drop policy if exists "products_update_all" on public.products;
-create policy "products_update_all"
-  on public.products for update
-  using (true)
-  with check (true);
+drop policy if exists "products_delete_all" on public.products;
+drop policy if exists "products_select_active" on public.products;
+create policy "products_select_active"
+  on public.products for select to anon, authenticated
+  using (active is true);
 
 insert into public.products
   (id, name, name_zh, category, size, price, pro_price, stock, min_stock, is_pro_only, image_url, description, skin_type, ingredients, features)

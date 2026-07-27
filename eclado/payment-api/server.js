@@ -9,11 +9,23 @@ const app = express();
 const port = process.env.PORT || 3000;
 const baseUrl = process.env.SINOPAC_API_BASE_URL || 'https://apisbx.sinopac.com/funBIZ-Sbx/QPay.WebAPI/api';
 const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || '';
 
 function must(value, name) {
   if (!value) throw new Error(`Missing env: ${name}`);
   return value;
+}
+
+function validateRequiredRuntimeEnv() {
+  must(process.env.ORDER_CLEANUP_KEY, 'ORDER_CLEANUP_KEY');
+}
+
+function hasValidCleanupKey(suppliedKey) {
+  const expectedKey = process.env.ORDER_CLEANUP_KEY || '';
+  if (!expectedKey || !suppliedKey) return false;
+  const expected = Buffer.from(expectedKey);
+  const supplied = Buffer.from(String(suppliedKey));
+  return expected.length === supplied.length && crypto.timingSafeEqual(expected, supplied);
 }
 
 function sha256Hex(input) {
@@ -225,14 +237,14 @@ function buildQueryBody(input) {
 }
 
 async function updateSupabaseOrder(orderNo, patch) {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Missing env: SUPABASE_URL or SUPABASE_ANON_KEY');
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing env: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
   }
   const response = await fetch(`${supabaseUrl}/rest/v1/orders?id=eq.${encodeURIComponent(orderNo)}`, {
     method: 'PATCH',
     headers: {
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${supabaseAnonKey}`,
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
       'Content-Type': 'application/json',
       Prefer: 'return=representation',
     },
@@ -247,6 +259,61 @@ async function updateSupabaseOrder(orderNo, patch) {
     throw new Error(`Order not found: ${orderNo}`);
   }
   return data;
+}
+
+async function callSupabaseRpc(name, body) {
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing env: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+  }
+  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`, {
+    method: 'POST',
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`Supabase ${name} failed: ${response.status} ${text}`);
+  }
+  return text ? JSON.parse(text) : null;
+}
+
+async function claimSupabaseOrder(orderNo, paymentToken) {
+  const order = await callSupabaseRpc('claim_order_payment', {
+    p_order_id: orderNo,
+    p_payment_token: paymentToken,
+  });
+  if (!order?.id) throw new Error(`Order not found: ${orderNo}`);
+  if (!Number.isFinite(Number(order.total)) || Number(order.total) <= 0) {
+    throw new Error(`Order total is invalid: ${orderNo}`);
+  }
+  return order;
+}
+
+async function authorizePaymentAccess(orderNo, paymentToken) {
+  if (!orderNo || !paymentToken) throw new Error('orderNo and paymentToken are required');
+  const authorized = await callSupabaseRpc('authorize_order_payment_access', {
+    p_order_id: orderNo,
+    p_payment_token: paymentToken,
+  });
+  if (authorized !== true) throw new Error('Invalid payment authorization');
+}
+
+async function buildAuthoritativeCreateBody(input) {
+  if (!input?.orderNo) throw new Error('orderNo is required');
+  if (!input?.paymentToken) throw new Error('paymentToken is required');
+  const order = await claimSupabaseOrder(String(input.orderNo), String(input.paymentToken));
+  const productName = Array.isArray(order.items) && order.items.length
+    ? `${order.items[0].name || order.items[0].nameZh || 'ECLADO訂單'}${order.items.length > 1 ? ` 等 ${order.items.length} 項商品` : ''}`
+    : 'ECLADO訂單';
+  return buildCreateBody({
+    ...input,
+    amount: Number(order.total),
+    prdtName: productName,
+  });
 }
 
 // 訂單在 Vultr 標記已付款後，轉發給 Vercel 端發送 LINE／Email 付款完成通知。
@@ -267,8 +334,8 @@ async function forwardPaidNotification(orderNo) {
 }
 
 async function expireOverdueOrders() {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Missing env: SUPABASE_URL or SUPABASE_ANON_KEY');
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing env: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
   }
 
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -280,8 +347,8 @@ async function expireOverdueOrders() {
 
   const listResponse = await fetch(`${supabaseUrl}/rest/v1/orders?${params.toString()}`, {
     headers: {
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${supabaseAnonKey}`,
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
     },
   });
   const listText = await listResponse.text();
@@ -298,8 +365,8 @@ async function expireOverdueOrders() {
   const patchResponse = await fetch(`${supabaseUrl}/rest/v1/orders?id=in.(${ids.map(encodeURIComponent).join(',')})`, {
     method: 'PATCH',
     headers: {
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${supabaseAnonKey}`,
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
       'Content-Type': 'application/json',
       Prefer: 'return=representation',
     },
@@ -439,19 +506,53 @@ app.get('/return', redirectPaymentReturn);
 app.post('/return', redirectPaymentReturn);
 
 app.post('/api/sinopac/create-payment', async (req, res) => {
+  const orderNo = String(req.body?.orderNo || '').trim();
+  const paymentToken = String(req.body?.paymentToken || '').trim();
+  let claimed = false;
+  let gatewaySucceeded = false;
   try {
-    const inner = buildCreateBody(req.body || {});
+    const inner = await buildAuthoritativeCreateBody(req.body || {});
+    claimed = true;
     const result = await callOrderApi('OrderCreate', inner);
     const sinopacError = getSinopacPaymentError(result.data);
-    if (sinopacError) return res.status(400).json({ ok: false, error: sinopacError, request: inner, response: result.data });
+    if (sinopacError) {
+      await callSupabaseRpc('complete_order_payment_claim', {
+        p_order_id: orderNo,
+        p_payment_token: paymentToken,
+        p_success: false,
+      });
+      claimed = false;
+      return res.status(400).json({ ok: false, error: sinopacError, request: inner, response: result.data });
+    }
+    gatewaySucceeded = true;
+    await callSupabaseRpc('complete_order_payment_claim', {
+      p_order_id: orderNo,
+      p_payment_token: paymentToken,
+      p_success: true,
+    });
+    claimed = false;
     res.json({ ok: true, request: inner, response: result.data });
   } catch (error) {
+    if (claimed && !gatewaySucceeded) {
+      try {
+        await callSupabaseRpc('complete_order_payment_claim', {
+          p_order_id: orderNo,
+          p_payment_token: paymentToken,
+          p_success: false,
+        });
+      } catch (releaseError) {
+        console.error('[create-payment] claim release failed', releaseError.message);
+      }
+    }
     res.status(400).json({ ok: false, error: error.message });
   }
 });
 
 app.post('/api/sinopac/query-payment', async (req, res) => {
   try {
+    const orderNo = String(req.body?.orderNo || '').trim();
+    const paymentToken = String(req.body?.paymentToken || '').trim();
+    await authorizePaymentAccess(orderNo, paymentToken);
     const inner = buildQueryBody(req.body || {});
     const result = await callOrderApi('OrderQuery', inner);
     res.json({ ok: true, request: inner, response: result.data });
@@ -462,8 +563,10 @@ app.post('/api/sinopac/query-payment', async (req, res) => {
 
 app.post('/api/orders/expire-overdue', async (req, res) => {
   try {
-    const cleanupKey = process.env.ORDER_CLEANUP_KEY || '';
-    if (cleanupKey && req.get('X-Cleanup-Key') !== cleanupKey) {
+    if (!process.env.ORDER_CLEANUP_KEY) {
+      return res.status(500).json({ ok: false, error: 'Server cleanup authorization is not configured' });
+    }
+    if (!hasValidCleanupKey(req.get('X-Cleanup-Key'))) {
       return res.status(401).json({ ok: false, error: 'Unauthorized' });
     }
 
@@ -513,6 +616,7 @@ app.post('/api/sinopac/notify', async (req, res) => {
 
 // 直接執行（pm2 / node server.js）時才啟動監聽；被 require 進測試時不啟動。
 if (require.main === module) {
+  validateRequiredRuntimeEnv();
   app.listen(port, '127.0.0.1', () => {
     console.log(`ECLADO payment API listening on 127.0.0.1:${port}`);
   });
@@ -521,6 +625,8 @@ if (require.main === module) {
 // 匯出 app 與純函式供測試使用。
 module.exports = {
   app,
+  validateRequiredRuntimeEnv,
+  hasValidCleanupKey,
   sha256Hex,
   xorHex,
   getAesKey,
@@ -535,5 +641,6 @@ module.exports = {
   isPendingLike,
   getSinopacPaymentError,
   buildCreateBody,
+  buildAuthoritativeCreateBody,
   buildQueryBody,
 };

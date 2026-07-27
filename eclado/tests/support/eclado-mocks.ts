@@ -170,6 +170,7 @@ export type MockEcladoApiOptions = {
   onPromotionUpdate?: (update: Record<string, unknown>, url: string) => void;
   onPromotionDelete?: (url: string) => void;
   onApplicationUpdate?: (update: Record<string, unknown>, url: string) => void;
+  onApplicationInsert?: (application: Record<string, unknown>) => void;
   onLinePush?: (body: Record<string, unknown>) => void;
   onOrderEmail?: (body: Record<string, unknown>) => void;
   onPaymentRequest?: (body: Record<string, unknown>) => void;
@@ -178,6 +179,7 @@ export type MockEcladoApiOptions = {
   promotionWriteError?: string;
   linePushError?: string;
   paymentError?: string;
+  authoritativePriceDelta?: number;
   authUser?: MockAuthUser | null;
   signInUser?: MockAuthUser;
   signInError?: string;
@@ -284,6 +286,152 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     return json(route, []);
   });
 
+  await page.route('**/rest/v1/rpc/create_order_with_pricing', async route => {
+    const request = route.request().postDataJSON();
+    if (options.orderWriteError) {
+      return json(route, { message: options.orderWriteError }, 400);
+    }
+
+    const role = String(
+      profiles.find(profile => String(profile.id) === String(authUser?.id))?.role || 'consumer',
+    );
+    const multiplier = role === 'pro' ? 1 : role === 'instructor' ? 0.7 : role === 'distributor' ? 0.65 : null;
+    const canBuyPro = ['pro', 'instructor', 'distributor'].includes(role);
+    const requestedItems = Array.isArray(request.p_items) ? request.p_items : [];
+    const authoritativeItems = requestedItems.map((requested: Record<string, unknown>, index: number) => {
+      const product = products().find(row => Number(row.id) === Number(requested.product_id));
+      if (!product || product.active === false) throw new Error('mock product not found');
+      if (product.is_pro_only && !canBuyPro) throw new Error('mock professional membership required');
+
+      const requestedVariant = requested.variant_id == null ? '' : String(requested.variant_id);
+      const variant = requestedVariant
+        ? productVariants().find(row =>
+          Number(row.product_id) === Number(product.id)
+          && [row.id, row.sku, row.size].some(value => String(value || '') === requestedVariant))
+        : null;
+      const listPrice = Number(variant?.price ?? product.price ?? 0);
+      const professionalPrice = Number(variant?.pro_price ?? product.pro_price ?? 0);
+      const calculatedUnitPrice = multiplier == null ? listPrice : Math.round(professionalPrice * multiplier);
+      const unitPrice = calculatedUnitPrice + (index === 0 ? Number(options.authoritativePriceDelta || 0) : 0);
+      const qty = Number(requested.qty);
+      const stock = Number(variant?.stock ?? product.stock ?? 0);
+      return {
+        id: Number(product.id),
+        product_id: Number(product.id),
+        variant_id: requested.variant_id || null,
+        name: Number(product.id) === 2 ? '胜肽修護精華液' : `商品 ${product.id}`,
+        nameZh: Number(product.id) === 2 ? '胜肽修護精華液' : `商品 ${product.id}`,
+        size: String(variant?.size || ''),
+        img: '',
+        qty,
+        list_price: listPrice,
+        professional_price: professionalPrice,
+        member_role: role,
+        price: unitPrice,
+        unit_price: unitPrice,
+        line_total: unitPrice * qty,
+        stock_at_order: Math.max(0, stock),
+        fulfillment_type: stock > 0 ? 'in_stock' : 'preorder',
+        fulfillment: stock > 0 ? '現貨商品' : '預購商品',
+        shipping_time: stock > 0 ? '出貨時間為 5 個工作天內，每週二出貨' : '出貨時間為 7-14 個工作天',
+      };
+    });
+    const subtotal = authoritativeItems.reduce((sum, item) => sum + item.line_total, 0);
+    const promotionCandidates = promotions
+      .filter(promotion => {
+        const now = Date.now();
+        return promotion.active !== false
+          && (!promotion.start_at || new Date(String(promotion.start_at)).getTime() <= now)
+          && (!promotion.end_at || new Date(String(promotion.end_at)).getTime() > now);
+      })
+      .map(promotion => {
+        const productIds = new Set(((promotion.product_ids as number[]) || []).map(Number));
+        const eligibleSubtotal = authoritativeItems
+          .filter(item => productIds.has(Number(item.product_id)))
+          .reduce((sum, item) => sum + item.line_total, 0);
+        const rate = Number(promotion.discount_rate);
+        const amount = Number(promotion.discount_amount);
+        if (
+          eligibleSubtotal <= 0
+          || !Number.isFinite(rate) || rate < 0 || rate > 1
+          || !Number.isFinite(amount) || amount < 0
+        ) return null;
+        const finalSubtotal = promotion.discount_order === 'amount_then_rate'
+          ? Math.max(0, (eligibleSubtotal - amount) * rate)
+          : Math.max(0, eligibleSubtotal * rate - amount);
+        return { promotion, discount: Math.round(eligibleSubtotal - finalSubtotal) };
+      })
+      .filter((candidate): candidate is { promotion: Record<string, unknown>; discount: number } =>
+        !!candidate && candidate.discount > 0)
+      .sort((a, b) => b.discount - a.discount);
+    const selectedPromotion = promotionCandidates[0] || null;
+    const discount = selectedPromotion?.discount || 0;
+    const shipping = authoritativeItems.every(item => item.product_id === 9) ? 0 : 120;
+    const orderId = `ECL-E2E-${Date.now()}`;
+    const status = request.p_payment_method === 'atm' ? 'awaiting_confirm' : 'unpaid';
+    const result = {
+      order_id: orderId,
+      member_role: role,
+      items: authoritativeItems,
+      subtotal,
+      discount,
+      shipping,
+      total: subtotal - discount + shipping,
+      status,
+      promotion_id: selectedPromotion?.promotion.id || null,
+      promotion_name: selectedPromotion?.promotion.name || null,
+      payment_token: `payment-token-${orderId}`,
+    };
+    options.onOrderInsert?.({
+      id: orderId,
+      member: request.p_member,
+      type: role,
+      items: authoritativeItems,
+      subtotal,
+      discount,
+      total: subtotal - discount + shipping,
+      status,
+      address: request.p_address,
+      phone: request.p_phone,
+      email: request.p_email,
+      note: request.p_note,
+      user_id: authUser?.id || null,
+      promotion_id: selectedPromotion?.promotion.id || null,
+      promotion_name: selectedPromotion?.promotion.name || null,
+    });
+    return json(route, result);
+  });
+
+  await page.route('**/rest/v1/rpc/get_public_sales_orders', async route => {
+    const counted = orders
+      .filter(order => ['paid', 'preparing', 'shipped', 'delivered'].includes(String(order.status)))
+      .slice(0, 1000)
+      .map(order => ({ status: order.status, items: order.items || [] }));
+    return json(route, counted);
+  });
+
+  await page.route('**/rest/v1/rpc/submit_professional_application', async route => {
+    const body = route.request().postDataJSON();
+    if (!authUser) return json(route, { message: 'Authentication required' }, 403);
+    const application = {
+      id: `app-e2e-${Date.now()}`,
+      studio_name: body.p_studio_name,
+      contact_name: body.p_contact_name,
+      phone: body.p_phone,
+      address: body.p_address,
+      social_media: body.p_social_media,
+      certificate: body.p_certificate,
+      user_id: authUser.id,
+      user_email: authUser.email,
+      status: 'pending',
+      source: 'standalone',
+    };
+    options.onApplicationInsert?.(application);
+    const profile = profiles.find(row => String(row.id) === String(authUser.id));
+    if (profile) profile.role = 'pending';
+    return json(route, application.id);
+  });
+
   await page.route('**/rest/v1/orders**', async route => {
     const method = route.request().method();
     if (method === 'GET') return json(route, filterRows(orders, route.request().url()));
@@ -342,6 +490,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     await page.route('https://pay.ecladotaiwan.com/api/sinopac/create-payment', async route => {
       const request = route.request().postDataJSON();
       options.onPaymentRequest?.(request);
+      if (!request.paymentToken) {
+        return json(route, { ok: false, error: 'paymentToken is required' }, 401);
+      }
       if (options.paymentError) return json(route, { ok: false, error: options.paymentError }, 502);
       const payToken = `PAYTOKEN${Date.now()}`;
       return json(route, {

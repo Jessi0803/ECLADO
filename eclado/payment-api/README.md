@@ -11,11 +11,18 @@
   `OrderPayQuery` 確認後，標記訂單已付款，再導回前台。
 - `POST /api/sinopac/notify` — 各付款方式的非同步通知（BackendURL）。確認後標記已付款。
 - `POST /api/sinopac/query-payment` — `OrderQuery` 查詢。
-- `POST /api/orders/expire-overdue` — 清理逾期未付款訂單。
+- `POST /api/orders/expire-overdue` — 清理逾期未付款訂單；必須帶正確的 `X-Cleanup-Key`。
 
 確認付款成功後，會轉發 `{OrderNo, Status:'S'}` 給 Vercel 端
 （`www.ecladotaiwan.com/api/sinopac/notify`）負責標記 paid + 寄送 LINE／Email，
 本服務再補寫一次 paid 作為保險。詳見整體架構說明。
+
+訂單讀取與狀態更新一律使用 Vultr 端的 `SUPABASE_SERVICE_ROLE_KEY`；
+瀏覽器公開的 anon key 不具備訂單存取權，也不應提供給本服務作為後端權限。
+建立或查詢付款時必須帶上權威訂單 RPC 回傳的一次性 `paymentToken`。
+
+`ORDER_CLEANUP_KEY` 是必填環境變數。未設定時服務會拒絕啟動，清理端點也不會執行。
+資料庫只保存 token hash，且會原子鎖定建單流程，避免同一訂單重複建立付款單。
 
 ## 付款狀態判定（豐收款 PayStatus，規格書 §10.2）
 

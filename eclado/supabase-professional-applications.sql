@@ -35,19 +35,13 @@ create trigger trg_professional_applications_updated_at
 alter table public.professional_applications enable row level security;
 
 drop policy if exists "professional_applications_select_all" on public.professional_applications;
-create policy "professional_applications_select_all"
-  on public.professional_applications for select
-  using (true);
-
 drop policy if exists "professional_applications_insert_all" on public.professional_applications;
-create policy "professional_applications_insert_all"
-  on public.professional_applications for insert
-  with check (true);
-
 drop policy if exists "professional_applications_update_all" on public.professional_applications;
-create policy "professional_applications_update_all"
-  on public.professional_applications for update
-  using (true) with check (true);
+drop policy if exists "professional_applications_delete_all" on public.professional_applications;
+drop policy if exists "professional_applications_select_own" on public.professional_applications;
+create policy "professional_applications_select_own"
+  on public.professional_applications for select to authenticated
+  using (user_id = auth.uid());
 
 do $$
 begin

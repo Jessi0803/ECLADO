@@ -4,25 +4,21 @@ import CheckoutOrderSummary from '../components/checkout/CheckoutOrderSummary.js
 import CheckoutSteps from '../components/checkout/CheckoutSteps.jsx';
 import PaymentInfo from '../components/checkout/PaymentInfo.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
-import {
-  getFulfillmentInfo,
-  getMemberPrice,
-  getMemberRole,
-} from '../domain/catalog.jsx';
+import { getMemberPrice, getMemberRole } from '../domain/catalog.jsx';
 import { calculateDiscount } from '../domain/promotions.js';
+import { calculateShipping } from '../domain/shipping.js';
 import {
   PAYMENT_METHODS,
   SINOPAC_NOTIFY_API,
   SINOPAC_PAYMENT_API,
   addDays,
-  buildPaymentNotes,
   extractPaymentLink,
   formatDateCompact,
   formatTimeCompact,
   getSinopacPaymentError,
   safeTrim,
 } from '../domain/payments.js';
-import { saveOrder } from '../services/orders.js';
+import { createAuthoritativeOrder } from '../services/orders.js';
 import { createSinopacPayment } from '../services/paymentApi.js';
 
 // ─── CHECKOUT PAGE ────────────────────────────────────────────────────────────
@@ -38,18 +34,23 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     address: '',
     note: '',
   });
-  const [orderNo] = useState(() => `ECL-${Date.now().toString().slice(-8)}`);
+  const [orderNo, setOrderNo] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('atm');
   const [paymentResult, setPaymentResult] = useState(null);
   const [paymentSnapshot, setPaymentSnapshot] = useState(null);
   const [paymentSummary, setPaymentSummary] = useState(null);
   const [paymentError, setPaymentError] = useState('');
+  const [pendingAuthoritativeOrder, setPendingAuthoritativeOrder] = useState(null);
+  const [pricingChanges, setPricingChanges] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [copiedAtmNo, setCopiedAtmNo] = useState(false);
   const isMobile = useIsMobile();
 
-  const { subtotal, discount, finalSubtotal, promotion } = calculateDiscount(cart, promotions, user);
-  const shipping = cart.every(i => i.id === 9) ? 0 : 120;
+  // Browser values are a preview. The order RPC recalculates member prices and
+  // chooses the single best live promotion before any payment request is made.
+  const { subtotal, discount, finalSubtotal, promotion } =
+    calculateDiscount(cart, promotions, user);
+  const shipping = calculateShipping(cart);
   const total = finalSubtotal + shipping;
 
   const STEPS = ['收件資訊', '確認付款', '完成'];
@@ -64,43 +65,56 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     return `${cart[0].nameZh} 等 ${cart.length} 項商品`;
   }
 
-
-  async function insertOrder(paymentData, method) {
-    const today = new Date();
-    const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    const noteParts = [safeTrim(form.note), buildPaymentNotes(method.label, paymentData)].filter(Boolean);
-    const order = {
-      id: orderNo,
-      member: form.name || user?.name || '訪客',
-      type: getMemberRole(user),
-      items: cart.map(i => {
-        const fulfillment = getFulfillmentInfo(i);
-        return {
-          id: i.id,
-          name: i.nameZh,
-          qty: i.qty,
-          price: getMemberPrice(i, user),
-          fulfillment: fulfillment.label,
-          fulfillment_type: fulfillment.type,
-          shipping_time: fulfillment.shipping,
-          stock_at_order: Number(i.stock ?? 0),
-        };
-      }),
-      total,
-      subtotal,
-      discount,
-      promotion_id: promotion?.id || null,
-      promotion_name: promotion?.name || null,
-      status: method.pendingStatus || 'unpaid',
-      date: dateStr,
-      address: `${form.city}${form.district}${form.address}`,
-      phone: form.phone,
-      email: form.email,
-      note: noteParts.join('\n\n'),
-      transfer_last5: paymentData?.ATMParam?.AtmPayNo ? paymentData.ATMParam.AtmPayNo.slice(-5) : '',
-      user_id: user?.uid || null,
+  function toPaymentSummary(authoritativeOrder) {
+    const items = authoritativeOrder.items.map(item => ({ ...item }));
+    return {
+      subtotal: authoritativeOrder.subtotal,
+      discount: authoritativeOrder.discount,
+      finalSubtotal: authoritativeOrder.subtotal - authoritativeOrder.discount,
+      promotion: authoritativeOrder.promotion,
+      shipping: authoritativeOrder.shipping,
+      total: authoritativeOrder.total,
+      items,
     };
-    return saveOrder(order);
+  }
+
+  function getPricingChanges(authoritativeOrder) {
+    const changes = [];
+    const previewRole = getMemberRole(user);
+    const checks = [
+      ['會員價格資格', previewRole, authoritativeOrder.member_role],
+      ['商品小計', subtotal, authoritativeOrder.subtotal],
+      ['活動折抵', discount, authoritativeOrder.discount],
+      ['套用活動', promotion?.id || null, authoritativeOrder.promotion?.id || null],
+      ['運費', shipping, authoritativeOrder.shipping],
+      ['訂單總額', total, authoritativeOrder.total],
+    ];
+    checks.forEach(([label, preview, authoritative]) => {
+      if (String(preview ?? '') !== String(authoritative ?? '')) {
+        changes.push({ label, preview, authoritative });
+      }
+    });
+
+    const previewLines = cart.map(item => ({
+      productId: Number(item.id),
+      variantId: String(item.variantId || item.variantSize || ''),
+      quantity: Number(item.qty),
+      unitPrice: Number(getMemberPrice(item, user)),
+    }));
+    const authoritativeLines = authoritativeOrder.items.map(item => ({
+      productId: Number(item.product_id ?? item.id),
+      variantId: String(item.variant_id || ''),
+      quantity: Number(item.qty),
+      unitPrice: Number(item.unit_price ?? item.price),
+    }));
+    if (JSON.stringify(previewLines) !== JSON.stringify(authoritativeLines)) {
+      changes.push({
+        label: '商品成交單價',
+        preview: '畫面預覽',
+        authoritative: '後端已重新計算',
+      });
+    }
+    return changes;
   }
 
   async function handleNext(e) {
@@ -113,33 +127,54 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     if (step !== 2) return;
 
     const method = PAYMENT_METHODS[paymentMethod] || PAYMENT_METHODS.atm;
-    const expiresAt = addDays(new Date(), 1);
-    const payload = {
-      orderNo,
-      amount: total,
-      prdtName: productNameForPayment(),
-      payType: method.payType,
-      expireDate: formatDateCompact(expiresAt),
-      expireTime: formatTimeCompact(expiresAt),
-      returnUrl: `${SINOPAC_PAYMENT_API}/return?orderNo=${encodeURIComponent(orderNo)}`,
-      backendUrl: `${SINOPAC_NOTIFY_API}?orderNo=${encodeURIComponent(orderNo)}`,
-      qrCodeStatus: 'Y',
-      memo: safeTrim(form.note),
-      Param1: orderNo,
-    };
-    if (method.choosePay) payload.choosePay = method.choosePay;
-
     setPaymentError('');
     setSubmitting(true);
     try {
+      const authoritativeOrder = pendingAuthoritativeOrder || await createAuthoritativeOrder({
+          items: cart,
+          member: form.name || user?.name || '訪客',
+          address: `${form.city}${form.district}${form.address}`,
+          phone: form.phone,
+          email: form.email,
+          note: safeTrim(form.note),
+          paymentMethod,
+        });
+      const authoritativeOrderNo = authoritativeOrder.order_id;
+      setOrderNo(authoritativeOrderNo);
+      const authoritativeSummary = toPaymentSummary(authoritativeOrder);
+      setPaymentSnapshot(authoritativeSummary.items);
+      setPaymentSummary(authoritativeSummary);
+
+      if (!pendingAuthoritativeOrder) {
+        const changes = getPricingChanges(authoritativeOrder);
+        if (changes.length > 0) {
+          setPendingAuthoritativeOrder(authoritativeOrder);
+          setPricingChanges(changes);
+          window.scrollTo(0, 0);
+          return;
+        }
+      }
+
+      const expiresAt = addDays(new Date(), 1);
+      const payload = {
+        orderNo: authoritativeOrderNo,
+        paymentToken: authoritativeOrder.paymentToken,
+        amount: authoritativeOrder.total,
+        prdtName: productNameForPayment(),
+        payType: method.payType,
+        expireDate: formatDateCompact(expiresAt),
+        expireTime: formatTimeCompact(expiresAt),
+        returnUrl: `${SINOPAC_PAYMENT_API}/return?orderNo=${encodeURIComponent(authoritativeOrderNo)}`,
+        backendUrl: `${SINOPAC_NOTIFY_API}?orderNo=${encodeURIComponent(authoritativeOrderNo)}`,
+        qrCodeStatus: 'Y',
+        memo: safeTrim(form.note),
+        Param1: authoritativeOrderNo,
+      };
+      if (method.choosePay) payload.choosePay = method.choosePay;
+
       const apiResponse = await createSinopacPayment(payload);
       const sinopacError = getSinopacPaymentError(apiResponse);
       if (sinopacError) throw new Error(sinopacError);
-
-      setPaymentSnapshot(cart.map(item => ({ ...item })));
-      setPaymentSummary({ subtotal, discount, finalSubtotal, promotion, shipping, total, items: cart.map(item => ({ ...item })) });
-      const insertError = await insertOrder(apiResponse, method);
-      if (insertError) console.error(insertError);
 
       const paymentLink = extractPaymentLink(apiResponse);
       setPaymentResult({
@@ -148,8 +183,10 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
         request: payload,
         response: apiResponse,
         paymentLink,
-        insertError: insertError ? (insertError.message || String(insertError)) : '',
+        insertError: '',
       });
+      setPendingAuthoritativeOrder(null);
+      setPricingChanges([]);
       setCart([]);
       window.scrollTo(0, 0);
       setStep(3);
@@ -190,7 +227,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
               onCopyAtmNo={copyAtmNo}
               orderNo={orderNo}
               paymentResult={paymentResult}
-              total={total}
+              total={paymentSummary?.total || total}
             />
 
             <div style={{ background:'var(--off-white)', padding:'24px 28px' }}>
@@ -231,6 +268,11 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       <div style={{ maxWidth:960, margin:'0 auto', padding: isMobile ? '40px 20px' : '60px 40px' }}>
         <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 28 : 36, fontWeight:300, marginBottom:36 }}>結帳</h1>
         <CheckoutSteps steps={STEPS} currentStep={step} />
+        {promotions.length > 0 && (
+          <div style={{ background:'#fffbf0', border:'1px solid #e8d9b0', padding:'12px 14px', marginBottom:20, fontSize:12, color:'#5a4a1e', lineHeight:1.7 }}>
+            結帳成交價與活動折扣會由後端依會員資格及活動期間重新計算；若有多個活動符合，系統會自動套用折抵最多的一個。
+          </div>
+        )}
 
         <form onSubmit={handleNext}>
           <div className="gcheckout">
@@ -243,7 +285,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                     </div>
                     <div>
                       <p style={{ fontSize:12, fontWeight:500, color:'var(--black)', marginBottom:2 }}>宅配到府</p>
-                      <p style={{ fontSize:11, color:'var(--dark)' }}>順豐物流 · NT$ 120</p>
+                      <p style={{ fontSize:11, color:'var(--dark)' }}>順豐物流 · {shipping === 0 ? '免運' : `NT$ ${shipping}`}</p>
                     </div>
                   </div>
 
@@ -291,7 +333,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                   <div style={{ border:'1px solid var(--light)', padding:'20px 24px' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
                       <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase' }}>收件資訊</p>
-                      <button type="button" onClick={() => setStep(1)} style={{ background:'none', border:'none', fontSize:11, color:'var(--dark)', cursor:'pointer', textDecoration:'underline', fontFamily:'var(--font-body)', padding:0 }}>修改</button>
+                      <button type="button" disabled={!!pendingAuthoritativeOrder} onClick={() => setStep(1)} style={{ background:'none', border:'none', fontSize:11, color:'var(--dark)', cursor: pendingAuthoritativeOrder ? 'not-allowed' : 'pointer', opacity: pendingAuthoritativeOrder ? 0.45 : 1, textDecoration:'underline', fontFamily:'var(--font-body)', padding:0 }}>修改</button>
                     </div>
                     <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'8px 20px', fontSize:13 }}>
                       {[['收件人', form.name], ['手機', form.phone], ['Email', form.email], ['地址', `${form.city}${form.district}${form.address}`], ['物流','宅配到府（順豐物流）']].map(([k, v]) => (
@@ -312,6 +354,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                           <button
                             key={key}
                             type="button"
+                            disabled={!!pendingAuthoritativeOrder}
                             onClick={() => setPaymentMethod(key)}
                             style={{
                               width:'100%',
@@ -319,7 +362,8 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                               border: active ? '2px solid var(--black)' : '1px solid var(--light)',
                               background: active ? 'var(--off-white)' : 'var(--white)',
                               padding:'16px 18px',
-                              cursor:'pointer',
+                              cursor: pendingAuthoritativeOrder ? 'not-allowed' : 'pointer',
+                              opacity: pendingAuthoritativeOrder && !active ? 0.5 : 1,
                             }}
                           >
                             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12 }}>
@@ -343,8 +387,23 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                   <div style={{ background:'#fffbf0', border:'1px solid #e8d9b0', padding:'12px 14px', fontSize:11, color:'#5a4a1e', lineHeight:1.85, marginBottom:10 }}>
                     ⚠ <strong>退貨說明</strong>：本訂單商品為個人衛生用品，依《消費者保護法》第 19 條之 1，<strong>已拆封商品不適用七天猶豫期退貨</strong>。未拆封商品自收到次日起 7 日內可申請退貨（運費由消費者負擔）。如有品質瑕疵，不限拆封與否均可退換（運費由本公司負擔）。詳見<a href="/info" style={{ color:'#5a4a1e' }}>退換貨政策</a>。
                   </div>
+                  {pricingChanges.length > 0 && (
+                    <div role="alert" style={{ background:'#fff4e5', border:'2px solid #c47a16', padding:'16px 18px', color:'#5a3a10', lineHeight:1.7 }}>
+                      <p style={{ fontSize:14, fontWeight:600, marginBottom:8 }}>成交金額已由後端更新，尚未建立付款單</p>
+                      <p style={{ fontSize:12, marginBottom:10 }}>請確認右側最新訂單明細。只有再次按下確認按鈕後，系統才會建立永豐付款單。</p>
+                      <ul style={{ margin:'0 0 0 18px', padding:0, fontSize:12 }}>
+                        {pricingChanges.map(change => (
+                          <li key={change.label}>{change.label}已重新確認</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   <button type="submit" disabled={submitting} style={{ background: submitting ? 'var(--dark)' : 'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: submitting ? 'wait' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8, opacity: submitting ? 0.7 : 1 }}>
-                    {submitting ? '建立付款單中...' : '建立付款單'}
+                    {submitting
+                      ? '建立付款單中...'
+                      : pendingAuthoritativeOrder
+                        ? '確認更新後金額並建立付款單'
+                        : '建立付款單'}
                   </button>
                   {paymentError && <p style={{ fontSize:12, color:'#c0392b', textAlign:'center', lineHeight:1.6 }}>{paymentError}</p>}
                   <p style={{ fontSize:11, color:'var(--dark)', textAlign:'center', lineHeight:1.6 }}>

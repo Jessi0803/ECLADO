@@ -7,7 +7,6 @@ import {
 import { getMemberRole } from '../domain/catalog.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
 import { fetchLatestProApplication } from '../services/membership.js';
-import { setProfileRole } from '../services/profiles.js';
 import { createProfessionalApplication } from '../services/professionalApplications.js';
 
 export default function ProfessionalApplicationPage({ setPage, user, authReady, onUserUpdated }) {
@@ -97,7 +96,6 @@ export default function ProfessionalApplicationPage({ setPage, user, authReady, 
       setSubmitting(false);
       return;
     }
-    await setProfileRole(user.uid, 'pending');
     if (onUserUpdated) await onUserUpdated();
     setSubmitting(false);
     setSubmitted(true);

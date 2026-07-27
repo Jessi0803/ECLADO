@@ -1,4 +1,5 @@
 const DEFAULT_FROM = 'ECLADO <service@ecladotaiwan.com>';
+const { requireNotificationAuthorization } = require('./_notification-auth.js');
 
 function currency(value) {
   return Number.isFinite(Number(value)) ? `NT$ ${Number(value).toLocaleString('zh-TW')}` : '';
@@ -69,6 +70,11 @@ function buildEmail({ type = 'order_placed', orderId, total, tracking, memberNam
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const authorization = await requireNotificationAuthorization(req);
+  if (!authorization.ok) {
+    return res.status(authorization.status).json({ error: authorization.error });
+  }
 
   const { email, orderId, type, total, tracking, memberName } = req.body || {};
   const apiKey = process.env.RESEND_API_KEY;

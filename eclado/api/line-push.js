@@ -1,3 +1,5 @@
+const { requireNotificationAuthorization } = require('./_notification-auth.js');
+
 function buildMessage({ type = 'shipment', orderId, tracking, total }) {
   if (type === 'payment_paid') {
     return [
@@ -27,6 +29,11 @@ function buildMessage({ type = 'shipment', orderId, tracking, total }) {
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
+
+  const authorization = await requireNotificationAuthorization(req);
+  if (!authorization.ok) {
+    return res.status(authorization.status).json({ error: authorization.error });
+  }
 
   const { lineUserId, orderId, tracking, type, total } = req.body || {};
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;

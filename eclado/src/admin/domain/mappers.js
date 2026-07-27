@@ -1,9 +1,22 @@
 export function normalizeOrder(row) {
+  const items = Array.isArray(row.items) ? row.items : [];
+  const itemSubtotal = items.reduce(
+    (sum, item) => sum + (Number(item.price ?? item.unit_price) || 0) * (Number(item.qty) || 0),
+    0,
+  );
+  const orderSubtotal = row.subtotal == null ? itemSubtotal : Number(row.subtotal);
+  const snapshotShipping = row.pricing_snapshot?.shipping == null
+    ? Number.NaN
+    : Number(row.pricing_snapshot.shipping);
+  const inferredShipping = Math.max(
+    0,
+    Number(row.total || 0) - (orderSubtotal - Number(row.discount || 0)),
+  );
   return {
     id: row.id,
     member: row.member,
     type: row.type,
-    items: row.items || [],
+    items,
     total: row.total,
     status: row.status,
     date: row.date,
@@ -17,6 +30,8 @@ export function normalizeOrder(row) {
     subtotal: row.subtotal,
     discount: row.discount || 0,
     promotionName: row.promotion_name,
+    shipping: Number.isFinite(snapshotShipping) ? snapshotShipping : inferredShipping,
+    pricingSnapshot: row.pricing_snapshot || null,
   };
 }
 

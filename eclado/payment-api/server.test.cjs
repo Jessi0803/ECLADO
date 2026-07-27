@@ -9,6 +9,9 @@ process.env.SINOPAC_B1 = process.env.SINOPAC_B1 || 'CB1AFFBF915A492B';
 process.env.SINOPAC_B2 = process.env.SINOPAC_B2 || '7F242C0AA612454F';
 process.env.SINOPAC_SHOP_NO = process.env.SINOPAC_SHOP_NO || 'NA0636_001';
 process.env.PAYMENT_PUBLIC_URL = process.env.PAYMENT_PUBLIC_URL || 'https://pay.ecladotaiwan.com';
+process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://supabase.example.test';
+process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'test-service-role-key';
+process.env.ORDER_CLEANUP_KEY = process.env.ORDER_CLEANUP_KEY || 'test-cleanup-key';
 
 const server = require('./server.js');
 
@@ -16,6 +19,19 @@ test('exports pure helpers without starting the server', () => {
   for (const fn of ['getAesKey', 'encryptMessage', 'decryptMessage', 'isPaidLike', 'buildCreateBody', 'signableString', 'generateSign']) {
     assert.equal(typeof server[fn], 'function', `應匯出 ${fn}`);
   }
+});
+
+test('ORDER_CLEANUP_KEY 必須設定，且清理金鑰需完全一致', () => {
+  const originalKey = process.env.ORDER_CLEANUP_KEY;
+  delete process.env.ORDER_CLEANUP_KEY;
+  assert.throws(() => server.validateRequiredRuntimeEnv(), /Missing env: ORDER_CLEANUP_KEY/);
+  assert.equal(server.hasValidCleanupKey('test-cleanup-key'), false);
+
+  process.env.ORDER_CLEANUP_KEY = originalKey;
+  assert.doesNotThrow(() => server.validateRequiredRuntimeEnv());
+  assert.equal(server.hasValidCleanupKey(originalKey), true);
+  assert.equal(server.hasValidCleanupKey(`${originalKey}-wrong`), false);
+  assert.equal(server.hasValidCleanupKey(''), false);
 });
 
 test('isPaidLike: 授權/請款/付款完成算已付款；待付款/逾期不算', () => {
@@ -86,6 +102,44 @@ test('buildCreateBody: ATM 帶 ATMParam；金額為 0 應拋錯', () => {
   assert.equal(atm.PayType, 'A');
   assert.ok(atm.ATMParam, '應帶 ATMParam');
   assert.throws(() => server.buildCreateBody({ orderNo: 'X', amount: 0, payType: 'A' }), /amount/);
+});
+
+test('buildAuthoritativeCreateBody: 忽略呼叫端 amount，使用資料庫訂單 total', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url, options) => {
+    assert.match(String(url), /rpc\/claim_order_payment$/);
+    assert.equal(options.headers.apikey, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    assert.equal(options.headers.Authorization, `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`);
+    assert.deepEqual(JSON.parse(options.body), {
+      p_order_id: 'ECL-AUTH-001',
+      p_payment_token: 'payment-token-test',
+    });
+    return new Response(JSON.stringify({
+      id: 'ECL-AUTH-001',
+      total: 3980,
+      status: 'unpaid',
+      items: [{ name: '胜肽修護精華液', qty: 1 }],
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  };
+  try {
+    const body = await server.buildAuthoritativeCreateBody({
+      orderNo: 'ECL-AUTH-001',
+      paymentToken: 'payment-token-test',
+      amount: 1,
+      payType: 'C',
+    });
+    assert.equal(body.Amount, 398000);
+    assert.equal(body.PrdtName, '胜肽修護精華液');
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('buildAuthoritativeCreateBody: 缺少 payment token 時拒絕建單', async () => {
+  await assert.rejects(
+    server.buildAuthoritativeCreateBody({ orderNo: 'ECL-NO-TOKEN', amount: 100, payType: 'A' }),
+    /paymentToken is required/,
+  );
 });
 
 test('getSinopacPaymentError: 失敗回傳描述，成功回空字串', () => {

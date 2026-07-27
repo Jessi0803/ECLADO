@@ -11,6 +11,7 @@ import {
   calculateDiscount,
   isPromotionLive,
 } from '../domain/promotions.js';
+import { calculateShipping } from '../domain/shipping.js';
 
 // ─── CART PAGE ────────────────────────────────────────────────────────────────
 export default function CartPage({ cart, setCart, setPage, user, promotions = [] }) {
@@ -36,7 +37,7 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
     setPage('checkout');
   }
   const { subtotal, discount, finalSubtotal, promotion } = calculateDiscount(cart, promotions, user);
-  const shipping = cart.every(i => i.id === 9) ? 0 : 120;
+  const shipping = calculateShipping(cart);
   const grandTotal = finalSubtotal + shipping;
 
   return (

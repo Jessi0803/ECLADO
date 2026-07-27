@@ -210,9 +210,11 @@ test('LINE push 會送出出貨通知', async () => {
   const originalFetch = global.fetch;
   const originalEnv = {
     LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    INTERNAL_API_KEY: process.env.INTERNAL_API_KEY,
   };
 
   process.env.LINE_CHANNEL_ACCESS_TOKEN = 'test-line-token';
+  process.env.INTERNAL_API_KEY = 'test-internal-key';
   global.fetch = async (url, options = {}) => {
     calls.push({ url: String(url), options });
 
@@ -233,6 +235,7 @@ test('LINE push 會送出出貨通知', async () => {
   try {
     await linePush({
       method: 'POST',
+      headers: { 'x-internal-api-key': 'test-internal-key' },
       body: {
         lineUserId: 'U1234567890',
         orderId: 'ORDER-001',
@@ -255,9 +258,11 @@ test('LINE push 會送出付款完成通知', async () => {
   const originalFetch = global.fetch;
   const originalEnv = {
     LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    INTERNAL_API_KEY: process.env.INTERNAL_API_KEY,
   };
 
   process.env.LINE_CHANNEL_ACCESS_TOKEN = 'test-line-token';
+  process.env.INTERNAL_API_KEY = 'test-internal-key';
   global.fetch = async (url, options = {}) => {
     calls.push({ url: String(url), options });
 
@@ -279,6 +284,7 @@ test('LINE push 會送出付款完成通知', async () => {
   try {
     await linePush({
       method: 'POST',
+      headers: { 'x-internal-api-key': 'test-internal-key' },
       body: {
         type: 'payment_paid',
         lineUserId: 'U1234567890',
@@ -295,6 +301,26 @@ test('LINE push 會送出付款完成通知', async () => {
   assert.equal(res.statusCode, 200);
   assert.deepEqual(res.jsonBody, { status: 'sent' });
   assert.equal(calls.length, 1);
+});
+
+test('LINE push 拒絕未驗證呼叫者', async () => {
+  const originalKey = process.env.INTERNAL_API_KEY;
+  delete process.env.INTERNAL_API_KEY;
+  const res = createRes();
+
+  try {
+    await linePush({
+      method: 'POST',
+      headers: {},
+      body: { lineUserId: 'U1234567890', orderId: 'ORDER-DENIED-001' },
+    }, res);
+  } finally {
+    if (originalKey === undefined) delete process.env.INTERNAL_API_KEY;
+    else process.env.INTERNAL_API_KEY = originalKey;
+  }
+
+  assert.equal(res.statusCode, 401);
+  assert.deepEqual(res.jsonBody, { error: 'Unauthorized' });
 });
 
 function createRes() {

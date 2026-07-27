@@ -6,7 +6,6 @@ import {
   LOGIN_NOTICE_KEY,
 } from '../app/authSession.js';
 import {
-  findProfileByEmail,
   upsertConsumerProfile,
 } from '../services/profiles.js';
 import {
@@ -81,18 +80,6 @@ export default function LoginPage({ setPage }) {
     setLoading(true);
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      const {
-        data: existingProfile,
-        error: profileCheckError,
-      } = await findProfileByEmail(normalizedEmail);
-      if (profileCheckError) {
-        console.warn('[ECLADO] 檢查會員是否存在失敗：', profileCheckError.message);
-      }
-      if (existingProfile) {
-        setError('此 Email 已註冊會員，請直接登入或使用忘記密碼。');
-        return;
-      }
-
       const { data, error } = await signUp({
         email: normalizedEmail, password,
         options: {
@@ -101,7 +88,7 @@ export default function LoginPage({ setPage }) {
         }
       });
       if (error) { setError(sbError(error.message)); return; }
-      if (data?.user?.id) {
+      if (data?.session && data?.user?.id) {
         await upsertConsumerProfile({
           id: data.user.id,
           email: normalizedEmail, name, phone,

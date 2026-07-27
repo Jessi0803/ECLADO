@@ -21,20 +21,18 @@ create trigger trg_professional_applications_updated_at
   before update on public.professional_applications
   for each row execute function public.set_updated_at();
 
--- RLS：與 orders / profiles 相同，開放 anon 讀寫（目前前台與後台皆用 anon key）
+-- RLS：舊修復檔只保留本人唯讀；申請送出與管理員審核由
+-- supabase-core-rls-hardening.sql 的安全 RPC / admin policies 負責。
 alter table public.professional_applications enable row level security;
 
 drop policy if exists "professional_applications_select_all" on public.professional_applications;
-create policy "professional_applications_select_all"
-  on public.professional_applications for select using (true);
-
 drop policy if exists "professional_applications_insert_all" on public.professional_applications;
-create policy "professional_applications_insert_all"
-  on public.professional_applications for insert with check (true);
-
 drop policy if exists "professional_applications_update_all" on public.professional_applications;
-create policy "professional_applications_update_all"
-  on public.professional_applications for update using (true) with check (true);
+drop policy if exists "professional_applications_delete_all" on public.professional_applications;
+drop policy if exists "professional_applications_select_own" on public.professional_applications;
+create policy "professional_applications_select_own"
+  on public.professional_applications for select to authenticated
+  using (user_id = auth.uid());
 
 -- 若曾有只允許 authenticated 的舊 policy，一併移除常見名稱
 drop policy if exists "Enable read access for all users" on public.professional_applications;

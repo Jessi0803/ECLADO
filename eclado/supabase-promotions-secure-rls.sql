@@ -1,9 +1,9 @@
--- ============================================================================
--- DEPRECATED NAME: promotions RLS security migration
--- ============================================================================
--- 後台現在使用 Supabase Auth 正式登入。本檔保留舊檔名相容性，但不再允許
--- anon 寫入；新部署請優先執行 supabase-promotions-secure-rls.sql。
--- ============================================================================
+-- ECLADO promotions RLS hardening — phase 2A
+-- Run in Supabase SQL Editor after the authoritative pricing phase 1 migration.
+--
+-- Public storefront users may read promotions for display purposes.
+-- Only signed-in ECLADO administrators may create, update or delete promotions.
+-- The service_role continues to bypass RLS for trusted server-side operations.
 
 create or replace function public.is_eclado_admin()
 returns boolean
@@ -25,7 +25,6 @@ grant execute on function public.is_eclado_admin() to authenticated;
 
 alter table public.promotions enable row level security;
 
--- 一般使用者只讀目前有效活動；管理員可讀包含草稿與排程在內的全部活動
 drop policy if exists "promotions_select_all" on public.promotions;
 drop policy if exists "promotions_select_live" on public.promotions;
 drop policy if exists "promotions_select_admin" on public.promotions;
@@ -43,11 +42,7 @@ create policy "promotions_select_admin"
   to authenticated
   using (public.is_eclado_admin());
 
--- insert / update / delete：只有已登入且列入允許名單的管理員可操作
 drop policy if exists "promotions_insert_auth" on public.promotions;
-drop policy if exists "promotions_update_auth" on public.promotions;
-drop policy if exists "promotions_delete_auth" on public.promotions;
-
 drop policy if exists "promotions_insert_all" on public.promotions;
 drop policy if exists "promotions_insert_admin" on public.promotions;
 create policy "promotions_insert_admin"
@@ -55,6 +50,7 @@ create policy "promotions_insert_admin"
   to authenticated
   with check (public.is_eclado_admin());
 
+drop policy if exists "promotions_update_auth" on public.promotions;
 drop policy if exists "promotions_update_all" on public.promotions;
 drop policy if exists "promotions_update_admin" on public.promotions;
 create policy "promotions_update_admin"
@@ -63,9 +59,13 @@ create policy "promotions_update_admin"
   using (public.is_eclado_admin())
   with check (public.is_eclado_admin());
 
+drop policy if exists "promotions_delete_auth" on public.promotions;
 drop policy if exists "promotions_delete_all" on public.promotions;
 drop policy if exists "promotions_delete_admin" on public.promotions;
 create policy "promotions_delete_admin"
   on public.promotions for delete
   to authenticated
   using (public.is_eclado_admin());
+
+comment on function public.is_eclado_admin() is
+  'Returns true only for signed-in ECLADO administrator email addresses.';

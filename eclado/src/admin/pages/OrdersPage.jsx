@@ -29,6 +29,17 @@ export default function Orders({ orders, setOrders }) {
   const inStockCount = byStatus.filter(o => !hasPreorder(o)).length;
 
   async function pushLineOrderNotice(order, type, extra = {}) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    if (!accessToken) {
+      setLineNotice('管理員登入狀態已失效，請重新登入後再試。');
+      return false;
+    }
+    const authorizedHeaders = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    };
+
     async function pushEmailOrderNotice(fallbackReason = '') {
       if (!order?.email) {
         setLineNotice(fallbackReason || '此訂單沒有 Email，無法發送通知。');
@@ -36,7 +47,7 @@ export default function Orders({ orders, setOrders }) {
       }
       const response = await fetch('/api/order-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authorizedHeaders,
         body: JSON.stringify({
           type,
           email: order.email,
@@ -75,7 +86,7 @@ export default function Orders({ orders, setOrders }) {
     }
     const response = await fetch('/api/line-push', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authorizedHeaders,
       body: JSON.stringify({
         type,
         lineUserId: profile.line_user_id,
@@ -379,7 +390,7 @@ export default function Orders({ orders, setOrders }) {
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 6, color: 'var(--mid)' }}>
               <span>運費</span>
-              <span>{(selected.subtotal != null && selected.subtotal - (selected.discount || 0) >= 3000) ? '免運' : 'NT$ 150'}</span>
+              <span>{selected.shipping === 0 ? '免運' : `NT$ ${Number(selected.shipping).toLocaleString()}`}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, marginTop: 8, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
               <span>合計</span><span>NT$ {selected.total.toLocaleString()}</span>

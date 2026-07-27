@@ -1,9 +1,10 @@
 import { supabase } from './supabase.js';
 
 export async function fetchSalesOrders(statuses) {
-  return supabase
-    .from('orders')
-    .select('status, items')
-    .in('status', Array.from(statuses))
-    .limit(1000);
+  const result = await supabase.rpc('get_public_sales_orders');
+  if (result.error) return result;
+  return {
+    ...result,
+    data: (result.data || []).filter(order => statuses.has(order.status)),
+  };
 }
