@@ -1,6 +1,6 @@
 const SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
 const LINE_CHANNEL_ID = '2010106039';
-const SITE_URL = 'https://www.ecladotaiwan.com';
+const SITE_URL = 'https://ecladotaiwan.com';
 const LINE_REDIRECT_URI = `${SITE_URL}/api/line-callback`;
 const LINE_AUTH_REDIRECT_URI = `${SITE_URL}/line-callback`;
 

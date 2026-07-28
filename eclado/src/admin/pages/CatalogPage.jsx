@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { normalizeProductImageScale } from '../domain/mappers.js';
 
 const PRODUCT_CATEGORIES = ['清潔卸妝', '化妝水', '安瓶精華', '乳霜', '面膜', '防曬底妝', '其他', '院線課程儀器（含試用包）'];
@@ -7,6 +7,7 @@ const PRODUCT_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 export default function Catalog({ products, onSaveProduct, onArchiveProduct, onRestoreProduct }) {
   const [editing, setEditing] = useState(null); // product being edited (draft copy)
+  const editPanelRef = useRef(null);
   const [listMode, setListMode] = useState('active');
   const [stockFilter, setStockFilter] = useState('all');
   const [saving, setSaving] = useState(false);
@@ -29,6 +30,18 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
     out: baseProducts.filter(p => getStockStatus(p) === 'out').length,
   };
   const lowStock = activeProducts.filter(p => p.stock <= p.minStock);
+
+  useEffect(() => {
+    if (!editing || !editPanelRef.current) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      editPanelRef.current?.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'start',
+        inline: 'nearest',
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [editing?.id, editing?.isNew]);
 
   const lbl = { fontSize: 11, letterSpacing: '0.1em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 6 };
   const inp = { width: '100%', border: 'none', borderBottom: '1px solid var(--border)', padding: '8px 0', fontSize: 13, background: 'none', color: 'var(--dark)', outline: 'none', boxSizing: 'border-box' };
@@ -342,9 +355,9 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
       {lowStock.length > 0 && (
         <div style={{ background: 'oklch(0.60 0.18 25 / 0.05)', border: '1px solid oklch(0.60 0.18 25 / 0.2)', padding: '14px 20px', marginBottom: 20 }}>
           <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--red)', marginBottom: 8 }}>⚠ 庫存不足警示 — 以下商品需要補貨</div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'nowrap', overflowX: 'auto', paddingBottom: 4, WebkitOverflowScrolling: 'touch' }}>
             {lowStock.map(p => (
-              <div key={p.id} style={{ fontSize: 12, background: 'var(--white)', border: '1px solid var(--border)', padding: '5px 12px', display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div key={p.id} style={{ flex: '0 0 auto', whiteSpace: 'nowrap', fontSize: 12, background: 'var(--white)', border: '1px solid var(--border)', padding: '5px 12px', display: 'flex', gap: 8, alignItems: 'center' }}>
                 <span style={{ color: 'var(--dark)' }}>{p.nameZh}</span>
                 <span style={{ fontWeight: 700, color: p.stock === 0 ? 'var(--red)' : 'var(--yellow)' }}>{p.stock} 件</span>
               </div>
@@ -458,7 +471,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
 
         {/* Edit panel */}
         {editing && (
-          <div className="detail-panel" style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '24px' }}>
+          <div ref={editPanelRef} className="detail-panel" style={{ scrollMarginTop: 20, background: 'var(--white)', border: '1px solid var(--border)', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
               <div>
                 <div style={{ fontSize: 10, letterSpacing: '0.14em', color: 'var(--mid)', textTransform: 'uppercase', marginBottom: 4 }}>{editing.isNew ? '新增商品' : '編輯商品'}</div>

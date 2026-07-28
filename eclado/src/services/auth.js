@@ -42,7 +42,7 @@ export function sbError(msg) {
   return msg;
 }
 
-export const ECLADO_SITE_ORIGIN = 'https://www.ecladotaiwan.com';
+export const ECLADO_SITE_ORIGIN = 'https://ecladotaiwan.com';
 
 export function getSiteOrigin() {
   const { hostname, origin } = window.location;

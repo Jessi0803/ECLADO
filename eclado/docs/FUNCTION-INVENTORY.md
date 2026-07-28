@@ -1,7 +1,7 @@
 # ECLADO 電商網站 — 功能測試清單（精簡版）
 
 > 用途：手動測試、自動化規劃  
-> 網站：https://www.ecladotaiwan.com  
+> 網站：https://ecladotaiwan.com
 
 一條 = 一個可測場景，每條寫完整、不依其他編號引用（之後增刪項目較好維護）。有寫「資料庫驗證」的項目，測完畫面後請到 Supabase → Table Editor（或後台列表）對照是否寫入成功。
 

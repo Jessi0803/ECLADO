@@ -54,11 +54,11 @@ export default function Dashboard({ orders, products, members, applications = []
         <div style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '28px' }}>
           <h3 style={{ fontSize: 14, fontWeight: 500, color: 'var(--dark)', marginBottom: 4 }}>庫存警示</h3>
           <p style={{ fontSize: 12, color: 'var(--mid)', marginBottom: 20 }}>低於 3 件需補貨</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', gap: 12, overflowX: 'auto', paddingBottom: 4, WebkitOverflowScrolling: 'touch' }}>
             {lowStock.length === 0 ? (
-              <p style={{ fontSize: 13, color: 'var(--mid)', textAlign: 'center', padding: '20px 0' }}>✓ 庫存充足</p>
+              <p style={{ width: '100%', fontSize: 13, color: 'var(--mid)', textAlign: 'center', padding: '20px 0' }}>✓ 庫存充足</p>
             ) : lowStock.map(p => (
-              <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: p.stock === 0 ? 'oklch(0.60 0.18 25 / 0.06)' : 'oklch(0.78 0.14 80 / 0.06)', border: `1px solid ${p.stock === 0 ? 'oklch(0.60 0.18 25 / 0.2)' : 'oklch(0.78 0.14 80 / 0.2)'}` }}>
+              <div key={p.id} style={{ flex: '0 0 180px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: p.stock === 0 ? 'oklch(0.60 0.18 25 / 0.06)' : 'oklch(0.78 0.14 80 / 0.06)', border: `1px solid ${p.stock === 0 ? 'oklch(0.60 0.18 25 / 0.2)' : 'oklch(0.78 0.14 80 / 0.2)'}` }}>
                 <div>
                   <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--dark)', marginBottom: 2 }}>{p.nameZh}</p>
                   <p style={{ fontSize: 11, color: 'var(--mid)' }}>{p.size}</p>

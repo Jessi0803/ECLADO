@@ -49,7 +49,7 @@ test('LINE callback - 新使用者會建立 auth user、profiles 與 magic link'
       const body = JSON.parse(options.body);
       assert.equal(body.type, 'magiclink');
       assert.equal(body.email, 'line.U1234567890@ecladotaiwan.com');
-      return jsonResponse(200, { action_link: 'https://www.ecladotaiwan.com/line-callback#access_token=magic' });
+      return jsonResponse(200, { action_link: 'https://ecladotaiwan.com/line-callback#access_token=magic' });
     }
 
     throw new Error(`Unexpected fetch: ${url}`);
@@ -64,7 +64,7 @@ test('LINE callback - 新使用者會建立 auth user、profiles 與 magic link'
     restoreEnv(originalEnv);
   }
 
-  assert.equal(res.redirectedTo, 'https://www.ecladotaiwan.com/line-callback#access_token=magic');
+  assert.equal(res.redirectedTo, 'https://ecladotaiwan.com/line-callback#access_token=magic');
   assert.equal(res.statusCode, 200);
   assert.ok(calls.some(call => call.url === 'https://api.line.me/oauth2/v2.1/token'));
   assert.ok(calls.some(call => call.url === `${SUPABASE_URL}/auth/v1/admin/users`));
@@ -103,7 +103,7 @@ test('LINE callback - 已存在會員會更新名稱並重用既有帳號', asyn
     }
 
     if (url === `${SUPABASE_URL}/auth/v1/admin/generate_link`) {
-      return jsonResponse(200, { action_link: 'https://www.ecladotaiwan.com/line-callback#access_token=magic' });
+      return jsonResponse(200, { action_link: 'https://ecladotaiwan.com/line-callback#access_token=magic' });
     }
 
     if (url === `${SUPABASE_URL}/auth/v1/admin/users`) {
@@ -126,7 +126,7 @@ test('LINE callback - 已存在會員會更新名稱並重用既有帳號', asyn
     restoreEnv(originalEnv);
   }
 
-  assert.equal(res.redirectedTo, 'https://www.ecladotaiwan.com/line-callback#access_token=magic');
+  assert.equal(res.redirectedTo, 'https://ecladotaiwan.com/line-callback#access_token=magic');
   assert.equal(res.statusCode, 200);
   assert.ok(calls.some(call => call.url === `${SUPABASE_URL}/rest/v1/profiles?id=eq.user-999`));
 });
@@ -177,7 +177,7 @@ test('LINE callback - LINE email 與既有會員相同時會綁定同一個帳�
     if (url === `${SUPABASE_URL}/auth/v1/admin/generate_link`) {
       const body = JSON.parse(options.body);
       assert.equal(body.email, 'sameuser@example.com');
-      return jsonResponse(200, { action_link: 'https://www.ecladotaiwan.com/line-callback#access_token=magic' });
+      return jsonResponse(200, { action_link: 'https://ecladotaiwan.com/line-callback#access_token=magic' });
     }
 
     if (url === `${SUPABASE_URL}/auth/v1/admin/users`) {
@@ -200,7 +200,7 @@ test('LINE callback - LINE email 與既有會員相同時會綁定同一個帳�
     restoreEnv(originalEnv);
   }
 
-  assert.equal(res.redirectedTo, 'https://www.ecladotaiwan.com/line-callback#access_token=magic');
+  assert.equal(res.redirectedTo, 'https://ecladotaiwan.com/line-callback#access_token=magic');
   assert.equal(res.statusCode, 200);
   assert.ok(calls.some(call => call.url === 'https://api.line.me/oauth2/v2.1/verify'));
 });

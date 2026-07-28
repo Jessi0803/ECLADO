@@ -123,7 +123,7 @@ export default function LoginPage({ setPage }) {
     const state = Math.random().toString(36).substring(2, 15);
     sessionStorage.setItem('line_oauth_state', state);
     sessionStorage.setItem(LINE_LOGIN_PENDING_KEY, '1');
-    const lineRedirectUri = 'https://www.ecladotaiwan.com/api/line-callback';
+    const lineRedirectUri = 'https://ecladotaiwan.com/api/line-callback';
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: '2010106039',

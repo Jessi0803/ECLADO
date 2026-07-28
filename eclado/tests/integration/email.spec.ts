@@ -97,7 +97,7 @@ test.describe('Email 寄送驗證 (Resend + staging Supabase)', () => {
         },
         body: JSON.stringify({
           email: testEmail,
-          redirect_to: 'https://www.ecladotaiwan.com/reset-password',
+          redirect_to: 'https://ecladotaiwan.com/reset-password',
         }),
       });
       expect(resetRes.ok, `recover failed: ${resetRes.status}`).toBe(true);
