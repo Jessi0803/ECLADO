@@ -165,7 +165,7 @@ begin
       into product_row
       from public.products
       where id = nullif(requested_item.value ->> 'product_id', '')::integer
-        and active is not false;
+        and publication_status = 'active';
 
     if not found then
       raise exception 'Product not found or inactive' using errcode = 'P0002';

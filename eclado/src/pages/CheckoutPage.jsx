@@ -20,6 +20,7 @@ import {
 } from '../domain/payments.js';
 import { createAuthoritativeOrder } from '../services/orders.js';
 import { createSinopacPayment } from '../services/paymentApi.js';
+import { savePendingPayment } from '../services/pendingPayment.js';
 
 // ─── CHECKOUT PAGE ────────────────────────────────────────────────────────────
 export default function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
@@ -207,6 +208,17 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     setTimeout(() => setCopiedAtmNo(false), 2200);
   }
 
+  function goToPayment() {
+    if (!paymentResult?.paymentLink || !paymentResult?.request?.paymentToken) return;
+    savePendingPayment({
+      orderNo,
+      paymentToken: paymentResult.request.paymentToken,
+      amount: paymentSummary?.total || total,
+      method: paymentMethod,
+    });
+    window.location.assign(paymentResult.paymentLink);
+  }
+
 
   if (step === 3) return (
     <div style={{ paddingTop:68, minHeight:'80vh' }}>
@@ -224,6 +236,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
           <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
             <PaymentInfo
               copiedAtmNo={copiedAtmNo}
+              onGoToPayment={goToPayment}
               onCopyAtmNo={copyAtmNo}
               orderNo={orderNo}
               paymentResult={paymentResult}

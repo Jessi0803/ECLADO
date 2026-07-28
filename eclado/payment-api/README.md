@@ -8,7 +8,9 @@
 - `POST /api/sinopac/create-payment` — 呼叫豐收款 `OrderCreate` 建立付款（信用卡/ATM/Apple…）。
   信用卡預設 `AutoBilling=Y`（自動請款）；BackendURL 一律強制指向本服務。
 - `GET|POST /return` — 信用卡(含行動支付)付款結果的同步回拋。用 PayToken 向豐收款
-  `OrderPayQuery` 確認後，標記訂單已付款，再導回前台。
+  `OrderPayQuery` 確認後，標記訂單已付款，再導回前台 `/payment-result`。返回網址只帶
+  訂單編號與非權威的結果提示，不會把 PayToken 暴露給瀏覽器；前端會再以付款授權
+  token 查詢權威狀態。
 - `POST /api/sinopac/notify` — 各付款方式的非同步通知（BackendURL）。確認後標記已付款。
 - `POST /api/sinopac/query-payment` — `OrderQuery` 查詢。
 - `POST /api/orders/expire-overdue` — 清理逾期未付款訂單；必須帶正確的 `X-Cleanup-Key`。

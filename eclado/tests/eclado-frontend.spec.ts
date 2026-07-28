@@ -199,6 +199,7 @@ test('後台以規格表格與交易式 RPC 儲存商品', async ({ page }) => {
 
   await expect.poll(() => savedRequest).not.toBeNull();
   expect(savedRequest?.p_product?.id).toBe(2);
+  expect(savedRequest?.p_product?.publication_status).toBe('active');
   expect(savedRequest?.p_product).not.toHaveProperty('image_url');
   expect(savedRequest?.p_product).not.toHaveProperty('image_urls');
   expect(savedRequest?.p_variants).toHaveLength(2);
@@ -212,6 +213,32 @@ test('後台以規格表格與交易式 RPC 儲存商品', async ({ page }) => {
     sort_order: 1,
     active: true,
   });
+});
+
+test('後台新商品預設為草稿並提供三種發布狀態', async ({ page }) => {
+  const admin = authUser('ecladotaiwan@gmail.com');
+  await mockEcladoApis(page, {
+    authUser: admin,
+    products: adminProductRows,
+    orders: adminOrderRows,
+    profiles: adminProfileRows,
+    applications: adminApplicationRows,
+  });
+
+  await openAdminCatalog(page);
+  await expect(page.getByRole('button', { name: /^上架中/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^草稿/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^已下架/ })).toBeVisible();
+
+  await page.getByRole('button', { name: '+ 新增商品' }).click();
+  const status = page.locator('#productPublicationStatus');
+  await expect(status).toHaveValue('draft');
+  await expect(status.locator('option')).toHaveText([
+    '草稿（前台不可見）',
+    '正式上架',
+    '已下架',
+  ]);
+  await expect(page.getByRole('button', { name: '建立草稿' })).toBeVisible();
 });
 
 test('後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序', async ({ page }) => {
@@ -834,6 +861,59 @@ test('信用卡、Apple Pay、Google Pay 會送出對應金流 payType', async (
     expect(paymentRequests.at(-1)?.amount).toBe(orderInserts.at(-1)?.total);
     expect(orderInserts.at(-1)?.status).toBe('unpaid');
   }
+});
+
+test('信用卡付款使用同分頁按鈕，並在付款結果頁權威確認成功', async ({ page }) => {
+  await mockEcladoApis(page, { paymentQueryStatus: 'paid' });
+  await page.route('https://sandbox.sinopac.test/pay', route => route.fulfill({
+    status: 200,
+    contentType: 'text/html',
+    body: '<title>永豐 Sandbox</title><h1>Sandbox payment page</h1>',
+  }));
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+  await proceedToCheckout(page);
+
+  const checkoutInputs = page.locator('form input');
+  await checkoutInputs.nth(0).fill('付款返回測試');
+  await checkoutInputs.nth(1).fill('0912345678');
+  await checkoutInputs.nth(2).fill('return@example.com');
+  await page.getByPlaceholder('縣市').fill('台北市');
+  await page.getByPlaceholder('區域').fill('大安區');
+  await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('付款路 1 號');
+  await page.getByRole('button', { name: /繼續確認付款/ }).click();
+  await page.getByRole('button', { name: /信用卡/ }).click();
+  await page.getByRole('button', { name: /建立付款單/ }).click();
+
+  const goToPayment = page.getByRole('button', { name: '前往付款頁' });
+  await expect(goToPayment).toBeVisible();
+  await expect(page.getByRole('link', { name: '前往付款頁' })).toHaveCount(0);
+
+  const orderNo = await page.getByText(/^ECL-/).first().textContent();
+  await goToPayment.click();
+  await expect(page).toHaveURL('https://sandbox.sinopac.test/pay');
+  await page.goBack();
+  await expect.poll(() => page.evaluate(() => {
+    const stored = JSON.parse(sessionStorage.getItem('eclado_pending_payment') || 'null');
+    return {
+      orderNo: stored?.orderNo,
+      hasToken: !!stored?.paymentToken,
+      amount: stored?.amount,
+      method: stored?.method,
+    };
+  })).toEqual({
+    orderNo: orderNo?.trim(),
+    hasToken: true,
+    amount: 3702,
+    method: 'card',
+  });
+
+  await page.goto(`/payment-result?orderNo=${encodeURIComponent(orderNo?.trim() || '')}&result=paid`);
+  await expect(page.getByRole('heading', { name: '付款成功' })).toBeVisible();
+  await expect(page.getByText('付款金額：')).toContainText('NT$ 3,702');
+  expect(await page.evaluate(() => sessionStorage.getItem('eclado_pending_payment'))).toBeNull();
 });
 
 test('金流建單失敗時顯示錯誤且不進入付款完成畫面', async ({ page }) => {

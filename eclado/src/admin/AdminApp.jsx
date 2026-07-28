@@ -187,7 +187,7 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       source_folder_name: product.sourceFolderName || null,
       imported_from_drive: !!product.importedFromDrive,
       product_list_image_scale: product.listImageScale || null,
-      active: product.active !== false,
+      publication_status: product.publicationStatus || (product.active === false ? 'archived' : 'active'),
     };
     const variantsPayload = (product.variants || []).map((variant, index) => ({
       ...(/^[0-9]+$/.test(String(variant.id || '')) ? { id: String(variant.id) } : {}),
@@ -275,20 +275,24 @@ export default function AdminApp({ adminEmail, onSignOut }) {
   }
 
   async function archiveProduct(product) {
-    const { error } = await supabase.from('products').update({ active: false }).eq('id', product.id);
+    const { error } = await supabase.from('products').update({ publication_status: 'archived' }).eq('id', product.id);
     if (error) {
       return '下架商品失敗：' + (error.message || '請稍後再試');
     }
-    setProducts(prev => prev.map(p => p.id === product.id ? { ...p, active: false } : p));
+    setProducts(prev => prev.map(p => p.id === product.id
+      ? { ...p, publicationStatus: 'archived', active: false }
+      : p));
     return '';
   }
 
   async function restoreProduct(product) {
-    const { error } = await supabase.from('products').update({ active: true }).eq('id', product.id);
+    const { error } = await supabase.from('products').update({ publication_status: 'active' }).eq('id', product.id);
     if (error) {
       return '重新上架失敗：' + (error.message || '請稍後再試');
     }
-    setProducts(prev => prev.map(p => p.id === product.id ? { ...p, active: true } : p));
+    setProducts(prev => prev.map(p => p.id === product.id
+      ? { ...p, publicationStatus: 'active', active: true }
+      : p));
     return '';
   }
 

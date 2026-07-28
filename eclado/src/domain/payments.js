@@ -122,3 +122,13 @@ export function getSinopacPaymentError(response) {
   if (/^E\d{4}/i.test(description)) return description;
   return '';
 }
+
+export function getPaymentResultStatus(response) {
+  const order = Array.isArray(response?.OrderList) ? response.OrderList[0] : response;
+  const payStatus = String(order?.PayStatus || '').trim().toUpperCase();
+  const payFlag = String(order?.PayFlag || '').trim().toUpperCase();
+  if (/^1[A-Z](300|400)$/.test(payStatus) || /^1[A-Z](300|400)$/.test(payFlag)) return 'paid';
+  if (['1C200', '1A200', '1M200', '0'].includes(payStatus) || ['N', '0'].includes(payFlag)) return 'pending';
+  if (payStatus || payFlag) return 'failed';
+  return 'pending';
+}

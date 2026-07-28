@@ -11,9 +11,15 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
   const [stockFilter, setStockFilter] = useState('all');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const activeProducts = products.filter(p => p.active !== false);
-  const archivedProducts = products.filter(p => p.active === false);
-  const baseProducts = listMode === 'archived' ? archivedProducts : activeProducts;
+  const activeProducts = products.filter(p => p.publicationStatus === 'active');
+  const draftProducts = products.filter(p => p.publicationStatus === 'draft');
+  const archivedProducts = products.filter(p => p.publicationStatus === 'archived');
+  const productsByMode = {
+    active: activeProducts,
+    draft: draftProducts,
+    archived: archivedProducts,
+  };
+  const baseProducts = productsByMode[listMode] || activeProducts;
   const getStockStatus = p => p.stock === 0 ? 'out' : p.stock <= p.minStock ? 'low' : 'ok';
   const shownProducts = stockFilter === 'all' ? baseProducts : baseProducts.filter(p => getStockStatus(p) === stockFilter);
   const stockCounts = {
@@ -66,7 +72,8 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
       sourceFolderName: '',
       importedFromDrive: false,
       listImageScale: null,
-      active: true,
+      publicationStatus: 'draft',
+      active: false,
       isNew: true,
     });
   }
@@ -319,7 +326,11 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
       )}
 
       <div style={{ display: 'flex', gap: 0, marginBottom: 20, border: '1px solid var(--border)', width: 'fit-content', background: 'var(--white)' }}>
-        {[['active', `上架中 (${activeProducts.length})`], ['archived', `已下架 (${archivedProducts.length})`]].map(([value, label]) => (
+        {[
+          ['active', `上架中 (${activeProducts.length})`],
+          ['draft', `草稿 (${draftProducts.length})`],
+          ['archived', `已下架 (${archivedProducts.length})`],
+        ].map(([value, label]) => (
           <button key={value} onClick={() => { setListMode(value); setEditing(null); }} style={{
             padding: '9px 18px', border: 'none', background: listMode === value ? 'var(--dark)' : 'transparent',
             color: listMode === value ? '#fff' : 'var(--mid)', fontSize: 12, cursor: 'pointer',
@@ -385,7 +396,9 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                   <tr>
                     <td colSpan={9} style={{ padding: 40, textAlign: 'center', color: 'var(--mid)', fontSize: 13 }}>
                       {stockFilter === 'all'
-                        ? (listMode === 'archived' ? '目前沒有已下架商品' : '目前沒有上架商品')
+                        ? (listMode === 'archived'
+                          ? '目前沒有已下架商品'
+                          : listMode === 'draft' ? '目前沒有草稿商品' : '目前沒有上架商品')
                         : '目前沒有符合此庫存狀態的商品'}
                     </td>
                   </tr>
@@ -412,8 +425,10 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                         <span style={{ fontSize: 15, fontWeight: 600, color: p.stock === 0 ? 'var(--red)' : isLow ? 'var(--yellow)' : 'var(--dark)' }}>{p.stock}</span>
                       </td>
                       <td style={{ padding: '13px 14px' }}>
-                        {p.active === false
-                          ? <span style={{ fontSize: 11, color: 'var(--mid)', fontWeight: 500 }}>已下架</span>
+                        {p.publicationStatus === 'draft'
+                          ? <span style={{ fontSize: 11, color: 'var(--yellow)', fontWeight: 500 }}>草稿</span>
+                          : p.publicationStatus === 'archived'
+                            ? <span style={{ fontSize: 11, color: 'var(--mid)', fontWeight: 500 }}>已下架</span>
                           : p.stock === 0
                           ? <span style={{ fontSize: 11, color: 'var(--red)', fontWeight: 500 }}>缺貨</span>
                           : isLow
@@ -424,7 +439,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <button onClick={() => openEdit(p)}
                             style={{ padding: '5px 12px', fontSize: 11, background: isEditing ? 'var(--dark)' : 'none', border: '1px solid var(--border)', color: isEditing ? '#fff' : 'var(--dark)', cursor: 'pointer' }}>編輯</button>
-                          {p.active === false ? (
+                          {p.publicationStatus !== 'active' ? (
                             <button onClick={() => restoreProduct(p)} disabled={saving}
                               style={{ padding: '5px 12px', fontSize: 11, background: 'var(--dark)', border: '1px solid var(--dark)', color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>重新上架</button>
                           ) : (
@@ -462,6 +477,20 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                   <label htmlFor="productName" style={lbl}>英文名稱</label>
                   <input id="productName" value={editing.name} onChange={setF('name')} style={inp} />
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="productPublicationStatus" style={lbl}>商品狀態</label>
+                <select
+                  id="productPublicationStatus"
+                  value={editing.publicationStatus || 'draft'}
+                  onChange={setF('publicationStatus')}
+                  style={{ ...inp, cursor: 'pointer' }}
+                >
+                  <option value="draft">草稿（前台不可見）</option>
+                  <option value="active">正式上架</option>
+                  <option value="archived">已下架</option>
+                </select>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -626,7 +655,11 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
             <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
               <button onClick={saveEdit} disabled={saving}
                 style={{ flex: 1, padding: '12px 0', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
-                {saving ? '儲存中…' : editing.isNew ? '建立商品' : '儲存'}
+                {saving
+                  ? '儲存中…'
+                  : editing.isNew && editing.publicationStatus === 'draft'
+                    ? '建立草稿'
+                    : editing.isNew ? '建立並上架' : '儲存'}
               </button>
               <button onClick={() => setEditing(null)}
                 style={{ padding: '12px 20px', background: 'none', border: '1px solid var(--border)', fontSize: 12, color: 'var(--mid)', cursor: 'pointer' }}>

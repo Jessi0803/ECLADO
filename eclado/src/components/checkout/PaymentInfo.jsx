@@ -3,6 +3,7 @@ import React from 'react';
 export default function PaymentInfo({
   copiedAtmNo,
   onCopyAtmNo,
+  onGoToPayment,
   orderNo,
   paymentResult,
   total,
@@ -45,7 +46,7 @@ export default function PaymentInfo({
       )}
       {!atmNo && paymentLink && (
         <div style={{ display:'flex', gap:10, marginTop:16, flexWrap:'wrap' }}>
-          <a href={paymentLink} target="_blank" rel="noreferrer" style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', padding:'11px 16px', border:'1px solid var(--black)', color:'var(--black)', textDecoration:'none', fontSize:12, letterSpacing:'0.12em', fontFamily:'var(--font-body)' }}>前往付款頁</a>
+          <button type="button" onClick={onGoToPayment} style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', padding:'11px 16px', border:'1px solid var(--black)', color:'var(--black)', background:'transparent', fontSize:12, letterSpacing:'0.12em', fontFamily:'var(--font-body)', cursor:'pointer' }}>前往付款頁</button>
           <button type="button" onClick={() => navigator.clipboard?.writeText(paymentLink)} style={{ background:'none', border:'1px solid var(--light)', color:'var(--dark)', padding:'11px 16px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>複製付款連結</button>
         </div>
       )}

@@ -177,6 +177,7 @@ export type MockEcladoApiOptions = {
   onLinePush?: (body: Record<string, unknown>) => void;
   onOrderEmail?: (body: Record<string, unknown>) => void;
   onPaymentRequest?: (body: Record<string, unknown>) => void;
+  paymentQueryStatus?: 'paid' | 'pending' | 'failed';
   productWriteError?: string;
   orderWriteError?: string;
   promotionWriteError?: string;
@@ -546,11 +547,24 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
           Description: '付款單建立成功',
           TSNo: `E2E${Date.now()}`,
           PayToken: request.payType === 'C' ? undefined : payToken,
-          CardParam: request.payType === 'C' ? { PayToken: payToken } : undefined,
-          ATMParam: {
-            AtmPayNo: '8071234567890123',
-          },
+          CardParam: request.payType === 'C'
+            ? { PayToken: payToken, CardPayURL: 'https://sandbox.sinopac.test/pay' }
+            : undefined,
+          ATMParam: request.payType === 'A'
+            ? { AtmPayNo: '8071234567890123' }
+            : undefined,
           Echo: request,
+        },
+      });
+    });
+    await page.route('https://pay.ecladotaiwan.com/api/sinopac/query-payment', async route => {
+      const status = options.paymentQueryStatus || 'paid';
+      const payStatus = status === 'paid' ? '1C400' : status === 'pending' ? '1C200' : '1C250';
+      return json(route, {
+        ok: true,
+        response: {
+          Status: 'S',
+          OrderList: [{ OrderNo: route.request().postDataJSON()?.orderNo, PayStatus: payStatus }],
         },
       });
     });

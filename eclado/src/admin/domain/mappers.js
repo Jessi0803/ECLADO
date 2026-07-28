@@ -111,7 +111,11 @@ export function normalizeProduct(row, variantRows = null, imageRows = []) {
     sourceFolderName: row.source_folder_name || '',
     importedFromDrive: !!row.imported_from_drive,
     listImageScale: normalizeProductImageScale(row.product_list_image_scale),
-    active: row.active !== false,
+    publicationStatus: row.publication_status
+      || (row.active === false ? 'archived' : 'active'),
+    active: row.publication_status
+      ? row.publication_status === 'active'
+      : row.active !== false,
   };
 }
 

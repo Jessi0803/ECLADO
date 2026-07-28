@@ -30,6 +30,7 @@ declare
   normalized_stock integer;
   normalized_active boolean;
   normalized_default boolean;
+  normalized_publication_status text;
   default_count integer := 0;
   default_variant public.product_variants%rowtype;
   response_variants jsonb;
@@ -87,11 +88,24 @@ begin
     requested_asset_key := (p_product ->> 'asset_key')::uuid;
   end if;
 
+  normalized_publication_status := case
+    when p_product ? 'publication_status'
+      then nullif(trim(p_product ->> 'publication_status'), '')
+    when p_product ? 'active'
+      then case when (p_product ->> 'active')::boolean then 'active' else 'archived' end
+    else null
+  end;
+  if normalized_publication_status is not null
+    and normalized_publication_status not in ('draft', 'active', 'archived')
+  then
+    raise exception 'Invalid product publication status' using errcode = '22023';
+  end if;
+
   if requested_product_id is null then
     insert into public.products (
       asset_key, name, name_zh, category, min_stock, is_pro_only,
       image_url, image_urls, description, skin_type, ingredients, features,
-      source_folder_name, imported_from_drive, product_list_image_scale, active,
+      source_folder_name, imported_from_drive, product_list_image_scale, publication_status, active,
       size, price, pro_price, stock, variants
     )
     values (
@@ -116,7 +130,8 @@ begin
       nullif(trim(p_product ->> 'source_folder_name'), ''),
       coalesce((p_product ->> 'imported_from_drive')::boolean, false),
       nullif(p_product ->> 'product_list_image_scale', '')::numeric,
-      coalesce((p_product ->> 'active')::boolean, true),
+      coalesce(normalized_publication_status, 'draft'),
+      coalesce(normalized_publication_status, 'draft') = 'active',
       '', 0, 0, 0, '[]'::jsonb
     )
     returning id, asset_key into target_product_id, target_asset_key;
@@ -132,6 +147,10 @@ begin
       raise exception 'Product % not found', target_product_id using errcode = 'P0002';
     end if;
     target_asset_key := existing_product.asset_key;
+    normalized_publication_status := coalesce(
+      normalized_publication_status,
+      existing_product.publication_status
+    );
 
     update public.products
     set
@@ -167,7 +186,8 @@ begin
           then nullif(p_product ->> 'product_list_image_scale', '')::numeric
         else product_list_image_scale
       end,
-      active = coalesce((p_product ->> 'active')::boolean, active),
+      publication_status = normalized_publication_status,
+      active = normalized_publication_status = 'active',
       updated_at = now()
     where id = target_product_id;
   end if;

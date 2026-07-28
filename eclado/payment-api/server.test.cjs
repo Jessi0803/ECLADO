@@ -146,3 +146,12 @@ test('getSinopacPaymentError: 失敗回傳描述，成功回空字串', () => {
   assert.equal(server.getSinopacPaymentError({ Status: 'S' }), '');
   assert.match(server.getSinopacPaymentError({ Status: 'F', Description: '卡片遭拒' }), /卡片遭拒/);
 });
+
+test('付款返回網址只包含訂單與結果，不洩漏任何 token', () => {
+  const url = new URL(server.buildPaymentResultUrl('ECL-RETURN-001', 'paid'));
+  assert.equal(url.pathname, '/payment-result');
+  assert.equal(url.searchParams.get('orderNo'), 'ECL-RETURN-001');
+  assert.equal(url.searchParams.get('result'), 'paid');
+  assert.equal(url.searchParams.has('payToken'), false);
+  assert.equal(url.searchParams.has('paymentToken'), false);
+});

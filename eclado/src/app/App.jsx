@@ -25,6 +25,7 @@ import InfoPage from '../pages/InfoPage.jsx';
 import LineCallbackPage from '../pages/LineCallbackPage.jsx';
 import LoginPage from '../pages/LoginPage.jsx';
 import PrivacyPage from '../pages/PrivacyPage.jsx';
+import PaymentResultPage from '../pages/PaymentResultPage.jsx';
 import ProductPage from '../pages/ProductPage.jsx';
 import ProfessionalApplicationPage from '../pages/ProfessionalApplicationPage.jsx';
 import ResetPasswordPage from '../pages/ResetPasswordPage.jsx';
@@ -126,6 +127,7 @@ export default function App() {
       case 'about':    return <AboutPage />;
       case 'info':     return <InfoPage user={user} />;
       case 'line-callback': return <LineCallbackPage />;
+      case 'payment-result': return <PaymentResultPage setPage={setPage} />;
       case 'privacy':  return <PrivacyPage />;
       case 'contact':  return <ContactPage />;
       default:         return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;

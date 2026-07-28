@@ -465,22 +465,25 @@ app.get('/health', (req, res) => {
   });
 });
 
-async function redirectPaymentReturn(req, res) {
-  const siteUrl = new URL('https://www.ecladotaiwan.com/');
-  siteUrl.searchParams.set('payment', 'success');
+function buildPaymentResultUrl(orderNo, result = 'pending') {
+  const siteUrl = new URL('https://ecladotaiwan.com/payment-result');
+  if (orderNo) siteUrl.searchParams.set('orderNo', String(orderNo));
+  siteUrl.searchParams.set('result', ['paid', 'failed'].includes(result) ? result : 'pending');
+  return siteUrl.toString();
+}
 
+async function redirectPaymentReturn(req, res) {
   const orderNo = req.query.orderNo || req.body?.OrderNo || req.body?.orderNo;
   const payToken = req.body?.PayToken || req.body?.payToken || req.query.payToken;
-
-  if (orderNo) siteUrl.searchParams.set('orderNo', String(orderNo));
-  if (payToken) siteUrl.searchParams.set('payToken', String(payToken));
+  let resolvedOrderNo = String(orderNo || '').trim();
+  let result = 'pending';
 
   // 信用卡(含行動支付)的付款結果是經由 ReturnURL 同步回拋，
   // 這裡用 PayToken 向豐收款確認付款結果後更新訂單，再導回前台。
   if (payToken) {
     try {
       const payment = await resolvePaymentStateFromWebhook({ ...req.query, ...req.body });
-      const resolvedOrderNo = payment.orderNo || String(orderNo || '').trim();
+      resolvedOrderNo = payment.orderNo || resolvedOrderNo;
       if (resolvedOrderNo && payment.paid) {
         // 先轉發給 Vercel（此時訂單尚未標記 paid）→ Vercel 標記已付款並寄 LINE／Email，
         // 再由 Vultr 補寫一次作為保險（Vercel 失敗時仍會標記）。
@@ -491,15 +494,17 @@ async function redirectPaymentReturn(req, res) {
           console.error('[return] supabase fallback failed', e.message);
         }
         console.log(`[return] order ${resolvedOrderNo} confirmed paid`);
+        result = 'paid';
       } else {
         console.warn(`[return] order ${resolvedOrderNo || '?'} not marked paid (payStatus=${payment.payStatus}, payFlag=${payment.payFlag})`);
+        result = payment.pending ? 'pending' : 'failed';
       }
     } catch (error) {
       console.error('[return] payment confirm failed', error);
     }
   }
 
-  res.redirect(303, siteUrl.toString());
+  res.redirect(303, buildPaymentResultUrl(resolvedOrderNo, result));
 }
 
 app.get('/return', redirectPaymentReturn);
@@ -643,4 +648,5 @@ module.exports = {
   buildCreateBody,
   buildAuthoritativeCreateBody,
   buildQueryBody,
+  buildPaymentResultUrl,
 };
