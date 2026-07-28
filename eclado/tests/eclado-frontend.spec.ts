@@ -104,6 +104,18 @@ test('LINE 登入結帳回來後會回到結帳頁', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '結帳' })).toBeVisible();
 });
 
+test('LINE magic link 即使遺失 pending sessionStorage 仍會回到首頁', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: authUser('line-home@example.com'),
+    profiles: [profile('consumer', 'line-home@example.com')],
+  });
+
+  await page.goto('/login#access_token=mock-access-token&refresh_token=mock-refresh-token&expires_in=3600&token_type=bearer&type=magiclink');
+
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('button', { name: '會員專區' })).toContainText('E2E 會員');
+});
+
 test('商城瀏覽、商品詳情、一般會員價格與院線商品限制', async ({ page }) => {
   await page.goto('/shop');
   await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();

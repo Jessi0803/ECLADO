@@ -11,7 +11,7 @@ export default function LineCallbackPage() {
     getSession().then(({ data: { session } }) => {
       if (session?.user) {
         done = true;
-        const nextLabel = sessionStorage.getItem(CHECKOUT_LOGIN_REDIRECT_KEY) === 'checkout' ? '結帳頁' : '會員專區';
+        const nextLabel = sessionStorage.getItem(CHECKOUT_LOGIN_REDIRECT_KEY) === 'checkout' ? '結帳頁' : '首頁';
         setStatus(`LINE 登入成功，正在前往${nextLabel}...`);
         return;
       }

@@ -116,12 +116,14 @@ export default function useAuth(setPageState) {
             await finishLineLoginRedirect(session);
             return;
           }
-          await loadUser(session.user);
           if (isEmailVerificationCallback()) {
+            await loadUser(session.user);
             sessionStorage.setItem('eclado_auth_notice', 'email_verified');
+            cleanAuthCallbackFromUrl('/login');
+            setPageState('login');
+            return;
           }
-          cleanAuthCallbackFromUrl('/login');
-          setPageState('login');
+          await finishLineLoginRedirect(session);
         }
       } finally {
         if (!cancelled) setAuthReady(true);
@@ -160,6 +162,8 @@ export default function useAuth(setPageState) {
         sessionStorage.setItem('eclado_auth_notice', 'email_verified');
         cleanAuthCallbackFromUrl('/login');
         setPageState('login');
+      } else if (event === 'SIGNED_IN' && hasAuthCallbackInUrl()) {
+        await finishLineLoginRedirect(session);
       }
 
       if (session?.user) loadUser(session.user);

@@ -83,7 +83,7 @@ export function isPasswordRecoveryUrl() {
 
 export function isEmailVerificationCallback() {
   const t = getUrlAuthParams().get('type');
-  return t === 'signup' || t === 'email' || t === 'invite' || t === 'magiclink';
+  return t === 'signup' || t === 'email' || t === 'invite';
 }
 
 export function getAuthCallbackErrorMessage() {
