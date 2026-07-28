@@ -51,6 +51,13 @@ async function proceedToCheckout(page: import('@playwright/test').Page) {
   }
 }
 
+async function openAdminCatalog(page: import('@playwright/test').Page) {
+  await page.goto('/admin');
+  const openMenu = page.getByRole('button', { name: '開啟選單' });
+  if (await openMenu.isVisible()) await openMenu.click();
+  await page.getByRole('button', { name: /商品 & 庫存/ }).click();
+}
+
 async function triggerProductsRealtime(page: import('@playwright/test').Page) {
   await page.evaluate(() => {
     const client = (window as any).supabase;
@@ -169,8 +176,7 @@ test('後台以規格表格與交易式 RPC 儲存商品', async ({ page }) => {
     onProductWithVariantsSave: request => { savedRequest = request; },
   });
 
-  await page.goto('/admin');
-  await page.getByRole('button', { name: /商品 & 庫存/ }).click();
+  await openAdminCatalog(page);
   await expect(page.getByText('批次圖片縮放', { exact: true })).toHaveCount(0);
   const productRow = page.getByRole('row').filter({ hasText: '胜肽修護精華液' });
   await productRow.getByRole('button', { name: '編輯' }).click();
@@ -230,8 +236,7 @@ test('後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序', async 
     onProductImageUpload: path => { uploadedPath = path; },
   });
 
-  await page.goto('/admin');
-  await page.getByRole('button', { name: /商品 & 庫存/ }).click();
+  await openAdminCatalog(page);
   const productRow = page.getByRole('row').filter({ hasText: '胜肽修護精華液' });
   await productRow.getByRole('button', { name: '編輯' }).click();
 
