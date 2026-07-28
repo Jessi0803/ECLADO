@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import AuthForms from '../components/auth/AuthForms.jsx';
 import BackHomeButton from '../components/auth/BackHomeButton.jsx';
 import {
+  consumeCheckoutLoginRedirectPage,
   LINE_LOGIN_PENDING_KEY,
   LOGIN_NOTICE_KEY,
 } from '../app/authSession.js';
