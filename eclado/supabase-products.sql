@@ -1,8 +1,12 @@
 -- ECLADO products / inventory table
 -- Run once in Supabase SQL Editor.
 
+create extension if not exists pgcrypto;
+create sequence if not exists public.products_id_seq as integer;
+
 create table if not exists public.products (
-  id integer primary key,
+  id integer primary key default nextval('public.products_id_seq'::regclass),
+  asset_key uuid not null default gen_random_uuid(),
   name text not null,
   name_zh text not null,
   category text not null,
@@ -32,6 +36,13 @@ alter table public.products add column if not exists variants jsonb not null def
 alter table public.products add column if not exists product_list_image_scale numeric;
 alter table public.products add column if not exists source_folder_name text;
 alter table public.products add column if not exists imported_from_drive boolean not null default false;
+alter table public.products add column if not exists asset_key uuid default gen_random_uuid();
+update public.products set asset_key = gen_random_uuid() where asset_key is null;
+alter table public.products alter column asset_key set default gen_random_uuid();
+alter table public.products alter column asset_key set not null;
+alter table public.products alter column id set default nextval('public.products_id_seq'::regclass);
+alter sequence public.products_id_seq owned by public.products.id;
+create unique index if not exists products_asset_key_unique on public.products(asset_key);
 
 create table if not exists public.product_variants (
   id bigserial primary key,
@@ -126,6 +137,12 @@ on conflict (id) do update set
   ingredients = excluded.ingredients,
   features = excluded.features,
   updated_at = now();
+
+select setval(
+  'public.products_id_seq'::regclass,
+  greatest(coalesce((select max(id) from public.products), 0) + 1, 1),
+  false
+);
 
 do $$
 begin

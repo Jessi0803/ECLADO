@@ -4,6 +4,7 @@ import {
   applyVariantToProduct,
   getCartKey,
   getVariantForCartItem,
+  groupProductImages,
   groupProductVariants,
   isProfessionalMember,
   mergeProductsWithStock,
@@ -23,7 +24,14 @@ export default function useProducts(user, setCart) {
     let alive = true;
 
     async function loadProducts() {
-      const { data, error, variantRows, variantError } = await fetchProductRows();
+      const {
+        data,
+        error,
+        variantRows,
+        variantError,
+        imageRows,
+        imageError,
+      } = await fetchProductRows();
       if (!alive) return;
       if (error) {
         console.error('[ECLADO] 無法載入 products：', error.message, error);
@@ -37,7 +45,14 @@ export default function useProducts(user, setCart) {
         return;
       }
       const variantMap = groupProductVariants(variantRows);
-      const loadedProducts = mergeProductsWithStock(PRODUCTS, data || [], variantMap);
+      if (imageError) {
+        console.warn(
+          '[ECLADO] 無法載入 product_images（暫用 products 圖片欄位）：',
+          imageError.message || imageError,
+        );
+      }
+      const imageMap = imageError ? null : groupProductImages(imageRows);
+      const loadedProducts = mergeProductsWithStock(PRODUCTS, data || [], variantMap, imageMap);
       setProducts(loadedProducts);
       setCart(previous => previous.map(item => {
         const product = loadedProducts.find(current => (
@@ -57,7 +72,7 @@ export default function useProducts(user, setCart) {
     try {
       channel = subscribeToTables(
         'products-realtime',
-        ['products', 'product_variants'],
+        ['products', 'product_variants', 'product_images'],
         loadProducts,
       );
     } catch (error) {

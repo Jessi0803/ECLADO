@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import useIsMobile from '../hooks/useIsMobile.js';
 import { PRODUCT_NAV_LINKS } from '../app/navigation.js';
 import ProductCard from '../components/product/ProductCard.jsx';
-import ProductDetail from '../components/product/ProductDetail.jsx';
 import PromoSection from '../components/product/PromoSection.jsx';
 import {
   PRODUCTS,
@@ -39,9 +38,8 @@ function isProductInCategory(product, category) {
   return false;
 }
 
-export default function ShopPage({ user, cart, setCart, promotions = [], products = PRODUCTS }) {
+export default function ShopPage({ user, cart, setCart, onSelectProduct, promotions = [], products = PRODUCTS }) {
   const [activeCategory, setActiveCategory] = useState('所有產品');
-  const [selectedProduct, setSelectedProduct] = useState(null);
   const categories = PRODUCT_NAV_LINKS;
   const isMobile = useIsMobile();
 
@@ -55,19 +53,7 @@ export default function ShopPage({ user, cart, setCart, promotions = [], product
     });
   }
 
-  useEffect(() => {
-    if (!selectedProduct) return;
-    const fresh = products.find(product => product.id === selectedProduct.id);
-    if (fresh && fresh.stock !== selectedProduct.stock) {
-      setSelectedProduct(fresh);
-    }
-  }, [products, selectedProduct]);
-
   const filtered = products.filter(product => isProductInCategory(product, activeCategory));
-
-  if (selectedProduct) {
-    return <ProductDetail product={selectedProduct} user={user} onAdd={addToCart} onBack={() => setSelectedProduct(null)} promotions={promotions} />;
-  }
 
   const livePromosShop = promotions.filter(isPromotionLive);
 
@@ -122,7 +108,7 @@ export default function ShopPage({ user, cart, setCart, promotions = [], product
       <div style={{ maxWidth:1280, margin:'0 auto', padding: isMobile ? '40px 20px' : '60px 32px' }}>
         {false && null /* pro banner moved to header */}
         <div className="g4lg">
-          {filtered.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} promotions={promotions} />)}
+          {filtered.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => onSelectProduct(p)} promotions={promotions} />)}
         </div>
         {filtered.length === 0 && <div style={{ textAlign:'center', padding:'80px 0', color:'var(--dark)', fontSize:14 }}>此分類目前無商品</div>}
       </div>

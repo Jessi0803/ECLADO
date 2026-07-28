@@ -150,7 +150,10 @@ export function getProductImage(product, width = 600) {
 export function getProductImages(product) {
   const images = [product?.img, ...normalizeJsonArray(product?.imageUrls)].filter(Boolean);
   const uniqueImages = [...new Set(images)];
-  const primaryIndex = PRODUCT_PRIMARY_IMAGE_OVERRIDES[product?.nameZh];
+  const hasStorageImages = Array.isArray(product?.productImages) && product.productImages.length > 0;
+  const primaryIndex = hasStorageImages
+    ? undefined
+    : PRODUCT_PRIMARY_IMAGE_OVERRIDES[product?.nameZh];
   if (Number.isInteger(primaryIndex) && uniqueImages[primaryIndex]) {
     return [uniqueImages[primaryIndex], ...uniqueImages.filter((_, index) => index !== primaryIndex)];
   }
@@ -201,6 +204,31 @@ export function groupProductVariants(rows) {
   return grouped;
 }
 
+export function groupProductImages(rows) {
+  const grouped = (rows || []).reduce((map, row) => {
+    if (row.active === false || !row.url) return map;
+    const productId = Number(row.product_id);
+    if (!productId) return map;
+    const image = {
+      id: row.id || row.storage_path,
+      storagePath: row.storage_path || '',
+      url: row.url,
+      altText: row.alt_text || '',
+      sortOrder: Number(row.sort_order) || 0,
+      isPrimary: row.is_primary === true,
+    };
+    if (!map.has(productId)) map.set(productId, []);
+    map.get(productId).push(image);
+    return map;
+  }, new Map());
+  grouped.forEach(images => images.sort((left, right) => (
+    Number(right.isPrimary) - Number(left.isPrimary)
+    || left.sortOrder - right.sortOrder
+    || String(left.id).localeCompare(String(right.id))
+  )));
+  return grouped;
+}
+
 export function getFulfillmentInfo(product) {
   const rawStock = product?.stock;
   if (rawStock === null || rawStock === undefined || rawStock === '') {
@@ -240,13 +268,18 @@ export function getFulfillmentInfo(product) {
   };
 }
 
-export function mergeProductsWithStock(baseProducts, stockRows, variantMap) {
+export function mergeProductsWithStock(baseProducts, stockRows, variantMap, imageMap = null) {
   const productMap = new Map(baseProducts.map(product => [Number(product.id), product]));
   return (stockRows || []).filter(row => row.active !== false).map(row => {
     const product = productMap.get(Number(row.id)) || {};
     const rowImages = normalizeJsonArray(row.image_urls).filter(Boolean);
     const fallbackImages = normalizeJsonArray(product.imageUrls).filter(Boolean);
-    const imageUrls = rowImages.length ? rowImages : fallbackImages;
+    const storageImages = imageMap?.get(Number(row.id)) || [];
+    const legacyImageUrls = rowImages.length ? rowImages : fallbackImages;
+    const imageUrls = storageImages.length
+      ? storageImages.map(image => image.url)
+      : legacyImageUrls;
+    const primaryStorageImage = storageImages.find(image => image.isPrimary) || storageImages[0];
     const variantSource = variantMap?.get(Number(row.id)) || [];
     const variants = variantSource
       .map(normalizeProductVariant)
@@ -263,8 +296,9 @@ export function mergeProductsWithStock(baseProducts, stockRows, variantMap) {
       isProOnly: row.is_pro_only != null ? !!row.is_pro_only : product.isProOnly,
       price: primaryVariant?.price || (row.price != null ? Number(row.price) : product.price),
       proPrice: primaryVariant?.proPrice || (row.pro_price != null ? Number(row.pro_price) : product.proPrice),
-      img: row.image_url || imageUrls[0] || product.img || '',
+      img: primaryStorageImage?.url || row.image_url || imageUrls[0] || product.img || '',
       imageUrls,
+      productImages: storageImages,
       variants,
       desc: row.description || product.desc || '',
       skinType: row.skin_type || product.skinType || '',

@@ -165,6 +165,8 @@ export type MockEcladoApiOptions = {
   onProductInsert?: (product: Record<string, unknown>) => void;
   onProductUpdate?: (update: Record<string, unknown>, url: string) => void;
   onProductWithVariantsSave?: (request: Record<string, unknown>) => void;
+  onProductImagesSave?: (request: Record<string, unknown>) => void;
+  onProductImageUpload?: (path: string) => void;
   onProfileUpdate?: (update: Record<string, unknown>, url: string) => void;
   onMemberDelete?: (memberId: string) => void;
   onPromotionInsert?: (promotion: Record<string, unknown>) => void;
@@ -186,6 +188,7 @@ export type MockEcladoApiOptions = {
   signInError?: string;
   products?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
   productVariants?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
+  productImages?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
   promotions?: Record<string, unknown>[];
   orders?: Record<string, unknown>[];
   profiles?: Record<string, unknown>[];
@@ -199,6 +202,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   const productVariants = () => typeof options.productVariants === 'function'
     ? options.productVariants()
     : (options.productVariants || []);
+  const productImages = () => typeof options.productImages === 'function'
+    ? options.productImages()
+    : (options.productImages || []);
   const promotions = options.promotions || [activePromotion];
   const orders = options.orders || [];
   const profiles = [...(options.profiles || [])];
@@ -235,8 +241,20 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
 
   await page.route('**/auth/v1/logout', async route => json(route, {}, 204));
 
+  await page.route('**/storage/v1/object/product-images/**', async route => {
+    const marker = '/storage/v1/object/product-images/';
+    const path = decodeURIComponent(route.request().url().split(marker)[1] || '');
+    if (route.request().method() === 'POST') options.onProductImageUpload?.(path);
+    return json(route, { Key: `product-images/${path}` });
+  });
+
   await page.route('**/rest/v1/product_variants**', async route => {
     if (route.request().method() === 'GET') return json(route, productVariants());
+    return json(route, []);
+  });
+
+  await page.route('**/rest/v1/product_images**', async route => {
+    if (route.request().method() === 'GET') return json(route, productImages());
     return json(route, []);
   });
 
@@ -295,6 +313,16 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       product_id: Number(request?.p_product?.id || 999),
       default_variant_id: Number(request?.p_variants?.[0]?.id || 9991),
       variants: request?.p_variants || [],
+    });
+  });
+
+  await page.route('**/rest/v1/rpc/save_product_images', async route => {
+    const request = route.request().postDataJSON();
+    options.onProductImagesSave?.(request);
+    if (options.productWriteError) return json(route, { message: options.productWriteError }, 400);
+    return json(route, {
+      product_id: Number(request?.p_product_id),
+      images: request?.p_images || [],
     });
   });
 

@@ -16,10 +16,9 @@ import { emptySalesStats, getPopularProducts } from '../domain/sales.js';
 import { isPromotionLive } from '../domain/promotions.js';
 import { goProfessionalApply } from '../services/membership.js';
 
-export default function HomePage({ setPage, user, cart, setCart, promotions = [], products = PRODUCTS, salesStats = emptySalesStats() }) {
+export default function HomePage({ setPage, onSelectProduct, user, cart, setCart, promotions = [], products = PRODUCTS, salesStats = emptySalesStats() }) {
   const [slide, setSlide] = useState(0);
   const [animating, setAnimating] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
   const isMobile = useIsMobile();
   const livePromos = promotions.filter(isPromotionLive);
   const topProducts = getPopularProducts(products, salesStats);
@@ -31,14 +30,6 @@ export default function HomePage({ setPage, user, cart, setCart, promotions = []
     }, 7500);
     return () => clearInterval(t);
   }, []);
-
-  useEffect(() => {
-    if (!selectedProduct) return;
-    const fresh = products.find(product => product.id === selectedProduct.id);
-    if (fresh && fresh !== selectedProduct) {
-      setSelectedProduct(fresh);
-    }
-  }, [products, selectedProduct]);
 
   const featured = products.filter(p => !p.isProOnly).slice(0, 4);
 
@@ -53,10 +44,6 @@ export default function HomePage({ setPage, user, cart, setCart, promotions = []
   }
 
   const heroPad = isMobile ? '0 6vw' : '0 10vw';
-
-  if (selectedProduct) {
-    return <ProductDetail product={selectedProduct} user={user} onAdd={addToCart} onBack={() => setSelectedProduct(null)} promotions={promotions} />;
-  }
 
   return (
     <div>
@@ -158,11 +145,11 @@ export default function HomePage({ setPage, user, cart, setCart, promotions = []
       {/* LIVE PROMOTIONS */}
       <div id="eclado-promotions">
         {livePromos.map(promo => (
-          <PromoSection key={promo.id} promo={promo} user={user} addToCart={addToCart} onSelect={setSelectedProduct} isMobile={isMobile} promotions={promotions} products={products} />
+          <PromoSection key={promo.id} promo={promo} user={user} addToCart={addToCart} onSelect={onSelectProduct} isMobile={isMobile} promotions={promotions} products={products} />
         ))}
       </div>
 
-      <TopProductsCarousel products={topProducts} user={user} onAdd={addToCart} onSelect={setSelectedProduct} isMobile={isMobile} setPage={setPage} promotions={promotions} />
+      <TopProductsCarousel products={topProducts} user={user} onAdd={addToCart} onSelect={onSelectProduct} isMobile={isMobile} setPage={setPage} promotions={promotions} />
 
       {/* FEATURED PRODUCTS */}
       <section style={{ padding: isMobile ? '60px 0' : '100px 0', background:'var(--white)' }}>
@@ -175,7 +162,7 @@ export default function HomePage({ setPage, user, cart, setCart, promotions = []
             <button onClick={() => setPage('shop')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'var(--dark)', fontFamily:'var(--font-body)', borderBottom:'1px solid var(--dark)', paddingBottom:2, whiteSpace:'nowrap' }}>全部商品 →</button>
           </div>
           <div className="g4">
-            {featured.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => setSelectedProduct(p)} promotions={promotions} />)}
+            {featured.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => onSelectProduct(p)} promotions={promotions} />)}
           </div>
         </div>
       </section>

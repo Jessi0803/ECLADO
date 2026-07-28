@@ -63,7 +63,7 @@ async function triggerProductsRealtime(page: import('@playwright/test').Page) {
 
 test('主要路徑可開啟且不白屏', async ({ page }) => {
   test.slow();
-  for (const path of ['/', '/shop', '/cart', '/checkout', '/login', '/professional-apply', '/about', '/info', '/privacy', '/contact', '/admin']) {
+  for (const path of ['/', '/shop', '/products/peptide-repair-serum', '/cart', '/checkout', '/login', '/professional-apply', '/about', '/info', '/privacy', '/contact', '/admin']) {
     await page.goto(path, { waitUntil: 'domcontentloaded' });
     const body = page.locator('body');
     await expect(body).toBeVisible();
@@ -103,10 +103,28 @@ test('商城瀏覽、商品詳情、一般會員價格與院線商品限制', as
   await expect(page.getByText('NT$ 3,980').first()).toBeVisible();
 
   await page.getByText('NK細胞活化安瓶').first().click();
+  await expect(page).toHaveURL(/\/products\/nk-cell-activator$/);
   await expect(page.getByText('院線專業商品')).toBeVisible();
   await expect(page.getByText('院線專業集中護理')).toBeVisible();
   await expect(page.getByText('私訊 LINE 官方詢問')).toBeVisible();
   await expect(page.getByRole('button', { name: /加入購物車/ })).toHaveCount(0);
+});
+
+test('商品具有可分享唯一路徑，重新整理與返回列表皆正常', async ({ page }) => {
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await expect(page).toHaveURL(/\/products\/peptide-repair-serum$/);
+  await expect(page.getByRole('heading', { name: '胜肽修護精華液' })).toBeVisible();
+
+  await page.reload();
+  await expect(page).toHaveURL(/\/products\/peptide-repair-serum$/);
+  await expect(page.getByRole('heading', { name: '胜肽修護精華液' })).toBeVisible();
+
+  await page.getByRole('button', { name: '返回商品列表' }).click();
+  await expect(page).toHaveURL(/\/shop$/);
+
+  await page.goto('/products/not-a-real-product');
+  await expect(page.getByRole('heading', { name: '找不到此商品' })).toBeVisible();
 });
 
 test('商品新分類正確，院線商品不重複出現在一般分類', async ({ page }) => {
@@ -152,14 +170,18 @@ test('後台以規格表格與交易式 RPC 儲存商品', async ({ page }) => {
   });
 
   await page.goto('/admin');
-    await page.getByRole('button', { name: /商品 & 庫存/ }).click();
+  await page.getByRole('button', { name: /商品 & 庫存/ }).click();
+  await expect(page.getByText('批次圖片縮放', { exact: true })).toHaveCount(0);
   const productRow = page.getByRole('row').filter({ hasText: '胜肽修護精華液' });
   await productRow.getByRole('button', { name: '編輯' }).click();
 
   await expect(page.getByText('商品規格', { exact: true })).toBeVisible();
+  await expect(page.getByText('商品列表圖片縮放', { exact: true })).toBeVisible();
   await expect(page.locator('#productSize')).toHaveCount(0);
   await expect(page.locator('#productPrice')).toHaveCount(0);
   await expect(page.locator('#productStock')).toHaveCount(0);
+  await expect(page.locator('#productImage')).toHaveCount(0);
+  await expect(page.locator('#productImageUrls')).toHaveCount(0);
 
   await page.getByRole('button', { name: '+ 新增規格' }).click();
   await page.getByLabel('規格 2 名稱').fill('100ml');
@@ -171,6 +193,8 @@ test('後台以規格表格與交易式 RPC 儲存商品', async ({ page }) => {
 
   await expect.poll(() => savedRequest).not.toBeNull();
   expect(savedRequest?.p_product?.id).toBe(2);
+  expect(savedRequest?.p_product).not.toHaveProperty('image_url');
+  expect(savedRequest?.p_product).not.toHaveProperty('image_urls');
   expect(savedRequest?.p_variants).toHaveLength(2);
   expect(savedRequest?.p_variants?.[1]).toMatchObject({
     sku: 'SERUM-100',
@@ -180,6 +204,56 @@ test('後台以規格表格與交易式 RPC 儲存商品', async ({ page }) => {
     stock: 5,
     is_default: false,
     sort_order: 1,
+    active: true,
+  });
+});
+
+test('後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序', async ({ page }) => {
+  let savedImagesRequest: Record<string, any> | null = null;
+  let uploadedPath = '';
+  const assetKey = '11111111-2222-4333-8444-555555555555';
+  const admin = authUser('ecladotaiwan@gmail.com');
+  await mockEcladoApis(page, {
+    authUser: admin,
+    products: adminProductRows.map(product => product.id === 2 ? { ...product, asset_key: assetKey } : product),
+    productVariants: [
+      { id: 201, product_id: 2, sku: 'SERUM-30', size: '30ml', price: 3980, pro_price: 2980, stock: 2, is_default: true, sort_order: 0, active: true },
+    ],
+    productImages: [
+      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', product_id: 2, storage_path: `products/${assetKey}/hero.webp`, alt_text: '原首圖', sort_order: 0, is_primary: true, active: true },
+      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', product_id: 2, storage_path: `products/${assetKey}/detail.webp`, alt_text: '原附圖', sort_order: 1, is_primary: false, active: true },
+    ],
+    orders: adminOrderRows,
+    profiles: adminProfileRows,
+    applications: adminApplicationRows,
+    onProductImagesSave: request => { savedImagesRequest = request; },
+    onProductImageUpload: path => { uploadedPath = path; },
+  });
+
+  await page.goto('/admin');
+  await page.getByRole('button', { name: /商品 & 庫存/ }).click();
+  const productRow = page.getByRole('row').filter({ hasText: '胜肽修護精華液' });
+  await productRow.getByRole('button', { name: '編輯' }).click();
+
+  await expect(page.getByText('首圖', { exact: true })).toBeVisible();
+  await page.locator('#productImageFiles').setInputFiles({
+    name: 'new-detail.webp',
+    mimeType: 'image/webp',
+    buffer: Buffer.from('eclado-image-test'),
+  });
+  await expect(page.getByText('待上傳', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '設為首圖' }).nth(2).click();
+  await page.getByRole('button', { name: '儲存', exact: true }).click();
+
+  await expect.poll(() => uploadedPath).toContain(`products/${assetKey}/`);
+  await expect.poll(() => savedImagesRequest).not.toBeNull();
+  expect(savedImagesRequest?.p_product_id).toBe(2);
+  expect(savedImagesRequest?.p_images).toHaveLength(3);
+  expect(savedImagesRequest?.p_images.filter((image: any) => image.is_primary)).toHaveLength(1);
+  expect(savedImagesRequest?.p_images[2]).toMatchObject({
+    original_name: 'new-detail.webp',
+    mime_type: 'image/webp',
+    is_primary: true,
     active: true,
   });
 });
@@ -270,6 +344,57 @@ test('DB 的 price 覆蓋寫死的售價', async ({ page }) => {
   await page.goto('/shop');
   await page.getByText('胜肽修護精華液').first().click();
   await expect(page.getByText('NT$ 2,999').first()).toBeVisible();
+});
+
+test('Storage 商品圖片優先於舊欄位，並套用首圖、排序與停用規則', async ({ page }) => {
+  await mockEcladoApis(page, {
+    productImages: [
+      {
+        id: 'image-secondary',
+        product_id: 2,
+        storage_path: 'products/asset-2/detail.webp',
+        alt_text: '胜肽修護精華液細節圖',
+        sort_order: 0,
+        is_primary: false,
+        active: true,
+      },
+      {
+        id: 'image-primary',
+        product_id: 2,
+        storage_path: 'products/asset-2/hero.webp',
+        alt_text: '胜肽修護精華液主圖',
+        sort_order: 1,
+        is_primary: true,
+        active: true,
+      },
+      {
+        id: 'image-inactive',
+        product_id: 2,
+        storage_path: 'products/asset-2/inactive.webp',
+        alt_text: '停用圖片',
+        sort_order: 2,
+        is_primary: false,
+        active: false,
+      },
+    ],
+    promotions: [],
+  });
+
+  await page.goto('/shop');
+  const cardImage = page.getByAltText('胜肽修護精華液').first();
+  await expect(cardImage).toHaveAttribute(
+    'src',
+    /\/storage\/v1\/object\/public\/product-images\/products\/asset-2\/hero\.webp$/,
+  );
+
+  await page.getByText('胜肽修護精華液').first().click();
+  await expect(page.getByRole('button', { name: '查看商品圖片 1' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '查看商品圖片 2' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '查看商品圖片 3' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '查看商品圖片 1' }).locator('img')).toHaveAttribute(
+    'src',
+    /\/storage\/v1\/object\/public\/product-images\/products\/asset-2\/hero\.webp$/,
+  );
 });
 
 test('商品多容量規格可切換價格並分開加入購物車', async ({ page }) => {

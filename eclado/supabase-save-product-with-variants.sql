@@ -15,6 +15,8 @@ as $$
 declare
   target_product_id integer;
   requested_product_id integer;
+  target_asset_key uuid;
+  requested_asset_key uuid;
   existing_product public.products%rowtype;
   variant_input jsonb;
   variant_position bigint;
@@ -81,20 +83,19 @@ begin
     end;
   end if;
 
-  if requested_product_id is null then
-    -- Existing products use integer IDs rather than an identity column. Locking
-    -- prevents two concurrent admin creates from selecting the same next ID.
-    lock table public.products in share row exclusive mode;
-    select coalesce(max(id), 0) + 1 into target_product_id from public.products;
+  if nullif(trim(p_product ->> 'asset_key'), '') is not null then
+    requested_asset_key := (p_product ->> 'asset_key')::uuid;
+  end if;
 
+  if requested_product_id is null then
     insert into public.products (
-      id, name, name_zh, category, min_stock, is_pro_only,
+      asset_key, name, name_zh, category, min_stock, is_pro_only,
       image_url, image_urls, description, skin_type, ingredients, features,
       source_folder_name, imported_from_drive, product_list_image_scale, active,
       size, price, pro_price, stock, variants
     )
     values (
-      target_product_id,
+      coalesce(requested_asset_key, gen_random_uuid()),
       trim(p_product ->> 'name'),
       trim(p_product ->> 'name_zh'),
       trim(p_product ->> 'category'),
@@ -117,7 +118,8 @@ begin
       nullif(p_product ->> 'product_list_image_scale', '')::numeric,
       coalesce((p_product ->> 'active')::boolean, true),
       '', 0, 0, 0, '[]'::jsonb
-    );
+    )
+    returning id, asset_key into target_product_id, target_asset_key;
   else
     target_product_id := requested_product_id;
 
@@ -129,6 +131,7 @@ begin
     if not found then
       raise exception 'Product % not found', target_product_id using errcode = 'P0002';
     end if;
+    target_asset_key := existing_product.asset_key;
 
     update public.products
     set
@@ -329,6 +332,7 @@ begin
 
   return jsonb_build_object(
     'product_id', target_product_id,
+    'asset_key', target_asset_key,
     'default_variant_id', default_variant.id,
     'variants', response_variants
   );

@@ -67,12 +67,30 @@ export function normalizeProductVariant(row, index = 0) {
   };
 }
 
-export function normalizeProduct(row, variantRows = null) {
+export function normalizeProductImage(row, index = 0) {
+  return {
+    id: row.id == null ? `new-image-${index}` : String(row.id),
+    storagePath: row.storage_path || '',
+    url: row.url || '',
+    originalName: row.original_name || '',
+    altText: row.alt_text || '',
+    sortOrder: Math.max(0, Number(row.sort_order) || index),
+    isPrimary: !!row.is_primary,
+    active: row.active !== false,
+    mimeType: row.mime_type || '',
+    fileSize: row.file_size == null ? null : Number(row.file_size),
+    width: row.width == null ? null : Number(row.width),
+    height: row.height == null ? null : Number(row.height),
+  };
+}
+
+export function normalizeProduct(row, variantRows = null, imageRows = []) {
   const variants = Array.isArray(variantRows)
     ? variantRows.map(normalizeProductVariant)
     : (Array.isArray(row.variants) ? row.variants.map(normalizeProductVariant) : []);
   return {
     id: row.id,
+    assetKey: row.asset_key || '',
     name: row.name || '',
     nameZh: row.name_zh || '',
     category: normalizeProductCategory(row.category, !!row.is_pro_only),
@@ -89,35 +107,11 @@ export function normalizeProduct(row, variantRows = null) {
     ingredients: row.ingredients || '',
     features: Array.isArray(row.features) ? row.features : [],
     variants,
+    productImages: imageRows.map(normalizeProductImage),
     sourceFolderName: row.source_folder_name || '',
     importedFromDrive: !!row.imported_from_drive,
     listImageScale: normalizeProductImageScale(row.product_list_image_scale),
     active: row.active !== false,
-  };
-}
-
-export function productToRow(product) {
-  return {
-    name: product.name || '',
-    name_zh: product.nameZh || '',
-    category: product.category || '',
-    size: product.size || '',
-    price: Number(product.price) || 0,
-    pro_price: Number(product.proPrice) || 0,
-    stock: Number(product.stock) || 0,
-    min_stock: product.minStock === '' || product.minStock == null ? 3 : Math.max(0, Number(product.minStock) || 0),
-    is_pro_only: !!product.isProOnly,
-    image_url: product.img || null,
-    image_urls: Array.isArray(product.imageUrls) ? product.imageUrls : [],
-    description: product.desc || '',
-    skin_type: product.skinType || '',
-    ingredients: product.ingredients || '',
-    features: Array.isArray(product.features) ? product.features : [],
-    variants: Array.isArray(product.variants) ? product.variants : [],
-    source_folder_name: product.sourceFolderName || null,
-    imported_from_drive: !!product.importedFromDrive,
-    product_list_image_scale: normalizeProductImageScale(product.listImageScale),
-    active: product.active !== false,
   };
 }
 

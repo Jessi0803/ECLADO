@@ -7,7 +7,12 @@ import {
   LINE_LOGIN_PENDING_KEY,
   POST_LOGIN_PAGE_KEY,
 } from './authSession.js';
-import { PAGE_PATHS, pageFromPath } from './routes.js';
+import {
+  PAGE_PATHS,
+  getProductSlug,
+  pageFromPath,
+  productSlugFromPath,
+} from './routes.js';
 import Nav from '../components/layout/Nav.jsx';
 import PromoDiagnosticBar from '../components/common/PromoDiagnosticBar.jsx';
 import AboutPage from '../pages/AboutPage.jsx';
@@ -20,6 +25,7 @@ import InfoPage from '../pages/InfoPage.jsx';
 import LineCallbackPage from '../pages/LineCallbackPage.jsx';
 import LoginPage from '../pages/LoginPage.jsx';
 import PrivacyPage from '../pages/PrivacyPage.jsx';
+import ProductPage from '../pages/ProductPage.jsx';
 import ProfessionalApplicationPage from '../pages/ProfessionalApplicationPage.jsx';
 import ResetPasswordPage from '../pages/ResetPasswordPage.jsx';
 import ShopPage from '../pages/ShopPage.jsx';
@@ -44,6 +50,18 @@ export default function App() {
     const path = PAGE_PATHS[newPage] || '/';
     window.history.pushState({ page: newPage }, '', path);
     setPageState(newPage);
+  }
+  function openProduct(product, from = page) {
+    const path = `/products/${getProductSlug(product.name)}`;
+    window.history.pushState({ page:'product', from }, '', path);
+    setPageState('product');
+  }
+  function closeProduct() {
+    if (window.history.state?.from) {
+      window.history.back();
+      return;
+    }
+    setPage('shop');
   }
   const {
     authReady,
@@ -95,8 +113,9 @@ export default function App() {
 
   function renderPage() {
     switch (page) {
-      case 'home':     return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
-      case 'shop':     return <ShopPage user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
+      case 'home':     return <HomePage setPage={setPage} onSelectProduct={product => openProduct(product, 'home')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
+      case 'shop':     return <ShopPage onSelectProduct={product => openProduct(product, 'shop')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
+      case 'product':  return <ProductPage productSlug={productSlugFromPath(window.location.pathname)} products={products} user={user} setCart={setCart} promotions={promotions} onBack={closeProduct} onShop={() => setPage('shop')} />;
       case 'cart':     return <CartPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
       case 'checkout': return <CheckoutPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
       case 'login':    return <LoginPage setPage={setPage} />;

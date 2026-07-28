@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { normalizeProductImageScale } from '../domain/mappers.js';
 
 const PRODUCT_CATEGORIES = ['清潔卸妝', '化妝水', '安瓶精華', '乳霜', '面膜', '防曬底妝', '其他', '院線課程儀器（含試用包）'];
-const MAX_PRODUCT_IMAGE_BYTES = 2 * 1024 * 1024;
+const MAX_PRODUCT_IMAGE_BYTES = 5 * 1024 * 1024;
+const PRODUCT_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
-export default function Catalog({ products, setProducts, onSaveProduct, onArchiveProduct, onRestoreProduct }) {
+export default function Catalog({ products, onSaveProduct, onArchiveProduct, onRestoreProduct }) {
   const [editing, setEditing] = useState(null); // product being edited (draft copy)
   const [listMode, setListMode] = useState('active');
   const [stockFilter, setStockFilter] = useState('all');
-  const [bulkListScale, setBulkListScale] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const activeProducts = products.filter(p => p.active !== false);
@@ -33,6 +33,7 @@ export default function Catalog({ products, setProducts, onSaveProduct, onArchiv
     setEditing({
       ...p,
       variants: (p.variants || []).map(variant => ({ ...variant })),
+      productImages: (p.productImages || []).map(image => ({ ...image })),
     });
   }
 
@@ -40,13 +41,13 @@ export default function Catalog({ products, setProducts, onSaveProduct, onArchiv
     setError('');
     setEditing({
       id: null,
+      assetKey: crypto.randomUUID(),
       name: '',
       nameZh: '',
       category: PRODUCT_CATEGORIES[0],
       minStock: 3,
       isProOnly: false,
-      img: '',
-      imageUrls: [],
+      productImages: [],
       desc: '',
       skinType: '',
       ingredients: '',
@@ -72,11 +73,6 @@ export default function Catalog({ products, setProducts, onSaveProduct, onArchiv
 
   function setF(field) {
     return e => setEditing(prev => ({ ...prev, [field]: e.target.value }));
-  }
-
-  function setImageUrls(e) {
-    const imageUrls = e.target.value.split('\n').map(line => line.trim()).filter(Boolean);
-    setEditing(prev => ({ ...prev, imageUrls }));
   }
 
   function updateVariant(index, field, value) {
@@ -142,36 +138,100 @@ export default function Catalog({ products, setProducts, onSaveProduct, onArchiv
     });
   }
 
-  async function setImageFile(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  function setImageFiles(e) {
+    const files = [...(e.target.files || [])];
+    if (!files.length) return;
     setError('');
-    if (!file.type.startsWith('image/')) {
-      setError('請選擇圖片檔案');
+    const invalidType = files.find(file => !PRODUCT_IMAGE_TYPES.has(file.type));
+    if (invalidType) {
+      setError(`不支援 ${invalidType.name}，請使用 JPG、PNG 或 WebP`);
       return;
     }
-    if (file.size > MAX_PRODUCT_IMAGE_BYTES) {
-      setError('圖片大小不可超過 2 MB');
+    const oversized = files.find(file => file.size > MAX_PRODUCT_IMAGE_BYTES);
+    if (oversized) {
+      setError(`${oversized.name} 超過 5 MB`);
       return;
     }
-    const dataUrl = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(new Error('read failed'));
-      reader.readAsDataURL(file);
-    }).catch(() => null);
-    if (!dataUrl) {
-      setError('圖片讀取失敗，請重新選擇');
-      return;
-    }
-    setEditing(prev => ({ ...prev, img: dataUrl }));
+    setEditing(prev => {
+      const hasPrimary = (prev.productImages || []).some(image => image.active !== false && image.isPrimary);
+      const additions = files.map((file, index) => ({
+        id: `pending-${crypto.randomUUID()}`,
+        url: URL.createObjectURL(file),
+        storagePath: '',
+        originalName: file.name,
+        altText: prev.nameZh || '',
+        sortOrder: prev.productImages.length + index,
+        isPrimary: !hasPrimary && index === 0,
+        active: true,
+        mimeType: file.type,
+        fileSize: file.size,
+        width: null,
+        height: null,
+        pendingFile: file,
+      }));
+      return { ...prev, productImages: [...prev.productImages, ...additions] };
+    });
+    e.target.value = '';
+  }
+
+  function updateProductImage(index, field, value) {
+    setEditing(prev => ({
+      ...prev,
+      productImages: prev.productImages.map((image, imageIndex) => (
+        imageIndex === index ? { ...image, [field]: value } : image
+      )),
+    }));
+  }
+
+  function setPrimaryImage(index) {
+    setEditing(prev => ({
+      ...prev,
+      productImages: prev.productImages.map((image, imageIndex) => ({
+        ...image,
+        isPrimary: imageIndex === index,
+        active: imageIndex === index ? true : image.active,
+      })),
+    }));
+  }
+
+  function moveProductImage(index, direction) {
+    setEditing(prev => {
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= prev.productImages.length) return prev;
+      const productImages = [...prev.productImages];
+      [productImages[index], productImages[nextIndex]] = [productImages[nextIndex], productImages[index]];
+      return { ...prev, productImages };
+    });
+  }
+
+  function removeProductImage(index) {
+    setEditing(prev => {
+      const removed = prev.productImages[index];
+      const productImages = prev.productImages.filter((_, imageIndex) => imageIndex !== index);
+      if (removed?.pendingFile && removed.url?.startsWith('blob:')) URL.revokeObjectURL(removed.url);
+      if (removed?.isPrimary && productImages.length) {
+        productImages[0] = { ...productImages[0], isPrimary: true, active: true };
+      }
+      return { ...prev, productImages };
+    });
   }
 
   async function saveEdit() {
     setError('');
-    if (!editing.nameZh.trim() || !editing.name.trim() || (editing.isNew && !editing.img.trim())) {
-      setError('請輸入中文名稱、英文名稱並選擇商品圖片');
+    if (!editing.nameZh.trim() || !editing.name.trim()) {
+      setError('請輸入中文名稱與英文名稱');
       return;
+    }
+    if (editing.isNew && !editing.productImages.length) {
+      setError('請選擇至少一張商品圖片');
+      return;
+    }
+    if (editing.productImages.length) {
+      const primaryImages = editing.productImages.filter(image => image.active !== false && image.isPrimary);
+      if (primaryImages.length !== 1) {
+        setError('商品圖片必須指定一張啟用中的首圖');
+        return;
+      }
     }
     if (!editing.variants.length) {
       setError('商品至少需要一個規格');
@@ -221,25 +281,6 @@ export default function Catalog({ products, setProducts, onSaveProduct, onArchiv
     setEditing(null);
   }
 
-  function applyBulkImageScale(field, value, label) {
-    setError('');
-    const scale = normalizeProductImageScale(value);
-    if (!scale) {
-      setError(`請輸入有效的${label}縮放比例，例如 1、1.08、0.95`);
-      return;
-    }
-    if (!confirm(`確定將所有商品的「${label}」調整為 ${scale} 倍嗎？`)) return;
-    setProducts(prev => prev.map(product => ({ ...product, [field]: scale })));
-    setEditing(prev => prev ? { ...prev, [field]: scale } : prev);
-  }
-
-  function clearBulkImageScale(field, label) {
-    setError('');
-    if (!confirm(`確定將所有商品的「${label}」恢復為自動校正嗎？`)) return;
-    setProducts(prev => prev.map(product => ({ ...product, [field]: null })));
-    setEditing(prev => prev ? { ...prev, [field]: null } : prev);
-  }
-
   async function archiveProduct(p) {
     if (!confirm(`確定要下架商品「${p.nameZh}」嗎？下架後前台將不顯示此商品。`)) return;
     setError('');
@@ -284,25 +325,6 @@ export default function Catalog({ products, setProducts, onSaveProduct, onArchiv
             color: listMode === value ? '#fff' : 'var(--mid)', fontSize: 12, cursor: 'pointer',
           }}>{label}</button>
         ))}
-      </div>
-
-      <div style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '16px 18px', marginBottom: 20 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dark)', marginBottom: 4 }}>批次圖片縮放</div>
-            <div style={{ fontSize: 11, color: 'var(--mid)' }}>透明背景圖片會自動校正商品本體大小；填數值會改為手動覆寫商品列表圖。1 為原尺寸，大於 1 放大，小於 1 縮小。</div>
-          </div>
-          <div style={{ display: 'flex', gap: 14, alignItems: 'end', flexWrap: 'wrap' }}>
-            <div>
-              <label htmlFor="bulkListScale" style={{ ...lbl, marginBottom: 5 }}>商品列表圖片</label>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <input id="bulkListScale" type="number" min="0.1" max="3" step="0.01" value={bulkListScale} onChange={e => setBulkListScale(e.target.value)} style={{ ...inp, width: 92, border: '1px solid var(--border)', padding: '7px 9px' }} placeholder="1.08" />
-                <button onClick={() => applyBulkImageScale('listImageScale', bulkListScale, '商品列表圖片')} style={{ padding: '7px 12px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 11, cursor: 'pointer' }}>套用</button>
-                <button onClick={() => clearBulkImageScale('listImageScale', '商品列表圖片')} style={{ padding: '7px 12px', background: 'none', color: 'var(--mid)', border: '1px solid var(--border)', fontSize: 11, cursor: 'pointer' }}>自動</button>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Low stock warning */}
@@ -466,22 +488,41 @@ export default function Catalog({ products, setProducts, onSaveProduct, onArchiv
               <div style={{ height: 1, background: 'var(--border)' }} />
 
               <div>
-                <label htmlFor="productImageFile" style={lbl}>上傳商品圖片</label>
-                <input id="productImageFile" type="file" accept="image/*" onChange={setImageFile} style={{ ...inp, padding: '8px 0', cursor: 'pointer' }} />
-                <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 6 }}>JPG、PNG、WebP，檔案上限 2 MB</p>
-              </div>
-
-              <div>
-                <label htmlFor="productImage" style={lbl}>或貼上圖片網址</label>
-                <input id="productImage" value={editing.img.startsWith('data:') ? '' : editing.img} onChange={setF('img')} style={inp} placeholder="https://..." />
-                {editing.img && (
-                  <img src={editing.img} alt={editing.nameZh || '商品圖片預覽'} style={{ width: 84, height: 84, objectFit: 'cover', marginTop: 10, border: '1px solid var(--border)', background: 'var(--off)' }} />
+                <label htmlFor="productImageFiles" style={lbl}>商品圖片</label>
+                <input id="productImageFiles" type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={setImageFiles} style={{ ...inp, padding: '8px 0', cursor: 'pointer' }} />
+                <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 6 }}>可一次選擇多張 JPG、PNG、WebP；每張上限 5 MB。儲存商品時才會上傳。</p>
+                {(editing.productImages || []).length > 0 && (
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(190px, 1fr))', gap:12, marginTop:14 }}>
+                    {editing.productImages.map((image, index) => (
+                      <div key={image.id || index} style={{ border:'1px solid var(--border)', padding:10, background:'var(--off)', opacity:image.active === false ? 0.55 : 1 }}>
+                        <div style={{ position:'relative', aspectRatio:'1', background:'#fff', marginBottom:8 }}>
+                          <img src={image.url} alt={image.altText || `商品圖片 ${index + 1}`} style={{ width:'100%', height:'100%', objectFit:'contain' }} />
+                          {image.isPrimary && <span style={{ position:'absolute', top:6, left:6, background:'var(--dark)', color:'#fff', padding:'3px 7px', fontSize:10 }}>首圖</span>}
+                          {image.pendingFile && <span style={{ position:'absolute', top:6, right:6, background:'var(--gold)', color:'#fff', padding:'3px 7px', fontSize:10 }}>待上傳</span>}
+                        </div>
+                        <input
+                          aria-label={`商品圖片 ${index + 1} 替代文字`}
+                          value={image.altText || ''}
+                          onChange={event => updateProductImage(index, 'altText', event.target.value)}
+                          style={{ ...inp, marginBottom:8 }}
+                          placeholder="圖片替代文字"
+                        />
+                        <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
+                          <button type="button" onClick={() => setPrimaryImage(index)} disabled={image.isPrimary}
+                            style={{ border:'1px solid var(--border)', background:image.isPrimary ? 'var(--dark)' : '#fff', color:image.isPrimary ? '#fff' : 'var(--dark)', padding:'5px 7px', fontSize:10, cursor:image.isPrimary ? 'default' : 'pointer' }}>
+                            設為首圖
+                          </button>
+                          <button type="button" aria-label={`商品圖片 ${index + 1} 上移`} onClick={() => moveProductImage(index, -1)} disabled={index === 0}
+                            style={{ border:'1px solid var(--border)', background:'#fff', padding:'5px 7px', fontSize:10 }}>↑</button>
+                          <button type="button" aria-label={`商品圖片 ${index + 1} 下移`} onClick={() => moveProductImage(index, 1)} disabled={index === editing.productImages.length - 1}
+                            style={{ border:'1px solid var(--border)', background:'#fff', padding:'5px 7px', fontSize:10 }}>↓</button>
+                          <button type="button" onClick={() => removeProductImage(index)}
+                            style={{ border:'1px solid #c99', background:'#fff', color:'#944', padding:'5px 7px', fontSize:10, cursor:'pointer' }}>移除</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
-              </div>
-
-              <div>
-                <label htmlFor="productImageUrls" style={lbl}>商品圖庫（一行一個圖片網址）</label>
-                <textarea id="productImageUrls" value={(editing.imageUrls || []).join('\n')} onChange={setImageUrls} style={{ ...ta, minHeight: 84 }} placeholder="https://..." />
               </div>
 
               <div>
