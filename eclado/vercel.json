@@ -12,6 +12,20 @@
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/", "destination": "/index.html" },
-    { "source": "/((?!api/|assets/).*)", "destination": "/index.html" }
+    { "source": "/shop", "destination": "/index.html" },
+    { "source": "/products/:slug", "destination": "/index.html" },
+    { "source": "/cart", "destination": "/index.html" },
+    { "source": "/checkout", "destination": "/index.html" },
+    { "source": "/payment-result", "destination": "/index.html" },
+    { "source": "/login", "destination": "/index.html" },
+    { "source": "/pro-login", "destination": "/index.html" },
+    { "source": "/reset-password", "destination": "/index.html" },
+    { "source": "/line-callback", "destination": "/index.html" },
+    { "source": "/professional-apply", "destination": "/index.html" },
+    { "source": "/account", "destination": "/index.html" },
+    { "source": "/about", "destination": "/index.html" },
+    { "source": "/info", "destination": "/index.html" },
+    { "source": "/privacy", "destination": "/index.html" },
+    { "source": "/contact", "destination": "/index.html" }
   ]
 }
