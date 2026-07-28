@@ -161,7 +161,7 @@ test('Email 驗證後重導回登入頁，顯示「Email 已驗證成功」訊�
 
 // ─── 登入錯誤 ────────────────────────────────────────────────────────────────
 
-test('密碼登入成功後進入會員專區且不顯示網路異常', async ({ page }) => {
+test('密碼登入成功後進入首頁且不顯示網路異常', async ({ page }) => {
   await mockEcladoApis(page);
 
   await page.goto('/login');
@@ -169,7 +169,7 @@ test('密碼登入成功後進入會員專區且不顯示網路異常', async ({
   await page.locator('form input[type="password"]').fill('password123');
   await page.locator('form').getByRole('button', { name: '登入' }).click();
 
-  await expect(page).toHaveURL(/\/account$/);
+  await expect(page).toHaveURL(/\/$/);
   await expect(page.getByText('網路異常，請確認連線')).not.toBeVisible();
 });
 
