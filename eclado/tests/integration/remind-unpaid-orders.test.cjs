@@ -6,12 +6,17 @@ test('remind unpaid orders - reminder delay defaults to 3 hours', () => {
   const originalEnv = {
     ORDER_PAYMENT_REMIND_MINUTES: process.env.ORDER_PAYMENT_REMIND_MINUTES,
     ORDER_PAYMENT_REMIND_HOURS: process.env.ORDER_PAYMENT_REMIND_HOURS,
+    ORDER_PAYMENT_SECOND_REMIND_MINUTES: process.env.ORDER_PAYMENT_SECOND_REMIND_MINUTES,
+    ORDER_PAYMENT_SECOND_REMIND_HOURS: process.env.ORDER_PAYMENT_SECOND_REMIND_HOURS,
   };
 
   try {
     delete process.env.ORDER_PAYMENT_REMIND_MINUTES;
     delete process.env.ORDER_PAYMENT_REMIND_HOURS;
+    delete process.env.ORDER_PAYMENT_SECOND_REMIND_MINUTES;
+    delete process.env.ORDER_PAYMENT_SECOND_REMIND_HOURS;
     assert.equal(remindUnpaidOrders.__test.getReminderDelayMs(), 3 * 60 * 60 * 1000);
+    assert.equal(remindUnpaidOrders.__test.getSecondReminderDelayMs(), 24 * 60 * 60 * 1000);
 
     process.env.ORDER_PAYMENT_REMIND_HOURS = '3';
     assert.equal(remindUnpaidOrders.__test.getReminderDelayMs(), 3 * 60 * 60 * 1000);
@@ -50,7 +55,8 @@ test('remind unpaid orders - sends LINE first and marks reminded', async () => {
     if (String(url).includes('/rest/v1/orders?') && options.method === 'GET') {
       assert.match(String(url), /status=in\.\(awaiting_confirm,unpaid\)/);
       assert.match(String(url), /created_at=lte\.2026-05-21T09%3A00%3A00\.000Z/);
-      assert.match(String(url), /payment_reminded_at=is\.null/);
+      assert.match(String(url), /payment_due_at=gt\.2026-05-21T12%3A00%3A00\.000Z/);
+      assert.match(String(url), /or=\(payment_reminded_at\.is\.null,and\(created_at\.lte\.2026-05-20T12%3A00%3A00\.000Z,payment_second_reminded_at\.is\.null\)\)/);
       return jsonResponse(200, [
         {
           id: 'REMIND-LINE-001',
@@ -60,6 +66,9 @@ test('remind unpaid orders - sends LINE first and marks reminded', async () => {
           user_id: 'user-line-001',
           member: 'LINE 買家',
           email: 'buyer@example.com',
+          payment_reminded_at: null,
+          payment_second_reminded_at: null,
+          payment_due_at: '2026-05-23T08:30:00.000Z',
         },
       ]);
     }
@@ -117,6 +126,7 @@ test('remind unpaid orders - falls back to email when LINE is unavailable', asyn
   const originalFetch = global.fetch;
   const originalNow = Date.now;
   const originalEnv = {
+    CRON_SECRET: process.env.CRON_SECRET,
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
     LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
@@ -124,6 +134,7 @@ test('remind unpaid orders - falls back to email when LINE is unavailable', asyn
     ORDER_PAYMENT_REMIND_HOURS: process.env.ORDER_PAYMENT_REMIND_HOURS,
   };
 
+  process.env.CRON_SECRET = 'test-cron-secret';
   process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   process.env.RESEND_API_KEY = 'test-resend-key';
   delete process.env.LINE_CHANNEL_ACCESS_TOKEN;
@@ -142,6 +153,9 @@ test('remind unpaid orders - falls back to email when LINE is unavailable', asyn
           user_id: null,
           member: 'Email 買家',
           email: 'buyer@example.com',
+          payment_reminded_at: null,
+          payment_second_reminded_at: null,
+          payment_due_at: '2026-05-23T07:30:00.000Z',
         },
       ]);
     }
@@ -168,7 +182,7 @@ test('remind unpaid orders - falls back to email when LINE is unavailable', asyn
   try {
     await remindUnpaidOrders({
       method: 'GET',
-      headers: { 'x-vercel-cron': '1' },
+      headers: { authorization: 'Bearer test-cron-secret' },
       body: {},
     }, res);
   } finally {
@@ -184,7 +198,74 @@ test('remind unpaid orders - falls back to email when LINE is unavailable', asyn
   assert.equal(res.jsonBody.results[0].emailSent, true);
 });
 
-test('remind unpaid orders - requires cron auth when x-vercel-cron is absent', async () => {
+test('remind unpaid orders - sends a second reminder after 24 hours and marks both timestamps', async () => {
+  const originalFetch = global.fetch;
+  const originalNow = Date.now;
+  const originalEnv = {
+    CRON_SECRET: process.env.CRON_SECRET,
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+    LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+  };
+
+  process.env.CRON_SECRET = 'test-cron-secret';
+  process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
+  process.env.LINE_CHANNEL_ACCESS_TOKEN = 'test-line-token';
+  Date.now = () => Date.parse('2026-05-21T12:00:00.000Z');
+
+  global.fetch = async (url, options = {}) => {
+    if (String(url).includes('/rest/v1/orders?') && options.method === 'GET') {
+      return jsonResponse(200, [{
+        id: 'REMIND-SECOND-001',
+        status: 'unpaid',
+        created_at: '2026-05-20T11:00:00.000Z',
+        total: 5200,
+        user_id: 'user-line-002',
+        member: '第二次提醒買家',
+        email: 'buyer@example.com',
+        payment_reminded_at: null,
+        payment_second_reminded_at: null,
+        payment_due_at: '2026-05-22T11:00:00.000Z',
+      }]);
+    }
+    if (String(url).includes('/rest/v1/profiles?id=eq.user-line-002')) {
+      return jsonResponse(200, [{ line_user_id: 'U2222222222', email: 'buyer@example.com' }]);
+    }
+    if (url === 'https://api.line.me/v2/bot/message/push') {
+      const body = JSON.parse(options.body);
+      assert.match(body.messages[0].text, /仍未完成付款/);
+      assert.match(body.messages[0].text, /最後提醒/);
+      assert.match(body.messages[0].text, /付款期限/);
+      return jsonResponse(200, { ok: true });
+    }
+    if (String(url).includes('/rest/v1/orders?id=eq.REMIND-SECOND-001') && options.method === 'PATCH') {
+      assert.match(String(url), /payment_second_reminded_at=is\.null/);
+      const body = JSON.parse(options.body);
+      assert.equal(body.payment_reminded_at, '2026-05-21T12:00:00.000Z');
+      assert.equal(body.payment_second_reminded_at, '2026-05-21T12:00:00.000Z');
+      return jsonResponse(200, []);
+    }
+    throw new Error(`Unexpected fetch ${options.method} ${url}`);
+  };
+
+  const res = createRes();
+  try {
+    await remindUnpaidOrders({
+      method: 'POST',
+      headers: { authorization: 'Bearer test-cron-secret' },
+      body: {},
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    Date.now = originalNow;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.jsonBody.results[0].stage, 'second');
+  assert.equal(res.jsonBody.results[0].marked, true);
+});
+
+test('remind unpaid orders - rejects forged x-vercel-cron header without bearer secret', async () => {
   const originalEnv = {
     CRON_SECRET: process.env.CRON_SECRET,
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
@@ -196,7 +277,11 @@ test('remind unpaid orders - requires cron auth when x-vercel-cron is absent', a
   const res = createRes();
 
   try {
-    await remindUnpaidOrders({ method: 'POST', headers: {}, body: {} }, res);
+    await remindUnpaidOrders({
+      method: 'POST',
+      headers: { 'x-vercel-cron': '1' },
+      body: {},
+    }, res);
   } finally {
     restoreEnv(originalEnv);
   }

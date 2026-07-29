@@ -152,6 +152,8 @@ create table if not exists public.orders (
   tracking text,
   user_id uuid references auth.users(id) on delete set null,
   payment_reminded_at timestamptz,
+  payment_second_reminded_at timestamptz,
+  payment_due_at timestamptz not null default (now() + interval '48 hours'),
   pricing_snapshot jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -164,8 +166,12 @@ create trigger trg_orders_updated_at
 
 create index if not exists idx_orders_unpaid_payment_reminder
   on public.orders (status, created_at)
-  where payment_reminded_at is null
-    and status in ('awaiting_confirm', 'unpaid');
+  where status in ('awaiting_confirm', 'unpaid')
+    and (payment_reminded_at is null or payment_second_reminded_at is null);
+
+create index if not exists idx_orders_unpaid_payment_due
+  on public.orders (payment_due_at)
+  where status in ('awaiting_confirm', 'unpaid');
 
 -- 活動資料
 create table if not exists public.promotions (

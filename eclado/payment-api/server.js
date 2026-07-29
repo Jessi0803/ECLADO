@@ -309,11 +309,34 @@ async function buildAuthoritativeCreateBody(input) {
   const productName = Array.isArray(order.items) && order.items.length
     ? `${order.items[0].name || order.items[0].nameZh || 'ECLADO訂單'}${order.items.length > 1 ? ` 等 ${order.items.length} 項商品` : ''}`
     : 'ECLADO訂單';
+  const deadline = formatSinopacDeadline(order.payment_due_at);
+  if (!deadline) throw new Error('Order payment deadline is missing or invalid');
   return buildCreateBody({
     ...input,
     amount: Number(order.total),
     prdtName: productName,
+    expireDate: deadline.expireDate,
+    expireTime: deadline.expireTime,
   });
+}
+
+function formatSinopacDeadline(value) {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const part = type => parts.find(item => item.type === type)?.value || '';
+  return {
+    expireDate: `${part('year')}${part('month')}${part('day')}`,
+    expireTime: `${part('hour')}${part('minute')}`,
+  };
 }
 
 // 訂單在 Vultr 標記已付款後，轉發給 Vercel 端發送 LINE／Email 付款完成通知。
@@ -338,11 +361,11 @@ async function expireOverdueOrders() {
     throw new Error('Missing env: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
   }
 
-  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const cutoff = new Date(Date.now()).toISOString();
   const params = new URLSearchParams({
-    status: 'eq.awaiting_confirm',
-    created_at: `lt.${cutoff}`,
-    select: 'id,status,created_at',
+    status: 'in.(awaiting_confirm,unpaid)',
+    payment_due_at: `lte.${cutoff}`,
+    select: 'id,status,created_at,payment_due_at',
   });
 
   const listResponse = await fetch(`${supabaseUrl}/rest/v1/orders?${params.toString()}`, {
@@ -362,7 +385,12 @@ async function expireOverdueOrders() {
   }
 
   const ids = orders.map(order => order.id).filter(Boolean);
-  const patchResponse = await fetch(`${supabaseUrl}/rest/v1/orders?id=in.(${ids.map(encodeURIComponent).join(',')})`, {
+  const updateParams = new URLSearchParams({
+    id: `in.(${ids.join(',')})`,
+    status: 'in.(awaiting_confirm,unpaid)',
+    payment_due_at: `lte.${cutoff}`,
+  });
+  const patchResponse = await fetch(`${supabaseUrl}/rest/v1/orders?${updateParams.toString()}`, {
     method: 'PATCH',
     headers: {
       apikey: supabaseServiceKey,
@@ -647,6 +675,7 @@ module.exports = {
   getSinopacPaymentError,
   buildCreateBody,
   buildAuthoritativeCreateBody,
+  formatSinopacDeadline,
   buildQueryBody,
   buildPaymentResultUrl,
 };

@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const cancelExpiredOrders = require('../../api/cancel-expired-orders.js');
 
-test('cancel expired orders - requires cron auth when x-vercel-cron is absent', async () => {
+test('cancel expired orders - rejects forged x-vercel-cron header without bearer secret', async () => {
   const originalEnv = {
     CRON_SECRET: process.env.CRON_SECRET,
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
@@ -13,7 +13,11 @@ test('cancel expired orders - requires cron auth when x-vercel-cron is absent', 
 
   const res = createRes();
   try {
-    await cancelExpiredOrders({ method: 'POST', headers: {}, body: {} }, res);
+    await cancelExpiredOrders({
+      method: 'POST',
+      headers: { 'x-vercel-cron': '1' },
+      body: {},
+    }, res);
   } finally {
     restoreEnv(originalEnv);
   }
@@ -22,19 +26,17 @@ test('cancel expired orders - requires cron auth when x-vercel-cron is absent', 
   assert.deepEqual(res.jsonBody, { error: 'Unauthorized' });
 });
 
-test('cancel expired orders - cancels awaiting_confirm and unpaid orders older than 24 hours', async () => {
+test('cancel expired orders - cancels awaiting_confirm and unpaid orders past payment_due_at', async () => {
   const calls = [];
   const originalFetch = global.fetch;
   const originalNow = Date.now;
   const originalEnv = {
     CRON_SECRET: process.env.CRON_SECRET,
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
-    ORDER_PAYMENT_EXPIRE_HOURS: process.env.ORDER_PAYMENT_EXPIRE_HOURS,
   };
 
   process.env.CRON_SECRET = 'test-cron-secret';
   process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
-  delete process.env.ORDER_PAYMENT_EXPIRE_HOURS;
   Date.now = () => Date.parse('2026-05-21T12:00:00.000Z');
 
   global.fetch = async (url, options = {}) => {
@@ -42,16 +44,17 @@ test('cancel expired orders - cancels awaiting_confirm and unpaid orders older t
 
     if (options.method === 'GET') {
       assert.match(String(url), /status=in\.\(awaiting_confirm,unpaid\)/);
-      assert.match(String(url), /created_at=lt\.2026-05-20T12%3A00%3A00\.000Z/);
+      assert.match(String(url), /payment_due_at=lte\.2026-05-21T12%3A00%3A00\.000Z/);
       return jsonResponse(200, [
-        { id: 'OLD-001', status: 'awaiting_confirm', created_at: '2026-05-20T10:00:00.000Z' },
-        { id: 'OLD-002', status: 'unpaid', created_at: '2026-05-20T09:00:00.000Z' },
+        { id: 'OLD-001', status: 'awaiting_confirm', created_at: '2026-05-19T10:00:00.000Z', payment_due_at: '2026-05-21T10:00:00.000Z' },
+        { id: 'OLD-002', status: 'unpaid', created_at: '2026-05-19T09:00:00.000Z', payment_due_at: '2026-05-21T09:00:00.000Z' },
       ]);
     }
 
     if (options.method === 'PATCH') {
       assert.match(String(url), /id=in\.\(OLD-001,OLD-002\)/);
       assert.match(String(url), /status=in\.\(awaiting_confirm,unpaid\)/);
+      assert.match(String(url), /payment_due_at=lte\.2026-05-21T12%3A00%3A00\.000Z/);
       assert.deepEqual(JSON.parse(options.body), { status: 'cancelled' });
       return jsonResponse(200, [
         { id: 'OLD-001', status: 'cancelled' },
@@ -97,10 +100,12 @@ test('cancel expired orders - returns zero when no expired orders exist', async 
   const originalFetch = global.fetch;
   const originalNow = Date.now;
   const originalEnv = {
+    CRON_SECRET: process.env.CRON_SECRET,
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   };
 
+  process.env.CRON_SECRET = 'test-cron-secret';
   process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   Date.now = () => Date.parse('2026-05-21T12:00:00.000Z');
@@ -116,7 +121,7 @@ test('cancel expired orders - returns zero when no expired orders exist', async 
   try {
     await cancelExpiredOrders({
       method: 'POST',
-      headers: { 'x-vercel-cron': '1' },
+      headers: { authorization: 'Bearer test-cron-secret' },
       body: {},
     }, res);
   } finally {
@@ -134,6 +139,7 @@ test('cancel expired orders - returns zero when no expired orders exist', async 
 
 test('cancel expired orders - returns 500 when service key is missing', async () => {
   const originalEnv = {
+    CRON_SECRET: process.env.CRON_SECRET,
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   };
@@ -141,13 +147,14 @@ test('cancel expired orders - returns 500 when service key is missing', async ()
   console.error = () => {};
   delete process.env.SUPABASE_SERVICE_KEY;
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  process.env.CRON_SECRET = 'test-cron-secret';
 
   const res = createRes();
 
   try {
     await cancelExpiredOrders({
       method: 'POST',
-      headers: { 'x-vercel-cron': '1' },
+      headers: { authorization: 'Bearer test-cron-secret' },
       body: {},
     }, res);
   } finally {
@@ -163,10 +170,12 @@ test('cancel expired orders - returns 500 when Supabase update fails', async () 
   const originalFetch = global.fetch;
   const originalError = console.error;
   const originalEnv = {
+    CRON_SECRET: process.env.CRON_SECRET,
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   };
 
+  process.env.CRON_SECRET = 'test-cron-secret';
   process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   console.error = () => {};
@@ -174,7 +183,7 @@ test('cancel expired orders - returns 500 when Supabase update fails', async () 
   global.fetch = async (url, options = {}) => {
     if (options.method === 'GET') {
       return jsonResponse(200, [
-        { id: 'OLD-003', status: 'awaiting_confirm', created_at: '2026-05-20T10:00:00.000Z' },
+        { id: 'OLD-003', status: 'awaiting_confirm', created_at: '2026-05-19T10:00:00.000Z', payment_due_at: '2026-05-21T10:00:00.000Z' },
       ]);
     }
     if (options.method === 'PATCH') {
@@ -189,7 +198,7 @@ test('cancel expired orders - returns 500 when Supabase update fails', async () 
   try {
     await cancelExpiredOrders({
       method: 'POST',
-      headers: { 'x-vercel-cron': '1' },
+      headers: { authorization: 'Bearer test-cron-secret' },
       body: {},
     }, res);
   } finally {

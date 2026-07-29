@@ -1,5 +1,4 @@
 const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
-const EXPIRE_HOURS = Number(process.env.ORDER_PAYMENT_EXPIRE_HOURS || 24);
 
 function getAuthHeader(req) {
   return req.headers.authorization || req.headers.Authorization || '';
@@ -7,9 +6,6 @@ function getAuthHeader(req) {
 
 function requireCronAuth(req, res) {
   const secret = process.env.CRON_SECRET;
-  const vercelCron = req.headers['x-vercel-cron'];
-  if (vercelCron === '1' || vercelCron === 1 || vercelCron === true) return true;
-
   if (!secret) {
     res.status(500).json({ error: 'CRON_SECRET not set' });
     return false;
@@ -65,16 +61,15 @@ module.exports = async function handler(req, res) {
 
   if (!requireCronAuth(req, res)) return;
 
-  const expireMs = EXPIRE_HOURS * 60 * 60 * 1000;
-  const cutoff = new Date(Date.now() - expireMs).toISOString();
+  const cutoff = new Date(Date.now()).toISOString();
   const statuses = ['awaiting_confirm', 'unpaid'];
 
   try {
     const query = [
       `status=in.(${statuses.join(',')})`,
-      `created_at=lt.${encodeURIComponent(cutoff)}`,
-      'select=id,status,created_at,total,member',
-      'order=created_at.asc',
+      `payment_due_at=lte.${encodeURIComponent(cutoff)}`,
+      'select=id,status,created_at,payment_due_at,total,member',
+      'order=payment_due_at.asc',
     ].join('&');
 
     const expiredOrders = await supabaseRequest(`orders?${query}`, {
@@ -94,7 +89,7 @@ module.exports = async function handler(req, res) {
     const updateQuery = [
       `id=in.(${ids.map(encodeURIComponent).join(',')})`,
       `status=in.(${statuses.join(',')})`,
-      `created_at=lt.${encodeURIComponent(cutoff)}`,
+      `payment_due_at=lte.${encodeURIComponent(cutoff)}`,
     ].join('&');
 
     const cancelled = await supabaseRequest(`orders?${updateQuery}`, {

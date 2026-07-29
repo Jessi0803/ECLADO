@@ -24,6 +24,8 @@
 建立或查詢付款時必須帶上權威訂單 RPC 回傳的一次性 `paymentToken`。
 
 `ORDER_CLEANUP_KEY` 是必填環境變數。未設定時服務會拒絕啟動，清理端點也不會執行。
+逾期判斷以 Supabase 訂單的 `payment_due_at` 為唯一依據；新訂單預設為建立後 48 小時。
+建立永豐 ATM 付款單時，`ExpireDate`／`ExpireTime` 同樣由 `payment_due_at` 轉換，不接受前端自訂期限。
 資料庫只保存 token hash，且會原子鎖定建單流程，避免同一訂單重複建立付款單。
 
 ## 付款狀態判定（豐收款 PayStatus，規格書 §10.2）

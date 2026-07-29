@@ -11,10 +11,7 @@ import {
   PAYMENT_METHODS,
   SINOPAC_NOTIFY_API,
   SINOPAC_PAYMENT_API,
-  addDays,
   extractPaymentLink,
-  formatDateCompact,
-  formatTimeCompact,
   getSinopacPaymentError,
   safeTrim,
 } from '../domain/payments.js';
@@ -156,15 +153,12 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
         }
       }
 
-      const expiresAt = addDays(new Date(), 1);
       const payload = {
         orderNo: authoritativeOrderNo,
         paymentToken: authoritativeOrder.paymentToken,
         amount: authoritativeOrder.total,
         prdtName: productNameForPayment(),
         payType: method.payType,
-        expireDate: formatDateCompact(expiresAt),
-        expireTime: formatTimeCompact(expiresAt),
         returnUrl: `${SINOPAC_PAYMENT_API}/return?orderNo=${encodeURIComponent(authoritativeOrderNo)}`,
         backendUrl: `${SINOPAC_NOTIFY_API}?orderNo=${encodeURIComponent(authoritativeOrderNo)}`,
         qrCodeStatus: 'Y',
