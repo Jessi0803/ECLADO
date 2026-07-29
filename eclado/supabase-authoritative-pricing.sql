@@ -468,6 +468,9 @@ begin
   if not found or target_order.status not in ('awaiting_confirm', 'unpaid') then
     raise exception 'Order is not payable' using errcode = '22023';
   end if;
+  if target_order.payment_due_at <= now() then
+    raise exception 'Order payment has expired' using errcode = '22023';
+  end if;
 
   update public.order_payment_authorizations
   set claimed_at = now()
@@ -477,7 +480,8 @@ begin
     'id', target_order.id,
     'total', target_order.total,
     'status', target_order.status,
-    'items', target_order.items
+    'items', target_order.items,
+    'payment_due_at', target_order.payment_due_at
   );
 end;
 $$;

@@ -28,7 +28,7 @@
 | 8 | 付款才扣庫存 | 下單後庫存不變；後台改「已付款」後前台變化；後續改「備貨中／已出貨／已到貨」庫存不加回 | 下單後 `products.stock` 不變；改 `orders.status` 為 `paid` 後 `products.stock` 減少。`paid`、`preparing`、`shipped`、`delivered` 都視為占用庫存 |
 | 9 | 取消／退貨加回庫存 | 已占用庫存的訂單取消／退貨後庫存回升 | `orders.status` 從 `paid`／`preparing`／`shipped`／`delivered` 改成 `cancelled` 或 `returned` 後，`products.stock` 加回 |
 | 10 | 後台改庫存 | 後台改數字後，前台刷新可見現貨／預購變化 | `products.stock` 與後台輸入一致 |
-| 11 | 24 小時未付款自動取消 | 逾時訂單作廢；此功能由 Vercel Cron 每日執行，不是滿 24 小時立即取消 | `orders.status` = `cancelled`（原為 `awaiting_confirm` 或 `unpaid`，且 `created_at` 超過 24 小時） |
+| 11 | 48 小時未付款自動取消 | 訂單建立時寫入 `payment_due_at = created_at + 48 hours`；外部 Cron 可每小時觸發取消，Vercel Cron 作為每日補漏 | `orders.status` = `cancelled`（原為 `awaiting_confirm` 或 `unpaid`，且 `payment_due_at` 已到期） |
 
 ### 會員
 
@@ -102,7 +102,7 @@
 | `tests/integration/email.spec.ts` | Resend + staging Supabase integration | 12（驗證信確實寄出）、14（忘記密碼信確實寄出）— 透過 Resend API 驗證；執行前拒絕正式 Supabase project |
 | `tests/integration/line-handler.test.cjs` | 完全隔離 LINE handler 測試 | 16、23 的後端核心邏輯 |
 | `tests/integration/line-webhook.test.cjs` | 完全隔離 LINE webhook 測試 | Webhook health check、method guard、簽章驗證、follow event |
-| `tests/integration/cancel-expired-orders.test.cjs` | 完全隔離 Cron handler 測試 | 11（24 小時未付款自動取消：授權、查詢條件、無逾期訂單、批次取消、缺 service key、Supabase 失敗） |
+| `tests/integration/cancel-expired-orders.test.cjs` | 完全隔離 Cron handler 測試 | 11（48 小時權威期限取消：授權、查詢條件、無逾期訂單、批次取消、缺 service key、Supabase 失敗） |
 | `tests/integration/email-click.spec.ts` | Playwright + Resend + staging Supabase | 13（驗證信連結點擊 → `email_confirmed_at` 寫入）、14（重設密碼連結點擊 → 填新密碼 → 成功）；執行前拒絕正式 Supabase project |
 
 ### 預計補齊

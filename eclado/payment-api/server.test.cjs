@@ -119,6 +119,7 @@ test('buildAuthoritativeCreateBody: 忽略呼叫端 amount，使用資料庫訂�
       total: 3980,
       status: 'unpaid',
       items: [{ name: '胜肽修護精華液', qty: 1 }],
+      payment_due_at: '2026-07-31T07:30:00.000Z',
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   };
   try {
@@ -126,13 +127,23 @@ test('buildAuthoritativeCreateBody: 忽略呼叫端 amount，使用資料庫訂�
       orderNo: 'ECL-AUTH-001',
       paymentToken: 'payment-token-test',
       amount: 1,
-      payType: 'C',
+      payType: 'A',
     });
     assert.equal(body.Amount, 398000);
     assert.equal(body.PrdtName, '胜肽修護精華液');
+    assert.equal(body.ATMParam.ExpireDate, '20260731');
+    assert.equal(body.ATMParam.ExpireTime, '1530');
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+test('formatSinopacDeadline: 將權威截止時間轉為台灣日期與時間', () => {
+  assert.deepEqual(server.formatSinopacDeadline('2026-07-31T15:59:00.000Z'), {
+    expireDate: '20260731',
+    expireTime: '2359',
+  });
+  assert.equal(server.formatSinopacDeadline('invalid'), null);
 });
 
 test('buildAuthoritativeCreateBody: 缺少 payment token 時拒絕建單', async () => {
