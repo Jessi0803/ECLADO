@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { SF_EXPRESS_TRACKING_URL } from '../../domain/shipping.js';
 import { supabase } from '../../services/supabase.js';
 import { StatusSelect, TypeBadge } from '../components/StatusIndicators.jsx';
 
@@ -6,7 +7,20 @@ function hasPreorder(order) {
   return Array.isArray(order.items) && order.items.some(i => i.fulfillment_type === 'preorder');
 }
 
-export default function Orders({ orders, setOrders }) {
+function formatNotificationTime(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+export default function Orders({ orders, setOrders, persistOrderPatch }) {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState('awaiting_confirm');
   const [stockFilter, setStockFilter] = useState('all');
@@ -33,7 +47,7 @@ export default function Orders({ orders, setOrders }) {
     const accessToken = sessionData?.session?.access_token;
     if (!accessToken) {
       setLineNotice('管理員登入狀態已失效，請重新登入後再試。');
-      return false;
+      return { ok: false, channel: '', error: '管理員登入狀態已失效' };
     }
     const authorizedHeaders = {
       'Content-Type': 'application/json',
@@ -43,7 +57,7 @@ export default function Orders({ orders, setOrders }) {
     async function pushEmailOrderNotice(fallbackReason = '') {
       if (!order?.email) {
         setLineNotice(fallbackReason || '此訂單沒有 Email，無法發送通知。');
-        return false;
+        return { ok: false, channel: '', error: fallbackReason || '此訂單沒有 Email，無法發送通知。' };
       }
       const response = await fetch('/api/order-email', {
         method: 'POST',
@@ -60,14 +74,14 @@ export default function Orders({ orders, setOrders }) {
         setLineNotice('Email 通知送出失敗：' + (e.message || '網路錯誤'));
         return null;
       });
-      if (!response) return false;
+      if (!response) return { ok: false, channel: 'email', error: 'Email 網路錯誤' };
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         setLineNotice('Email 通知送出失敗：' + (body.error || `HTTP ${response.status}`));
-        return false;
+        return { ok: false, channel: 'email', error: body.error || `HTTP ${response.status}` };
       }
       setLineNotice(type === 'payment_paid' ? 'Email 付款完成通知已送出。' : 'Email 出貨通知已送出。');
-      return true;
+      return { ok: true, channel: 'email', error: '' };
     }
 
     if (!order?.user_id) {
@@ -96,17 +110,68 @@ export default function Orders({ orders, setOrders }) {
         ...extra,
       }),
     }).catch(e => {
-      setLineNotice('LINE 通知送出失敗：' + (e.message || '網路錯誤'));
+      setLineNotice('LINE 通知送出失敗，正在改寄 Email。');
       return null;
     });
-    if (!response) return false;
+    if (!response) {
+      return pushEmailOrderNotice('LINE 通知因網路錯誤送出失敗，且訂單沒有 Email，無法發送備援通知。');
+    }
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      setLineNotice('LINE 通知送出失敗：' + (body.error || `HTTP ${response.status}`));
-      return false;
+      return pushEmailOrderNotice(`LINE 通知送出失敗（${body.error || `HTTP ${response.status}`}），且訂單沒有 Email，無法發送備援通知。`);
     }
     setLineNotice(type === 'payment_paid' ? 'LINE 付款完成通知已送出。' : 'LINE 出貨通知已送出。');
-    return true;
+    return { ok: true, channel: 'line', error: '' };
+  }
+
+  async function sendShipmentNotice(order, { force = false } = {}) {
+    if (!force && order.shipmentNotificationSentAt) {
+      setLineNotice(`出貨通知已於 ${formatNotificationTime(order.shipmentNotificationSentAt)} 發送；如需再次通知，請使用「重新發送」。`);
+      return false;
+    }
+
+    const result = await pushLineOrderNotice(order, 'shipment', { tracking: order.tracking });
+    const patch = result.ok
+      ? {
+          shipment_notification_sent_at: new Date().toISOString(),
+          shipment_notification_channel: result.channel,
+          shipment_notification_error: null,
+        }
+      : {
+          shipment_notification_error: result.error || 'LINE 與 Email 通知皆發送失敗',
+        };
+
+    try {
+      await persistOrderPatch(order.id, patch);
+      if (selected?.id === order.id) {
+        setSelected(current => ({
+          ...current,
+          ...(result.ok ? {
+            shipmentNotificationSentAt: patch.shipment_notification_sent_at,
+            shipmentNotificationChannel: patch.shipment_notification_channel,
+            shipmentNotificationError: '',
+          } : {
+            shipmentNotificationError: patch.shipment_notification_error,
+          }),
+        }));
+      }
+    } catch (error) {
+      setLineNotice(
+        result.ok
+          ? `通知已送出，但通知紀錄儲存失敗：${error?.message || '請稍後再試'}`
+          : `通知失敗，且錯誤紀錄無法儲存：${error?.message || '請稍後再試'}`,
+      );
+    }
+    return result.ok;
+  }
+
+  async function resendShipmentNotice() {
+    setPushing(true);
+    try {
+      await sendShipmentNotice(selected, { force: true });
+    } finally {
+      setPushing(false);
+    }
   }
 
   async function updateStatus(id, status) {
@@ -114,32 +179,66 @@ export default function Orders({ orders, setOrders }) {
     const order = orders.find(o => o.id === id);
     const shouldNotifyPaid = order && order.status !== 'paid' && status === 'paid';
     const typedTracking = selected?.id === id ? trackingInput.trim() : '';
-    const shipmentTracking = order?.tracking || typedTracking;
+    const shipmentTracking = typedTracking || order?.tracking;
     const shouldNotifyShipment = order && order.status !== 'shipped' && status === 'shipped';
     const patch = status === 'shipped' && typedTracking ? { status, tracking: typedTracking } : { status };
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, ...patch } : o));
-    if (selected?.id === id) setSelected(s => ({ ...s, ...patch }));
+    if (shouldNotifyShipment && !shipmentTracking) {
+      setLineNotice('請先輸入順豐托運單號，再確認出貨。');
+      return;
+    }
+    try {
+      if (status === 'shipped') {
+        await persistOrderPatch(id, patch);
+      } else {
+        setOrders(prev => prev.map(o => o.id === id ? { ...o, ...patch } : o));
+      }
+      if (selected?.id === id) setSelected(s => ({ ...s, ...patch }));
+      setFilter(status);
+    } catch (error) {
+      setLineNotice('出貨資料儲存失敗：' + (error?.message || '請稍後再試'));
+      return;
+    }
     if (shouldNotifyPaid) {
       await pushLineOrderNotice({ ...order, status }, 'payment_paid');
     }
     if (shouldNotifyShipment) {
-      await pushLineOrderNotice({ ...order, status, tracking: shipmentTracking }, 'shipment', { tracking: shipmentTracking });
+      await sendShipmentNotice({ ...order, status, tracking: shipmentTracking });
     }
   }
 
   async function confirmShipment() {
     const id = selected.id;
     const tracking = trackingInput.trim();
+    if (!tracking) {
+      setLineNotice('請輸入順豐托運單號，再確認出貨。');
+      return;
+    }
     setPushing(true);
     setLineNotice('');
     const newStatus = ['paid', 'preparing'].includes(selected.status) ? 'shipped' : selected.status;
     const isNewShipment = newStatus === 'shipped' && selected.status !== 'shipped';
     try {
-      setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus, tracking } : o));
-      setSelected(s => ({ ...s, status: newStatus, tracking }));
+      const shipmentPatch = {
+        status: newStatus,
+        tracking,
+        shipping_carrier: 'sf_express',
+        ...(isNewShipment ? { shipped_at: new Date().toISOString() } : {}),
+      };
+      await persistOrderPatch(id, shipmentPatch);
+      const shipmentOrder = {
+        ...selected,
+        status: newStatus,
+        tracking,
+        shippingCarrier: 'sf_express',
+        ...(isNewShipment ? { shippedAt: shipmentPatch.shipped_at } : {}),
+      };
+      setSelected(shipmentOrder);
+      setFilter(newStatus);
       if (isNewShipment) {
-        await pushLineOrderNotice({ ...selected, status: newStatus, tracking }, 'shipment', { tracking });
+        await sendShipmentNotice(shipmentOrder);
       }
+    } catch (error) {
+      setLineNotice('出貨資料儲存失敗：' + (error?.message || '請稍後再試'));
     } finally {
       setPushing(false);
     }
@@ -341,7 +440,7 @@ export default function Orders({ orders, setOrders }) {
                     <input
                       value={trackingInput}
                       onChange={e => setTrackingInput(e.target.value)}
-                      placeholder="輸入順豐托運單號（選填）"
+                      placeholder="輸入順豐托運單號（必填）"
                       style={{ flex: 1, padding: '8px 10px', border: '1px solid var(--border)', fontSize: 12, outline: 'none', background: 'var(--off)' }}
                     />
                     <button
@@ -357,14 +456,40 @@ export default function Orders({ orders, setOrders }) {
                   </div>
                   {selected.tracking && (
                     <div style={{ fontSize: 11, color: 'var(--mid)', marginTop: 6 }}>
-                      目前：<a href={`https://htm.sf-express.com/sc/waybill.html?waybillno=${selected.tracking}`} target="_blank" style={{ color: 'var(--blue)' }}>{selected.tracking}</a>
+                      目前：<a href={SF_EXPRESS_TRACKING_URL} target="_blank" rel="noreferrer" style={{ color: 'var(--blue)' }}>{selected.tracking}</a>
+                    </div>
+                  )}
+                  {selected.status === 'shipped' && selected.tracking && (
+                    <div style={{ marginTop: 12, padding: '10px 12px', border: '1px solid var(--border)', background: 'var(--off)' }}>
+                      <div style={{ fontSize: 11, color: 'var(--mid)', lineHeight: 1.7 }}>
+                        {selected.shippedAt && <div>出貨時間：{formatNotificationTime(selected.shippedAt)}</div>}
+                        {selected.shipmentNotificationSentAt ? (
+                          <div style={{ color: 'var(--green)' }}>
+                            通知已發送：{formatNotificationTime(selected.shipmentNotificationSentAt)}
+                            {selected.shipmentNotificationChannel ? `（${selected.shipmentNotificationChannel === 'line' ? 'LINE' : 'Email'}）` : ''}
+                          </div>
+                        ) : (
+                          <div>尚無成功通知紀錄</div>
+                        )}
+                        {selected.shipmentNotificationError && (
+                          <div style={{ color: 'var(--red)' }}>最近錯誤：{selected.shipmentNotificationError}</div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={resendShipmentNotice}
+                        disabled={pushing}
+                        style={{ marginTop: 8, padding: '7px 10px', border: '1px solid var(--dark)', background: 'var(--white)', color: 'var(--dark)', fontSize: 11, cursor: pushing ? 'not-allowed' : 'pointer' }}
+                      >
+                        重新發送出貨通知
+                      </button>
                     </div>
                   )}
                 </>
               ) : selected.tracking ? (
                 <>
                   <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>物流追蹤</div>
-                  <a href={`https://htm.sf-express.com/sc/waybill.html?waybillno=${selected.tracking}`} target="_blank" style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 500, textDecoration: 'none' }}>{selected.tracking}</a>
+                  <a href={SF_EXPRESS_TRACKING_URL} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 500, textDecoration: 'none' }}>{selected.tracking}</a>
                 </>
               ) : null}
             </div>

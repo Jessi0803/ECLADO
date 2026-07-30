@@ -93,19 +93,16 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       }
     });
 
-    const previewLines = cart.map(item => ({
-      productId: Number(item.id),
-      variantId: String(item.variantId || item.variantSize || ''),
-      quantity: Number(item.qty),
-      unitPrice: Number(getMemberPrice(item, user)),
-    }));
-    const authoritativeLines = authoritativeOrder.items.map(item => ({
-      productId: Number(item.product_id ?? item.id),
-      variantId: String(item.variant_id || ''),
-      quantity: Number(item.qty),
-      unitPrice: Number(item.unit_price ?? item.price),
-    }));
-    if (JSON.stringify(previewLines) !== JSON.stringify(authoritativeLines)) {
+    // Only a real unit-price change should require another confirmation.
+    // Product/variant identifiers can be returned by Postgres in a different
+    // representation (for example numeric ID vs text) without changing what
+    // the customer pays, so they must not be treated as a price change.
+    const unitPricesChanged = cart.length !== authoritativeOrder.items.length
+      || cart.some((item, index) => (
+        Number(getMemberPrice(item, user))
+        !== Number(authoritativeOrder.items[index]?.unit_price ?? authoritativeOrder.items[index]?.price)
+      ));
+    if (unitPricesChanged) {
       changes.push({
         label: '商品成交單價',
         preview: '畫面預覽',

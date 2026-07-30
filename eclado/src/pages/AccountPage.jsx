@@ -4,6 +4,7 @@ import {
   isProfessionalMember,
 } from '../domain/catalog.jsx';
 import { getOrderStatusLabel } from '../domain/payments.js';
+import { SF_EXPRESS_TRACKING_URL } from '../domain/shipping.js';
 import useIsMobile from '../hooks/useIsMobile.js';
 import {
   fetchLatestProApplication,
@@ -20,6 +21,30 @@ export default function AccountPage({ user, setPage, onSignOut }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [proAppStatus, setProAppStatus] = useState(null); // null | 'pending' | 'approved' | 'rejected'
+  const [copiedTracking, setCopiedTracking] = useState('');
+
+  async function copyTracking(tracking) {
+    try {
+      await navigator.clipboard.writeText(tracking);
+      setCopiedTracking(tracking);
+      window.setTimeout(() => setCopiedTracking(current => current === tracking ? '' : current), 2000);
+    } catch {
+      setCopiedTracking('');
+    }
+  }
+
+  function shipmentTime(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('zh-TW', {
+      timeZone: 'Asia/Taipei',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
 
   useEffect(() => {
     if (!user?.uid || isProfessionalMember(user)) return;
@@ -161,7 +186,22 @@ export default function AccountPage({ user, setPage, onSignOut }) {
                           </div>
                         ))}
                         {order.promotion_name && <div style={{ fontSize:12, color:'var(--gold)' }}>活動：{order.promotion_name}</div>}
-                        {order.tracking && <div style={{ fontSize:12, color:'var(--dark)' }}>物流編號：{order.tracking}</div>}
+                        {order.tracking && (
+                          <div style={{ marginTop:4, padding:'12px 14px', background:'var(--off-white)', border:'1px solid var(--light)' }}>
+                            <div style={{ fontSize:12, color:'var(--dark)', marginBottom:5 }}>物流公司：順豐速運</div>
+                            <div style={{ fontSize:12, color:'var(--dark)', marginBottom:10 }}>托運單號：{order.tracking}</div>
+                            {order.shipped_at && <div style={{ fontSize:11, color:'var(--dark)', marginBottom:10 }}>出貨時間：{shipmentTime(order.shipped_at)}</div>}
+                            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                              <button type="button" onClick={() => copyTracking(order.tracking)} style={{ border:'1px solid var(--light)', background:'var(--white)', color:'var(--dark)', padding:'7px 10px', fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
+                                {copiedTracking === order.tracking ? '已複製' : '複製單號'}
+                              </button>
+                              <a href={SF_EXPRESS_TRACKING_URL} target="_blank" rel="noreferrer" style={{ border:'1px solid var(--black)', background:'var(--black)', color:'var(--white)', padding:'7px 10px', fontSize:11, textDecoration:'none' }}>前往順豐查件</a>
+                            </div>
+                            <p style={{ fontSize:11, color:'var(--dark)', lineHeight:1.7, marginTop:10 }}>
+                              後續派送或取件通知以順豐電話、簡訊或 APP 推播為準，請保持收件電話暢通。
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <div style={{ textAlign:isMobile ? 'left' : 'right' }}>
                         <div style={{ fontSize:12, color:'var(--dark)', marginBottom:5 }}>{order.date || order.created_at?.slice(0, 10) || ''}</div>

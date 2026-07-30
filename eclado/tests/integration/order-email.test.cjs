@@ -67,7 +67,7 @@ test('order email sends shipment notice with tracking link', async () => {
     assert.deepEqual(body.to, ['buyer@example.com']);
     assert.match(body.subject, /訂單已出貨/);
     assert.match(body.text, /托運單號：SF111222333/);
-    assert.match(body.text, /waybillno=SF111222333/);
+    assert.match(body.text, /https:\/\/htm\.sf-express\.com\/tw\/tc\//);
     return jsonResponse(200, { id: 'email_shipped_001' });
   };
 

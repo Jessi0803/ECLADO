@@ -150,6 +150,12 @@ create table if not exists public.orders (
   note text,
   transfer_last5 text,
   tracking text,
+  shipping_carrier text,
+  shipped_at timestamptz,
+  shipment_notification_sent_at timestamptz,
+  shipment_notification_channel text
+    check (shipment_notification_channel is null or shipment_notification_channel in ('line', 'email')),
+  shipment_notification_error text,
   user_id uuid references auth.users(id) on delete set null,
   payment_reminded_at timestamptz,
   payment_second_reminded_at timestamptz,
@@ -163,6 +169,27 @@ drop trigger if exists trg_orders_updated_at on public.orders;
 create trigger trg_orders_updated_at
   before update on public.orders
   for each row execute function public.set_updated_at();
+
+create or replace function public.set_order_shipment_metadata()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.status = 'shipped' and old.status is distinct from 'shipped' then
+    new.shipped_at := coalesce(new.shipped_at, now());
+    if new.tracking is not null and btrim(new.tracking) <> '' then
+      new.shipping_carrier := coalesce(new.shipping_carrier, 'sf_express');
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_orders_shipment_metadata on public.orders;
+create trigger trg_orders_shipment_metadata
+  before update of status, tracking on public.orders
+  for each row execute function public.set_order_shipment_metadata();
 
 create index if not exists idx_orders_unpaid_payment_reminder
   on public.orders (status, created_at)

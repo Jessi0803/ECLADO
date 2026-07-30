@@ -171,6 +171,20 @@ export default function AdminApp({ adminEmail, onSignOut }) {
     });
   }
 
+  async function persistOrderPatch(id, patch) {
+    const { error } = await supabase.from('orders').update(patch).eq('id', id);
+    if (error) throw error;
+    const localPatch = {
+      ...patch,
+      ...('shipping_carrier' in patch ? { shippingCarrier: patch.shipping_carrier || '' } : {}),
+      ...('shipped_at' in patch ? { shippedAt: patch.shipped_at || null } : {}),
+      ...('shipment_notification_sent_at' in patch ? { shipmentNotificationSentAt: patch.shipment_notification_sent_at || null } : {}),
+      ...('shipment_notification_channel' in patch ? { shipmentNotificationChannel: patch.shipment_notification_channel || '' } : {}),
+      ...('shipment_notification_error' in patch ? { shipmentNotificationError: patch.shipment_notification_error || '' } : {}),
+    };
+    setOrders(prev => prev.map(order => order.id === id ? { ...order, ...localPatch } : order));
+  }
+
   async function saveProductWithVariants(product) {
     const productPayload = {
       ...(product.id ? { id: product.id } : {}),
@@ -348,7 +362,7 @@ export default function AdminApp({ adminEmail, onSignOut }) {
     const activeProducts = products.filter(product => product.active !== false);
     switch (page) {
       case 'dashboard': return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} />;
-      case 'orders': return <Orders orders={orders} setOrders={setOrdersWithSync} />;
+      case 'orders': return <Orders orders={orders} setOrders={setOrdersWithSync} persistOrderPatch={persistOrderPatch} />;
       case 'catalog': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} />;
       // 舊路徑相容，避免有人記住 /admin#products 之類的
       case 'products':

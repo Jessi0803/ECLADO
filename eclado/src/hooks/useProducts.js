@@ -3,6 +3,7 @@ import {
   PRODUCTS,
   applyVariantToProduct,
   getCartKey,
+  getProductVariants,
   getVariantForCartItem,
   groupProductImages,
   groupProductVariants,
@@ -15,7 +16,7 @@ import {
   subscribeToTables,
 } from '../services/realtime.js';
 
-export default function useProducts(user, setCart) {
+export default function useProducts(user, setCart, authReady = true) {
   const [products, setProducts] = useState(() => (
     PRODUCTS.map(product => ({ ...product, stock: null }))
   ));
@@ -41,7 +42,6 @@ export default function useProducts(user, setCart) {
       if (variantError) {
         console.error('[ECLADO] 無法載入 product_variants：', variantError.message || variantError);
         setProducts([]);
-        setCart([]);
         return;
       }
       const variantMap = groupProductVariants(variantRows);
@@ -54,6 +54,7 @@ export default function useProducts(user, setCart) {
       const imageMap = imageError ? null : groupProductImages(imageRows);
       const loadedProducts = mergeProductsWithStock(PRODUCTS, data || [], variantMap, imageMap);
       setProducts(loadedProducts);
+      if (!authReady) return;
       setCart(previous => previous.map(item => {
         const product = loadedProducts.find(current => (
           Number(current.id) === Number(item.id)
@@ -61,9 +62,14 @@ export default function useProducts(user, setCart) {
         if (!product || (product.isProOnly && !isProfessionalMember(user))) {
           return null;
         }
+        const variants = getProductVariants(product);
         const variant = getVariantForCartItem(product, item);
+        if ((item.variantId || item.variantSize) && variants.length > 0 && !variant) {
+          return null;
+        }
         const nextProduct = applyVariantToProduct(product, variant);
-        return { ...nextProduct, cartKey: getCartKey(item), qty: item.qty };
+        const qty = Math.min(Math.max(Math.floor(Number(item.qty) || 0), 1), 99);
+        return { ...nextProduct, cartKey: getCartKey(nextProduct), qty };
       }).filter(Boolean));
     }
 
@@ -83,7 +89,7 @@ export default function useProducts(user, setCart) {
       alive = false;
       removeRealtimeChannel(channel);
     };
-  }, [user?.role, setCart]);
+  }, [authReady, user?.role, setCart]);
 
   return products;
 }

@@ -732,6 +732,34 @@ test('庫存為 0 顯示預購，且一般商品仍可加入購物車下單', as
   await expect(page.getByText('胜肽修護精華液')).toBeVisible();
 });
 
+test('購物車重新整理後仍保留，且 localStorage 不保存價格資料', async ({ page }) => {
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+
+  const storedCart = await page.evaluate(() => JSON.parse(
+    window.localStorage.getItem('eclado_cart_v1') || '[]',
+  ));
+  expect(storedCart).toEqual([{
+    id: 2,
+    variantId: '',
+    qty: 1,
+  }]);
+  expect(storedCart[0]).not.toHaveProperty('price');
+  expect(storedCart[0]).not.toHaveProperty('proPrice');
+
+  await page.evaluate(() => {
+    const items = JSON.parse(window.localStorage.getItem('eclado_cart_v1') || '[]');
+    items[0].price = 1;
+    items[0].nameZh = '被竄改的商品';
+    window.localStorage.setItem('eclado_cart_v1', JSON.stringify(items));
+  });
+  await page.reload();
+  await openCart(page);
+  await expect(page.getByText('胜肽修護精華液')).toBeVisible();
+  await expect(page.getByText('NT$ 3,980').first()).toBeVisible();
+});
+
 test('結帳建立付款單但不寫入真實訂單或真金流', async ({ page }) => {
   await page.goto('/shop');
   await page.getByText('胜肽修護精華液').first().click();
@@ -1020,7 +1048,11 @@ test('會員專區顯示自己的訂單與托運單號', async ({ page }) => {
   await expect(page.getByText('您好，E2E 會員')).toBeVisible();
   await expect(page.getByText('ACCOUNT-ORDER-001')).toBeVisible();
   await expect(page.getByText('已出貨')).toBeVisible();
-  await expect(page.getByText('物流編號：SF123456789')).toBeVisible();
+  await expect(page.getByText('托運單號：SF123456789')).toBeVisible();
+  await expect(page.getByRole('link', { name: '前往順豐查件' })).toHaveAttribute(
+    'href',
+    'https://htm.sf-express.com/tw/tc/',
+  );
 });
 
 test('手機版主要購物流程可使用', async ({ page, isMobile }) => {

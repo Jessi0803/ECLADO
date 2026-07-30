@@ -73,7 +73,7 @@ export default function PrivacyPage() {
     },
     {
       title: '八、Cookie 政策',
-      content: `本網站使用必要性 Cookie 以維持登入狀態及購物車功能。這些 Cookie 僅於瀏覽器工作階段內或依您設定保存，不用於跨網站追蹤或廣告投放。您可透過瀏覽器設定管理 Cookie，但停用可能影響部分功能正常運作。`,
+      content: `本網站主要使用瀏覽器本機儲存空間（localStorage、sessionStorage）維持登入狀態、購物車及必要流程資訊；基礎設施服務亦可能使用必要性 Cookie 提供安全與流量管理。上述資料不用於跨網站追蹤或廣告投放。您可透過瀏覽器設定清除網站資料，但清除後可能需要重新登入，購物車內容也會被移除。`,
     },
     {
       title: '九、政策修訂',

@@ -28,9 +28,9 @@ export default function Dashboard({ orders, products, members, applications = []
         <StatCard label="庫存警示" value={lowStock.length} sub="件商品庫存不足" accent={lowStock.length > 0 ? 'var(--red)' : 'var(--green)'} icon="◉" />
       </div>
 
-      <div className="split-2" style={{ marginBottom: 20 }}>
+      <div className="dashboard-chart-stack" style={{ marginBottom: 20 }}>
         {/* Revenue chart */}
-        <div style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '28px' }}>
+        <div data-testid="dashboard-revenue-panel" style={{ minWidth: 0, background: 'var(--white)', border: '1px solid var(--border)', padding: '28px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
             <div>
               <h3 style={{ fontSize: 14, fontWeight: 500, color: 'var(--dark)', marginBottom: 2 }}>近6個月營業額</h3>
@@ -51,10 +51,10 @@ export default function Dashboard({ orders, products, members, applications = []
         </div>
 
         {/* Low stock alert */}
-        <div style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '28px' }}>
+        <div data-testid="dashboard-low-stock-panel" style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden', background: 'var(--white)', border: '1px solid var(--border)', padding: '28px' }}>
           <h3 style={{ fontSize: 14, fontWeight: 500, color: 'var(--dark)', marginBottom: 4 }}>庫存警示</h3>
           <p style={{ fontSize: 12, color: 'var(--mid)', marginBottom: 20 }}>低於 3 件需補貨</p>
-          <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', gap: 12, overflowX: 'auto', paddingBottom: 4, WebkitOverflowScrolling: 'touch' }}>
+          <div data-testid="dashboard-low-stock-scroll" style={{ width: '100%', maxWidth: '100%', minWidth: 0, display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', gap: 12, overflowX: 'auto', overflowY: 'hidden', paddingBottom: 6, WebkitOverflowScrolling: 'touch', overscrollBehaviorInline: 'contain' }}>
             {lowStock.length === 0 ? (
               <p style={{ width: '100%', fontSize: 13, color: 'var(--mid)', textAlign: 'center', padding: '20px 0' }}>✓ 庫存充足</p>
             ) : lowStock.map(p => (

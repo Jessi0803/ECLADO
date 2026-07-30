@@ -33,17 +33,22 @@ function textForPaymentPaid({ orderId, total, memberName }) {
 
 function textForShipment({ orderId, tracking, memberName }) {
   const trackingUrl = tracking
-    ? `https://htm.sf-express.com/sc/waybill.html?waybillno=${tracking}`
+    ? 'https://htm.sf-express.com/tw/tc/'
     : '';
 
   return [
     `${memberName || '您好'}，您的訂單已出貨。`,
     '',
     `訂單編號：${orderId}`,
+    '物流公司：順豐速運',
     tracking ? `托運單號：${tracking}` : null,
-    trackingUrl ? `查詢物流：${trackingUrl}` : null,
     '',
-    '如有問題請透過官方帳號聯繫客服，感謝您的支持。',
+    '商品已交由順豐配送，後續派送或取件通知以順豐電話、簡訊或 APP 推播為準，請保持收件電話暢通。',
+    '',
+    trackingUrl ? '您可複製上方運單號，前往順豐官方網站查詢最新進度：' : null,
+    trackingUrl || null,
+    '',
+    '如有訂單相關問題，請透過 ECLADO 官方 LINE 聯繫客服，感謝您的支持。',
     '',
     'ECLADO Taiwan',
   ].filter(line => line !== null).join('\n');

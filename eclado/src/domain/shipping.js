@@ -2,6 +2,7 @@ import { getProfessionalOrderProgress } from './memberShopping.js';
 
 export const STANDARD_SHIPPING_FEE = 120;
 export const FREE_SHIPPING_PRODUCT_ID = 9;
+export const SF_EXPRESS_TRACKING_URL = 'https://htm.sf-express.com/tw/tc/';
 
 // Frontend preview only. The database RPC remains authoritative at checkout.
 export function calculateShipping(items, user, merchandiseAmount = 0) {

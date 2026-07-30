@@ -94,6 +94,40 @@ test('儀表板顯示待處理資訊，點待審核申請可前往會員審核�
   await expect(page.getByText('審核中會員')).toBeVisible();
 });
 
+test('儀表板營業額與庫存警示固定上下排列，庫存內容獨立水平捲動', async ({ page }) => {
+  const lowStockProducts = Array.from({ length: 10 }, (_, index) => ({
+    ...adminProductRows[index % adminProductRows.length],
+    id: 100 + index,
+    name_zh: `低庫存測試商品 ${index + 1}`,
+    stock: 0,
+    min_stock: 3,
+  }));
+  await mockAdminApis(page, { products: lowStockProducts });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/admin');
+
+  const revenuePanel = page.getByTestId('dashboard-revenue-panel');
+  const stockPanel = page.getByTestId('dashboard-low-stock-panel');
+  const stockScroll = page.getByTestId('dashboard-low-stock-scroll');
+  const revenueBox = await revenuePanel.boundingBox();
+  const stockBox = await stockPanel.boundingBox();
+
+  expect(revenueBox).not.toBeNull();
+  expect(stockBox).not.toBeNull();
+  expect(stockBox!.y).toBeGreaterThan(revenueBox!.y + revenueBox!.height);
+  expect(Math.abs(stockBox!.x - revenueBox!.x)).toBeLessThan(2);
+  expect(Math.abs(stockBox!.width - revenueBox!.width)).toBeLessThan(2);
+
+  const overflow = await stockScroll.evaluate(element => ({
+    scrollWidth: element.scrollWidth,
+    clientWidth: element.clientWidth,
+    pageScrollWidth: document.documentElement.scrollWidth,
+    pageClientWidth: document.documentElement.clientWidth,
+  }));
+  expect(overflow.scrollWidth).toBeGreaterThan(overflow.clientWidth);
+  expect(overflow.pageScrollWidth).toBeLessThanOrEqual(overflow.pageClientWidth);
+});
+
 test('訂單管理可查看明細並更新狀態', async ({ page }) => {
   const orderUpdates: Record<string, unknown>[] = [];
   await mockAdminApis(page, {
@@ -102,13 +136,15 @@ test('訂單管理可查看明細並更新狀態', async ({ page }) => {
 
   await page.goto('/admin');
   await openAdminSection(page, /訂單管理/);
-  await expect(page.getByText('E2E-ORDER-001')).toBeVisible();
+  await expect(page.getByText('E2E-ORDER-001').first()).toBeVisible();
   await page.getByText('E2E-ORDER-001').click();
   await expect(page.getByText('訂單詳情')).toBeVisible();
 
   await page.locator('.detail-panel select').selectOption('paid');
 
   await expect.poll(() => orderUpdates.some(update => update.status === 'paid')).toBe(true);
+  expect(await page.getByRole('button', { name: '已付款' }).evaluate(button => button.style.background)).toBe('var(--dark)');
+  await expect(page.getByRole('cell', { name: 'E2E-ORDER-001' })).toBeVisible();
   await expect(page.getByText('已付款').first()).toBeVisible();
 });
 
@@ -150,11 +186,13 @@ test('訂單管理可取消訂單並同步 cancelled 狀態', async ({ page }) =
   await expect.poll(() => orderUpdates.some(update => update.status === 'cancelled')).toBe(true);
 });
 
-test('訂單改為已付款會送出 LINE 付款通知，LINE 失敗時顯示訊息', async ({ page }) => {
+test('訂單改為已付款會送出 LINE 付款通知，LINE 失敗時改寄 Email', async ({ page }) => {
   const linePushes: Record<string, unknown>[] = [];
+  const orderEmails: Record<string, unknown>[] = [];
   await mockAdminApis(page, {
     orders: [{ ...adminOrderRows[1], status: 'awaiting_confirm' }],
     onLinePush: body => linePushes.push(body),
+    onOrderEmail: body => orderEmails.push(body),
     linePushError: '測試推播失敗',
   });
 
@@ -169,7 +207,11 @@ test('訂單改為已付款會送出 LINE 付款通知，LINE 失敗時顯示訊
     lineUserId: 'U1234567890',
     orderId: 'E2E-ORDER-002',
   });
-  await expect(page.getByText('LINE 通知送出失敗：測試推播失敗')).toBeVisible();
+  await expect(page.getByText('Email 付款完成通知已送出。')).toBeVisible();
+  expect(orderEmails).toContainEqual(expect.objectContaining({
+    type: 'payment_paid',
+    orderId: 'E2E-ORDER-002',
+  }));
 });
 
 test('出貨可寫入托運單號並送出 LINE 通知', async ({ page }) => {
@@ -184,14 +226,23 @@ test('出貨可寫入托運單號並送出 LINE 通知', async ({ page }) => {
   await openAdminSection(page, /訂單管理/);
   await page.getByRole('button', { name: '已付款' }).click();
   await page.getByText('E2E-ORDER-002').click();
-  await page.getByPlaceholder('輸入順豐托運單號（選填）').fill('SF987654321');
+  await page.getByPlaceholder('輸入順豐托運單號（必填）').fill('SF987654321');
   await page.getByRole('button', { name: '確認出貨' }).click();
 
   await expect(page.getByText('LINE 出貨通知已送出。')).toBeVisible();
   await expect(page.getByText('目前：')).toBeVisible();
   await expect(page.getByText('SF987654321')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'SF987654321' })).toHaveAttribute(
+    'href',
+    'https://htm.sf-express.com/tw/tc/',
+  );
+  await expect(page.getByText(/通知已發送：/)).toBeVisible();
   await expect.poll(() => orderUpdates.some(update =>
     update.status === 'shipped' && update.tracking === 'SF987654321',
+  )).toBe(true);
+  await expect.poll(() => orderUpdates.some(update =>
+    typeof update.shipment_notification_sent_at === 'string'
+      && update.shipment_notification_channel === 'line',
   )).toBe(true);
   expect(linePushes).toContainEqual(expect.objectContaining({
     type: 'shipment',
@@ -199,6 +250,52 @@ test('出貨可寫入托運單號並送出 LINE 通知', async ({ page }) => {
     orderId: 'E2E-ORDER-002',
     tracking: 'SF987654321',
   }));
+
+  await page.getByRole('button', { name: '重新發送出貨通知' }).click();
+  await expect.poll(() => linePushes.length).toBe(2);
+});
+
+test('未填托運單號不能確認出貨或發送通知', async ({ page }) => {
+  const orderUpdates: Record<string, unknown>[] = [];
+  const linePushes: Record<string, unknown>[] = [];
+  await mockAdminApis(page, {
+    onOrderUpdate: update => orderUpdates.push(update),
+    onLinePush: body => linePushes.push(body),
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByRole('button', { name: '已付款' }).click();
+  await page.getByText('E2E-ORDER-002').click();
+  await page.getByRole('button', { name: '確認出貨' }).click();
+
+  await expect(page.getByText('請輸入順豐托運單號，再確認出貨。')).toBeVisible();
+  expect(orderUpdates.some(update => update.status === 'shipped')).toBe(false);
+  expect(linePushes).toHaveLength(0);
+});
+
+test('已有成功通知紀錄時不會自動重複發送', async ({ page }) => {
+  const linePushes: Record<string, unknown>[] = [];
+  await mockAdminApis(page, {
+    orders: [{
+      ...adminOrderRows[1],
+      status: 'preparing',
+      tracking: 'SF-DUPLICATE-GUARD',
+      shipped_at: '2026-05-21T03:00:00.000Z',
+      shipment_notification_sent_at: '2026-05-21T03:01:00.000Z',
+      shipment_notification_channel: 'line',
+    }],
+    onLinePush: body => linePushes.push(body),
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByRole('button', { name: '備貨中' }).click();
+  await page.getByText('E2E-ORDER-002').click();
+  await page.locator('.detail-panel select').selectOption('shipped');
+
+  await expect(page.getByText(/出貨通知已於.*發送/)).toBeVisible();
+  expect(linePushes).toHaveLength(0);
 });
 
 test('沒有 LINE 綁定的訂單出貨會送出 Email 通知', async ({ page }) => {
@@ -214,7 +311,7 @@ test('沒有 LINE 綁定的訂單出貨會送出 Email 通知', async ({ page })
   await openAdminSection(page, /訂單管理/);
   await page.getByRole('button', { name: '已付款' }).click();
   await page.getByText('E2E-ORDER-001').click();
-  await page.getByPlaceholder('輸入順豐托運單號（選填）').fill('SF111222333');
+  await page.getByPlaceholder('輸入順豐托運單號（必填）').fill('SF111222333');
   await page.getByRole('button', { name: '確認出貨' }).click();
 
   await expect(page.getByText('Email 出貨通知已送出。')).toBeVisible();

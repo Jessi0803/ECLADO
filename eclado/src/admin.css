@@ -46,6 +46,7 @@ input, select, textarea { font-family: var(--font); }
 .stat-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .stat-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .split-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+.dashboard-chart-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; min-width: 0; max-width: 100%; }
 .product-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 
 @media (max-width: 900px) {

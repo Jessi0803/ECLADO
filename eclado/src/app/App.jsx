@@ -34,6 +34,11 @@ import {
   hasAuthCallbackInUrl,
   isPasswordRecoveryUrl,
 } from '../services/auth.js';
+import {
+  CART_STORAGE_KEY,
+  loadStoredCart,
+  saveStoredCart,
+} from '../services/cartStorage.js';
 import { goProfessionalApply } from '../services/membership.js';
 
 export default function App() {
@@ -72,11 +77,23 @@ export default function App() {
     showProBanner,
     user,
   } = useAuth(setPageState);
-  const [cart, setCart] = useState([]);
-  const products = useProducts(user, setCart);
+  const [cart, setCart] = useState(loadStoredCart);
+  const products = useProducts(user, setCart, authReady);
   const { promotions, status: promoFetchStatus, errorText: promoFetchError } = usePromotions();
   const salesStats = useSalesStats();
   const cartCount = cart.reduce((sum,i) => sum+i.qty, 0);
+
+  useEffect(() => {
+    saveStoredCart(cart);
+  }, [cart]);
+
+  useEffect(() => {
+    function syncCartAcrossTabs(event) {
+      if (event.key === CART_STORAGE_KEY) setCart(loadStoredCart());
+    }
+    window.addEventListener('storage', syncCartAcrossTabs);
+    return () => window.removeEventListener('storage', syncCartAcrossTabs);
+  }, []);
 
   // 登入後導向美容師申請（從導覽「美容師申請」未登入時進入）
   useEffect(() => {
