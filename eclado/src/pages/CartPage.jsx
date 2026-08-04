@@ -18,6 +18,10 @@ import { calculateShipping } from '../domain/shipping.js';
 export default function CartPage({ cart, setCart, setPage, user, promotions = [] }) {
   const isMobile = useIsMobile();
   const [showCheckoutChoice, setShowCheckoutChoice] = useState(false);
+  const isRestoringCart = cart.some(item => (
+    !item?.nameZh || !Number.isFinite(Number(item?.price))
+  ));
+  const pricedCart = isRestoringCart ? [] : cart;
   function updateQty(key, delta) {
     setCart(prev => prev.map(i => getCartKey(i) === key ? { ...i, qty: Math.max(0, i.qty+delta) } : i).filter(i => i.qty>0));
   }
@@ -37,9 +41,9 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
     setShowCheckoutChoice(false);
     setPage('checkout');
   }
-  const { subtotal, discount, finalSubtotal, promotion } = calculateDiscount(cart, promotions, user);
+  const { subtotal, discount, finalSubtotal, promotion } = calculateDiscount(pricedCart, promotions, user);
   const professionalProgress = getProfessionalOrderProgress(finalSubtotal, user);
-  const shipping = calculateShipping(cart, user, finalSubtotal);
+  const shipping = calculateShipping(pricedCart, user, finalSubtotal);
   const grandTotal = finalSubtotal + shipping;
 
   return (
@@ -56,7 +60,11 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
           </div>
         )}
 
-        {cart.length === 0 ? (
+        {isRestoringCart ? (
+          <div role="status" style={{ textAlign:'center', padding:'80px 0' }}>
+            <p style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:300, color:'var(--dark)' }}>正在載入購物車商品…</p>
+          </div>
+        ) : cart.length === 0 ? (
           <div style={{ textAlign:'center', padding:'80px 0' }}>
             <p style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:300, color:'var(--dark)', marginBottom:24 }}>購物車是空的</p>
             <button onClick={() => setPage('shop')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 36px', fontSize:12, letterSpacing:'0.15em', cursor:'pointer', fontFamily:'var(--font-body)' }}>繼續購物</button>

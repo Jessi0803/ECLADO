@@ -63,6 +63,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
       assetKey: crypto.randomUUID(),
       name: '',
       nameZh: '',
+      subtitle: '',
       category: PRODUCT_CATEGORIES[0],
       minStock: 3,
       isProOnly: false,
@@ -490,6 +491,11 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                   <label htmlFor="productName" style={lbl}>英文名稱</label>
                   <input id="productName" value={editing.name} onChange={setF('name')} style={inp} />
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="productSubtitle" style={lbl}>功效副標</label>
+                <input id="productSubtitle" value={editing.subtitle || ''} onChange={setF('subtitle')} style={inp} placeholder="例如：潤澤提亮・水光透亮" />
               </div>
 
               <div>

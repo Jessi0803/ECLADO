@@ -98,6 +98,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
           <div>
             <p style={{ fontSize:10, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>{product.category}</p>
             <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 26 : 34, fontWeight:300, color:'var(--black)', lineHeight:1.2, marginBottom:6 }}>{product.nameZh}</h1>
+            {product.subtitle && <p style={{ fontSize:13, color:'var(--gold)', letterSpacing:'0.08em', marginBottom:8 }}>{product.subtitle}</p>}
             <p style={{ fontSize:12, color:'var(--dark)', letterSpacing:'0.1em', marginBottom:28 }}>{product.name} · {displayProduct.size}</p>
             <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:10, marginBottom:22 }}>
               <span style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--white)', background: fulfillment.type === 'preorder' ? 'var(--gold)' : fulfillment.type === 'loading' ? 'var(--mid)' : 'var(--black)', padding:'5px 10px' }}>{fulfillment.label}</span>
@@ -197,7 +198,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
           ].map(({ label, content }) => (
             <div key={label} style={{ background:'var(--white)', padding: isMobile ? '28px 20px' : '36px 32px' }}>
               <p style={{ fontSize:13, fontWeight:600, letterSpacing:'0.24em', color:'var(--dark)', textTransform:'uppercase', marginBottom:14 }}>{label}</p>
-              <p style={{ fontSize:14, color:'#555', lineHeight:1.9 }}>{content}</p>
+              <p style={{ fontSize:14, color:'#555', lineHeight:1.9, whiteSpace:'pre-line' }}>{content}</p>
             </div>
           ))}
         </div>

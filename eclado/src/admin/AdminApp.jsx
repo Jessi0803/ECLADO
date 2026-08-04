@@ -191,6 +191,7 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       ...(product.assetKey ? { asset_key: product.assetKey } : {}),
       name: product.name || '',
       name_zh: product.nameZh || '',
+      subtitle: product.subtitle || null,
       category: product.category || '',
       min_stock: Math.max(0, Number(product.minStock) || 0),
       is_pro_only: !!product.isProOnly,

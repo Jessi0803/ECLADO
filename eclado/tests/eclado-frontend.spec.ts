@@ -61,10 +61,10 @@ async function openAdminCatalog(page: import('@playwright/test').Page) {
 async function triggerProductsRealtime(page: import('@playwright/test').Page) {
   await page.evaluate(() => {
     const client = (window as any).supabase;
-    const channel = client.getChannels().find((candidate: any) => candidate.topic.includes('products-realtime'));
+    const channel = client.getChannels().find((candidate: any) => candidate.topic === 'realtime:products-realtime');
     const callback = channel?.bindings?.postgres_changes?.[0]?.callback;
     if (!callback) throw new Error('products realtime callback not found');
-    callback({});
+    return callback({});
   });
 }
 
@@ -760,6 +760,32 @@ test('購物車重新整理後仍保留，且 localStorage 不保存價格資料
   await expect(page.getByText('NT$ 3,980').first()).toBeVisible();
 });
 
+test('數字型規格 ID 經 localStorage 還原後仍保留商品與正確價格', async ({ page }) => {
+  await mockEcladoApis(page, {
+    productVariants: [
+      { id: 201, product_id: 2, size: '30ml', price: 3980, pro_price: 2980, stock: 2, is_default: true, sort_order: 1, active: true },
+      { id: 202, product_id: 2, size: '60ml', price: 6880, pro_price: 5200, stock: 4, is_default: false, sort_order: 2, active: true },
+    ],
+    promotions: [],
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: '60ml' }).click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+
+  await expect.poll(() => page.evaluate(() => (
+    JSON.parse(window.localStorage.getItem('eclado_cart_v1') || '[]')[0]?.variantId
+  ))).toBe('202');
+
+  await page.reload();
+  await openCart(page);
+  await expect(page.getByText('胜肽修護精華液')).toBeVisible();
+  await expect(page.getByText('胜肽修護精華液 · 60ml')).toBeVisible();
+  await expect(page.getByText('NT$ 6,880').first()).toBeVisible();
+  await expect(page.getByText('NT$ 非數值')).toHaveCount(0);
+});
+
 test('結帳建立付款單但不寫入真實訂單或真金流', async ({ page }) => {
   await page.goto('/shop');
   await page.getByText('胜肽修護精華液').first().click();
@@ -1010,17 +1036,6 @@ test('權威訂單建立失敗時不建立付款單', async ({ page }) => {
   await expect(page.getByText(/付款單建立失敗.*測試訂單寫入失敗/)).toBeVisible();
   await expect(page.getByRole('heading', { name: '付款單已建立' })).toHaveCount(0);
   expect(paymentRequests).toHaveLength(0);
-});
-
-test('購物車只存在瀏覽器記憶體，重新整理會清空', async ({ page }) => {
-  await page.goto('/shop');
-  await page.getByText('胜肽修護精華液').first().click();
-  await page.getByRole('button', { name: /加入購物車/ }).click();
-  await openCart(page);
-  await expect(page.getByText('胜肽修護精華液')).toBeVisible();
-
-  await page.reload();
-  await expect(page.getByText('購物車是空的')).toBeVisible();
 });
 
 test('會員專區顯示自己的訂單與托運單號', async ({ page }) => {

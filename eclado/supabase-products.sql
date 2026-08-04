@@ -9,6 +9,7 @@ create table if not exists public.products (
   asset_key uuid not null default gen_random_uuid(),
   name text not null,
   name_zh text not null,
+  subtitle text,
   category text not null,
   size text,
   price numeric not null default 0,
@@ -32,6 +33,7 @@ create table if not exists public.products (
 );
 
 alter table public.products add column if not exists image_urls jsonb not null default '[]'::jsonb;
+alter table public.products add column if not exists subtitle text;
 alter table public.products add column if not exists variants jsonb not null default '[]'::jsonb;
 alter table public.products add column if not exists product_list_image_scale numeric;
 alter table public.products add column if not exists source_folder_name text;

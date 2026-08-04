@@ -56,7 +56,7 @@ export function normalizeProductVariant(variant) {
 }
 
 export const PRODUCT_IMAGE_ZOOM_NAMES = new Set([
-  '亮白光采霜', '完美潔面卸妝膏', '記憶抗皺眼霜', 'PHA溫和煥膚',
+  '光采素顏霜', '完美潔面卸妝膏', '記憶抗皺眼霜', 'PHA溫和煥膚',
   '急救安瓶-水合複合', '平衡爽膚水', '急救安瓶-積雪草毛孔', '急救安瓶-維他命美白', '亮顏防曬BB霜',
   '乳酸菌亮白面膜', '乳酸菌亮白⾯膜', '保濕補水霜', '精萃凝膠', '氧氣泡泡',
 ]);
@@ -66,7 +66,7 @@ export const PRODUCT_PRIMARY_IMAGE_OVERRIDES = {
 };
 
 export const PRODUCT_IMAGE_SCALE_OVERRIDES = {
-  '亮白光采霜': 1.24,
+  '光采素顏霜': 1.24,
   '完美潔面卸妝膏': 1.22,
 };
 
@@ -170,7 +170,7 @@ export function applyVariantToProduct(product, variant) {
   if (!variant) return product;
   return {
     ...product,
-    variantId: variant.id || variant.size || '',
+    variantId: String(variant.id || variant.size || ''),
     variantSize: variant.size || '',
     size: variant.size || product.size || '',
     price: variant.price || product.price || 0,
@@ -185,7 +185,10 @@ export function getCartKey(item) {
 
 export function getVariantForCartItem(product, item) {
   const variants = getProductVariants(product);
-  return variants.find(variant => (variant.id || variant.size || '') === (item?.variantId || item?.variantSize || '')) || null;
+  const cartVariantId = String(item?.variantId || item?.variantSize || '');
+  return variants.find(variant => (
+    String(variant.id || variant.size || '') === cartVariantId
+  )) || null;
 }
 
 export function groupProductVariants(rows) {
@@ -290,6 +293,7 @@ export function mergeProductsWithStock(baseProducts, stockRows, variantMap, imag
       id: Number(row.id),
       name: row.name || product.name || '',
       nameZh: row.name_zh || product.nameZh || '',
+      subtitle: row.subtitle || product.subtitle || '',
       category: row.category || product.category || '',
       size: primaryVariant?.size || row.size || product.size || '',
       stock: primaryVariant?.stock != null ? primaryVariant.stock : Number(row.stock ?? 0),

@@ -103,7 +103,7 @@ begin
 
   if requested_product_id is null then
     insert into public.products (
-      asset_key, name, name_zh, category, min_stock, is_pro_only,
+      asset_key, name, name_zh, subtitle, category, min_stock, is_pro_only,
       image_url, image_urls, description, skin_type, ingredients, features,
       source_folder_name, imported_from_drive, product_list_image_scale, publication_status, active,
       size, price, pro_price, stock, variants
@@ -112,6 +112,7 @@ begin
       coalesce(requested_asset_key, gen_random_uuid()),
       trim(p_product ->> 'name'),
       trim(p_product ->> 'name_zh'),
+      nullif(trim(p_product ->> 'subtitle'), ''),
       trim(p_product ->> 'category'),
       greatest(coalesce((p_product ->> 'min_stock')::integer, 3), 0),
       coalesce((p_product ->> 'is_pro_only')::boolean, false),
@@ -156,6 +157,10 @@ begin
     set
       name = trim(p_product ->> 'name'),
       name_zh = trim(p_product ->> 'name_zh'),
+      subtitle = case
+        when p_product ? 'subtitle' then nullif(trim(p_product ->> 'subtitle'), '')
+        else subtitle
+      end,
       category = trim(p_product ->> 'category'),
       min_stock = greatest(coalesce((p_product ->> 'min_stock')::integer, min_stock, 3), 0),
       is_pro_only = coalesce((p_product ->> 'is_pro_only')::boolean, is_pro_only),

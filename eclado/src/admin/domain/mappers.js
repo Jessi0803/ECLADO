@@ -98,6 +98,7 @@ export function normalizeProduct(row, variantRows = null, imageRows = []) {
     assetKey: row.asset_key || '',
     name: row.name || '',
     nameZh: row.name_zh || '',
+    subtitle: row.subtitle || '',
     category: normalizeProductCategory(row.category, !!row.is_pro_only),
     size: row.size || '',
     price: Number(row.price) || 0,

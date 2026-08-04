@@ -54,6 +54,12 @@ async function openAdminSection(page: Page, name: RegExp) {
   await page.getByRole('button', { name }).click();
 }
 
+const adminProductVariants = [
+  { id: 101, product_id: 1, sku: 'FOAM-200', size: '200ml', price: 1280, pro_price: 960, stock: 48, is_default: true, sort_order: 0, active: true },
+  { id: 201, product_id: 2, sku: 'SERUM-30', size: '30ml', price: 3980, pro_price: 2980, stock: 2, is_default: true, sort_order: 0, active: true },
+  { id: 701, product_id: 7, sku: 'NK-10', size: '3.5ml×10', price: 8800, pro_price: 6600, stock: 0, is_default: true, sort_order: 0, active: true },
+];
+
 test('後台登入權限：非管理員擋下，管理員可進入', async ({ page }) => {
   await mockEcladoApis(page, {
     signInUser: normalUser(),
@@ -326,21 +332,22 @@ test('沒有 LINE 綁定的訂單出貨會送出 Email 通知', async ({ page })
   }));
 });
 
-test('商品庫存可在後台修改並同步 products 更新', async ({ page }) => {
-  const productUpdates: Record<string, unknown>[] = [];
+test('商品庫存可在規格表格修改並透過交易式 RPC 儲存', async ({ page }) => {
+  let savedRequest: Record<string, any> | null = null;
   await mockAdminApis(page, {
-    onProductUpdate: update => productUpdates.push(update),
+    productVariants: adminProductVariants,
+    onProductWithVariantsSave: request => { savedRequest = request; },
   });
 
   await page.goto('/admin');
   await openAdminSection(page, /商品 & 庫存/);
   await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();
-  await page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr').getByRole('button', { name: '修改庫存' }).click();
-  await page.locator('input[type="number"]').fill('12');
-  await page.getByRole('button', { name: '✓' }).click();
+  await page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr').getByRole('button', { name: '編輯' }).click();
+  await page.getByLabel('規格 1 庫存').fill('12');
+  await page.getByRole('button', { name: '儲存', exact: true }).click();
 
-  await expect(page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr').getByText('12')).toBeVisible();
-  await expect.poll(() => productUpdates.some(update => update.stock === 12)).toBe(true);
+  await expect.poll(() => savedRequest).not.toBeNull();
+  expect(savedRequest?.p_variants?.[0]).toMatchObject({ id: '201', stock: 12 });
 });
 
 test('商品庫存可依庫存狀態篩選', async ({ page }) => {
@@ -368,10 +375,11 @@ test('商品庫存可依庫存狀態篩選', async ({ page }) => {
   await expect(table.getByText('NK細胞活化安瓶')).toHaveCount(0);
 });
 
-test('商品管理可編輯名稱、價格與院線限定並同步 products 更新', async ({ page }) => {
-  const productUpdates: Record<string, unknown>[] = [];
+test('商品管理可編輯名稱、規格價格與院線限定並透過 RPC 儲存', async ({ page }) => {
+  let savedRequest: Record<string, any> | null = null;
   await mockAdminApis(page, {
-    onProductUpdate: update => productUpdates.push(update),
+    productVariants: adminProductVariants,
+    onProductWithVariantsSave: request => { savedRequest = request; },
   });
 
   await page.goto('/admin');
@@ -380,31 +388,28 @@ test('商品管理可編輯名稱、價格與院線限定並同步 products 更�
   await productRow.getByRole('button', { name: '編輯' }).click();
 
   const panel = page.locator('.detail-panel');
-  await panel.locator('input').nth(0).fill('胜肽全效修護精華液');
-  await panel.locator('input[type="number"]').nth(0).fill('4200');
-  await panel.locator('input[type="number"]').nth(1).fill('3100');
+  await panel.getByLabel('中文名稱').fill('胜肽全效修護精華液');
+  await panel.getByLabel('規格 1 市場價').fill('4200');
+  await panel.getByLabel('規格 1 專業價').fill('3100');
   await panel.getByLabel(/院線限定/).check();
-  await panel.getByLabel('上傳商品圖片').setInputFiles({
-    name: 'updated-product.webp',
-    mimeType: 'image/webp',
-    buffer: Buffer.from('updated-image-data'),
-  });
-  await expect(panel.getByAltText('胜肽全效修護精華液')).toBeVisible();
   await panel.getByRole('button', { name: '儲存' }).click();
 
-  await expect.poll(() => productUpdates.some(update =>
-    update.name_zh === '胜肽全效修護精華液' &&
-    update.price === 4200 &&
-    update.pro_price === 3100 &&
-    update.is_pro_only === true &&
-    String(update.image_url).startsWith('data:image/webp;base64,'),
-  )).toBe(true);
+  await expect.poll(() => savedRequest).not.toBeNull();
+  expect(savedRequest?.p_product).toMatchObject({
+    id: 2,
+    name_zh: '胜肽全效修護精華液',
+    is_pro_only: true,
+  });
+  expect(savedRequest?.p_variants?.[0]).toMatchObject({ price: 4200, pro_price: 3100 });
 });
 
-test('商品管理可從本機上傳圖片建立商品並寫入 products', async ({ page }) => {
-  const productInserts: Record<string, unknown>[] = [];
+test('商品管理可從本機上傳圖片並以規格 RPC 建立草稿', async ({ page }) => {
+  let savedRequest: Record<string, any> | null = null;
+  let savedImagesRequest: Record<string, any> | null = null;
   await mockAdminApis(page, {
-    onProductInsert: product => productInserts.push(product),
+    productVariants: adminProductVariants,
+    onProductWithVariantsSave: request => { savedRequest = request; },
+    onProductImagesSave: request => { savedImagesRequest = request; },
   });
 
   await page.goto('/admin');
@@ -414,39 +419,41 @@ test('商品管理可從本機上傳圖片建立商品並寫入 products', async
   const panel = page.locator('.detail-panel');
   await panel.getByLabel('中文名稱').fill('E2E 新商品');
   await panel.getByLabel('英文名稱').fill('E2E New Product');
-  await panel.getByLabel('規格').fill('50ml');
-  await panel.getByLabel('售價 (NT$)').fill('1680');
-  await panel.getByLabel('專業價 (NT$)').fill('1280');
-  await panel.getByLabel('庫存數量').fill('20');
+  await panel.getByLabel('規格 1 名稱').fill('50ml');
+  await panel.getByLabel('規格 1 SKU').fill('E2E-50');
+  await panel.getByLabel('規格 1 市場價').fill('1680');
+  await panel.getByLabel('規格 1 專業價').fill('1280');
+  await panel.getByLabel('規格 1 庫存').fill('20');
   await panel.getByLabel('低庫存警示值').fill('5');
-  await panel.getByLabel('上傳商品圖片').setInputFiles({
+  await panel.getByLabel('商品圖片').setInputFiles({
     name: 'e2e-product.png',
     mimeType: 'image/png',
     buffer: Buffer.from('e2e-image-data'),
   });
-  await expect(panel.getByAltText('E2E 新商品')).toBeVisible();
-  await panel.getByRole('button', { name: '建立商品' }).click();
+  await expect(panel.getByText('首圖', { exact: true })).toBeVisible();
+  await panel.getByRole('button', { name: '建立草稿' }).click();
 
-  await expect.poll(() => productInserts.length).toBe(1);
-  expect(productInserts[0]).toMatchObject({
-    id: 8,
+  await expect.poll(() => savedRequest).not.toBeNull();
+  expect(savedRequest?.p_product).toMatchObject({
     name: 'E2E New Product',
     name_zh: 'E2E 新商品',
-    size: '50ml',
-    price: 1680,
-    pro_price: 1280,
-    stock: 20,
     min_stock: 5,
-    active: true,
+    publication_status: 'draft',
   });
-  expect(String(productInserts[0].image_url)).toMatch(/^data:image\/png;base64,/);
-  await expect(page.getByText('E2E 新商品')).toBeVisible();
+  expect(savedRequest?.p_variants?.[0]).toMatchObject({
+    sku: 'E2E-50', size: '50ml', price: 1680, pro_price: 1280, stock: 20,
+  });
+  await expect.poll(() => savedImagesRequest).not.toBeNull();
+  expect(savedImagesRequest?.p_images?.[0]).toMatchObject({
+    original_name: 'e2e-product.png', mime_type: 'image/png', is_primary: true,
+  });
 });
 
-test('商品圖片上傳會阻止未選圖片、非圖片與超過 2 MB 的檔案', async ({ page }) => {
-  const productInserts: Record<string, unknown>[] = [];
+test('商品圖片上傳會阻止未選圖片、非圖片與超過 5 MB 的檔案', async ({ page }) => {
+  let savedRequest: Record<string, any> | null = null;
   await mockAdminApis(page, {
-    onProductInsert: product => productInserts.push(product),
+    productVariants: adminProductVariants,
+    onProductWithVariantsSave: request => { savedRequest = request; },
   });
 
   await page.goto('/admin');
@@ -456,27 +463,28 @@ test('商品圖片上傳會阻止未選圖片、非圖片與超過 2 MB 的檔�
   await panel.getByLabel('中文名稱').fill('無圖商品');
   await panel.getByLabel('英文名稱').fill('Missing Image Product');
 
-  await panel.getByRole('button', { name: '建立商品' }).click();
-  await expect(page.getByText('請輸入中文名稱、英文名稱並選擇商品圖片')).toBeVisible();
+  await panel.getByRole('button', { name: '建立草稿' }).click();
+  await expect(page.getByText('請選擇至少一張商品圖片')).toBeVisible();
 
-  await panel.getByLabel('上傳商品圖片').setInputFiles({
+  await panel.getByLabel('商品圖片').setInputFiles({
     name: 'not-an-image.txt',
     mimeType: 'text/plain',
     buffer: Buffer.from('not an image'),
   });
-  await expect(page.getByText('請選擇圖片檔案')).toBeVisible();
+  await expect(page.getByText('不支援 not-an-image.txt，請使用 JPG、PNG 或 WebP')).toBeVisible();
 
-  await panel.getByLabel('上傳商品圖片').setInputFiles({
+  await panel.getByLabel('商品圖片').setInputFiles({
     name: 'too-large.png',
     mimeType: 'image/png',
-    buffer: Buffer.alloc(2 * 1024 * 1024 + 1),
+    buffer: Buffer.alloc(5 * 1024 * 1024 + 1),
   });
-  await expect(page.getByText('圖片大小不可超過 2 MB')).toBeVisible();
-  expect(productInserts).toHaveLength(0);
+  await expect(page.getByText('too-large.png 超過 5 MB')).toBeVisible();
+  expect(savedRequest).toBeNull();
 });
 
 test('新增商品寫入失敗時顯示錯誤且不加入商品清單', async ({ page }) => {
   await mockAdminApis(page, {
+    productVariants: adminProductVariants,
     productWriteError: '測試商品新增失敗',
   });
 
@@ -486,14 +494,18 @@ test('新增商品寫入失敗時顯示錯誤且不加入商品清單', async ({
   const panel = page.locator('.detail-panel');
   await panel.getByLabel('中文名稱').fill('失敗商品');
   await panel.getByLabel('英文名稱').fill('Failed Product');
-  await panel.getByLabel('上傳商品圖片').setInputFiles({
+  await panel.getByLabel('規格 1 名稱').fill('50ml');
+  await panel.getByLabel('規格 1 SKU').fill('FAILED-50');
+  await panel.getByLabel('規格 1 市場價').fill('1000');
+  await panel.getByLabel('規格 1 專業價').fill('800');
+  await panel.getByLabel('商品圖片').setInputFiles({
     name: 'product.png',
     mimeType: 'image/png',
     buffer: Buffer.from('image'),
   });
-  await panel.getByRole('button', { name: '建立商品' }).click();
+  await panel.getByRole('button', { name: '建立草稿' }).click();
 
-  await expect(page.getByText(/新增商品失敗：測試商品新增失敗/)).toBeVisible();
+  await expect(page.getByText(/儲存商品失敗：測試商品新增失敗/)).toBeVisible();
   await expect(page.getByRole('table').getByText('失敗商品')).toHaveCount(0);
 });
 
@@ -509,13 +521,13 @@ test('商品管理可下架、於已下架清單查看並重新上架商品', as
   page.once('dialog', dialog => dialog.accept());
   await productRow.getByRole('button', { name: '下架' }).click();
 
-  await expect.poll(() => productUpdates.some(update => update.active === false)).toBe(true);
+  await expect.poll(() => productUpdates.some(update => update.publication_status === 'archived')).toBe(true);
   await expect(page.getByText('胜肽修護精華液')).toHaveCount(0);
   await page.getByRole('button', { name: /已下架/ }).click();
   const archivedRow = page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr');
   await expect(archivedRow.getByText('已下架')).toBeVisible();
   await archivedRow.getByRole('button', { name: '重新上架' }).click();
-  await expect.poll(() => productUpdates.some(update => update.active === true)).toBe(true);
+  await expect.poll(() => productUpdates.some(update => update.publication_status === 'active')).toBe(true);
   await page.getByRole('button', { name: /上架中/ }).click();
   await expect(page.getByRole('table').getByText('胜肽修護精華液')).toBeVisible();
 });
