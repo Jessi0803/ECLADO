@@ -56,7 +56,7 @@ export default function AdminGate({ children }) {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--sidebar)', padding: 16 }}>
       <form onSubmit={submit} style={{ background: 'var(--white)', padding: 'clamp(32px, 6vw, 48px) clamp(24px, 5vw, 56px)', width: '100%', maxWidth: 380, boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontFamily: 'var(--font-d)', fontSize: 22, letterSpacing: '0.22em', color: 'var(--dark)', marginBottom: 6 }}>ECLADO</div>
+          <img src="/assets/images/ECLADO LOGO with CI_WHITE.png" alt="ECLADO Laboratory" style={{ width:120, height:'auto', display:'block', filter:'brightness(0)', margin:'0 auto 10px' }} />
           <div style={{ fontSize: 10, letterSpacing: '0.24em', color: 'var(--gold)', textTransform: 'uppercase' }}>管理後台 · 請登入</div>
         </div>
         <label style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>電子郵件</label>

@@ -1,3 +1,5 @@
+const { buildBrandedEmailHtml } = require('./_email-template.js');
+
 const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
 const DEFAULT_REMIND_MINUTES = 180;
 const DEFAULT_SECOND_REMIND_MINUTES = 24 * 60;
@@ -192,6 +194,7 @@ async function sendEmailReminder(order, fallbackEmail = '', stage = 'first') {
       to: [email],
       subject: `ECLADO ${stage === 'second' ? '最後付款提醒' : '付款提醒'}｜${order.id}`,
       text: buildReminderEmail(order, stage),
+      html: buildBrandedEmailHtml(buildReminderEmail(order, stage)),
     }),
   });
 

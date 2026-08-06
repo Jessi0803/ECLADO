@@ -141,9 +141,8 @@ export default function LoginPage({ setPage }) {
       <div className="login-visual" style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center', background:'var(--black)', padding:60, position:'relative', overflow:'hidden' }}>
         <img src="https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=900&q=85&fit=crop" alt="" style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.35 }} />
         <div style={{ position:'relative', zIndex:1, textAlign:'center' }}>
-          <div style={{ fontFamily:'var(--font-display)', fontSize:26, letterSpacing:'0.22em', color:'var(--white)', marginBottom:6 }}>ECLADO</div>
-          <div style={{ fontSize:9, letterSpacing:'0.3em', color:'var(--gold)', marginBottom:40, textTransform:'uppercase' }}>Korean Cosmeceuticals</div>
-          <p style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, color:'var(--white)', lineHeight:1.4, marginBottom:20 }}>Professional<br />Skincare.</p>
+          <img src="/assets/images/ECLADO LOGO with CI_WHITE.png" alt="ECLADO Laboratory" style={{ width:190, height:'auto', display:'block', margin:'0 auto 8px' }} />
+          <p style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, color:'var(--white)', lineHeight:1.4, marginTop:40, marginBottom:20 }}>Professional<br />Skincare.</p>
           <p style={{ fontSize:13, color:'rgba(255,255,255,0.4)', lineHeight:1.9 }}>登入後享有完整購物體驗</p>
         </div>
       </div>
@@ -153,8 +152,7 @@ export default function LoginPage({ setPage }) {
         <BackHomeButton setPage={setPage} />
 
         <div style={{ marginBottom:28 }}>
-          <div style={{ fontFamily:'var(--font-display)', fontSize:20, letterSpacing:'0.2em', color:'var(--black)', marginBottom:4 }}>ECLADO</div>
-          <div style={{ fontSize:9, letterSpacing:'0.26em', color:'var(--gold)', textTransform:'uppercase' }}>Korean Cosmeceuticals</div>
+          <img src="/assets/images/ECLADO LOGO with CI_WHITE.png" alt="ECLADO Laboratory" style={{ width:150, height:'auto', display:'block', filter:'brightness(0)', marginBottom:6 }} />
         </div>
 
         {/* Tabs — 登入 / 註冊 (hidden on forgot view) */}

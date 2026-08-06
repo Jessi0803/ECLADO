@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import PasswordVisibilityIcon from './PasswordVisibilityIcon.jsx';
 
 const inputStyle = {
   width:'100%',
@@ -35,6 +36,24 @@ function SubmitButton({ children, disabled }) {
   );
 }
 
+function PasswordInput({ visible, onToggle, ...props }) {
+  return (
+    <div style={{ position:'relative' }}>
+      <input
+        {...props}
+        type={visible ? 'text' : 'password'}
+        required
+        style={{ ...inputStyle, paddingRight:52 }}
+        onFocus={event => { event.target.style.borderBottomColor = 'var(--dark)'; }}
+        onBlur={event => { event.target.style.borderBottomColor = 'var(--light)'; }}
+      />
+      <button type="button" onClick={onToggle} aria-label={visible ? '隱藏密碼' : '顯示密碼'} style={{ position:'absolute', right:0, top:0, bottom:1, width:34, display:'flex', alignItems:'center', justifyContent:'flex-end', border:'none', background:'transparent', padding:0, color:'var(--dark)', opacity:0.72, cursor:'pointer' }}>
+        <PasswordVisibilityIcon visible={visible} />
+      </button>
+    </div>
+  );
+}
+
 export default function AuthForms({
   confirm,
   email,
@@ -54,6 +73,9 @@ export default function AuthForms({
   phone,
   view,
 }) {
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
+
   return (
     <>
       {view === 'login' && (
@@ -64,14 +86,11 @@ export default function AuthForms({
               <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase' }}>密碼</label>
               <button type="button" onClick={onForgotView} style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color:'var(--dark)', fontFamily:'var(--font-body)', letterSpacing:'0.04em', textDecoration:'underline', textUnderlineOffset:3 }}>忘記密碼？</button>
             </div>
-            <input
-              type="password"
+            <PasswordInput
+              visible={passwordVisible}
+              onToggle={() => setPasswordVisible(current => !current)}
               value={password}
               onChange={onPasswordChange}
-              required
-              style={inputStyle}
-              onFocus={event => { event.target.style.borderBottomColor = 'var(--dark)'; }}
-              onBlur={event => { event.target.style.borderBottomColor = 'var(--light)'; }}
             />
           </div>
           <SubmitButton disabled={loading}>{loading ? '登入中...' : '登入'}</SubmitButton>
@@ -83,8 +102,14 @@ export default function AuthForms({
           <AuthInput label="姓名" type="text" value={name} onChange={onNameChange} />
           <AuthInput label="手機" type="tel" value={phone} onChange={onPhoneChange} placeholder="09xx-xxx-xxx" />
           <AuthInput label="Email" type="email" value={email} onChange={onEmailChange} />
-          <AuthInput label="密碼（至少 6 位）" type="password" value={password} onChange={onPasswordChange} minLength={6} />
-          <AuthInput label="確認密碼" type="password" value={confirm} onChange={onConfirmChange} />
+          <div>
+            <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:9 }}>密碼（至少 6 位）</label>
+            <PasswordInput visible={passwordVisible} onToggle={() => setPasswordVisible(current => !current)} value={password} onChange={onPasswordChange} minLength={6} />
+          </div>
+          <div>
+            <label style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:9 }}>確認密碼</label>
+            <PasswordInput visible={confirmVisible} onToggle={() => setConfirmVisible(current => !current)} value={confirm} onChange={onConfirmChange} />
+          </div>
           <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.8, marginBottom:0 }}>想申請美容師資格？請先完成會員註冊，登入後再前往「<a href="/professional-apply" style={{ color:'var(--black)', textDecoration:'underline', textUnderlineOffset:3 }}>美容師申請</a>」頁面填寫資料。</p>
           <SubmitButton disabled={loading}>{loading ? '建立中...' : '建立帳號'}</SubmitButton>
         </form>

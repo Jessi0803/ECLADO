@@ -55,9 +55,18 @@ export default function Nav({ setPage, cartCount, user, setUser, page }) {
       }}>
         <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px', height:68, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           {/* Logo */}
-          <div onClick={() => { setPage('home'); setDrawerOpen(false); }} style={{ cursor:'pointer', display:'flex', flexDirection:'column', gap:1, flexShrink:0 }}>
-            <span style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:400, letterSpacing:'0.22em', color: darkMode || drawerOpen ? 'var(--black)' : 'var(--white)' }}>ECLADO</span>
-            <span style={{ fontSize:9, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase' }}>Korean Cosmeceuticals</span>
+          <div onClick={() => { setPage('home'); setDrawerOpen(false); }} style={{ cursor:'pointer', display:'flex', flexDirection:'column', flexShrink:0 }}>
+            <img
+              src="/assets/images/ONLY ECLADO LOGO_WHITE.png"
+              alt="ECLADO Laboratory"
+              style={{
+                width:110,
+                height:'auto',
+                display:'block',
+                filter: darkMode || drawerOpen ? 'brightness(0)' : 'none',
+                transition:'filter 0.4s',
+              }}
+            />
           </div>
 
           {/* Desktop nav */}

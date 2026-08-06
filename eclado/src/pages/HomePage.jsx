@@ -225,15 +225,15 @@ export default function HomePage({ setPage, onSelectProduct, user, cart, setCart
       </section>
 
       {/* FOOTER */}
-      <footer style={{ background:'var(--black)', borderTop:'1px solid rgba(255,255,255,0.08)', padding: isMobile ? '48px 0 28px' : '60px 0 32px' }}>
+      <footer style={{ fontFamily:'"Open Sans", var(--font-body), sans-serif', background:'var(--black)', borderTop:'1px solid rgba(255,255,255,0.08)', padding: isMobile ? '48px 0 28px' : '60px 0 32px' }}>
         <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
           <div className="gfooter">
             <div>
-              <div style={{ fontFamily:'var(--font-display)', fontSize:18, letterSpacing:'0.22em', color:'var(--white)', marginBottom:5 }}>ECLADO</div>
-              <div style={{ fontSize:9, letterSpacing:'0.24em', color:'var(--gold)', marginBottom:16 }}>Korean Cosmeceuticals</div>
+              <img src="/assets/images/ECLADO LOGO with CI_WHITE.png" alt="ECLADO Laboratory" style={{ width:100, height:'auto', display:'block', marginBottom:16 }} />
               <p style={{ fontSize:13, color:'rgba(255,255,255,0.35)', lineHeight:1.8, marginBottom:24 }}>韓國醫美院線保養品<br />台灣專業代理</p>
               {!isMobile && (
                 <p style={{ fontSize:11, color:'rgba(255,255,255,0.3)', lineHeight:1.9 }}>
+                  昭澄國際貿易有限公司<br />
                   Zhao Cheng International Trading Co., Ltd.<br />
                   統一編號：60490580<br />
                   桃園市中壢區石頭里中正路82號10樓<br />
@@ -270,6 +270,7 @@ export default function HomePage({ setPage, onSelectProduct, user, cart, setCart
           {isMobile && (
             <div style={{ borderTop:'1px solid rgba(255,255,255,0.1)', marginTop:4, paddingTop:16 }}>
               <p style={{ fontSize:11, color:'rgba(255,255,255,0.3)', lineHeight:2 }}>
+                昭澄國際貿易有限公司<br />
                 Zhao Cheng International Trading Co., Ltd.<br />
                 統一編號：60490580<br />
                 桃園市中壢區石頭里中正路82號10樓<br />

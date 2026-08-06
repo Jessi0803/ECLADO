@@ -1,5 +1,6 @@
 const DEFAULT_FROM = 'ECLADO <service@ecladotaiwan.com>';
 const { requireNotificationAuthorization } = require('./_notification-auth.js');
+const { buildBrandedEmailHtml } = require('./_email-template.js');
 
 function currency(value) {
   return Number.isFinite(Number(value)) ? `NT$ ${Number(value).toLocaleString('zh-TW')}` : '';
@@ -101,6 +102,7 @@ module.exports = async function handler(req, res) {
       to: [email],
       subject: message.subject,
       text: message.text,
+      html: buildBrandedEmailHtml(message.text),
     }),
   });
 

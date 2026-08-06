@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /account
+Disallow: /cart
+Disallow: /checkout
+Disallow: /login
+Disallow: /pro-login
+Disallow: /reset-password
+Disallow: /line-callback
+Disallow: /payment-result
+Disallow: /professional-apply
+Disallow: /api/
+
+Sitemap: https://ecladotaiwan.com/sitemap.xml

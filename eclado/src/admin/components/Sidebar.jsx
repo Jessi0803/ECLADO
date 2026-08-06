@@ -29,9 +29,9 @@ export default function Sidebar({ page, setPage, open, onClose, adminEmail, onSi
   return (
     <div className={'app-sidebar' + (open ? ' open' : '')}>
       {/* Logo */}
-      <div style={{ padding: '28px 24px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{ padding: '20px 24px 17px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <div style={{ fontFamily: 'var(--font-d)', fontSize: 18, letterSpacing: '0.2em', color: '#fff', marginBottom: 4 }}>ECLADO</div>
+          <img src="/assets/images/ONLY ECLADO LOGO_WHITE.png" alt="ECLADO Laboratory" style={{ width:100, height:'auto', display:'block', marginBottom:8 }} />
           <div style={{ fontSize: 9, letterSpacing: '0.24em', color: 'var(--gold)', textTransform: 'uppercase' }}>管理後台</div>
         </div>
         {/* Close (mobile only) */}

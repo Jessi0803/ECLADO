@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { buildBrandedEmailHtml } = require('../_email-template.js');
 
 const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
 const DEFAULT_QPAY_API_BASE = 'https://apisbx.sinopac.com/funBIZ-Sbx/QPay.WebAPI/api/';
@@ -342,6 +343,7 @@ async function sendPaymentEmailNotice(order, fallbackEmail = '') {
       to: [email],
       subject: `ECLADO 訂單已付款完成｜${order.id}`,
       text: buildPaymentEmail(order),
+      html: buildBrandedEmailHtml(buildPaymentEmail(order)),
     }),
   });
 

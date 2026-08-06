@@ -391,7 +391,7 @@ export default function AdminApp({ adminEmail, onSignOut }) {
           <span style={{ display: 'block', width: 16, height: 1.5, background: '#fff' }} />
           <span style={{ display: 'block', width: 22, height: 1.5, background: '#fff' }} />
         </button>
-        <div style={{ fontFamily: 'var(--font-d)', fontSize: 14, letterSpacing: '0.2em', color: '#fff' }}>ECLADO</div>
+        <img src="/assets/images/ECLADO LOGO with CI_WHITE.png" alt="ECLADO Laboratory" style={{ width:80, height:'auto', display:'block' }} />
         <div style={{ width: 38 }} />
       </div>
 
