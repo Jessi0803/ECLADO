@@ -16,6 +16,7 @@
   h1, h2, h3 { font-family: 'Gilda Display', 'Noto Serif TC', Georgia, serif; }
   p, span, button, a, label, input, textarea { font-family: 'Jost', 'Noto Serif TC', sans-serif; }
   #root { min-height: 100vh; }
+  .home-open-sans, .home-open-sans * { font-family: 'Open Sans', 'Noto Serif TC', Helvetica, sans-serif !important; }
 
   @keyframes fadeInDown {
     from { opacity: 0; transform: translateX(-50%) translateY(-6px); }

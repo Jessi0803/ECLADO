@@ -46,7 +46,7 @@ export default function HomePage({ setPage, onSelectProduct, user, cart, setCart
   const heroPad = isMobile ? '0 6vw' : '0 10vw';
 
   return (
-    <div>
+    <div className="home-open-sans">
       {/* HERO */}
       <section style={{ height:'100vh', position:'relative', overflow:'hidden', background:'#1a1a18' }}>
         {HERO_SLIDES.map((s,i) => (
@@ -62,7 +62,7 @@ export default function HomePage({ setPage, onSelectProduct, user, cart, setCart
                 <div style={{ width:28, height:1, background:'var(--gold)' }} />
                 <span style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase', fontFamily:'var(--font-body)' }}>{HERO_SLIDES[slide].accent}</span>
               </div>
-              <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,44px)' : 'clamp(40px,7.5vw,104px)', fontWeight:300, color:'var(--white)', lineHeight:1.0, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
+              <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,44px)' : 'clamp(40px,7.5vw,104px)', fontWeight:300, color:'#fff', textShadow:'0 2px 16px rgba(0,0,0,0.22)', lineHeight:1.0, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
               <p style={{ fontSize:15, color:'rgba(255,255,255,0.65)', letterSpacing:'0.06em', marginBottom:36, fontWeight:300, lineHeight:1.8, maxWidth:560 }}>{HERO_SLIDES[slide].sub}</p>
               <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
                 <button onClick={() => setPage('shop')} style={{ background:'var(--white)', color:'var(--black)', border:'none', padding:'13px 28px', fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}
@@ -84,7 +84,7 @@ export default function HomePage({ setPage, onSelectProduct, user, cart, setCart
                 <span style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase' }}>{HERO_SLIDES[slide].accent}</span>
                 <div style={{ width:20, height:1, background:'var(--gold)' }} />
               </div>
-              <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,46px)' : 'clamp(38px,8vw,112px)', fontWeight:300, color:'var(--white)', lineHeight:1.0, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
+              <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,46px)' : 'clamp(38px,8vw,112px)', fontWeight:300, color:'#fff', textShadow:'0 2px 16px rgba(0,0,0,0.22)', lineHeight:1.0, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
               <p style={{ fontSize:15, color:'rgba(255,255,255,0.6)', letterSpacing:'0.06em', marginBottom:40, fontWeight:300, maxWidth:520, lineHeight:1.8 }}>{HERO_SLIDES[slide].sub}</p>
               <button onClick={() => setPage('shop')} style={{ background:'transparent', color:'var(--white)', border:'1px solid rgba(255,255,255,0.6)', padding:'14px 40px', fontSize:11, letterSpacing:'0.14em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', whiteSpace:'nowrap' }}
                 onMouseEnter={e=>{e.target.style.background='var(--white)';e.target.style.color='var(--black)';}}
@@ -104,7 +104,7 @@ export default function HomePage({ setPage, onSelectProduct, user, cart, setCart
                   <span style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase' }}>{HERO_SLIDES[slide].accent}</span>
                   <div style={{ width:28, height:1, background:'var(--gold)' }} />
                 </div>
-                <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,44px)' : 'clamp(36px,6.5vw,92px)', fontWeight:300, color:'var(--white)', lineHeight:1.05, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
+                <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,44px)' : 'clamp(36px,6.5vw,92px)', fontWeight:300, color:'#fff', textShadow:'0 2px 16px rgba(0,0,0,0.22)', lineHeight:1.05, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
                 <p style={{ fontSize:15, color:'rgba(255,255,255,0.6)', letterSpacing:'0.06em', marginBottom:36, fontWeight:300, lineHeight:1.8 }}>{HERO_SLIDES[slide].sub}</p>
                 <button onClick={() => setPage('login')} style={{ background:'var(--gold)', color:'var(--white)', border:'none', padding:'13px 28px', fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}
                   onMouseEnter={e=>e.target.style.opacity='0.85'}
