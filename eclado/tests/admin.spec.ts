@@ -87,7 +87,7 @@ test('後台登入權限：管理員 session 可進入儀表板', async ({ page 
   await expect(page.getByText('baby90522@gmail.com')).toBeVisible();
 });
 
-test('商品、訂單與會員詳情使用響應式抽屜且不撐寬整體頁面', async ({ page }) => {
+test('商品、訂單與會員列表響應式切換，詳情使用抽屜且不撐寬頁面', async ({ page }) => {
   await mockAdminApis(page, { productVariants: adminProductVariants });
   await page.goto('/admin');
 
@@ -105,18 +105,39 @@ test('商品、訂單與會員詳情使用響應式抽屜且不撐寬整體頁�
     expect(layout.pageWidth).toBeLessThanOrEqual(layout.viewportWidth + 0.5);
   };
 
+  const assertResponsiveList = async () => {
+    const table = page.locator('.responsive-admin-table').first();
+    const layout = await table.evaluate(element => ({
+      viewportWidth: window.innerWidth,
+      headDisplay: getComputedStyle(element.querySelector('thead')!).display,
+      rowDisplay: getComputedStyle(element.querySelector('tbody tr')!).display,
+      pageWidth: document.documentElement.scrollWidth,
+    }));
+    expect(layout.pageWidth).toBeLessThanOrEqual(layout.viewportWidth + 0.5);
+    if (layout.viewportWidth <= 1180) {
+      expect(layout.headDisplay).toBe('none');
+      expect(layout.rowDisplay).toBe('grid');
+    } else {
+      expect(layout.headDisplay).not.toBe('none');
+      expect(layout.rowDisplay).toBe('table-row');
+    }
+  };
+
   await openAdminSection(page, /商品 & 庫存/);
+  await assertResponsiveList();
   await page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr').getByRole('button', { name: '編輯' }).click();
   await assertDrawer('編輯商品');
   await page.getByRole('button', { name: '關閉商品編輯' }).click();
   await expect(page.getByRole('dialog', { name: '編輯商品' })).toHaveCount(0);
 
   await openAdminSection(page, /訂單管理/);
+  await assertResponsiveList();
   await page.getByText('E2E-ORDER-001').first().click();
   await assertDrawer('訂單詳情');
   await page.getByRole('button', { name: '關閉訂單詳情' }).click();
 
   await openAdminSection(page, /會員管理/);
+  await assertResponsiveList();
   await page.getByRole('cell', { name: '測試會員' }).click();
   await assertDrawer('會員詳情');
   await page.getByRole('button', { name: '關閉會員詳情' }).click();

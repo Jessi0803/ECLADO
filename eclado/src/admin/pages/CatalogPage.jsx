@@ -358,7 +358,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
         {/* Table */}
         <div>
           <div className="table-scroll" style={{ background: 'var(--white)', border: '1px solid var(--border)' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table className="responsive-admin-table admin-products-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
                   {['商品名稱', '分類', '規格', '售價', '專業價', '院線', '庫存'].map(h => (
@@ -409,23 +409,23 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                   const isEditing = editing?.id === p.id;
                   return (
                     <tr key={p.id} style={{ borderBottom: '1px solid var(--border)', background: isEditing ? 'var(--off)' : p.stock === 0 ? 'oklch(0.60 0.18 25 / 0.03)' : 'transparent' }}>
-                      <td style={{ padding: '13px 14px' }}>
+                      <td data-label="商品名稱" style={{ padding: '13px 14px' }}>
                         <div style={{ fontSize: 13, fontWeight: 500 }}>{p.nameZh}</div>
                         <div style={{ fontSize: 11, color: 'var(--mid)' }}>{p.name}</div>
                       </td>
-                      <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{p.category}</td>
-                      <td style={{ padding: '13px 14px', fontSize: 12 }}>{p.size}</td>
-                      <td style={{ padding: '13px 14px', fontSize: 12, fontWeight: 500 }}>NT$ {p.price.toLocaleString()}</td>
-                      <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--gold)' }}>NT$ {p.proPrice.toLocaleString()}</td>
-                      <td style={{ padding: '13px 14px' }}>
+                      <td data-label="分類" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{p.category}</td>
+                      <td data-label="規格" style={{ padding: '13px 14px', fontSize: 12 }}>{p.size}</td>
+                      <td data-label="售價" style={{ padding: '13px 14px', fontSize: 12, fontWeight: 500 }}>NT$ {p.price.toLocaleString()}</td>
+                      <td data-label="專業價" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--gold)' }}>NT$ {p.proPrice.toLocaleString()}</td>
+                      <td data-label="商品類型" style={{ padding: '13px 14px' }}>
                         <span style={{ fontSize: 11, color: p.isProOnly ? 'var(--dark)' : 'var(--mid)', fontWeight: p.isProOnly ? 600 : 400 }}>
                           {p.isProOnly ? '● 院線' : '○ 一般'}
                         </span>
                       </td>
-                      <td style={{ padding: '13px 14px' }}>
+                      <td data-label="庫存" style={{ padding: '13px 14px' }}>
                         <span style={{ fontSize: 15, fontWeight: 600, color: p.stock === 0 ? 'var(--red)' : isLow ? 'var(--yellow)' : 'var(--dark)' }}>{p.stock}</span>
                       </td>
-                      <td style={{ padding: '13px 14px' }}>
+                      <td data-label="狀態" style={{ padding: '13px 14px' }}>
                         {p.publicationStatus === 'draft'
                           ? <span style={{ fontSize: 11, color: 'var(--yellow)', fontWeight: 500 }}>草稿</span>
                           : p.publicationStatus === 'archived'
@@ -436,7 +436,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                             ? <span style={{ fontSize: 11, color: 'var(--yellow)', fontWeight: 500 }}>低庫存</span>
                             : <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 500 }}>正常</span>}
                       </td>
-                      <td style={{ padding: '13px 14px' }}>
+                      <td data-label="操作" style={{ padding: '13px 14px' }}>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <button onClick={() => openEdit(p)}
                             style={{ padding: '5px 12px', fontSize: 11, background: isEditing ? 'var(--dark)' : 'none', border: '1px solid var(--border)', color: isEditing ? '#fff' : 'var(--dark)', cursor: 'pointer' }}>編輯</button>

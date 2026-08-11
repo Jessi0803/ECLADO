@@ -37,6 +37,39 @@ input, select, textarea { font-family: var(--font); }
 .table-scroll { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
 .table-scroll table { min-width: 720px; }
 
+/* 寬版維持有表頭的資料表；空間不足時，每筆資料改為可閱讀的小卡。 */
+@media (max-width: 1180px) {
+  .table-scroll:has(.responsive-admin-table) { overflow-x: visible; background: transparent !important; border: 0 !important; }
+  .responsive-admin-table { min-width: 0 !important; border-collapse: separate !important; border-spacing: 0 12px !important; }
+  .responsive-admin-table thead { display: none; }
+  .responsive-admin-table tbody { display: block; width: 100%; }
+  .responsive-admin-table tbody { display: grid; gap: 12px; }
+  .responsive-admin-table tr {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 18px; width: 100%;
+    background: var(--white) !important; border: 1px solid var(--border) !important;
+    padding: 14px 16px; box-shadow: 0 3px 14px rgba(20,20,18,0.025);
+  }
+  .responsive-admin-table td {
+    display: block; width: auto; min-width: 0; padding: 2px 0 !important;
+    white-space: normal !important; overflow-wrap: anywhere;
+  }
+  .responsive-admin-table td::before {
+    content: attr(data-label); display: block; margin-bottom: 4px; color: var(--mid);
+    font-size: 10px; font-weight: 500; letter-spacing: 0.06em; line-height: 1.4;
+  }
+  .responsive-admin-table td:first-child { grid-column: span 2; }
+  .responsive-admin-table td[colspan] { display: block; grid-column: 1 / -1; padding: 28px 12px !important; }
+  .responsive-admin-table td[colspan]::before { display: none; }
+  .admin-products-table td:last-child, .admin-members-table td:last-child { grid-column: 1 / -1; }
+  .admin-members-table td:nth-child(2) { grid-column: span 2; }
+}
+
+@media (max-width: 700px) {
+  .responsive-admin-table tr { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
+  .responsive-admin-table td:first-child,
+  .admin-members-table td:nth-child(2) { grid-column: 1 / -1; }
+}
+
 /* 商品／訂單／會員：清單維持全寬，詳情使用右側抽屜。 */
 .detail-grid, .detail-grid.no-panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; min-width: 0; }
 .detail-grid > * { min-width: 0; max-width: 100%; }
@@ -88,6 +121,7 @@ input, select, textarea { font-family: var(--font); }
   .app-main { padding: 68px 12px 20px; }
   .stat-grid-4 { grid-template-columns: 1fr; }
   .detail-panel { padding: 20px 16px 32px !important; }
+  .responsive-admin-table tr { padding: 13px 14px; gap: 11px 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

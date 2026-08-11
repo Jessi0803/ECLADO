@@ -125,7 +125,7 @@ export default function Members({
         )}
 
         <div className="table-scroll" style={{ background: 'var(--white)', border: '1px solid var(--border)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table className="responsive-admin-table admin-members-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
                 {['姓名', 'Email', '電話', '類型', '申請', '訂單數', '消費總額', '加入日期', '操作'].map(h => (
@@ -138,11 +138,11 @@ export default function Members({
                 <tr key={m.id} onClick={() => { setSelected(m); setTypeNotice(''); setDeleteNotice(''); }} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: selected?.id === m.id ? 'var(--off)' : 'transparent', transition: 'background 0.1s' }}
                 onMouseEnter={e => { if (selected?.id !== m.id) e.currentTarget.style.background = 'var(--off)'; }}
                 onMouseLeave={e => { if (selected?.id !== m.id) e.currentTarget.style.background = 'transparent'; }}>
-                  <td style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>{m.name}</td>
-                  <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{m.email}</td>
-                  <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{m.phone}</td>
-                  <td style={{ padding: '13px 14px' }}><TypeBadge type={m.type} /></td>
-                  <td style={{ padding: '13px 14px', fontSize: 11 }}>
+                  <td data-label="姓名" style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>{m.name}</td>
+                  <td data-label="Email" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{m.email}</td>
+                  <td data-label="電話" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{m.phone}</td>
+                  <td data-label="類型" style={{ padding: '13px 14px' }}><TypeBadge type={m.type} /></td>
+                  <td data-label="申請" style={{ padding: '13px 14px', fontSize: 11 }}>
                     {(() => {
                       const app = appsForMember(applications, m.id)[0];
                       if (!app) return <span style={{ color: 'var(--light)' }}>—</span>;
@@ -153,10 +153,10 @@ export default function Members({
                       );
                     })()}
                   </td>
-                  <td style={{ padding: '13px 14px', fontSize: 13 }}>{m.orders}</td>
-                  <td style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>NT$ {m.total.toLocaleString()}</td>
-                  <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)', whiteSpace: 'nowrap' }}>{m.joined}</td>
-                  <td style={{ padding: '13px 14px' }}>
+                  <td data-label="訂單數" style={{ padding: '13px 14px', fontSize: 13 }}>{m.orders}</td>
+                  <td data-label="消費總額" style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>NT$ {m.total.toLocaleString()}</td>
+                  <td data-label="加入日期" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)', whiteSpace: 'nowrap' }}>{m.joined}</td>
+                  <td data-label="操作" style={{ padding: '13px 14px' }}>
                     <select value={m.type} onChange={e => { e.stopPropagation(); changeType(m.id, e.target.value); }} onClick={e => e.stopPropagation()} style={{ padding: '5px 8px', fontSize: 11, border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--dark)', cursor: 'pointer', outline: 'none' }}>
                       <option value="consumer">一般會員</option>
                       <option value="pro" disabled={memberHasPendingApp(applications, m.id)}>美容師{memberHasPendingApp(applications, m.id) ? '（請先審核）' : ''}</option>

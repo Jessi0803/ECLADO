@@ -320,7 +320,7 @@ export default function Orders({ orders, setOrders, persistOrderPatch }) {
         )}
 
         <div className="table-scroll" style={{ background: 'var(--white)', border: '1px solid var(--border)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table className="responsive-admin-table admin-orders-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
                 {['訂單編號', '會員', '類型', '金額', '付款碼', '庫存', '狀態', '日期'].map(h => (
@@ -338,23 +338,23 @@ export default function Orders({ orders, setOrders, persistOrderPatch }) {
                 <tr key={o.id} onClick={() => setSelected(o)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: selected?.id === o.id ? 'var(--off)' : 'transparent', transition: 'background 0.1s' }}
                 onMouseEnter={e => { if (selected?.id !== o.id) e.currentTarget.style.background = 'var(--off)'; }}
                 onMouseLeave={e => { if (selected?.id !== o.id) e.currentTarget.style.background = 'transparent'; }}>
-                  <td style={{ padding: '13px 14px', fontSize: 12, fontWeight: 500, color: 'var(--dark)', whiteSpace: 'nowrap' }}>{o.id}</td>
-                  <td style={{ padding: '13px 14px', fontSize: 13 }}>{o.member}</td>
-                  <td style={{ padding: '13px 14px' }}><TypeBadge type={o.type} /></td>
-                  <td style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>NT$ {o.total.toLocaleString()}</td>
-                  <td style={{ padding: '13px 14px', fontSize: 13, fontFamily: 'var(--font-d)', letterSpacing: '0.15em', color: o.transferLast5 ? 'var(--dark)' : 'var(--light)', fontWeight: 600 }}>
+                  <td data-label="訂單編號" style={{ padding: '13px 14px', fontSize: 12, fontWeight: 500, color: 'var(--dark)', whiteSpace: 'nowrap' }}>{o.id}</td>
+                  <td data-label="會員" style={{ padding: '13px 14px', fontSize: 13 }}>{o.member}</td>
+                  <td data-label="類型" style={{ padding: '13px 14px' }}><TypeBadge type={o.type} /></td>
+                  <td data-label="金額" style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>NT$ {o.total.toLocaleString()}</td>
+                  <td data-label="付款碼" style={{ padding: '13px 14px', fontSize: 13, fontFamily: 'var(--font-d)', letterSpacing: '0.15em', color: o.transferLast5 ? 'var(--dark)' : 'var(--light)', fontWeight: 600 }}>
                     {o.transferLast5 || '—'}
                   </td>
-                  <td style={{ padding: '13px 14px' }}>
+                  <td data-label="庫存" style={{ padding: '13px 14px' }}>
                     {hasPreorder(o)
                       ? <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--gold)', background: 'oklch(0.82 0.12 80 / 0.12)', padding: '3px 8px', whiteSpace: 'nowrap' }}>預購</span>
                       : <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--green)', background: 'oklch(0.65 0.18 145 / 0.10)', padding: '3px 8px', whiteSpace: 'nowrap' }}>現貨</span>
                     }
                   </td>
-                  <td style={{ padding: '13px 14px' }}>
+                  <td data-label="狀態" style={{ padding: '13px 14px' }}>
                     <StatusSelect status={o.status} onChange={ns => updateStatus(o.id, ns)} />
                   </td>
-                  <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)', whiteSpace: 'nowrap' }}>{o.date}</td>
+                  <td data-label="日期" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)', whiteSpace: 'nowrap' }}>{o.date}</td>
                 </tr>
               ))}
             </tbody>
