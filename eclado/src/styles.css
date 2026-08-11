@@ -7,16 +7,15 @@
     --dark: #2a2a28;
     --black: #141412;
     --gold: #b8a98a;
-    --font-display: 'Gilda Display', 'Noto Serif TC', Georgia, serif;
-    --font-body: 'Jost', 'Noto Serif TC', Helvetica, sans-serif;
-    --font-zh: 'Noto Serif TC', serif;
+    --font-display: 'Open Sans', 'Noto Sans TC', Helvetica, Arial, sans-serif;
+    --font-body: 'Open Sans', 'Noto Sans TC', Helvetica, sans-serif;
+    --font-zh: 'Noto Sans TC', sans-serif;
   }
   html { font-size: 16px; scroll-behavior: smooth; }
-  body { background: var(--white); color: var(--dark); font-family: 'Jost', 'Noto Serif TC', Helvetica, sans-serif; font-weight: 300; -webkit-font-smoothing: antialiased; }
-  h1, h2, h3 { font-family: 'Gilda Display', 'Noto Serif TC', Georgia, serif; }
-  p, span, button, a, label, input, textarea { font-family: 'Jost', 'Noto Serif TC', sans-serif; }
+  body { background: var(--white); color: var(--dark); font-family: var(--font-body); font-weight: 300; -webkit-font-smoothing: antialiased; }
+  h1, h2, h3 { font-family: var(--font-display); }
+  p, span, button, a, label, input, select, textarea { font-family: var(--font-body); }
   #root { min-height: 100vh; }
-  .home-open-sans, .home-open-sans * { font-family: 'Open Sans', 'Noto Serif TC', Helvetica, sans-serif !important; }
 
   @keyframes fadeInDown {
     from { opacity: 0; transform: translateX(-50%) translateY(-6px); }

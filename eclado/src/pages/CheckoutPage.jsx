@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import CheckoutField from '../components/checkout/CheckoutField.jsx';
 import CheckoutOrderSummary from '../components/checkout/CheckoutOrderSummary.jsx';
 import CheckoutSteps from '../components/checkout/CheckoutSteps.jsx';
@@ -41,6 +41,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   const [pendingAuthoritativeOrder, setPendingAuthoritativeOrder] = useState(null);
   const [pricingChanges, setPricingChanges] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [copiedAtmNo, setCopiedAtmNo] = useState(false);
   const isMobile = useIsMobile();
 
@@ -120,6 +121,11 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       return;
     }
     if (step !== 2) return;
+    // React state is updated asynchronously, so multiple clicks in the same
+    // event loop can enter this handler before `submitting` disables the
+    // button. A synchronous ref closes that gap and prevents duplicate orders.
+    if (submittingRef.current) return;
+    submittingRef.current = true;
 
     const method = PAYMENT_METHODS[paymentMethod] || PAYMENT_METHODS.atm;
     setPaymentError('');
@@ -189,6 +195,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
         : '付款單建立失敗，請稍後再試或聯繫客服。' + (err?.message ? `（${err.message}）` : '');
       setPaymentError(message);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }

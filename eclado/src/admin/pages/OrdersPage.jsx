@@ -364,7 +364,9 @@ export default function Orders({ orders, setOrders, persistOrderPatch }) {
 
       {/* Order detail panel */}
       {selected && (
-        <div className="detail-panel" style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '24px', height: 'fit-content' }}>
+        <>
+        <button type="button" className="detail-panel-backdrop" aria-label="關閉訂單詳情" onClick={() => setSelected(null)} />
+        <div className="detail-panel" role="dialog" aria-modal="true" aria-label="訂單詳情" style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <h3 style={{ fontSize: 15, fontWeight: 500 }}>訂單詳情</h3>
             <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--mid)', cursor: 'pointer', lineHeight: 1 }}>×</button>
@@ -530,6 +532,7 @@ export default function Orders({ orders, setOrders, persistOrderPatch }) {
             </div>
           )}
         </div>
+        </>
       )}
     </div>
   );

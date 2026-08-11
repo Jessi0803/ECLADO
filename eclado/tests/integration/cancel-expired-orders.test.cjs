@@ -211,6 +211,56 @@ test('cancel expired orders - returns 500 when Supabase update fails', async () 
   assert.deepEqual(res.jsonBody, { ok: false, error: 'staging update failed' });
 });
 
+test('cancel expired orders - does not report cancellation when order becomes paid during the race window', async () => {
+  const originalFetch = global.fetch;
+  const originalNow = Date.now;
+  const originalEnv = {
+    CRON_SECRET: process.env.CRON_SECRET,
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+
+  process.env.CRON_SECRET = 'test-cron-secret';
+  process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  Date.now = () => Date.parse('2026-05-21T12:00:00.000Z');
+
+  global.fetch = async (url, options = {}) => {
+    if (options.method === 'GET') {
+      return jsonResponse(200, [{
+        id: 'RACE-PAID-001',
+        status: 'unpaid',
+        created_at: '2026-05-19T10:00:00.000Z',
+        payment_due_at: '2026-05-21T10:00:00.000Z',
+      }]);
+    }
+    if (options.method === 'PATCH') {
+      assert.match(String(url), /status=in\.\(awaiting_confirm,unpaid\)/);
+      // 模擬 GET 與 PATCH 之間付款成功，條件式 PATCH 因狀態已 paid 而不更新任何資料。
+      return jsonResponse(200, []);
+    }
+    throw new Error(`Unexpected fetch ${options.method} ${url}`);
+  };
+
+  const res = createRes();
+  try {
+    await cancelExpiredOrders({
+      method: 'POST',
+      headers: { authorization: 'Bearer test-cron-secret' },
+      body: {},
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    Date.now = originalNow;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.jsonBody.ok, true);
+  assert.equal(res.jsonBody.cancelled, 0);
+  assert.deepEqual(res.jsonBody.orderIds, []);
+});
+
 function createRes() {
   return {
     statusCode: 200,

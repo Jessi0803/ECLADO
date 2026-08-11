@@ -87,6 +87,41 @@ test('後台登入權限：管理員 session 可進入儀表板', async ({ page 
   await expect(page.getByText('baby90522@gmail.com')).toBeVisible();
 });
 
+test('商品、訂單與會員詳情使用響應式抽屜且不撐寬整體頁面', async ({ page }) => {
+  await mockAdminApis(page, { productVariants: adminProductVariants });
+  await page.goto('/admin');
+
+  const assertDrawer = async (label: string) => {
+    const drawer = page.getByRole('dialog', { name: label });
+    await expect(drawer).toBeVisible();
+    const layout = await drawer.evaluate(element => ({
+      position: getComputedStyle(element).position,
+      width: element.getBoundingClientRect().width,
+      viewportWidth: window.innerWidth,
+      pageWidth: document.documentElement.scrollWidth,
+    }));
+    expect(layout.position).toBe('fixed');
+    expect(layout.width).toBeLessThanOrEqual(layout.viewportWidth + 0.5);
+    expect(layout.pageWidth).toBeLessThanOrEqual(layout.viewportWidth + 0.5);
+  };
+
+  await openAdminSection(page, /商品 & 庫存/);
+  await page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr').getByRole('button', { name: '編輯' }).click();
+  await assertDrawer('編輯商品');
+  await page.getByRole('button', { name: '關閉商品編輯' }).click();
+  await expect(page.getByRole('dialog', { name: '編輯商品' })).toHaveCount(0);
+
+  await openAdminSection(page, /訂單管理/);
+  await page.getByText('E2E-ORDER-001').first().click();
+  await assertDrawer('訂單詳情');
+  await page.getByRole('button', { name: '關閉訂單詳情' }).click();
+
+  await openAdminSection(page, /會員管理/);
+  await page.getByRole('cell', { name: '測試會員' }).click();
+  await assertDrawer('會員詳情');
+  await page.getByRole('button', { name: '關閉會員詳情' }).click();
+});
+
 test('儀表板顯示待處理資訊，點待審核申請可前往會員審核列表', async ({ page }) => {
   await mockAdminApis(page);
 

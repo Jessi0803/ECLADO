@@ -1008,6 +1008,40 @@ test('金流建單失敗時顯示錯誤且不進入付款完成畫面', async ({
   await expect(page.getByText('付款單已建立')).toHaveCount(0);
 });
 
+test('快速重複點擊建立付款單只會送出一次金流請求', async ({ page }) => {
+  const paymentRequests: Record<string, unknown>[] = [];
+  await mockEcladoApis(page, {
+    promotions: [],
+    paymentResponseDelayMs: 250,
+    onPaymentRequest: request => paymentRequests.push(request),
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+  await proceedToCheckout(page);
+
+  const checkoutInputs = page.locator('form input');
+  await checkoutInputs.nth(0).fill('防重複付款測試');
+  await checkoutInputs.nth(1).fill('0912345678');
+  await checkoutInputs.nth(2).fill('idempotency@example.com');
+  await page.getByPlaceholder('縣市').fill('台北市');
+  await page.getByPlaceholder('區域').fill('大安區');
+  await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('防重複路 1 號');
+  await page.getByRole('button', { name: /繼續確認付款/ }).click();
+
+  const createPayment = page.getByRole('button', { name: /^建立付款單$/ });
+  await createPayment.evaluate((button: HTMLButtonElement) => {
+    button.click();
+    button.click();
+    button.click();
+  });
+
+  await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
+  expect(paymentRequests).toHaveLength(1);
+});
+
 test('權威訂單建立失敗時不建立付款單', async ({ page }) => {
   const paymentRequests: Record<string, unknown>[] = [];
   await mockEcladoApis(page, {

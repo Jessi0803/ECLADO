@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { normalizeProductImageScale } from '../domain/mappers.js';
 
 const PRODUCT_CATEGORIES = ['清潔卸妝', '化妝水', '安瓶精華', '乳霜', '面膜', '防曬底妝', '其他', '院線課程儀器（含試用包）'];
@@ -7,7 +7,6 @@ const PRODUCT_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 export default function Catalog({ products, onSaveProduct, onArchiveProduct, onRestoreProduct }) {
   const [editing, setEditing] = useState(null); // product being edited (draft copy)
-  const editPanelRef = useRef(null);
   const [listMode, setListMode] = useState('active');
   const [stockFilter, setStockFilter] = useState('all');
   const [saving, setSaving] = useState(false);
@@ -30,18 +29,6 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
     out: baseProducts.filter(p => getStockStatus(p) === 'out').length,
   };
   const lowStock = activeProducts.filter(p => p.stock <= p.minStock);
-
-  useEffect(() => {
-    if (!editing || !editPanelRef.current) return undefined;
-    const frame = window.requestAnimationFrame(() => {
-      editPanelRef.current?.scrollIntoView({
-        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-        block: 'start',
-        inline: 'nearest',
-      });
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [editing?.id, editing?.isNew]);
 
   const lbl = { fontSize: 11, letterSpacing: '0.1em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 6 };
   const inp = { width: '100%', border: 'none', borderBottom: '1px solid var(--border)', padding: '8px 0', fontSize: 13, background: 'none', color: 'var(--dark)', outline: 'none', boxSizing: 'border-box' };
@@ -472,7 +459,9 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
 
         {/* Edit panel */}
         {editing && (
-          <div ref={editPanelRef} className="detail-panel" style={{ scrollMarginTop: 20, background: 'var(--white)', border: '1px solid var(--border)', padding: '24px' }}>
+          <>
+          <button type="button" className="detail-panel-backdrop" aria-label="關閉商品編輯" onClick={() => setEditing(null)} />
+          <div className="detail-panel detail-panel-wide" role="dialog" aria-modal="true" aria-label={editing.isNew ? '新增商品' : '編輯商品'} style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
               <div>
                 <div style={{ fontSize: 10, letterSpacing: '0.14em', color: 'var(--mid)', textTransform: 'uppercase', marginBottom: 4 }}>{editing.isNew ? '新增商品' : '編輯商品'}</div>
@@ -686,6 +675,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
               </button>
             </div>
           </div>
+          </>
         )}
       </div>
     </div>

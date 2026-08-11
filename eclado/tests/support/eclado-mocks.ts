@@ -183,6 +183,7 @@ export type MockEcladoApiOptions = {
   promotionWriteError?: string;
   linePushError?: string;
   paymentError?: string;
+  paymentResponseDelayMs?: number;
   authoritativePriceDelta?: number;
   authUser?: MockAuthUser | null;
   signInUser?: MockAuthUser;
@@ -535,6 +536,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     await page.route('https://pay.ecladotaiwan.com/api/sinopac/create-payment', async route => {
       const request = route.request().postDataJSON();
       options.onPaymentRequest?.(request);
+      if (options.paymentResponseDelayMs) {
+        await new Promise(resolve => setTimeout(resolve, options.paymentResponseDelayMs));
+      }
       if (!request.paymentToken) {
         return json(route, { ok: false, error: 'paymentToken is required' }, 401);
       }

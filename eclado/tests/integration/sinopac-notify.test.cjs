@@ -501,6 +501,142 @@ test('Sinopac notify ignores explicit failed payment notices', async () => {
   assert.equal(res.jsonBody.ignored, true);
 });
 
+test('Sinopac notify rejects amount mismatch without changing order or sending notices', async () => {
+  const calls = [];
+  const originalFetch = global.fetch;
+  const originalEnv = {
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+  };
+
+  process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  process.env.LINE_CHANNEL_ACCESS_TOKEN = 'test-line-token';
+  process.env.RESEND_API_KEY = 'test-resend-key';
+
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+    if (String(url).startsWith(`${SUPABASE_URL}/rest/v1/orders?id=eq.ORDER-AMOUNT-MISMATCH&select=`)) {
+      assert.equal(options.method, 'GET');
+      return jsonResponse(200, [{
+        id: 'ORDER-AMOUNT-MISMATCH',
+        status: 'unpaid',
+        total: 3980,
+        user_id: 'user-amount-mismatch',
+        email: 'buyer@example.com',
+      }]);
+    }
+    throw new Error(`amount mismatch must not make another request: ${options.method} ${url}`);
+  };
+
+  const res = createRes();
+  try {
+    await sinopacNotify({
+      method: 'POST',
+      body: { OrderNo: 'ORDER-AMOUNT-MISMATCH', Status: 'S', Amount: 100 },
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.statusCode, 400);
+  assert.deepEqual(res.jsonBody, {
+    ok: false,
+    error: 'amount mismatch',
+    orderId: 'ORDER-AMOUNT-MISMATCH',
+  });
+  assert.equal(calls.length, 1, '金額不符只能讀取訂單，不能改狀態或發通知');
+});
+
+test('Sinopac notify returns 404 for an unknown order without creating one', async () => {
+  const calls = [];
+  const originalFetch = global.fetch;
+  const originalEnv = {
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+
+  process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+    assert.match(String(url), /orders\?id=eq\.ORDER-UNKNOWN&select=/);
+    assert.equal(options.method, 'GET');
+    return jsonResponse(200, []);
+  };
+
+  const res = createRes();
+  try {
+    await sinopacNotify({
+      method: 'POST',
+      body: { OrderNo: 'ORDER-UNKNOWN', Status: 'S', Amount: 500 },
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.statusCode, 404);
+  assert.deepEqual(res.jsonBody, { ok: false, error: 'order not found', orderId: 'ORDER-UNKNOWN' });
+  assert.equal(calls.length, 1);
+});
+
+test('Sinopac notify returns 500 and sends no notice when paid status update fails', async () => {
+  const calls = [];
+  const originalFetch = global.fetch;
+  const originalError = console.error;
+  const originalEnv = {
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+  };
+
+  process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  process.env.LINE_CHANNEL_ACCESS_TOKEN = 'test-line-token';
+  process.env.RESEND_API_KEY = 'test-resend-key';
+  console.error = () => {};
+
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+    if (String(url).startsWith(`${SUPABASE_URL}/rest/v1/orders?id=eq.ORDER-PATCH-FAILED&select=`)) {
+      return jsonResponse(200, [{
+        id: 'ORDER-PATCH-FAILED',
+        status: 'unpaid',
+        total: 1280,
+        user_id: 'user-patch-failed',
+        email: 'buyer@example.com',
+      }]);
+    }
+    if (String(url) === `${SUPABASE_URL}/rest/v1/orders?id=eq.ORDER-PATCH-FAILED`) {
+      assert.equal(options.method, 'PATCH');
+      return jsonResponse(500, { message: 'database temporarily unavailable' });
+    }
+    throw new Error(`status update failure must not send a notice: ${options.method} ${url}`);
+  };
+
+  const res = createRes();
+  try {
+    await sinopacNotify({
+      method: 'POST',
+      body: { OrderNo: 'ORDER-PATCH-FAILED', Status: 'S', Amount: 1280 },
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    console.error = originalError;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.statusCode, 500);
+  assert.equal(res.jsonBody.ok, false);
+  assert.match(res.jsonBody.error, /database temporarily unavailable/);
+  assert.equal(calls.length, 2, '狀態寫入失敗後不可發送付款成功通知');
+});
+
 function createRes() {
   return {
     statusCode: 200,

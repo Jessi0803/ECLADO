@@ -4,26 +4,59 @@ const MENU_GROUPS = [
   {
     title: '營運',
     items: [
-      { id: 'dashboard', icon: '▦', label: '儀表板' },
-      { id: 'orders', icon: '◫', label: '訂單管理' },
+      { id: 'dashboard', icon: 'dashboard', label: '儀表板' },
+      { id: 'orders', icon: 'orders', label: '訂單管理' },
     ],
   },
   {
     title: '商品',
     items: [
-      { id: 'catalog', icon: '◈', label: '商品 & 庫存' },
-      { id: 'promotions', icon: '◆', label: '活動管理' },
-      { id: 'ai', icon: '✦', label: 'AI 補貨建議' },
+      { id: 'catalog', icon: 'catalog', label: '商品 & 庫存' },
+      { id: 'promotions', icon: 'promotions', label: '活動管理' },
+      { id: 'ai', icon: 'ai', label: 'AI 補貨建議' },
     ],
   },
   {
     title: '會員',
     items: [
-      { id: 'members', icon: '◎', label: '會員管理' },
-      { id: 'analytics', icon: '◐', label: '營業分析' },
+      { id: 'members', icon: 'members', label: '會員管理' },
+      { id: 'analytics', icon: 'analytics', label: '營業分析' },
     ],
   },
 ];
+
+function SidebarIcon({ name }) {
+  const common = {
+    width: 18,
+    height: 18,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.6,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+    'aria-hidden': true,
+  };
+
+  switch (name) {
+    case 'dashboard':
+      return <svg {...common}><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>;
+    case 'orders':
+      return <svg {...common}><path d="M7 4h10a2 2 0 012 2v15H5V6a2 2 0 012-2z" /><path d="M9 3h6v3H9zM8 11h8M8 15h8" /></svg>;
+    case 'catalog':
+      return <svg {...common}><path d="M4 7l8-4 8 4-8 4-8-4zM4 7v10l8 4 8-4V7M12 11v10" /></svg>;
+    case 'promotions':
+      return <svg {...common}><path d="M4 5h10l6 6-9 9-7-7V5z" /><circle cx="8.5" cy="9.5" r="1.2" /></svg>;
+    case 'ai':
+      return <svg {...common}><path d="M12 3l1.25 4.25L17.5 8.5l-4.25 1.25L12 14l-1.25-4.25L6.5 8.5l4.25-1.25L12 3zM18.5 14l.7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7.7-2.3zM6 15l.55 1.95L8.5 17.5l-1.95.55L6 20l-.55-1.95-1.95-.55 1.95-.55L6 15z" /></svg>;
+    case 'members':
+      return <svg {...common}><circle cx="9" cy="8" r="3" /><path d="M3.5 20v-2a5.5 5.5 0 0111 0v2M16 5.5a3 3 0 010 5.5M17 14a5 5 0 013.5 4.8V20" /></svg>;
+    case 'analytics':
+      return <svg {...common}><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>;
+    default:
+      return null;
+  }
+}
 
 export default function Sidebar({ page, setPage, open, onClose, adminEmail, onSignOut }) {
   return (
@@ -66,7 +99,9 @@ export default function Sidebar({ page, setPage, open, onClose, adminEmail, onSi
               onMouseEnter={e => { if (page !== item.id) e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; }}
               onMouseLeave={e => { if (page !== item.id) e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; }}
               >
-                <span style={{ fontSize: 14, opacity: 0.8 }}>{item.icon}</span>
+                <span style={{ width:20, height:18, display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0, opacity:0.8 }}>
+                  <SidebarIcon name={item.icon} />
+                </span>
                 {item.label}
               </button>
             ))}

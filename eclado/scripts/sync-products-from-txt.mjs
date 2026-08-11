@@ -177,10 +177,16 @@ async function readEnv(file) {
 function chooseProductRow(parsed, rows) {
   const acceptedNames = new Set([parsed.name, parsed.sourceFolderName].filter(Boolean));
   const matches = rows.filter(row => acceptedNames.has(row.name) || acceptedNames.has(row.name_zh));
-  if (matches.length !== 1) {
-    throw new Error(`${parsed.name}: expected exactly one database product, found ${matches.length}`);
-  }
-  return matches[0];
+  if (matches.length > 1) throw new Error(`${parsed.name}: matched more than one database product`);
+  return matches[0] || null;
+}
+
+function inferCategory(name) {
+  if (/刮痧板/.test(name)) return '其他';
+  if (/化妝水|爽膚水/.test(name)) return '化妝水';
+  if (/安瓶|精華液|精華/.test(name)) return '安瓶精華';
+  if (/雪霜|乳霜|面霜|眼霜/.test(name)) return '乳霜';
+  throw new Error(`${name}: cannot infer category for a new product`);
 }
 
 function buildVariantPlan(parsed, productRow, existingRows) {
@@ -195,8 +201,8 @@ function buildVariantPlan(parsed, productRow, existingRows) {
     if (match) unused.delete(match.id);
     return {
       id: match?.id || null,
-      product_id: productRow.id,
-      sku: match?.sku || `P${productRow.id}-TXT-${index + 1}`,
+      product_id: productRow.id || null,
+      sku: match?.sku || (productRow.id ? `P${productRow.id}-TXT-${index + 1}` : null),
       size: spec.size,
       price: spec.price,
       pro_price: spec.proPrice,
@@ -231,6 +237,8 @@ function summarizeChange(parsed, row, variants) {
   return {
     id: row.id,
     name: parsed.name,
+    action: row.isNew ? 'insert-draft' : 'update',
+    category: row.category,
     productChanges: {
       subtitle: { from: row.subtitle ?? null, to: parsed.subtitle },
       size: { from: row.size || '', to: defaultVariant.size },
@@ -257,6 +265,33 @@ function summarizeChange(parsed, row, variants) {
 
 async function applyPlan(supabase, plans) {
   for (const plan of plans) {
+    if (plan.row.isNew) {
+      const firstSpec = plan.parsed.specs[0];
+      const insertResult = await supabase.from('products').insert({
+        name: plan.parsed.name,
+        name_zh: plan.parsed.name,
+        subtitle: plan.parsed.subtitle,
+        category: plan.row.category,
+        size: firstSpec.size,
+        price: firstSpec.price,
+        pro_price: firstSpec.proPrice,
+        stock: 0,
+        min_stock: 3,
+        is_pro_only: plan.parsed.isProOnly,
+        description: plan.parsed.description,
+        skin_type: plan.parsed.skinType,
+        ingredients: plan.parsed.ingredients,
+        features: plan.parsed.features,
+        variants: [],
+        source_folder_name: plan.parsed.sourceFolderName,
+        imported_from_drive: false,
+        publication_status: 'draft',
+        active: false,
+      }).select('*').single();
+      if (insertResult.error) throw new Error(`${plan.parsed.name}: product insert failed: ${insertResult.error.message}`);
+      plan.row = { ...insertResult.data, isNew: true };
+      plan.variants = buildVariantPlan(plan.parsed, plan.row, []);
+    }
     for (const variant of plan.variants) {
       if (variant.preserve) continue;
       const payload = {
@@ -341,6 +376,9 @@ async function verifyAppliedPlans(supabase, plans) {
         failures.push(`${plan.parsed.name}: ${field} readback mismatch`);
       }
     }
+    if (plan.row.isNew && (row.publication_status !== 'draft' || row.active !== false)) {
+      failures.push(`${plan.parsed.name}: new product is not draft`);
+    }
     for (const expected of plan.variants) {
       const actual = rows.find(variant => Number(variant.id) === Number(expected.id))
         || rows.find(variant => normalizeSize(variant.size) === normalizeSize(expected.size));
@@ -385,8 +423,19 @@ async function main() {
   const blockers = [];
   for (const parsed of parsedProducts) {
     try {
-      const row = chooseProductRow(parsed, productsResult.data);
-      const existingVariants = variantsResult.data.filter(variant => Number(variant.product_id) === Number(row.id));
+      const matchedRow = chooseProductRow(parsed, productsResult.data);
+      const row = matchedRow || {
+        id: null,
+        name: parsed.name,
+        name_zh: parsed.name,
+        category: inferCategory(parsed.name),
+        publication_status: 'draft',
+        active: false,
+        isNew: true,
+      };
+      const existingVariants = row.id
+        ? variantsResult.data.filter(variant => Number(variant.product_id) === Number(row.id))
+        : [];
       const variants = buildVariantPlan(parsed, row, existingVariants);
       plans.push({ parsed, row, variants });
     } catch (error) {

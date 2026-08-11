@@ -14,8 +14,8 @@
   --red: oklch(0.60 0.18 25);
   --yellow: oklch(0.78 0.14 80);
   --blue: oklch(0.60 0.12 240);
-  --font: 'Jost', 'Noto Serif TC', sans-serif;
-  --font-d: 'Gilda Display', serif;
+  --font: 'Open Sans', 'Noto Sans TC', sans-serif;
+  --font-d: 'Open Sans', 'Noto Sans TC', sans-serif;
 }
 html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--dark); -webkit-font-smoothing: antialiased; }
 #root { height: 100%; }
@@ -27,20 +27,32 @@ input, select, textarea { font-family: var(--font); }
 
 /* ── RWD ── */
 .app-shell { display: flex; min-height: 100vh; }
-.app-main { margin-left: var(--sidebar-w); flex: 1; overflow-y: auto; padding: 36px 40px; background: var(--bg); min-width: 0; }
+.app-main { margin-left: var(--sidebar-w); flex: 1; overflow-y: auto; overflow-x: hidden; padding: 36px 40px; background: var(--bg); min-width: 0; }
 .app-sidebar { width: var(--sidebar-w); background: var(--sidebar); height: 100vh; position: fixed; left: 0; top: 0; display: flex; flex-direction: column; z-index: 50; transition: transform 0.25s ease; }
 .mobile-topbar { display: none; }
 .mobile-overlay { display: none; }
 .sidebar-close { display: none; }
 
 /* 表格水平捲動容器 */
-.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-scroll { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
 .table-scroll table { min-width: 720px; }
 
-/* 訂單/會員 grid（有側邊面板時） */
-.detail-grid { display: grid; grid-template-columns: 1fr 380px; gap: 20px; align-items: start; }
-.detail-grid.no-panel { grid-template-columns: 1fr; }
-.detail-panel { position: sticky; top: 20px; }
+/* 商品／訂單／會員：清單維持全寬，詳情使用右側抽屜。 */
+.detail-grid, .detail-grid.no-panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; min-width: 0; }
+.detail-grid > * { min-width: 0; max-width: 100%; }
+.detail-panel-backdrop {
+  position: fixed; inset: 0; z-index: 79; border: 0; padding: 0;
+  background: rgba(20,20,18,0.34); cursor: default; animation: adminDrawerFade 0.18s ease-out;
+}
+.detail-panel {
+  position: fixed; z-index: 80; top: 0; right: 0; bottom: 0;
+  width: min(500px, calc(100vw - var(--sidebar-w))); max-width: 100%;
+  overflow-y: auto; overscroll-behavior: contain; box-shadow: -18px 0 48px rgba(20,20,18,0.18);
+  animation: adminDrawerIn 0.22s ease-out; height: 100dvh !important;
+}
+.detail-panel.detail-panel-wide { width: min(680px, calc(100vw - var(--sidebar-w))); }
+@keyframes adminDrawerIn { from { transform: translateX(100%); opacity: 0.75; } to { transform: translateX(0); opacity: 1; } }
+@keyframes adminDrawerFade { from { opacity: 0; } to { opacity: 1; } }
 
 /* 統計卡片 grid */
 .stat-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
@@ -62,8 +74,7 @@ input, select, textarea { font-family: var(--font); }
   .mobile-overlay {
     display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 49;
   }
-  .detail-grid, .detail-grid.no-panel { grid-template-columns: 1fr; }
-  .detail-panel { position: static; top: auto; }
+  .detail-panel, .detail-panel.detail-panel-wide { top: 56px; width: 100%; max-width: none; height: calc(100dvh - 56px) !important; }
   .stat-grid-4 { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .stat-grid-3 { grid-template-columns: 1fr; gap: 10px; }
   .split-2 { grid-template-columns: 1fr; }
@@ -76,4 +87,9 @@ input, select, textarea { font-family: var(--font); }
 @media (max-width: 480px) {
   .app-main { padding: 68px 12px 20px; }
   .stat-grid-4 { grid-template-columns: 1fr; }
+  .detail-panel { padding: 20px 16px 32px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .detail-panel, .detail-panel-backdrop { animation: none; }
 }

@@ -174,7 +174,9 @@ export default function Members({
 
       {/* Member detail */}
       {selected && (
-        <div className="detail-panel" style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '24px', height: 'fit-content' }}>
+        <>
+        <button type="button" className="detail-panel-backdrop" aria-label="關閉會員詳情" onClick={() => setSelected(null)} />
+        <div className="detail-panel" role="dialog" aria-modal="true" aria-label="會員詳情" style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
             <h3 style={{ fontSize: 15, fontWeight: 500 }}>會員詳情</h3>
             <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--mid)', cursor: 'pointer' }}>×</button>
@@ -298,6 +300,7 @@ export default function Members({
             )}
           </div>
         </div>
+        </>
       )}
     </div>
   );

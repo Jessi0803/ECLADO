@@ -46,7 +46,7 @@ export default function HomePage({ setPage, onSelectProduct, user, cart, setCart
   const heroPad = isMobile ? '0 6vw' : '0 10vw';
 
   return (
-    <div className="home-open-sans">
+    <div>
       {/* HERO */}
       <section style={{ height:'100vh', position:'relative', overflow:'hidden', background:'#1a1a18' }}>
         {HERO_SLIDES.map((s,i) => (

@@ -290,6 +290,75 @@ test('remind unpaid orders - rejects forged x-vercel-cron header without bearer 
   assert.deepEqual(res.jsonBody, { error: 'Unauthorized' });
 });
 
+test('remind unpaid orders - does not mark reminder when LINE and Email both fail', async () => {
+  const calls = [];
+  const originalFetch = global.fetch;
+  const originalNow = Date.now;
+  const originalEnv = {
+    CRON_SECRET: process.env.CRON_SECRET,
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+    LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+  };
+
+  process.env.CRON_SECRET = 'test-cron-secret';
+  process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
+  process.env.LINE_CHANNEL_ACCESS_TOKEN = 'test-line-token';
+  process.env.RESEND_API_KEY = 'test-resend-key';
+  Date.now = () => Date.parse('2026-05-21T12:00:00.000Z');
+
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+    if (String(url).includes('/rest/v1/orders?') && options.method === 'GET') {
+      return jsonResponse(200, [{
+        id: 'REMIND-ALL-FAILED-001',
+        status: 'unpaid',
+        created_at: '2026-05-21T08:00:00.000Z',
+        total: 3980,
+        user_id: 'user-all-failed',
+        member: '通知失敗買家',
+        email: 'buyer@example.com',
+        payment_reminded_at: null,
+        payment_second_reminded_at: null,
+        payment_due_at: '2026-05-23T08:00:00.000Z',
+      }]);
+    }
+    if (String(url).includes('/rest/v1/profiles?id=eq.user-all-failed')) {
+      return jsonResponse(200, [{ line_user_id: 'U-ALL-FAILED', email: 'buyer@example.com' }]);
+    }
+    if (url === 'https://api.line.me/v2/bot/message/push') {
+      return jsonResponse(500, { message: 'LINE unavailable' });
+    }
+    if (url === 'https://api.resend.com/emails') {
+      return jsonResponse(503, { message: 'Email unavailable' });
+    }
+    if (String(url).includes('/rest/v1/orders?id=eq.REMIND-ALL-FAILED-001') && options.method === 'PATCH') {
+      throw new Error('failed reminder must not be marked');
+    }
+    throw new Error(`Unexpected fetch ${options.method} ${url}`);
+  };
+
+  const res = createRes();
+  try {
+    await remindUnpaidOrders({
+      method: 'POST',
+      headers: { authorization: 'Bearer test-cron-secret' },
+      body: {},
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    Date.now = originalNow;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.jsonBody.reminded, 0);
+  assert.equal(res.jsonBody.results[0].marked, false);
+  assert.equal(res.jsonBody.results[0].lineSent, false);
+  assert.equal(res.jsonBody.results[0].emailSent, false);
+  assert.equal(calls.filter(call => call.options.method === 'PATCH').length, 0);
+});
+
 function createRes() {
   return {
     statusCode: 200,
