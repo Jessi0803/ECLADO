@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import useIsMobile from '../hooks/useIsMobile.js';
 import { PRODUCT_NAV_LINKS } from '../app/navigation.js';
+import {
+  SHOP_CATEGORY_EVENT,
+  categoryFromLocation,
+  shopPath,
+} from '../app/shopNavigation.js';
 import ProductCard from '../components/product/ProductCard.jsx';
 import PromoSection from '../components/product/PromoSection.jsx';
 import {
@@ -39,9 +44,25 @@ function isProductInCategory(product, category) {
 }
 
 export default function ShopPage({ user, cart, setCart, onSelectProduct, promotions = [], products = PRODUCTS }) {
-  const [activeCategory, setActiveCategory] = useState('所有產品');
+  const [activeCategory, setActiveCategory] = useState(categoryFromLocation);
   const categories = PRODUCT_NAV_LINKS;
   const isMobile = useIsMobile();
+
+  useEffect(() => {
+    const syncCategory = event => setActiveCategory(event.detail || categoryFromLocation());
+    const syncPopState = () => setActiveCategory(categoryFromLocation());
+    window.addEventListener(SHOP_CATEGORY_EVENT, syncCategory);
+    window.addEventListener('popstate', syncPopState);
+    return () => {
+      window.removeEventListener(SHOP_CATEGORY_EVENT, syncCategory);
+      window.removeEventListener('popstate', syncPopState);
+    };
+  }, []);
+
+  function selectCategory(category) {
+    setActiveCategory(category);
+    window.history.pushState({ page: 'shop', category }, '', shopPath(category));
+  }
 
   function addToCart(product) {
     if (product.isProOnly && !isProfessionalMember(user)) return;
@@ -94,7 +115,7 @@ export default function ShopPage({ user, cart, setCart, onSelectProduct, promoti
         <div style={{ maxWidth:1280, margin:'0 auto', display:'flex', alignItems:'center' }}>
           <div style={{ display:'flex' }}>
           {categories.map(cat => (
-            <button key={cat} onClick={() => setActiveCategory(cat)} style={{
+            <button key={cat} onClick={() => selectCategory(cat)} style={{
               background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12,
               color: activeCategory===cat ? 'var(--black)' : 'var(--dark)',
               padding:'16px 20px', letterSpacing:'0.08em', textTransform:'uppercase',

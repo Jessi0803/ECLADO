@@ -48,7 +48,7 @@ export default function HomePage({ setPage, onSelectProduct, user, cart, setCart
   return (
     <div>
       {/* HERO */}
-      <section style={{ height:'100vh', position:'relative', overflow:'hidden', background:'#1a1a18' }}>
+      <section className="home-hero" style={{ position:'relative', overflow:'hidden', background:'#1a1a18' }}>
         {HERO_SLIDES.map((s,i) => (
           <img key={i} src={s.img} alt="" style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', objectFit:'cover', objectPosition: isMobile ? (s.mobilePosition || 'center') : (s.position || 'center'), opacity: i===slide ? 1 : 0, transition:'opacity 0.9s ease', pointerEvents:'none' }} />
         ))}
@@ -175,7 +175,7 @@ export default function HomePage({ setPage, onSelectProduct, user, cart, setCart
               <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--dark)', textTransform:'uppercase', marginBottom:14 }}>About ECLADO</p>
               <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(22px,3.2vw,42px)', fontWeight:300, lineHeight:1.2, marginBottom:24, color:'var(--black)' }}>
                 源自韓國醫美診所<br />
-                <span style={{ fontWeight:300 }}>的專業配方</span>
+                <span style={{ fontWeight:500 }}>的專業配方</span>
               </h2>
               <p style={{ fontSize:14, lineHeight:1.9, color:'#666', maxWidth:480, marginBottom:28 }}>
                 ECLADO 是源自韓國醫美院線的頂級保養品牌，每一款產品皆由皮膚科醫師與研究團隊共同研發，以臨床驗證的有效成分，帶給您診所級的保養體驗。

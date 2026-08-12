@@ -54,6 +54,7 @@ function parsePrices(text) {
 }
 
 function inferCategory(name) {
+  if (/爆水按摩霜/.test(name)) return '其他';
   if (/Celvix|水光|煥膚|輪廓/.test(name)) return '院線課程儀器';
   if (/防曬|BB/.test(name)) return '防曬底妝';
   if (/爽膚水|凝膠|凍膜/.test(name)) return '化妝水凝膠';

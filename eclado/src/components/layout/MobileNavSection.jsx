@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { goInfoSection } from '../../app/infoNavigation.js';
+import { goShopCategory } from '../../app/shopNavigation.js';
 import { goProfessionalApply } from '../../services/membership.js';
 
 export default function MobileNavSection({ item, setPage, user, close }) {
@@ -30,7 +31,10 @@ export default function MobileNavSection({ item, setPage, user, close }) {
         <div style={{ paddingBottom:8 }}>
           {item.children.map(child => (
             <button key={child} onClick={async () => {
-              if (item.label === '所有產品') go('shop');
+              if (item.label === '所有產品') {
+                goShopCategory(child, setPage);
+                close();
+              }
               else if (item.label === '會員登錄') await goMemberChild(child);
               else if (item.label === '購物說明') {
                 goInfoSection(child, setPage);

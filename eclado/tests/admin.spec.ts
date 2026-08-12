@@ -50,7 +50,11 @@ async function mockAdminApis(
 
 async function openAdminSection(page: Page, name: RegExp) {
   const mobileMenu = page.getByRole('button', { name: '開啟選單' });
-  if (await mobileMenu.isVisible()) await mobileMenu.click();
+  if ((page.viewportSize()?.width || 0) <= 900) {
+    await expect(mobileMenu).toBeVisible();
+    await mobileMenu.click();
+    await expect(page.locator('.app-sidebar')).toHaveClass(/\bopen\b/);
+  }
   await page.getByRole('button', { name }).click();
 }
 
@@ -85,6 +89,17 @@ test('後台登入權限：管理員 session 可進入儀表板', async ({ page 
   await page.goto('/admin');
   await expect(page.getByRole('heading', { name: '儀表板' })).toBeVisible();
   await expect(page.getByText('baby90522@gmail.com')).toBeVisible();
+});
+
+test('後台權限以資料庫 allow-list 為準，不再只相信管理員 Email', async ({ page }) => {
+  await mockAdminApis(page, {
+    authUser: adminUser(),
+    adminAccess: false,
+  });
+
+  await page.goto('/admin');
+  await expect(page.getByText('管理後台 · 請登入')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '儀表板' })).toHaveCount(0);
 });
 
 test('商品、訂單與會員列表響應式切換，詳情使用抽屜且不撐寬頁面', async ({ page }) => {
@@ -127,20 +142,20 @@ test('商品、訂單與會員列表響應式切換，詳情使用抽屜且不�
   await assertResponsiveList();
   await page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr').getByRole('button', { name: '編輯' }).click();
   await assertDrawer('編輯商品');
-  await page.getByRole('button', { name: '關閉商品編輯' }).click();
+  await page.getByRole('dialog', { name: '編輯商品' }).getByRole('button', { name: '關閉商品編輯' }).click();
   await expect(page.getByRole('dialog', { name: '編輯商品' })).toHaveCount(0);
 
   await openAdminSection(page, /訂單管理/);
   await assertResponsiveList();
   await page.getByText('E2E-ORDER-001').first().click();
   await assertDrawer('訂單詳情');
-  await page.getByRole('button', { name: '關閉訂單詳情' }).click();
+  await page.getByRole('dialog', { name: '訂單詳情' }).getByRole('button', { name: '關閉訂單詳情' }).click();
 
   await openAdminSection(page, /會員管理/);
   await assertResponsiveList();
   await page.getByRole('cell', { name: '測試會員' }).click();
   await assertDrawer('會員詳情');
-  await page.getByRole('button', { name: '關閉會員詳情' }).click();
+  await page.getByRole('dialog', { name: '會員詳情' }).getByRole('button', { name: '關閉會員詳情' }).click();
 });
 
 test('儀表板顯示待處理資訊，點待審核申請可前往會員審核列表', async ({ page }) => {

@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { NAV_ITEMS } from '../../app/navigation.js';
 import useIsMobile from '../../hooks/useIsMobile.js';
+import useAdminAccess from '../../hooks/useAdminAccess.js';
 import {
   getMemberTier,
   isProfessionalMember,
 } from '../../domain/catalog.jsx';
 import { hasProfessionalOrderRules } from '../../domain/memberShopping.js';
-import {
-  isAdminUser,
-  openAdmin,
-} from '../../services/membership.js';
+import { openAdmin } from '../../services/membership.js';
 import DesktopNavItem from './DesktopNavItem.jsx';
 import MobileNavSection from './MobileNavSection.jsx';
 
@@ -19,6 +17,7 @@ export default function Nav({ setPage, cartCount, user, setUser, page }) {
   const [scrolled, setScrolled] = useState(false);
   const [productDetailOpen, setProductDetailOpen] = useState(false);
   const isMobile = useIsMobile();
+  const isAdmin = useAdminAccess(user?.uid);
   const darkMode = scrolled || page !== 'home' || productDetailOpen;
   const navItems = NAV_ITEMS.map(item => (
     item.label === '購物說明' && hasProfessionalOrderRules(user)
@@ -79,7 +78,7 @@ export default function Nav({ setPage, cartCount, user, setUser, page }) {
             {user ? (
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                 {isProfessionalMember(user) && <span style={{ fontSize:10, letterSpacing:'0.1em', background: darkMode ? 'var(--black)' : 'rgba(255,255,255,0.15)', color:'var(--white)', padding:'3px 8px', fontWeight:500 }}>{getMemberTier(user).badge}</span>}
-                {isAdminUser(user) && <button onClick={openAdmin} style={{ background: darkMode ? 'var(--black)' : 'rgba(255,255,255,0.16)', color:'var(--white)', border:'1px solid rgba(255,255,255,0.22)', padding:'5px 10px', fontSize:11, letterSpacing:'0.1em', cursor:'pointer', fontFamily:'var(--font-body)' }}>後台</button>}
+                {isAdmin && <button onClick={openAdmin} style={{ background: darkMode ? 'var(--black)' : 'rgba(255,255,255,0.16)', color:'var(--white)', border:'1px solid rgba(255,255,255,0.22)', padding:'5px 10px', fontSize:11, letterSpacing:'0.1em', cursor:'pointer', fontFamily:'var(--font-body)' }}>後台</button>}
                 <button onClick={() => setPage('account')} aria-label="會員專區" style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)', display:'inline-flex', alignItems:'center', gap:6, padding:'4px 0' }}>
                   <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><path d="M20 21a8 8 0 0 0-16 0" /><circle cx="12" cy="7" r="4" /></svg>
                   <span>{user.name}</span>
@@ -129,7 +128,7 @@ export default function Nav({ setPage, cartCount, user, setUser, page }) {
             {user ? (
               <>
                 <button onClick={() => { setPage('account'); setDrawerOpen(false); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:14, color:'var(--dark)', textAlign:'left', padding:0, fontFamily:'var(--font-body)' }}>{isProfessionalMember(user) && <span style={{ fontSize:10, background:'var(--black)', color:'var(--white)', padding:'2px 7px', marginRight:8 }}>{getMemberTier(user).badge}</span>}{user.name}</button>
-                {isAdminUser(user) && <button onClick={openAdmin} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'var(--dark)', textAlign:'left', padding:0, fontFamily:'var(--font-body)', letterSpacing:'0.08em' }}>進入後台</button>}
+                {isAdmin && <button onClick={openAdmin} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'var(--dark)', textAlign:'left', padding:0, fontFamily:'var(--font-body)', letterSpacing:'0.08em' }}>進入後台</button>}
               </>
             ) : null}
           </div>

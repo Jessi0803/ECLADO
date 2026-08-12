@@ -182,7 +182,8 @@ function chooseProductRow(parsed, rows) {
 }
 
 function inferCategory(name) {
-  if (/刮痧板/.test(name)) return '其他';
+  if (/刮痧板|爆水按摩霜/.test(name)) return '其他';
+  if (/潔顏|清潔|卸妝/.test(name)) return '清潔卸妝';
   if (/化妝水|爽膚水/.test(name)) return '化妝水';
   if (/安瓶|精華液|精華/.test(name)) return '安瓶精華';
   if (/雪霜|乳霜|面霜|眼霜/.test(name)) return '乳霜';

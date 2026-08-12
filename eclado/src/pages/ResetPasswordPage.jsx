@@ -46,7 +46,7 @@ export default function ResetPasswordPage({ setPage }) {
         <img src="https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=900&q=85&fit=crop" alt="" style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.35 }} />
         <div style={{ position:'relative', zIndex:1, textAlign:'center' }}>
           <img src="/assets/images/ECLADO LOGO with CI_WHITE.png" alt="ECLADO Laboratory" style={{ width:190, height:'auto', display:'block', margin:'0 auto 8px' }} />
-          <p style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, color:'var(--white)', lineHeight:1.4, marginTop:40, marginBottom:20 }}>Reset<br />Password.</p>
+          <p style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:500, color:'var(--white)', lineHeight:1.4, marginTop:40, marginBottom:20 }}>Reset<br />Password.</p>
           <p style={{ fontSize:13, color:'rgba(255,255,255,0.4)', lineHeight:1.9 }}>請設定新的會員密碼</p>
         </div>
       </div>

@@ -6,10 +6,10 @@ import {
 import { getOrderStatusLabel } from '../domain/payments.js';
 import { SF_EXPRESS_TRACKING_URL } from '../domain/shipping.js';
 import useIsMobile from '../hooks/useIsMobile.js';
+import useAdminAccess from '../hooks/useAdminAccess.js';
 import {
   fetchLatestProApplication,
   goProfessionalApply,
-  isAdminUser,
   openAdmin,
 } from '../services/membership.js';
 import { fetchAccountOrders } from '../services/accountOrders.js';
@@ -17,6 +17,7 @@ import { fetchProfessionalApplicationStatus } from '../services/professionalAppl
 
 export default function AccountPage({ user, setPage, onSignOut }) {
   const isMobile = useIsMobile();
+  const isAdmin = useAdminAccess(user?.uid);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -138,7 +139,7 @@ export default function AccountPage({ user, setPage, onSignOut }) {
                   )}
                 </div>
               )}
-              {isAdminUser(user) && (
+              {isAdmin && (
                 <button onClick={openAdmin} style={{ marginTop:8, width:'fit-content', background:'var(--black)', color:'var(--white)', border:'1px solid var(--black)', padding:'10px 18px', fontSize:12, letterSpacing:'0.08em', cursor:'pointer', fontFamily:'var(--font-body)' }}>進入後台</button>
               )}
               <button onClick={onSignOut} style={{ marginTop:8, width:'fit-content', background:'none', color:'var(--dark)', border:'1px solid var(--light)', padding:'10px 18px', fontSize:12, letterSpacing:'0.08em', cursor:'pointer', fontFamily:'var(--font-body)' }}>登出</button>

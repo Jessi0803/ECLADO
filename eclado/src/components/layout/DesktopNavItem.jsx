@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { goInfoSection } from '../../app/infoNavigation.js';
+import { goShopCategory } from '../../app/shopNavigation.js';
 import { goProfessionalApply } from '../../services/membership.js';
 
 export default function DesktopNavItem({ item, scrolled, setPage, user }) {
@@ -16,7 +17,7 @@ export default function DesktopNavItem({ item, scrolled, setPage, user }) {
 
   async function go(child) {
     setOpen(false);
-    if (item.label === '所有產品') setPage('shop');
+    if (item.label === '所有產品') goShopCategory(child, setPage);
     else if (item.label === '會員登錄') {
       if (child === '美容師申請') await goProfessionalApply(user, setPage);
       else setPage(user ? 'account' : 'login');

@@ -1,16 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase.js';
-
-const ADMIN_EMAILS = [
-  'baby90522@gmail.com',
-  'ecladotaiwan@gmail.com',
-  'k0919933386@gmail.com',
-  'line.u6f71cfa36c3fb2188f54396a5cb58882@ecladotaiwan.com',
-];
-
-function isAdminEmail(email) {
-  return ADMIN_EMAILS.includes((email || '').toLowerCase());
-}
+import { checkAdminAccess } from '../../services/membership.js';
 
 export default function AdminGate({ children }) {
   const [session, setSession] = useState(undefined); // undefined = loading
@@ -19,6 +9,7 @@ export default function AdminGate({ children }) {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [adminAccess, setAdminAccess] = useState(undefined);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -26,9 +17,23 @@ export default function AdminGate({ children }) {
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
+      if (!s) setAdminAccess(false);
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+    if (!session) {
+      setAdminAccess(false);
+      return () => { alive = false; };
+    }
+    setAdminAccess(undefined);
+    checkAdminAccess().then(allowed => {
+      if (alive) setAdminAccess(allowed);
+    });
+    return () => { alive = false; };
+  }, [session?.user?.id]);
 
   async function submit(e) {
     e.preventDefault();
@@ -37,7 +42,8 @@ export default function AdminGate({ children }) {
     const { data, error: err } = await supabase.auth.signInWithPassword({ email, password: pwd });
     setLoading(false);
     if (err) { setError('帳號或密碼錯誤'); setPwd(''); return; }
-    if (!isAdminEmail(data.user?.email)) {
+    const allowed = await checkAdminAccess();
+    if (!allowed) {
       await supabase.auth.signOut();
       setError('此帳號無管理員權限');
       setPwd('');
@@ -48,9 +54,9 @@ export default function AdminGate({ children }) {
     await supabase.auth.signOut();
   }
 
-  if (session === undefined) return null; // loading
+  if (session === undefined || (session && adminAccess === undefined)) return null; // loading
 
-  const isAdmin = session && isAdminEmail(session.user?.email);
+  const isAdmin = session && adminAccess;
   if (isAdmin) return React.cloneElement(children, { adminEmail: session.user.email, onSignOut: signOut });
 
   return (

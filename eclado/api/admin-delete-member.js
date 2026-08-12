@@ -1,13 +1,6 @@
 const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
 const DEFAULT_SUPABASE_ANON = 'sb_publishable_BasrQNdstdbX_InrQWmCuw_Jb1Lscnl';
 
-const ADMIN_EMAILS = [
-  'baby90522@gmail.com',
-  'ecladotaiwan@gmail.com',
-  'k0919933386@gmail.com',
-  'line.u6f71cfa36c3fb2188f54396a5cb58882@ecladotaiwan.com',
-];
-
 function getAuthHeader(req) {
   return req.headers.authorization || req.headers.Authorization || '';
 }
@@ -37,18 +30,18 @@ async function requireAdmin(req, supabaseUrl, anonKey) {
   }
 
   try {
-    const user = await readSupabaseJson(`${supabaseUrl}/auth/v1/user`, {
-      method: 'GET',
+    const allowed = await readSupabaseJson(`${supabaseUrl}/rest/v1/rpc/is_eclado_admin`, {
+      method: 'POST',
       headers: jsonHeaders({
         apikey: anonKey,
         Authorization: authorization,
       }),
+      body: '{}',
     });
-    const email = (user?.email || '').toLowerCase();
-    if (!ADMIN_EMAILS.includes(email)) {
+    if (allowed !== true) {
       return { ok: false, status: 403, error: 'Forbidden' };
     }
-    return { ok: true, user };
+    return { ok: true };
   } catch (error) {
     return { ok: false, status: 401, error: error.message || 'Unauthorized' };
   }

@@ -188,6 +188,7 @@ export type MockEcladoApiOptions = {
   authUser?: MockAuthUser | null;
   signInUser?: MockAuthUser;
   signInError?: string;
+  adminAccess?: boolean;
   products?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
   productVariants?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
   productImages?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
@@ -253,6 +254,17 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   await page.route('**/rest/v1/product_variants**', async route => {
     if (route.request().method() === 'GET') return json(route, productVariants());
     return json(route, []);
+  });
+
+  await page.route('**/rest/v1/rpc/is_eclado_admin', async route => {
+    const currentUser = options.signInUser || authUser;
+    const allowed = options.adminAccess ?? Boolean(currentUser?.email && [
+      'baby90522@gmail.com',
+      'ecladotaiwan@gmail.com',
+      'k0919933386@gmail.com',
+      'line.u6f71cfa36c3fb2188f54396a5cb58882@ecladotaiwan.com',
+    ].includes(currentUser.email.toLowerCase()));
+    return json(route, allowed);
   });
 
   await page.route('**/rest/v1/product_images**', async route => {

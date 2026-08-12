@@ -547,14 +547,12 @@ returns boolean
 language sql
 stable
 security definer
-set search_path = public, auth
+set search_path = ''
 as $$
-  select lower(coalesce(auth.jwt() ->> 'email', '')) = any(array[
-    'baby90522@gmail.com',
-    'ecladotaiwan@gmail.com',
-    'k0919933386@gmail.com',
-    'line.u6f71cfa36c3fb2188f54396a5cb58882@ecladotaiwan.com'
-  ]);
+  select exists (
+    select 1 from public.admin_users
+    where user_id = auth.uid() and active = true
+  );
 $$;
 
 revoke all on function public.is_eclado_admin() from public;

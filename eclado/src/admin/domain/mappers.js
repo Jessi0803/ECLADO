@@ -113,7 +113,7 @@ export function normalizeProduct(row, variantRows = null, imageRows = []) {
     ingredients: row.ingredients || '',
     features: Array.isArray(row.features) ? row.features : [],
     variants,
-    productImages: imageRows.map(normalizeProductImage),
+    productImages: imageRows.filter(image => image.active !== false).map(normalizeProductImage),
     sourceFolderName: row.source_folder_name || '',
     importedFromDrive: !!row.imported_from_drive,
     listImageScale: normalizeProductImageScale(row.product_list_image_scale),

@@ -308,24 +308,43 @@ create trigger trg_professional_applications_updated_at
   before update on public.professional_applications
   for each row execute function public.set_updated_at();
 
--- 管理員權限由登入 JWT 的 email 在資料庫端判定，不能信任前端畫面。
+create table if not exists public.admin_users (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  role text not null default 'admin' check (role in ('admin', 'super_admin')),
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  created_by uuid references auth.users(id)
+);
+alter table public.admin_users enable row level security;
+revoke all on table public.admin_users from anon, authenticated;
+
+-- 管理員權限由 auth.uid() 與不可由瀏覽器直接存取的 allow-list 判定。
 create or replace function public.is_eclado_admin()
 returns boolean
 language sql
 stable
 security definer
-set search_path = public, auth
+set search_path = ''
 as $$
-  select lower(coalesce(auth.jwt() ->> 'email', '')) = any(array[
-    'baby90522@gmail.com',
-    'ecladotaiwan@gmail.com',
-    'k0919933386@gmail.com',
-    'line.u6f71cfa36c3fb2188f54396a5cb58882@ecladotaiwan.com'
-  ]);
+  select exists (
+    select 1 from public.admin_users
+    where user_id = auth.uid() and active = true
+  );
 $$;
 
 revoke all on function public.is_eclado_admin() from public;
 grant execute on function public.is_eclado_admin() to authenticated;
+
+insert into public.admin_users (user_id, role, active)
+select id, 'admin', true
+from auth.users
+where lower(email) in (
+  'baby90522@gmail.com',
+  'ecladotaiwan@gmail.com',
+  'k0919933386@gmail.com',
+  'line.u6f71cfa36c3fb2188f54396a5cb58882@ecladotaiwan.com'
+)
+on conflict (user_id) do update set active = true;
 
 -- RLS
 alter table public.profiles enable row level security;

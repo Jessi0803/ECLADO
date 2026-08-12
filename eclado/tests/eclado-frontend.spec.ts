@@ -54,7 +54,11 @@ async function proceedToCheckout(page: import('@playwright/test').Page) {
 async function openAdminCatalog(page: import('@playwright/test').Page) {
   await page.goto('/admin');
   const openMenu = page.getByRole('button', { name: '開啟選單' });
-  if (await openMenu.isVisible()) await openMenu.click();
+  if ((page.viewportSize()?.width || 0) <= 900) {
+    await expect(openMenu).toBeVisible();
+    await openMenu.click();
+    await expect(page.locator('.app-sidebar')).toHaveClass(/\bopen\b/);
+  }
   await page.getByRole('button', { name: /商品 & 庫存/ }).click();
 }
 
@@ -162,6 +166,27 @@ test('商品新分類正確，院線商品不重複出現在一般分類', async
   await expect(page.getByText('此分類目前無商品')).toBeVisible();
 });
 
+test('導覽列所有產品下拉分類會帶入商城分類並保留可分享網址', async ({ page, isMobile }) => {
+  await page.goto('/');
+
+  if (isMobile) {
+    await page.locator('.nav-hamburger').getByRole('button').last().click();
+    await page.getByRole('button', { name: '所有產品', exact: true }).click();
+  } else {
+    await page.getByRole('button', { name: '所有產品', exact: true }).hover();
+  }
+
+  await page.getByRole('button', { name: '安瓶精華', exact: true }).click();
+  await expect(page).toHaveURL(/\/shop\?category=%E5%AE%89%E7%93%B6%E7%B2%BE%E8%8F%AF$/);
+  await expect(page.getByRole('button', { name: '安瓶精華', exact: true }).last()).toHaveCSS('font-weight', '500');
+  await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();
+  await expect(page.getByText('NK細胞活化安瓶').first()).toHaveCount(0);
+
+  await page.reload();
+  await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();
+  await expect(page.getByText('NK細胞活化安瓶').first()).toHaveCount(0);
+});
+
 test('後台以規格表格與交易式 RPC 儲存商品', async ({ page }) => {
   let savedRequest: Record<string, any> | null = null;
   const admin = authUser('ecladotaiwan@gmail.com');
@@ -267,6 +292,7 @@ test('後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序', async 
     productImages: [
       { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', product_id: 2, storage_path: `products/${assetKey}/hero.webp`, alt_text: '原首圖', sort_order: 0, is_primary: true, active: true },
       { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', product_id: 2, storage_path: `products/${assetKey}/detail.webp`, alt_text: '原附圖', sort_order: 1, is_primary: false, active: true },
+      { id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', product_id: 2, storage_path: `products/${assetKey}/removed.webp`, alt_text: '已移除舊圖片', sort_order: 2, is_primary: false, active: false },
     ],
     orders: adminOrderRows,
     profiles: adminProfileRows,
@@ -280,6 +306,7 @@ test('後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序', async 
   await productRow.getByRole('button', { name: '編輯' }).click();
 
   await expect(page.getByText('首圖', { exact: true })).toBeVisible();
+  await expect(page.getByAltText('已移除舊圖片')).toHaveCount(0);
   await page.locator('#productImageFiles').setInputFiles({
     name: 'new-detail.webp',
     mimeType: 'image/webp',

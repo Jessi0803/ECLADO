@@ -6,15 +6,13 @@ import {
 } from '../app/authSession.js';
 import { supabase } from './supabase.js';
 
-export const ADMIN_EMAILS = [
-  'baby90522@gmail.com',
-  'ecladotaiwan@gmail.com',
-  'k0919933386@gmail.com',
-  'line.u6f71cfa36c3fb2188f54396a5cb58882@ecladotaiwan.com',
-];
-
-export function isAdminUser(user) {
-  return ADMIN_EMAILS.includes((user?.email || '').toLowerCase());
+export async function checkAdminAccess() {
+  const { data, error } = await supabase.rpc('is_eclado_admin');
+  if (error) {
+    console.error('[admin-access]', error);
+    return false;
+  }
+  return data === true;
 }
 
 export function openAdmin() {

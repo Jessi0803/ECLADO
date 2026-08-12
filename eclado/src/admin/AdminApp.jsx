@@ -52,7 +52,7 @@ export default function AdminApp({ adminEmail, onSignOut }) {
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
         supabase.from('products').select('*').order('id', { ascending: true }),
         supabase.from('product_variants').select('*').order('sort_order', { ascending: true }),
-        supabase.from('product_images').select('*').order('sort_order', { ascending: true }),
+        supabase.from('product_images').select('*').eq('active', true).order('sort_order', { ascending: true }),
         supabase.from('professional_applications').select('*').order('created_at', { ascending: false }),
       ]);
       if (ordersRes.error) throw ordersRes.error;

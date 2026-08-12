@@ -369,7 +369,7 @@ export default function Orders({ orders, setOrders, persistOrderPatch }) {
         <div className="detail-panel" role="dialog" aria-modal="true" aria-label="訂單詳情" style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <h3 style={{ fontSize: 15, fontWeight: 500 }}>訂單詳情</h3>
-            <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--mid)', cursor: 'pointer', lineHeight: 1 }}>×</button>
+            <button type="button" aria-label="關閉訂單詳情" onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--mid)', cursor: 'pointer', lineHeight: 1 }}>×</button>
           </div>
           <div style={{ fontSize: 12, color: 'var(--mid)', marginBottom: 4 }}>訂單編號</div>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, color: 'var(--dark)' }}>{selected.id}</div>

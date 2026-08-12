@@ -357,6 +357,21 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
       <div className={'detail-grid' + (editing ? '' : ' no-panel')}>
         {/* Table */}
         <div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <label htmlFor="catalog-stock-filter" style={{ color: 'var(--mid)', fontSize: 11, letterSpacing: '0.08em' }}>庫存狀態</label>
+            <select
+              id="catalog-stock-filter"
+              aria-label="庫存狀態篩選"
+              value={stockFilter}
+              onChange={e => { setStockFilter(e.target.value); setEditing(null); }}
+              style={{ width: 126, border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--dark)', fontSize: 11, padding: '7px 8px', outline: 'none', cursor: 'pointer' }}
+            >
+              <option value="all">全部 ({stockCounts.all})</option>
+              <option value="ok">正常 ({stockCounts.ok})</option>
+              <option value="low">低庫存 ({stockCounts.low})</option>
+              <option value="out">缺貨 ({stockCounts.out})</option>
+            </select>
+          </div>
           <div className="table-scroll" style={{ background: 'var(--white)', border: '1px solid var(--border)' }}>
             <table className="responsive-admin-table admin-products-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
@@ -364,31 +379,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                   {['商品名稱', '分類', '規格', '售價', '專業價', '院線', '庫存'].map(h => (
                     <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
-                  <th style={{ padding: '8px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
-                      <span>狀態</span>
-                      <select
-                        aria-label="庫存狀態篩選"
-                        value={stockFilter}
-                        onChange={e => { setStockFilter(e.target.value); setEditing(null); }}
-                        style={{
-                          width: 104,
-                          border: '1px solid var(--border)',
-                          background: 'var(--white)',
-                          color: 'var(--dark)',
-                          fontSize: 11,
-                          padding: '5px 8px',
-                          outline: 'none',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <option value="all">全部 ({stockCounts.all})</option>
-                        <option value="ok">正常 ({stockCounts.ok})</option>
-                        <option value="low">低庫存 ({stockCounts.low})</option>
-                        <option value="out">缺貨 ({stockCounts.out})</option>
-                      </select>
-                    </div>
-                  </th>
+                  <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>狀態</th>
                   <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>操作</th>
                 </tr>
               </thead>
@@ -467,7 +458,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                 <div style={{ fontSize: 10, letterSpacing: '0.14em', color: 'var(--mid)', textTransform: 'uppercase', marginBottom: 4 }}>{editing.isNew ? '新增商品' : '編輯商品'}</div>
                 <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--dark)' }}>{editing.nameZh || '新商品'}</div>
               </div>
-              <button onClick={() => setEditing(null)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--mid)', lineHeight: 1, padding: '0 0 0 8px' }}>✕</button>
+              <button type="button" aria-label="關閉商品編輯" onClick={() => setEditing(null)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--mid)', lineHeight: 1, padding: '0 0 0 8px' }}>✕</button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
