@@ -16,7 +16,7 @@
 - `POST /api/orders/expire-overdue` — 清理逾期未付款訂單；必須帶正確的 `X-Cleanup-Key`。
 
 確認付款成功後，會轉發 `{OrderNo, Status:'S'}` 給 Vercel 端
-（`www.ecladotaiwan.com/api/sinopac/notify`）負責標記 paid + 寄送 LINE／Email，
+（`ecladotaiwan.com/api/sinopac/notify`）負責標記 paid + 寄送 LINE／Email，
 本服務再補寫一次 paid 作為保險。詳見整體架構說明。
 
 訂單讀取與狀態更新一律使用 Vultr 端的 `SUPABASE_SERVICE_ROLE_KEY`；
@@ -24,6 +24,8 @@
 建立或查詢付款時必須帶上權威訂單 RPC 回傳的一次性 `paymentToken`。
 
 `ORDER_CLEANUP_KEY` 是必填環境變數。未設定時服務會拒絕啟動，清理端點也不會執行。
+`PAYMENT_NOTIFY_SECRET` 同樣為必填，Vultr 轉發付款完成通知時會以
+`X-ECLADO-Payment-Secret` header 傳給 Vercel；Vercel 只接受密鑰完全一致的請求。
 逾期判斷以 Supabase 訂單的 `payment_due_at` 為唯一依據；新訂單預設為建立後 48 小時。
 建立永豐 ATM 付款單時，`ExpireDate`／`ExpireTime` 同樣由 `payment_due_at` 轉換，不接受前端自訂期限。
 資料庫只保存 token hash，且會原子鎖定建單流程，避免同一訂單重複建立付款單。

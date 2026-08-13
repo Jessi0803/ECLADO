@@ -12,6 +12,7 @@ process.env.PAYMENT_PUBLIC_URL = process.env.PAYMENT_PUBLIC_URL || 'https://pay.
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://supabase.example.test';
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'test-service-role-key';
 process.env.ORDER_CLEANUP_KEY = process.env.ORDER_CLEANUP_KEY || 'test-cleanup-key';
+process.env.PAYMENT_NOTIFY_SECRET = process.env.PAYMENT_NOTIFY_SECRET || 'test-payment-notify-secret';
 
 const server = require('./server.js');
 
@@ -32,6 +33,51 @@ test('ORDER_CLEANUP_KEY 必須設定，且清理金鑰需完全一致', () => {
   assert.equal(server.hasValidCleanupKey(originalKey), true);
   assert.equal(server.hasValidCleanupKey(`${originalKey}-wrong`), false);
   assert.equal(server.hasValidCleanupKey(''), false);
+});
+
+test('PAYMENT_NOTIFY_SECRET 必須設定', () => {
+  const originalSecret = process.env.PAYMENT_NOTIFY_SECRET;
+  delete process.env.PAYMENT_NOTIFY_SECRET;
+  assert.throws(() => server.validateRequiredRuntimeEnv(), /Missing env: PAYMENT_NOTIFY_SECRET/);
+
+  process.env.PAYMENT_NOTIFY_SECRET = originalSecret;
+  assert.doesNotThrow(() => server.validateRequiredRuntimeEnv());
+});
+
+test('付款通知轉發會帶共用密鑰，且檢查 Vercel 回應', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url, options) => {
+    assert.equal(String(url), 'https://ecladotaiwan.com/api/sinopac/notify');
+    assert.equal(options.method, 'POST');
+    assert.equal(options.headers['X-ECLADO-Payment-Secret'], process.env.PAYMENT_NOTIFY_SECRET);
+    assert.deepEqual(JSON.parse(options.body), { OrderNo: 'ECL-NOTIFY-001', Status: 'S' });
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  };
+
+  try {
+    assert.deepEqual(await server.forwardPaidNotification('ECL-NOTIFY-001'), { sent: true });
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('Vercel 拒絕付款通知時，Vultr 會留下明確失敗結果', async () => {
+  const originalFetch = global.fetch;
+  const originalError = console.error;
+  const errors = [];
+  global.fetch = async () => new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+  console.error = (...args) => errors.push(args.join(' '));
+
+  try {
+    const result = await server.forwardPaidNotification('ECL-NOTIFY-002');
+    assert.equal(result.sent, false);
+    assert.match(result.reason, /Vercel notify HTTP 401/);
+    assert.equal(errors.length, 1);
+    assert.match(errors[0], /notify forward.*401/);
+  } finally {
+    global.fetch = originalFetch;
+    console.error = originalError;
+  }
 });
 
 test('isPaidLike: 授權/請款/付款完成算已付款；待付款/逾期不算', () => {

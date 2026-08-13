@@ -1,9 +1,21 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const sinopacNotify = require('../../api/sinopac/notify.js');
+const sinopacNotifyHandler = require('../../api/sinopac/notify.js');
 
 const SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
-const { __test } = sinopacNotify;
+const PAYMENT_NOTIFY_SECRET = 'test-payment-notify-secret';
+process.env.PAYMENT_NOTIFY_SECRET = PAYMENT_NOTIFY_SECRET;
+const { __test } = sinopacNotifyHandler;
+
+function sinopacNotify(req, res) {
+  return sinopacNotifyHandler({
+    ...req,
+    headers: {
+      ...(req.headers || {}),
+      'x-eclado-payment-secret': PAYMENT_NOTIFY_SECRET,
+    },
+  }, res);
+}
 
 // 豐收款 sandbox 範例雜湊值（AppSettings.config），A1,A2,B1,B2 排序
 const HASH_KEYS = '65960834240E44B7,2831076A098E49E7,CB1AFFBF915A492B,7F242C0AA612454F';

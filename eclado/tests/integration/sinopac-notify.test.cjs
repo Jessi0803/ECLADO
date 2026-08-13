@@ -1,8 +1,51 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const sinopacNotify = require('../../api/sinopac/notify.js');
+const sinopacNotifyHandler = require('../../api/sinopac/notify.js');
 
 const SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
+const PAYMENT_NOTIFY_SECRET = 'test-payment-notify-secret';
+process.env.PAYMENT_NOTIFY_SECRET = PAYMENT_NOTIFY_SECRET;
+
+function sinopacNotify(req, res) {
+  return sinopacNotifyHandler({
+    ...req,
+    headers: {
+      ...(req.headers || {}),
+      'x-eclado-payment-secret': PAYMENT_NOTIFY_SECRET,
+    },
+  }, res);
+}
+
+test('Sinopac notify rejects missing or incorrect payment notification secret', async () => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    throw new Error('unauthorized request must not access downstream services');
+  };
+
+  try {
+    const missingRes = createRes();
+    await sinopacNotifyHandler({
+      method: 'POST',
+      body: { OrderNo: 'ORDER-UNAUTHORIZED-001', Status: 'S' },
+    }, missingRes);
+    assert.equal(missingRes.statusCode, 401);
+    assert.equal(missingRes.jsonBody.error, 'Unauthorized');
+
+    const wrongRes = createRes();
+    await sinopacNotifyHandler({
+      method: 'POST',
+      headers: { 'x-eclado-payment-secret': `${PAYMENT_NOTIFY_SECRET}-wrong` },
+      body: { OrderNo: 'ORDER-UNAUTHORIZED-002', Status: 'S' },
+    }, wrongRes);
+    assert.equal(wrongRes.statusCode, 401);
+    assert.equal(wrongRes.jsonBody.error, 'Unauthorized');
+    assert.equal(fetchCalls, 0);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
 
 test('Sinopac notify marks order paid and sends LINE payment notice', async () => {
   const calls = [];

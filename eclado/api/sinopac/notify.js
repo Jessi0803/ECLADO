@@ -89,6 +89,26 @@ function isFailedPayment(payload) {
   return [status, payStatus, result].some(value => failureValues.has(value));
 }
 
+function getHeader(req, name) {
+  if (typeof req?.get === 'function') return req.get(name) || '';
+  const headers = req?.headers || {};
+  const wanted = String(name).toLowerCase();
+  const key = Object.keys(headers).find(candidate => candidate.toLowerCase() === wanted);
+  const value = key ? headers[key] : '';
+  return Array.isArray(value) ? value[0] || '' : value || '';
+}
+
+function hasValidPaymentNotifySecret(req) {
+  const expected = String(process.env.PAYMENT_NOTIFY_SECRET || '');
+  const received = String(getHeader(req, 'x-eclado-payment-secret') || '');
+  if (!expected || !received) return false;
+
+  const expectedBuffer = Buffer.from(expected, 'utf8');
+  const receivedBuffer = Buffer.from(received, 'utf8');
+  return expectedBuffer.length === receivedBuffer.length
+    && crypto.timingSafeEqual(expectedBuffer, receivedBuffer);
+}
+
 async function supabaseRequest(path, options = {}) {
   const supabaseUrl = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
@@ -393,6 +413,10 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  if (!hasValidPaymentNotifySecret(req)) {
+    return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  }
+
   const payload = { ...pickQuery(req.query), ...pickPayload(req.body) };
   let orderId = '';
 
@@ -500,4 +524,5 @@ module.exports.__test = {
   amountsMatch,
   getOrderId,
   getPayToken,
+  hasValidPaymentNotifySecret,
 };

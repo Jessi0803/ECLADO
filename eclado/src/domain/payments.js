@@ -1,5 +1,5 @@
 export const SINOPAC_PAYMENT_API = 'https://pay.ecladotaiwan.com';
-export const SINOPAC_NOTIFY_API = 'https://www.ecladotaiwan.com/api/sinopac/notify';
+export const SINOPAC_NOTIFY_API = 'https://ecladotaiwan.com/api/sinopac/notify';
 export const PAYMENT_REQUEST_TIMEOUT_MS = 15000;
 
 export const PAYMENT_METHODS = {

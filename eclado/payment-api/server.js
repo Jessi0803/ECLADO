@@ -18,6 +18,7 @@ function must(value, name) {
 
 function validateRequiredRuntimeEnv() {
   must(process.env.ORDER_CLEANUP_KEY, 'ORDER_CLEANUP_KEY');
+  must(process.env.PAYMENT_NOTIFY_SECRET, 'PAYMENT_NOTIFY_SECRET');
 }
 
 function hasValidCleanupKey(suppliedKey) {
@@ -341,18 +342,30 @@ function formatSinopacDeadline(value) {
 
 // 訂單在 Vultr 標記已付款後，轉發給 Vercel 端發送 LINE／Email 付款完成通知。
 // 只帶 OrderNo + Status，不帶 PayToken，Vercel 端不會再去打豐收款 API（正式環境免白名單）。
-const NOTIFY_FORWARD_URL = process.env.PAYMENT_NOTIFY_FORWARD_URL || 'https://www.ecladotaiwan.com/api/sinopac/notify';
+const NOTIFY_FORWARD_URL = process.env.PAYMENT_NOTIFY_FORWARD_URL || 'https://ecladotaiwan.com/api/sinopac/notify';
 
 async function forwardPaidNotification(orderNo) {
-  if (!orderNo || !NOTIFY_FORWARD_URL) return;
+  if (!orderNo || !NOTIFY_FORWARD_URL) return { sent: false, reason: 'notification target unavailable' };
   try {
-    await fetch(NOTIFY_FORWARD_URL, {
+    const secret = must(process.env.PAYMENT_NOTIFY_SECRET, 'PAYMENT_NOTIFY_SECRET');
+    const response = await fetch(NOTIFY_FORWARD_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-ECLADO-Payment-Secret': secret,
+      },
       body: JSON.stringify({ OrderNo: String(orderNo), Status: 'S' }),
     });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Vercel notify HTTP ${response.status}${text ? ` ${text}` : ''}`);
+    }
+
+    return { sent: true };
   } catch (error) {
     console.error('[notify forward] failed', error.message);
+    return { sent: false, reason: error.message };
   }
 }
 
@@ -678,4 +691,5 @@ module.exports = {
   formatSinopacDeadline,
   buildQueryBody,
   buildPaymentResultUrl,
+  forwardPaidNotification,
 };
