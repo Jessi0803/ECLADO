@@ -69,6 +69,7 @@ async function supabaseRequest(path, options = {}) {
     apikey: serviceKey,
     Authorization: `Bearer ${serviceKey}`,
     'Content-Type': 'application/json',
+    'X-ECLADO-Audit-Source': 'remind-unpaid-orders',
     ...(fetchOptions.headers || {}),
   };
 

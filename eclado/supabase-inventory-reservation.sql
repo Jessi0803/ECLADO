@@ -1,5 +1,5 @@
 -- ECLADO inventory reservation
--- Run once in Supabase SQL Editor after supabase-products.sql.
+-- Run once in Supabase SQL Editor after supabase-full-setup.sql.
 --
 -- Behavior:
 -- - Orders become inventory-active when status changes to paid/preparing/shipped/delivered.

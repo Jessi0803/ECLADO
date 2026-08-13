@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   PRODUCTS,
   applyVariantToProduct,
@@ -17,9 +17,10 @@ import {
 } from '../services/realtime.js';
 
 export default function useProducts(user, setCart, authReady = true) {
-  const [products, setProducts] = useState(() => (
-    PRODUCTS.map(product => ({ ...product, stock: null }))
-  ));
+  const [products, setProducts] = useState([]);
+  const [status, setStatus] = useState('loading');
+  const [errorText, setErrorText] = useState('');
+  const hasLoadedProducts = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -36,12 +37,20 @@ export default function useProducts(user, setCart, authReady = true) {
       if (!alive) return;
       if (error) {
         console.error('[ECLADO] 無法載入 products：', error.message, error);
-        setProducts(PRODUCTS.map(product => ({ ...product, stock: null })));
+        if (!hasLoadedProducts.current) {
+          setProducts([]);
+          setStatus('error');
+          setErrorText('商品資料暫時無法載入，請稍後重新整理。');
+        }
         return;
       }
       if (variantError) {
         console.error('[ECLADO] 無法載入 product_variants：', variantError.message || variantError);
-        setProducts([]);
+        if (!hasLoadedProducts.current) {
+          setProducts([]);
+          setStatus('error');
+          setErrorText('商品規格暫時無法載入，請稍後重新整理。');
+        }
         return;
       }
       const variantMap = groupProductVariants(variantRows);
@@ -53,7 +62,10 @@ export default function useProducts(user, setCart, authReady = true) {
       }
       const imageMap = imageError ? null : groupProductImages(imageRows);
       const loadedProducts = mergeProductsWithStock(PRODUCTS, data || [], variantMap, imageMap);
+      hasLoadedProducts.current = true;
       setProducts(loadedProducts);
+      setStatus('ready');
+      setErrorText('');
       if (!authReady) return;
       setCart(previous => previous.map(item => {
         const product = loadedProducts.find(current => (
@@ -91,5 +103,5 @@ export default function useProducts(user, setCart, authReady = true) {
     };
   }, [authReady, user?.role, setCart]);
 
-  return products;
+  return { products, status, errorText };
 }

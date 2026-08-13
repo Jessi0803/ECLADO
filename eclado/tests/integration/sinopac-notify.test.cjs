@@ -76,6 +76,7 @@ test('Sinopac notify marks order paid and sends LINE payment notice', async () =
 
     if (String(url) === `${SUPABASE_URL}/rest/v1/orders?id=eq.ORDER-PAID-001`) {
       assert.equal(options.method, 'PATCH');
+      assert.equal(options.headers['X-ECLADO-Audit-Source'], 'sinopac-notify');
       assert.equal(options.headers.Prefer, 'return=representation');
       assert.deepEqual(JSON.parse(options.body), { status: 'paid' });
       return jsonResponse(200, [{

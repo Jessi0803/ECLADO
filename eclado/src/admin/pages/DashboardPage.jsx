@@ -1,28 +1,33 @@
 import React from 'react';
 import { Badge } from '../components/StatusIndicators.jsx';
 import { MiniBarChart, StatCard } from '../components/DashboardWidgets.jsx';
-import { MONTHLY_REVENUE } from '../data/mockData.js';
+import { buildMonthlyRevenue, revenueGrowth } from '../domain/analytics.js';
 
-export default function Dashboard({ orders, products, members, applications = [], onGoToPendingMembers }) {
-  const thisMonth = MONTHLY_REVENUE[MONTHLY_REVENUE.length - 1];
-  const lastMonth = MONTHLY_REVENUE[MONTHLY_REVENUE.length - 2];
-  const growth = (((thisMonth.revenue - lastMonth.revenue) / lastMonth.revenue) * 100).toFixed(1);
+export default function Dashboard({ orders, products, members, applications = [], adminEmail, onGoToPendingMembers }) {
+  const today = new Date();
+  const monthlyRevenue = buildMonthlyRevenue(orders, today);
+  const thisMonth = monthlyRevenue[monthlyRevenue.length - 1];
+  const lastMonth = monthlyRevenue[monthlyRevenue.length - 2];
+  const growth = revenueGrowth(thisMonth.revenue, lastMonth.revenue);
+  const growthLabel = growth == null
+    ? '上月無營業額，暫不計成長率'
+    : `較上月 ${growth > 0 ? '+' : ''}${growth.toFixed(1)}%`;
   const lowStock = products.filter(p => p.stock <= p.minStock);
-  const pendingOrders = orders.filter(o => ['awaiting_confirm', 'paid', 'preparing'].includes(o.status));
   const paidOrders = orders.filter(o => o.status === 'paid');
-  const applicationCount = applications.length;
   const pendingApplications = applications.filter(a => a.status === 'pending');
+  const adminName = adminEmail ? adminEmail.split('@')[0] : '管理員';
+  const todayLabel = new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' }).format(today);
 
   return (
     <div>
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400, color: 'var(--dark)', marginBottom: 4 }}>儀表板</h1>
-        <p style={{ fontSize: 13, color: 'var(--mid)' }}>2026年5月1日 — 歡迎回來，Yoyo</p>
+        <p style={{ fontSize: 13, color: 'var(--mid)' }}>{todayLabel} — 歡迎回來，{adminName}</p>
       </div>
 
       {/* Stats grid */}
       <div className="stat-grid-4" style={{ marginBottom: 32 }}>
-        <StatCard label="本月營業額" value={`NT$ ${thisMonth.revenue.toLocaleString()}`} sub={`較上月 ${growth > 0 ? '+' : ''}${growth}%`} accent="var(--dark)" icon="◐" />
+        <StatCard label="本月營業額" value={`NT$ ${thisMonth.revenue.toLocaleString()}`} sub={growthLabel} accent="var(--dark)" icon="◐" />
         <StatCard label="已付款訂單" value={paidOrders.length} sub={paidOrders.length > 0 ? '可安排後續出貨' : '目前無已付款訂單'} accent={paidOrders.length > 0 ? 'var(--blue)' : 'var(--green)'} icon="◫" />
         <StatCard label="待審核申請" value={pendingApplications.length} sub={pendingApplications.length > 0 ? '點擊前往會員管理審核' : '目前無待審核'} accent={pendingApplications.length > 0 ? 'var(--gold)' : 'var(--green)'} icon="◉" onClick={pendingApplications.length > 0 ? onGoToPendingMembers : undefined} />
         <StatCard label="庫存警示" value={lowStock.length} sub="件商品庫存不足" accent={lowStock.length > 0 ? 'var(--red)' : 'var(--green)'} icon="◉" />
@@ -47,7 +52,7 @@ export default function Dashboard({ orders, products, members, applications = []
               </div>
             </div>
           </div>
-          <MiniBarChart data={MONTHLY_REVENUE} color="var(--dark)" height={120} />
+          <MiniBarChart data={monthlyRevenue} color="var(--dark)" height={120} />
         </div>
 
         {/* Low stock alert */}

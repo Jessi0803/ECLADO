@@ -43,7 +43,16 @@ function isProductInCategory(product, category) {
   return false;
 }
 
-export default function ShopPage({ user, cart, setCart, onSelectProduct, promotions = [], products = PRODUCTS }) {
+export default function ShopPage({
+  user,
+  cart,
+  setCart,
+  onSelectProduct,
+  promotions = [],
+  products = PRODUCTS,
+  productsStatus = 'ready',
+  productsError = '',
+}) {
   const [activeCategory, setActiveCategory] = useState(categoryFromLocation);
   const categories = PRODUCT_NAV_LINKS;
   const isMobile = useIsMobile();
@@ -128,10 +137,22 @@ export default function ShopPage({ user, cart, setCart, onSelectProduct, promoti
       </div>
       <div style={{ maxWidth:1280, margin:'0 auto', padding: isMobile ? '40px 20px' : '60px 32px' }}>
         {false && null /* pro banner moved to header */}
-        <div className="g4lg">
-          {filtered.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => onSelectProduct(p)} promotions={promotions} />)}
-        </div>
-        {filtered.length === 0 && <div style={{ textAlign:'center', padding:'80px 0', color:'var(--dark)', fontSize:14 }}>此分類目前無商品</div>}
+        {productsStatus === 'loading' && (
+          <div role="status" style={{ textAlign:'center', padding:'80px 0', color:'var(--dark)', fontSize:14 }}>商品載入中…</div>
+        )}
+        {productsStatus === 'error' && (
+          <div role="alert" style={{ textAlign:'center', padding:'80px 0', color:'var(--dark)', fontSize:14 }}>
+            {productsError || '商品資料暫時無法載入，請稍後重新整理。'}
+          </div>
+        )}
+        {productsStatus === 'ready' && (
+          <>
+            <div className="g4lg">
+              {filtered.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => onSelectProduct(p)} promotions={promotions} />)}
+            </div>
+            {filtered.length === 0 && <div style={{ textAlign:'center', padding:'80px 0', color:'var(--dark)', fontSize:14 }}>此分類目前無商品</div>}
+          </>
+        )}
       </div>
     </div>
   );

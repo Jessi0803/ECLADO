@@ -89,6 +89,24 @@ test('後台登入權限：管理員 session 可進入儀表板', async ({ page 
   await page.goto('/admin');
   await expect(page.getByRole('heading', { name: '儀表板' })).toBeVisible();
   await expect(page.getByText('baby90522@gmail.com')).toBeVisible();
+  await expect(page.getByText('E2E-ORDER-001')).toBeVisible();
+  await expect(page.getByText('ECL-20260504-0044')).toHaveCount(0);
+});
+
+test('後台資料為空時維持空狀態，不顯示本機示範商品、會員或訂單', async ({ page }) => {
+  await mockAdminApis(page, {
+    products: [],
+    orders: [],
+    profiles: [],
+    applications: [],
+  });
+
+  await page.goto('/admin');
+  await expect(page.getByRole('heading', { name: '儀表板' })).toBeVisible();
+  await expect(page.getByText('NT$ 0').first()).toBeVisible();
+  await expect(page.getByText('ECL-20260504-0044')).toHaveCount(0);
+  await expect(page.getByText('深層清潔泡沫洗面乳')).toHaveCount(0);
+  await expect(page.getByText('林小美')).toHaveCount(0);
 });
 
 test('後台權限以資料庫 allow-list 為準，不再只相信管理員 Email', async ({ page }) => {
@@ -855,12 +873,15 @@ test('會員管理可刪除會員並同步資料庫', async ({ page }) => {
   await expect(page.getByRole('cell', { name: '測試會員' })).toHaveCount(0);
 });
 
-test('營業分析與 AI 補貨頁面可使用，AI 回應由本地 stub 提供', async ({ page }) => {
+test('營業分析與 AI 補貨只使用真實訂單統計，不套用預設銷量', async ({ page }) => {
   await page.addInitScript(() => {
     (window as any).claude = {
-      complete: async () => JSON.stringify([
-        { name: '胜肽修護精華液', qty: 8, urgency: '緊急', reason: '庫存偏低，建議先補貨。' },
-      ]),
+      complete: async (prompt: string) => {
+        (window as any).__lastClaudePrompt = prompt;
+        return JSON.stringify([
+          { name: 'NK細胞活化安瓶', qty: 8, urgency: '緊急', reason: '依實際銷量與庫存評估。' },
+        ]);
+      },
     };
   });
   await mockAdminApis(page);
@@ -869,11 +890,88 @@ test('營業分析與 AI 補貨頁面可使用，AI 回應由本地 stub 提供'
   await openAdminSection(page, /營業分析/);
   await expect(page.getByRole('heading', { name: '營業分析' })).toBeVisible();
   await expect(page.getByText('月營業額趨勢')).toBeVisible();
+  await expect(page.getByText('NT$ 6,600').first()).toBeVisible();
 
   await openAdminSection(page, /AI 補貨建議/);
   await expect(page.getByRole('heading', { name: 'AI 補貨建議' })).toBeVisible();
+  await expect(page.getByTestId('ai-product-2')).toContainText('0.0');
+  await expect(page.getByTestId('ai-product-2')).toContainText('近六個月尚無銷售紀錄');
+  await expect(page.getByTestId('ai-product-7')).toContainText('0.2');
   await page.getByRole('button', { name: /開始 AI 分析/ }).first().click();
   await expect(page.getByText('AI 分析結果')).toBeVisible();
-  await page.getByText('胜肽修護精華液').last().click();
-  await expect(page.getByText('庫存偏低，建議先補貨。')).toBeVisible();
+  const prompt = await page.evaluate(() => (window as any).__lastClaudePrompt || '');
+  expect(prompt).toContain('胜肽修護精華液（30ml）：庫存 2 件，近6月平均銷量 0.0 件/月，趨勢尚無銷售紀錄');
+  expect(prompt).toContain('NK細胞活化安瓶（3.5ml×10）：庫存 0 件，近6月平均銷量 0.2 件/月');
+});
+
+test('操作紀錄可依資料類型篩選並查看不可竄改的前後差異', async ({ page }) => {
+  await mockAdminApis(page, {
+    auditLogs: [
+      {
+        id: 3,
+        created_at: '2026-08-13T09:00:00.000Z',
+        actor_user_id: null,
+        actor_email: null,
+        actor_role: 'service_role',
+        actor_type: 'api',
+        action: 'orders.payment_paid',
+        entity_type: 'orders',
+        entity_id: 'E2E-ORDER-002',
+        before_data: { id: 'E2E-ORDER-002', status: 'awaiting_confirm' },
+        after_data: { id: 'E2E-ORDER-002', status: 'paid' },
+        metadata: { source: 'sinopac-notify' },
+        request_id: '33333333-3333-4333-8333-333333333333',
+      },
+      {
+        id: 2,
+        created_at: '2026-08-13T08:30:00.000Z',
+        actor_user_id: 'admin-user-1',
+        actor_email: 'baby90522@gmail.com',
+        actor_role: 'admin',
+        actor_type: 'admin',
+        action: 'orders.UPDATE',
+        entity_type: 'orders',
+        entity_id: 'E2E-ORDER-001',
+        before_data: { id: 'E2E-ORDER-001', status: 'awaiting_confirm' },
+        after_data: { id: 'E2E-ORDER-001', status: 'paid' },
+        metadata: { source: 'database_trigger' },
+        request_id: '11111111-1111-4111-8111-111111111111',
+      },
+      {
+        id: 1,
+        created_at: '2026-08-13T08:00:00.000Z',
+        actor_user_id: 'admin-user-1',
+        actor_email: 'baby90522@gmail.com',
+        actor_role: 'admin',
+        actor_type: 'admin',
+        action: 'products.UPDATE',
+        entity_type: 'products',
+        entity_id: '2',
+        before_data: { id: 2, name_zh: '舊名稱' },
+        after_data: { id: 2, name_zh: '胜肽修護精華液' },
+        metadata: { source: 'database_trigger' },
+        request_id: '22222222-2222-4222-8222-222222222222',
+      },
+    ],
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /操作紀錄/);
+  await expect(page.getByRole('heading', { name: '操作紀錄' })).toBeVisible();
+  await expect(page.getByText('付款完成')).toBeVisible();
+  await expect(page.getByRole('cell', { name: /付款 API/ })).toBeVisible();
+  await expect(page.getByText('訂單修改')).toBeVisible();
+  await expect(page.getByText('商品修改')).toBeVisible();
+
+  await page.getByLabel('資料類型').selectOption('orders');
+  await expect(page.getByText('付款完成')).toBeVisible();
+  await expect(page.getByText('訂單修改')).toBeVisible();
+  await expect(page.getByText('商品修改')).toHaveCount(0);
+
+  await page.getByText('訂單修改').click();
+  const drawer = page.getByRole('dialog', { name: '操作紀錄詳情' });
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByText('awaiting_confirm')).toBeVisible();
+  await expect(drawer.getByText('paid')).toBeVisible();
+  await expect(drawer.getByText('11111111-1111-4111-8111-111111111111')).toBeVisible();
 });

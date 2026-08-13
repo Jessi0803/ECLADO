@@ -1,5 +1,5 @@
 -- ECLADO authoritative pricing — phases 1, 2B and 2C
--- Run in Supabase SQL Editor after supabase-full-setup.sql and supabase-products.sql.
+-- Run in Supabase SQL Editor after supabase-full-setup.sql.
 --
 -- The browser may preview prices, but this RPC is the authority for:
 -- - member role

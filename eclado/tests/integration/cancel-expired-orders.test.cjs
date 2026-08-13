@@ -52,6 +52,7 @@ test('cancel expired orders - cancels awaiting_confirm and unpaid orders past pa
     }
 
     if (options.method === 'PATCH') {
+      assert.equal(options.headers['X-ECLADO-Audit-Source'], 'cancel-expired-orders');
       assert.match(String(url), /id=in\.\(OLD-001,OLD-002\)/);
       assert.match(String(url), /status=in\.\(awaiting_confirm,unpaid\)/);
       assert.match(String(url), /payment_due_at=lte\.2026-05-21T12%3A00%3A00\.000Z/);

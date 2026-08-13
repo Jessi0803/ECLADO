@@ -20,6 +20,7 @@ export function normalizeOrder(row) {
     total: row.total,
     status: row.status,
     date: row.date,
+    createdAt: row.created_at || null,
     address: row.address,
     phone: row.phone,
     email: row.email,

@@ -156,6 +156,7 @@ test('buildAuthoritativeCreateBody: 忽略呼叫端 amount，使用資料庫訂�
     assert.match(String(url), /rpc\/claim_order_payment$/);
     assert.equal(options.headers.apikey, process.env.SUPABASE_SERVICE_ROLE_KEY);
     assert.equal(options.headers.Authorization, `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`);
+    assert.equal(options.headers['X-ECLADO-Audit-Source'], 'payment-api');
     assert.deepEqual(JSON.parse(options.body), {
       p_order_id: 'ECL-AUTH-001',
       p_payment_token: 'payment-token-test',

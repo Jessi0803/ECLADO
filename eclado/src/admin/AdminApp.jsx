@@ -5,19 +5,19 @@ import { normalizeMember, normalizeOrder, normalizeProduct } from './domain/mapp
 import Sidebar from './components/Sidebar.jsx';
 import AIReorder from './pages/AIReorderPage.jsx';
 import Analytics from './pages/AnalyticsPage.jsx';
+import AuditLogsPage from './pages/AuditLogsPage.jsx';
 import Catalog from './pages/CatalogPage.jsx';
 import Dashboard from './pages/DashboardPage.jsx';
 import Members from './pages/MembersPage.jsx';
 import Orders from './pages/OrdersPage.jsx';
 import Promotions from './pages/PromotionsPage.jsx';
-import { INIT_MEMBERS, INIT_ORDERS, INIT_PRODUCTS } from './data/mockData.js';
 
 export default function AdminApp({ adminEmail, onSignOut }) {
   const [page, setPage] = useState('dashboard');
   const [membersDefaultFilter, setMembersDefaultFilter] = useState('all');
-  const [products, setProducts] = useState(INIT_PRODUCTS);
-  const [members, setMembers] = useState(INIT_MEMBERS);
-  const [orders, setOrders] = useState(INIT_ORDERS);
+  const [products, setProducts] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [applications, setApplications] = useState([]);
   const [applicationsLoading, setApplicationsLoading] = useState(true);
   const [applicationsError, setApplicationsError] = useState('');
@@ -59,12 +59,9 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       if (profilesRes.error) throw profilesRes.error;
 
       const realOrders = (ordersRes.data || []).map(normalizeOrder);
-      const ids = new Set(realOrders.map(o => o.id));
-      const mockExtras = INIT_ORDERS.filter(o => !ids.has(o.id));
-      const allOrders = [...realOrders, ...mockExtras];
-      setOrders(allOrders);
+      setOrders(realOrders);
 
-      const realMembers = (profilesRes.data || []).map(p => normalizeMember(p, allOrders));
+      const realMembers = (profilesRes.data || []).map(p => normalizeMember(p, realOrders));
       const apps = applicationsRes.error ? [] : (applicationsRes.data || []);
 
       // 沒對到 profile 的 pending 申請（user_id null 或 user_id 對不到任何 profile）
@@ -84,7 +81,7 @@ export default function AdminApp({ adminEmail, onSignOut }) {
           total: 0,
         }));
       const allMembers = [...realMembers, ...orphanMembers];
-      setMembers(allMembers.length > 0 ? allMembers : INIT_MEMBERS);
+      setMembers(allMembers);
 
       if (!productsRes.error) {
         const variantsByProduct = (variantsRes.error ? [] : (variantsRes.data || [])).reduce((map, variant) => {
@@ -108,7 +105,8 @@ export default function AdminApp({ adminEmail, onSignOut }) {
         )));
       }
       if (productsRes.error) {
-        setLoadError('商品庫存尚未連接 Supabase products 表，請先執行 supabase-products.sql；目前顯示本機示範庫存。');
+        setProducts([]);
+        setLoadError('無法載入商品庫存：' + (productsRes.error.message || '請確認 Supabase products 資料表與權限設定'));
       } else if (variantsRes.error) {
         console.error('product variants fetch failed', variantsRes.error);
         setLoadError('無法載入商品規格：' + (variantsRes.error.message || '請確認已執行規格資料表 migration'));
@@ -129,7 +127,11 @@ export default function AdminApp({ adminEmail, onSignOut }) {
 
     } catch (err) {
       console.error('fetch failed', err);
-      setLoadError('無法連接 Supabase（' + (err.message || '') + '），目前顯示本機示範資料。');
+      setOrders([]);
+      setMembers([]);
+      setProducts([]);
+      setApplications([]);
+      setLoadError('無法連接 Supabase（' + (err.message || '') + '），請確認連線後重新整理。');
       setApplicationsError('無法載入專業申請資料');
     } finally {
       setApplicationsLoading(false);
@@ -362,8 +364,9 @@ export default function AdminApp({ adminEmail, onSignOut }) {
   function renderPage() {
     const activeProducts = products.filter(product => product.active !== false);
     switch (page) {
-      case 'dashboard': return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} />;
+      case 'dashboard': return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} />;
       case 'orders': return <Orders orders={orders} setOrders={setOrdersWithSync} persistOrderPatch={persistOrderPatch} />;
+      case 'audit': return <AuditLogsPage />;
       case 'catalog': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} />;
       // 舊路徑相容，避免有人記住 /admin#products 之類的
       case 'products':
@@ -371,9 +374,9 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       case 'promotions': return <Promotions products={activeProducts} />;
       case 'members': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onDeleteMember={deleteMemberWithSync} defaultFilter={membersDefaultFilter} />;
       case 'applications': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onDeleteMember={deleteMemberWithSync} defaultFilter="app_pending" />;
-      case 'analytics': return <Analytics />;
-      case 'ai': return <AIReorder products={activeProducts} />;
-      default: return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} />;
+      case 'analytics': return <Analytics orders={orders} />;
+      case 'ai': return <AIReorder products={activeProducts} orders={orders} />;
+      default: return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} />;
     }
   }
 

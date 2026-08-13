@@ -41,10 +41,15 @@ function profile(role: string, email = 'member@example.com') {
 
 async function openCart(page: import('@playwright/test').Page) {
   await page.locator('nav').getByRole('button', { name: /^購物車/ }).click();
+  const drawer = page.getByRole('dialog', { name: '購物車' });
+  await expect(drawer).toBeVisible();
+  return drawer;
 }
 
 async function proceedToCheckout(page: import('@playwright/test').Page) {
-  await page.getByRole('button', { name: /前往結帳/ }).click();
+  const drawer = page.getByRole('dialog', { name: '購物車' });
+  const scope = await drawer.isVisible().catch(() => false) ? drawer : page;
+  await scope.getByRole('button', { name: /前往結帳/ }).click();
   const guestCheckout = page.getByRole('button', { name: /訪客結帳/ });
   if (await guestCheckout.isVisible({ timeout: 1000 }).catch(() => false)) {
     await guestCheckout.click();
@@ -80,6 +85,31 @@ test('主要路徑可開啟且不白屏', async ({ page }) => {
     await expect(body).toBeVisible();
     await expect(body).not.toBeEmpty();
   }
+});
+
+test('商品 API 尚未完成時不顯示內建 fallback 商品', async ({ page }) => {
+  await mockEcladoApis(page, {
+    productResponseDelayMs: 900,
+    products: [{
+      id: 101,
+      name: 'Published Product',
+      name_zh: '資料庫上架商品',
+      category: '其他',
+      size: '30ml',
+      stock: 5,
+      price: 1000,
+      pro_price: 800,
+      is_pro_only: false,
+      active: true,
+    }],
+    promotions: [],
+  });
+
+  await page.goto('/shop');
+  await expect(page.getByRole('status').filter({ hasText: '商品載入中…' })).toBeVisible();
+  await expect(page.getByText('深層清潔泡沫洗面乳')).toHaveCount(0);
+  await expect(page.getByText('金流測試商品')).toHaveCount(0);
+  await expect(page.getByText('資料庫上架商品 · 30ml')).toBeVisible();
 });
 
 test('聯絡我們與隱私權由前台 SPA 路由呈現', async ({ page }) => {
@@ -375,20 +405,20 @@ test('專業會員購物車即時提示最低訂購與免運門檻', async ({ pa
   await page.goto('/shop');
   await page.getByText('胜肽修護精華液').first().click();
   await page.getByRole('button', { name: /加入購物車/ }).click();
-  await openCart(page);
+  const cartDrawer = await openCart(page);
 
-  await expect(page.getByRole('status')).toHaveText('尚差 NT$2,020 可達最低訂購門檻。');
-  await expect(page.getByRole('button', { name: '前往結帳' })).toBeDisabled();
+  await expect(cartDrawer.getByRole('status')).toHaveText('尚差 NT$2,020 可達最低訂購門檻。');
+  await expect(cartDrawer.getByRole('button', { name: '前往結帳' })).toBeDisabled();
 
-  const increaseQuantity = page.getByRole('button', { name: '+' });
+  const increaseQuantity = cartDrawer.getByRole('button', { name: '+' });
   await increaseQuantity.click();
-  await expect(page.getByRole('status')).toHaveText('已符合下單資格，再消費 NT$4,040 即享免運。');
+  await expect(cartDrawer.getByRole('status')).toHaveText('已符合下單資格，再消費 NT$4,040 即享免運。');
 
   await increaseQuantity.click();
   await increaseQuantity.click();
-  await expect(page.getByRole('status')).toHaveText('✓ 已享免運優惠。');
-  await expect(page.getByText('免運', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: '前往結帳' })).toBeEnabled();
+  await expect(cartDrawer.getByRole('status')).toHaveText('✓ 已享免運優惠。');
+  await expect(cartDrawer.getByText('免運', { exact: true })).toBeVisible();
+  await expect(cartDrawer.getByRole('button', { name: '前往結帳' })).toBeEnabled();
 });
 
 test('DB 的 is_pro_only=true 會讓原本公開商品變院線限定', async ({ page }) => {
@@ -494,10 +524,10 @@ test('商品多容量規格可切換價格並分開加入購物車', async ({ pa
   await expect(page.getByText('Peptide Repair Serum · 60ml')).toBeVisible();
   await expect(page.getByText('NT$ 6,880').first()).toBeVisible();
   await page.getByRole('button', { name: /加入購物車/ }).click();
-  await openCart(page);
-  await expect(page.getByText('胜肽修護精華液')).toBeVisible();
-  await expect(page.getByText('60ml')).toBeVisible();
-  await expect(page.getByText('NT$ 6,880').first()).toBeVisible();
+  const cartDrawer = await openCart(page);
+  await expect(cartDrawer.getByText('胜肽修護精華液', { exact: false })).toBeVisible();
+  await expect(cartDrawer.getByText('60ml', { exact: false })).toBeVisible();
+  await expect(cartDrawer.getByText('NT$ 6,880').first()).toBeVisible();
 });
 
 test('DB 新增的商品會顯示在商城', async ({ page }) => {
@@ -553,13 +583,13 @@ test('購物車中的商品收到下架更新後會被移除', async ({ page }) 
   await page.goto('/shop');
   await page.getByText('胜肽修護精華液').first().click();
   await page.getByRole('button', { name: /加入購物車/ }).click();
-  await openCart(page);
-  await expect(page.getByText('胜肽修護精華液')).toBeVisible();
+  const cartDrawer = await openCart(page);
+  await expect(cartDrawer.getByText('胜肽修護精華液', { exact: false })).toBeVisible();
 
   products = products.map(product => product.id === 2 ? { ...product, active: false } : product);
   await triggerProductsRealtime(page);
 
-  await expect(page.getByText('購物車是空的')).toBeVisible();
+  await expect(cartDrawer.getByText('購物車是空的')).toBeVisible();
 });
 
 test('購物車中的商品價格變更後會以最新價格重算', async ({ page }) => {
@@ -654,9 +684,9 @@ test('活動折扣可先減金額再打折', async ({ page }) => {
   await expect(page.getByText('NT$ 3,104')).toBeVisible();
   await page.getByRole('button', { name: /加入購物車/ }).click();
 
-  await openCart(page);
-  await expect(page.getByText('先減再折測試活動')).toBeVisible();
-  await expect(page.getByText('NT$ 3,224')).toBeVisible();
+  const cartDrawer = await openCart(page);
+  await expect(cartDrawer.getByText('先減再折測試活動')).toBeVisible();
+  await expect(cartDrawer.getByText('NT$ 3,224')).toBeVisible();
 });
 
 test('active=false 的停用活動不會顯示或套用折扣', async ({ page }) => {
@@ -756,8 +786,8 @@ test('庫存為 0 顯示預購，且一般商品仍可加入購物車下單', as
   await page.getByText('胜肽修護精華液').first().click();
   await expect(page.getByText(/預購商品/).first()).toBeVisible();
   await page.getByRole('button', { name: /加入購物車/ }).click();
-  await openCart(page);
-  await expect(page.getByText('胜肽修護精華液')).toBeVisible();
+  const cartDrawer = await openCart(page);
+  await expect(cartDrawer.getByText('胜肽修護精華液', { exact: false })).toBeVisible();
 });
 
 test('購物車重新整理後仍保留，且 localStorage 不保存價格資料', async ({ page }) => {
@@ -808,11 +838,11 @@ test('數字型規格 ID 經 localStorage 還原後仍保留商品與正確價�
   ))).toBe('202');
 
   await page.reload();
-  await openCart(page);
-  await expect(page.getByText('胜肽修護精華液')).toBeVisible();
-  await expect(page.getByText('胜肽修護精華液 · 60ml')).toBeVisible();
-  await expect(page.getByText('NT$ 6,880').first()).toBeVisible();
-  await expect(page.getByText('NT$ 非數值')).toHaveCount(0);
+  const cartDrawer = await openCart(page);
+  await expect(cartDrawer.getByText('胜肽修護精華液', { exact: false })).toBeVisible();
+  await expect(cartDrawer.getByText('胜肽修護精華液 · 60ml')).toBeVisible();
+  await expect(cartDrawer.getByText('NT$ 6,880').first()).toBeVisible();
+  await expect(cartDrawer.getByText('NT$ 非數值')).toHaveCount(0);
 });
 
 test('結帳建立付款單但不寫入真實訂單或真金流', async ({ page }) => {

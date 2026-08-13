@@ -14,12 +14,12 @@ export function StatCard({ label, value, sub, accent, icon, onClick }) {
 }
 
 export function MiniBarChart({ data, color = 'var(--dark)', height = 80 }) {
-  const max = Math.max(...data.map(item => item.revenue));
+  const max = Math.max(0, ...data.map(item => item.revenue));
   return (
     <div style={{ display:'flex', alignItems:'flex-end', gap:6, height }}>
       {data.map((item, index) => (
         <div key={index} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-          <div style={{ width:'100%', background:index === data.length - 1 ? color : color + '40', borderRadius:2, height:Math.max(4, (item.revenue / max) * (height - 20)), transition:'height 0.5s ease' }} />
+          <div style={{ width:'100%', background:index === data.length - 1 ? color : color + '40', borderRadius:2, height:max > 0 ? Math.max(4, (item.revenue / max) * (height - 20)) : 4, transition:'height 0.5s ease' }} />
           <span style={{ fontSize:9, color:'var(--mid)', letterSpacing:'0.04em' }}>{item.month}</span>
         </div>
       ))}

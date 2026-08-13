@@ -237,7 +237,7 @@ function buildQueryBody(input) {
   return body;
 }
 
-async function updateSupabaseOrder(orderNo, patch) {
+async function updateSupabaseOrder(orderNo, patch, auditSource = 'payment-api') {
   if (!supabaseUrl || !supabaseServiceKey) {
     throw new Error('Missing env: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
   }
@@ -247,6 +247,7 @@ async function updateSupabaseOrder(orderNo, patch) {
       apikey: supabaseServiceKey,
       Authorization: `Bearer ${supabaseServiceKey}`,
       'Content-Type': 'application/json',
+      'X-ECLADO-Audit-Source': auditSource,
       Prefer: 'return=representation',
     },
     body: JSON.stringify(patch),
@@ -272,6 +273,7 @@ async function callSupabaseRpc(name, body) {
       apikey: supabaseServiceKey,
       Authorization: `Bearer ${supabaseServiceKey}`,
       'Content-Type': 'application/json',
+      'X-ECLADO-Audit-Source': 'payment-api',
     },
     body: JSON.stringify(body),
   });
@@ -385,6 +387,7 @@ async function expireOverdueOrders() {
     headers: {
       apikey: supabaseServiceKey,
       Authorization: `Bearer ${supabaseServiceKey}`,
+      'X-ECLADO-Audit-Source': 'vultr-expire-overdue',
     },
   });
   const listText = await listResponse.text();
@@ -409,6 +412,7 @@ async function expireOverdueOrders() {
       apikey: supabaseServiceKey,
       Authorization: `Bearer ${supabaseServiceKey}`,
       'Content-Type': 'application/json',
+      'X-ECLADO-Audit-Source': 'vultr-expire-overdue',
       Prefer: 'return=representation',
     },
     body: JSON.stringify({ status: 'cancelled' }),
@@ -530,7 +534,7 @@ async function redirectPaymentReturn(req, res) {
         // 再由 Vultr 補寫一次作為保險（Vercel 失敗時仍會標記）。
         await forwardPaidNotification(resolvedOrderNo);
         try {
-          await updateSupabaseOrder(resolvedOrderNo, { status: 'paid' });
+          await updateSupabaseOrder(resolvedOrderNo, { status: 'paid' }, 'payment-return');
         } catch (e) {
           console.error('[return] supabase fallback failed', e.message);
         }
@@ -647,7 +651,7 @@ app.post('/api/sinopac/notify', async (req, res) => {
     }
 
     try {
-      await updateSupabaseOrder(orderNo, { status: nextStatus });
+      await updateSupabaseOrder(orderNo, { status: nextStatus }, 'sinopac-webhook');
     } catch (e) {
       console.error('[sinopac notify] supabase write failed', e.message);
     }

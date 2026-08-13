@@ -41,7 +41,13 @@ async function requireAdmin(req, supabaseUrl, anonKey) {
     if (allowed !== true) {
       return { ok: false, status: 403, error: 'Forbidden' };
     }
-    return { ok: true };
+    const user = await readSupabaseJson(`${supabaseUrl}/auth/v1/user`, {
+      headers: jsonHeaders({
+        apikey: anonKey,
+        Authorization: authorization,
+      }),
+    });
+    return { ok: true, user };
   } catch (error) {
     return { ok: false, status: 401, error: error.message || 'Unauthorized' };
   }
@@ -82,11 +88,41 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    const profiles = await serviceRequest(
+      supabaseUrl,
+      serviceKey,
+      `/rest/v1/profiles?id=eq.${encodeURIComponent(memberId)}&select=id,name,role`,
+    );
+    const beforeData = Array.isArray(profiles) ? (profiles[0] || { id: memberId }) : { id: memberId };
+
     await serviceRequest(supabaseUrl, serviceKey, `/auth/v1/admin/users/${encodeURIComponent(memberId)}`, {
       method: 'DELETE',
     });
 
-    return res.status(200).json({ ok: true, memberId });
+    let auditLogged = true;
+    try {
+      await serviceRequest(supabaseUrl, serviceKey, '/rest/v1/audit_logs', {
+        method: 'POST',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({
+          actor_user_id: admin.user?.id || null,
+          actor_email: admin.user?.email || null,
+          actor_role: 'admin',
+          actor_type: 'admin',
+          action: 'profiles.delete',
+          entity_type: 'profiles',
+          entity_id: memberId,
+          before_data: beforeData,
+          after_data: null,
+          metadata: { source: 'admin-delete-member-api' },
+        }),
+      });
+    } catch (auditError) {
+      auditLogged = false;
+      console.error('[admin-delete-member:audit]', auditError);
+    }
+
+    return res.status(200).json({ ok: true, memberId, auditLogged });
   } catch (error) {
     console.error('[admin-delete-member]', error);
     return res.status(500).json({ ok: false, error: error.message || String(error) });

@@ -79,7 +79,11 @@ export default function App() {
   } = useAuth(setPageState);
   const [cart, setCart] = useState(loadStoredCart);
   const [cartOpen, setCartOpen] = useState(false);
-  const products = useProducts(user, setCart, authReady);
+  const {
+    products,
+    status: productsStatus,
+    errorText: productsError,
+  } = useProducts(user, setCart, authReady);
   const { promotions, status: promoFetchStatus, errorText: promoFetchError } = usePromotions();
   const salesStats = useSalesStats();
   const cartCount = cart.reduce((sum,i) => sum+i.qty, 0);
@@ -149,8 +153,8 @@ export default function App() {
   function renderPage() {
     switch (page) {
       case 'home':     return <HomePage setPage={setPage} onSelectProduct={product => openProduct(product, 'home')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
-      case 'shop':     return <ShopPage onSelectProduct={product => openProduct(product, 'shop')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
-      case 'product':  return <ProductPage productSlug={productSlugFromPath(window.location.pathname)} products={products} user={user} setCart={setCart} promotions={promotions} onBack={closeProduct} onShop={() => setPage('shop')} />;
+      case 'shop':     return <ShopPage onSelectProduct={product => openProduct(product, 'shop')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} productsStatus={productsStatus} productsError={productsError} salesStats={salesStats} />;
+      case 'product':  return <ProductPage productSlug={productSlugFromPath(window.location.pathname)} products={products} productsStatus={productsStatus} productsError={productsError} user={user} setCart={setCart} promotions={promotions} onBack={closeProduct} onShop={() => setPage('shop')} />;
       case 'cart':     return <CartPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
       case 'checkout': return <CheckoutPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
       case 'login':    return <LoginPage setPage={setPage} />;
@@ -183,7 +187,7 @@ export default function App() {
       {showPromoBar && (
         <PromoDiagnosticBar status={promoFetchStatus} errorText={promoFetchError} />
       )}
-      {showProBanner && !authPage && (
+      {showProBanner && !authPage && !cartOpen && (
         <div style={{ position:'fixed', bottom:24, left:'50%', transform:'translateX(-50%)', zIndex:200, background:'var(--black)', color:'var(--white)', padding:'16px 20px', display:'flex', alignItems:'center', gap:16, boxShadow:'0 4px 24px rgba(0,0,0,0.25)', maxWidth:'calc(100vw - 32px)', width:440 }}>
           <div style={{ flex:1 }}>
             <div style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--gold)', textTransform:'uppercase', marginBottom:4 }}>美容師專業會員</div>

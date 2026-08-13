@@ -88,6 +88,7 @@ test('remind unpaid orders - sends LINE first and marks reminded', async () => {
     }
 
     if (String(url).includes('/rest/v1/orders?id=eq.REMIND-LINE-001') && options.method === 'PATCH') {
+      assert.equal(options.headers['X-ECLADO-Audit-Source'], 'remind-unpaid-orders');
       assert.match(String(url), /payment_reminded_at=is\.null/);
       assert.ok(JSON.parse(options.body).payment_reminded_at);
       return jsonResponse(200, []);

@@ -279,11 +279,6 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       <div style={{ maxWidth:960, margin:'0 auto', padding: isMobile ? '40px 20px' : '60px 40px' }}>
         <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 28 : 36, fontWeight:300, marginBottom:36 }}>結帳</h1>
         <CheckoutSteps steps={STEPS} currentStep={step} />
-        {promotions.length > 0 && (
-          <div style={{ background:'#fffbf0', border:'1px solid #e8d9b0', padding:'12px 14px', marginBottom:20, fontSize:12, color:'#5a4a1e', lineHeight:1.7 }}>
-            結帳成交價與活動折扣會由後端依會員資格及活動期間重新計算；若有多個活動符合，系統會自動套用折抵最多的一個。
-          </div>
-        )}
 
         <form onSubmit={handleNext}>
           <div className="gcheckout">

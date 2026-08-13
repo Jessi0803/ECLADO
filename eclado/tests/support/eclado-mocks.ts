@@ -184,6 +184,7 @@ export type MockEcladoApiOptions = {
   linePushError?: string;
   paymentError?: string;
   paymentResponseDelayMs?: number;
+  productResponseDelayMs?: number;
   authoritativePriceDelta?: number;
   authUser?: MockAuthUser | null;
   signInUser?: MockAuthUser;
@@ -196,6 +197,7 @@ export type MockEcladoApiOptions = {
   orders?: Record<string, unknown>[];
   profiles?: Record<string, unknown>[];
   applications?: Record<string, unknown>[];
+  auditLogs?: Record<string, unknown>[];
 };
 
 export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions = {}) {
@@ -212,6 +214,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   const orders = options.orders || [];
   const profiles = [...(options.profiles || [])];
   const applications = options.applications || [];
+  const auditLogs = options.auditLogs || [];
   const authUser = options.authUser;
 
   if (authUser) {
@@ -275,6 +278,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   await page.route('**/rest/v1/products**', async route => {
     const method = route.request().method();
     if (method === 'GET') {
+      if (options.productResponseDelayMs) {
+        await new Promise(resolve => setTimeout(resolve, options.productResponseDelayMs));
+      }
       const url = route.request().url();
       const rows = filterRows(products(), url);
       if (queryValue(url, 'order') === 'id.desc' && queryValue(url, 'limit') === '1') {
@@ -519,6 +525,11 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       options.onProfileUpdate?.(body, route.request().url());
       return json(route, [body]);
     }
+    return json(route, []);
+  });
+
+  await page.route('**/rest/v1/audit_logs**', async route => {
+    if (route.request().method() === 'GET') return json(route, filterRows(auditLogs, route.request().url()));
     return json(route, []);
   });
 

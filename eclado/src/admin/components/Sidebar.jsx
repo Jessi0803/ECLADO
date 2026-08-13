@@ -6,6 +6,7 @@ const MENU_GROUPS = [
     items: [
       { id: 'dashboard', icon: 'dashboard', label: '儀表板' },
       { id: 'orders', icon: 'orders', label: '訂單管理' },
+      { id: 'audit', icon: 'audit', label: '操作紀錄' },
     ],
   },
   {
@@ -43,6 +44,8 @@ function SidebarIcon({ name }) {
       return <svg {...common}><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>;
     case 'orders':
       return <svg {...common}><path d="M7 4h10a2 2 0 012 2v15H5V6a2 2 0 012-2z" /><path d="M9 3h6v3H9zM8 11h8M8 15h8" /></svg>;
+    case 'audit':
+      return <svg {...common}><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" /><path d="M9 2h6v4H9z" /></svg>;
     case 'catalog':
       return <svg {...common}><path d="M4 7l8-4 8 4-8 4-8-4zM4 7v10l8 4 8-4V7M12 11v10" /></svg>;
     case 'promotions':
