@@ -92,20 +92,20 @@ export default function ShopPage({ user, cart, setCart, onSelectProduct, promoti
       )}
       {/* 頂部 header */}
       <div style={{ position:'relative', height: isMobile ? 180 : 240, overflow:'hidden' }}>
-        <img src="https://images.unsplash.com/photo-1631730359585-38a4935cbec4?w=1600&q=80&fit=crop" alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 60%' }} />
-        <div style={{ position:'absolute', inset:0, background:'rgba(12,12,10,0.58)' }} />
+        <img src={isMobile ? '/assets/images/shop-hero-cleansing.png' : '/assets/images/shop-hero-cleansing-wide.png'} alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition: isMobile ? '70% 55%' : 'center center' }} />
+        <div style={{ position:'absolute', inset:0, background:'linear-gradient(90deg, rgba(12,12,10,0.86) 0%, rgba(12,12,10,0.66) 45%, rgba(12,12,10,0.30) 100%)' }} />
         <div style={{ position:'relative', height:'100%', maxWidth:1280, margin:'0 auto', padding: isMobile ? '0 24px' : '0 32px', display:'flex', alignItems:'flex-end', justifyContent:'space-between', flexWrap:'wrap', gap:12, paddingBottom: isMobile ? 28 : 36 }}>
           <div>
             <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
               <div style={{ width:28, height:1, background:'var(--gold)' }} />
               <p style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase', margin:0 }}>Shop</p>
             </div>
-            <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 28 : 42, fontWeight:300, color:'var(--white)', lineHeight:1.1, margin:0 }}>全部商品</h1>
+            <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 28 : 42, fontWeight:500, color:'var(--white)', lineHeight:1.1, margin:0 }}>全部商品</h1>
           </div>
           {isProfessionalMember(user) && (
             <div style={{ display:'flex', alignItems:'center', gap:8, paddingBottom:4 }}>
               <span style={{ fontSize:10, background:'var(--gold)', color:'var(--black)', padding:'3px 8px', letterSpacing:'0.12em', fontWeight:600 }}>{getMemberTier(user).badge}</span>
-              <span style={{ fontSize:12, color:'rgba(255,255,255,0.6)', letterSpacing:'0.04em' }}>{getMemberTier(user).priceLabel}已啟用</span>
+              <span style={{ fontSize:12, color:'var(--dark)', letterSpacing:'0.04em' }}>{getMemberTier(user).priceLabel}已啟用</span>
             </div>
           )}
         </div>

@@ -78,6 +78,7 @@ export default function App() {
     user,
   } = useAuth(setPageState);
   const [cart, setCart] = useState(loadStoredCart);
+  const [cartOpen, setCartOpen] = useState(false);
   const products = useProducts(user, setCart, authReady);
   const { promotions, status: promoFetchStatus, errorText: promoFetchError } = usePromotions();
   const salesStats = useSalesStats();
@@ -86,6 +87,22 @@ export default function App() {
   useEffect(() => {
     saveStoredCart(cart);
   }, [cart]);
+
+  useEffect(() => {
+    if (!cartOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const closeOnEscape = event => { if (event.key === 'Escape') setCartOpen(false); };
+    if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [cartOpen]);
 
   useEffect(() => {
     function syncCartAcrossTabs(event) {
@@ -162,7 +179,7 @@ export default function App() {
 
   return (
     <>
-      {!authPage && <Nav setPage={setPage} cartCount={cartCount} user={user} setUser={handleSignOut} page={page} />}
+      {!authPage && <Nav setPage={setPage} onOpenCart={() => setCartOpen(true)} cartCount={cartCount} user={user} setUser={handleSignOut} page={page} />}
       {showPromoBar && (
         <PromoDiagnosticBar status={promoFetchStatus} errorText={promoFetchError} />
       )}
@@ -177,6 +194,22 @@ export default function App() {
         </div>
       )}
       {renderPage()}
+      {cartOpen && !authPage && page !== 'cart' && (
+        <>
+          <button type="button" className="cart-drawer-backdrop" aria-label="關閉購物車" onClick={() => setCartOpen(false)} />
+          <aside className="cart-drawer" role="dialog" aria-modal="true" aria-label="購物車">
+            <CartPage
+              cart={cart}
+              setCart={setCart}
+              setPage={nextPage => { setCartOpen(false); setPage(nextPage); }}
+              user={user}
+              promotions={promotions}
+              drawer
+              onClose={() => setCartOpen(false)}
+            />
+          </aside>
+        </>
+      )}
     </>
   );
 }

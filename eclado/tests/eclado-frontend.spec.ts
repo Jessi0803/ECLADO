@@ -627,14 +627,15 @@ test('現貨、預購、活動折扣與購物車操作', async ({ page }) => {
   await page.getByRole('button', { name: /加入購物車/ }).click();
 
   await openCart(page);
-  await expect(page.getByText('E2E 測試活動')).toBeVisible();
-  await expect(page.getByText('NT$ 3,702')).toBeVisible();
+  const cartDrawer = page.getByRole('dialog', { name: '購物車' });
+  await expect(cartDrawer.getByText('E2E 測試活動')).toBeVisible();
+  await expect(cartDrawer.getByText('NT$ 3,702')).toBeVisible();
 
-  await page.getByRole('button', { name: '+' }).first().click();
-  await expect(page.getByText('NT$ 7,284')).toBeVisible();
+  await cartDrawer.getByRole('button', { name: '+' }).first().click();
+  await expect(cartDrawer.getByText('NT$ 7,284')).toBeVisible();
 
-  await page.getByRole('button', { name: /移除/ }).click();
-  await expect(page.getByText('購物車是空的')).toBeVisible();
+  await cartDrawer.getByRole('button', { name: /移除/ }).click();
+  await expect(cartDrawer.getByText('購物車是空的')).toBeVisible();
 });
 
 test('活動折扣可先減金額再打折', async ({ page }) => {
@@ -783,8 +784,9 @@ test('購物車重新整理後仍保留，且 localStorage 不保存價格資料
   });
   await page.reload();
   await openCart(page);
-  await expect(page.getByText('胜肽修護精華液')).toBeVisible();
-  await expect(page.getByText('NT$ 3,980').first()).toBeVisible();
+  const cartDrawer = page.getByRole('dialog', { name: '購物車' });
+  await expect(cartDrawer.getByText('胜肽修護精華液', { exact: false })).toBeVisible();
+  await expect(cartDrawer.getByText('NT$ 3,980').first()).toBeVisible();
 });
 
 test('數字型規格 ID 經 localStorage 還原後仍保留商品與正確價格', async ({ page }) => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import CheckoutChoiceModal from '../components/cart/CheckoutChoiceModal.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
 import { CHECKOUT_LOGIN_REDIRECT_KEY } from '../app/authSession.js';
@@ -15,9 +15,19 @@ import { getProfessionalOrderProgress } from '../domain/memberShopping.js';
 import { calculateShipping } from '../domain/shipping.js';
 
 // ─── CART PAGE ────────────────────────────────────────────────────────────────
-export default function CartPage({ cart, setCart, setPage, user, promotions = [] }) {
+export default function CartPage({ cart, setCart, setPage, user, promotions = [], drawer = false, onClose }) {
   const isMobile = useIsMobile();
   const [showCheckoutChoice, setShowCheckoutChoice] = useState(false);
+  const [itemsScrolling, setItemsScrolling] = useState(false);
+  const scrollStopTimer = useRef(null);
+
+  useEffect(() => () => clearTimeout(scrollStopTimer.current), []);
+
+  function handleItemsScroll() {
+    setItemsScrolling(true);
+    clearTimeout(scrollStopTimer.current);
+    scrollStopTimer.current = setTimeout(() => setItemsScrolling(false), 700);
+  }
   const isRestoringCart = cart.some(item => (
     !item?.nameZh || !Number.isFinite(Number(item?.price))
   ));
@@ -47,11 +57,12 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
   const grandTotal = finalSubtotal + shipping;
 
   return (
-    <div style={{ paddingTop:68, minHeight:'80vh' }}>
-      <div style={{ maxWidth:900, margin:'0 auto', padding: isMobile ? '40px 20px' : '60px 32px' }}>
-        <div style={{ display:'flex', alignItems:'baseline', gap:14, marginBottom:40 }}>
+    <div className={drawer ? 'cart-drawer-page' : ''} style={{ paddingTop: drawer ? 0 : 68, minHeight: drawer ? '100%' : '80vh' }}>
+      <div className={drawer ? 'cart-drawer-inner' : ''} style={{ maxWidth: drawer ? 'none' : 900, margin:'0 auto', padding: drawer ? (isMobile ? '0 18px' : '0 26px') : (isMobile ? '40px 20px' : '60px 32px') }}>
+        <div style={{ position:'relative', display:'flex', alignItems:'baseline', gap:14, minHeight: drawer ? 76 : undefined, paddingTop: drawer ? 20 : 0, marginBottom: drawer ? 18 : 40 }}>
           <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 30 : 40, fontWeight:300 }}>購物車</h1>
           <span style={{ fontSize:14, color:'var(--dark)' }}>{cart.length} 件商品</span>
+          {drawer && <button type="button" onClick={onClose} aria-label="關閉購物車" style={{ position:'absolute', top:16, right: isMobile ? 0 : -13, width:36, height:36, border:'1px solid var(--light)', background:'none', color:'var(--dark)', fontSize:24, lineHeight:1, cursor:'pointer' }}>×</button>}
         </div>
 
         {cart.length > 0 && promotions.some(isPromotionLive) && discount === 0 && (
@@ -70,8 +81,8 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
             <button onClick={() => setPage('shop')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 36px', fontSize:12, letterSpacing:'0.15em', cursor:'pointer', fontFamily:'var(--font-body)' }}>繼續購物</button>
           </div>
         ) : (
-          <div className="gcart">
-            <div>
+          <div className={drawer ? 'cart-drawer-content' : 'gcart'}>
+            <div className={drawer ? `cart-drawer-items${itemsScrolling ? ' is-scrolling' : ''}` : ''} onScroll={drawer ? handleItemsScroll : undefined}>
               {cart.map(item => {
                 const fulfillment = getFulfillmentInfo(item);
                 return (
@@ -95,7 +106,7 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
                 );
               })}
             </div>
-            <div style={{ background:'var(--off-white)', padding:'28px', height:'fit-content' }}>
+            <div className={drawer ? 'cart-drawer-summary' : ''} style={{ background:'var(--off-white)', padding: drawer ? '18px 22px' : '28px', height:'fit-content', marginTop: drawer ? 0 : 0 }}>
               <h3 style={{ fontFamily:'var(--font-display)', fontSize:18, fontWeight:400, marginBottom:20 }}>訂單摘要</h3>
               {professionalProgress && (
                 <div

@@ -97,7 +97,13 @@ export default function HomePage({ setPage, onSelectProduct, user, cart, setCart
         {/* Layout 3: split */}
         {HERO_SLIDES[slide].layout === 'split' && (
           <>
-            <div style={{ position:'absolute', inset:0, background:'linear-gradient(to left, rgba(14,14,12,0.1) 40%, rgba(14,14,12,0.92) 70%)' }} />
+            <div style={{
+              position:'absolute',
+              inset:0,
+              background: isMobile
+                ? 'linear-gradient(to right, rgba(14,14,12,0.88) 45%, rgba(14,14,12,0.15))'
+                : 'linear-gradient(to left, rgba(14,14,12,0.88) 45%, rgba(14,14,12,0.15))',
+            }} />
             <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', justifyContent:'center', alignItems: isMobile ? 'flex-start' : 'flex-end', padding:heroPad, opacity: animating?0:1, transition:'opacity 0.45s' }}>
               <div style={{ maxWidth:520, textAlign: isMobile ? 'left' : 'right' }}>
                 <div style={{ display:'flex', alignItems:'center', justifyContent: isMobile ? 'flex-start' : 'flex-end', gap:12, marginBottom:16 }}>
@@ -237,7 +243,7 @@ export default function HomePage({ setPage, onSelectProduct, user, cart, setCart
                   Zhao Cheng International Trading Co., Ltd.<br />
                   統一編號：60490580<br />
                   桃園市中壢區石頭里中正路82號10樓<br />
-                  © 2026 ECLADO. All rights reserved.
+                  Copyright © 2026 ECLADO. All rights reserved.
                 </p>
               )}
             </div>
@@ -274,7 +280,7 @@ export default function HomePage({ setPage, onSelectProduct, user, cart, setCart
                 Zhao Cheng International Trading Co., Ltd.<br />
                 統一編號：60490580<br />
                 桃園市中壢區石頭里中正路82號10樓<br />
-                © 2026 ECLADO. All rights reserved.
+                Copyright © 2026 ECLADO. All rights reserved.
               </p>
             </div>
           )}
