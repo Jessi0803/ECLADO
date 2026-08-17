@@ -26,6 +26,7 @@ test('order email sends order placed notice through Resend', async () => {
     assert.match(body.text, /訂單編號：ORDER-PLACED-001/);
     assert.match(body.text, /訂單金額：NT\$ 3,702/);
     assert.match(body.text, /訪客查詢碼：ABCDE-12345/);
+    assert.match(body.text, /查看訂單、付款及物流狀態/);
     assert.match(body.text, /https:\/\/ecladotaiwan\.com\/order-lookup\?lookup=ABCDE-12345/);
     return jsonResponse(200, { id: 'email_placed_001' });
   };

@@ -28,6 +28,12 @@ export default function AccountPage({ user, setPage, onSignOut }) {
   const [openingPaymentOrder, setOpeningPaymentOrder] = useState('');
   const [paymentErrors, setPaymentErrors] = useState({});
 
+  useEffect(() => {
+    // SPA navigation keeps the previous page's scroll position. A long order
+    // history would otherwise make Account open halfway down the page.
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, []);
+
   function paymentDeadlineFromIso(value) {
     const date = new Date(value || '');
     if (Number.isNaN(date.getTime())) return null;

@@ -260,11 +260,7 @@ export default function Orders({ orders, setOrders, persistOrderPatch }) {
               }}>
                 {label}
                 {val === 'awaiting_confirm' && awaitingCount > 0 && (
-                  <span style={{
-                    background: 'var(--red)', color: '#fff', fontSize: 10, fontWeight: 600,
-                    minWidth: 18, height: 18, borderRadius: 9, padding: '0 6px',
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-                  }}>{awaitingCount}</span>
+                  <span className="admin-filter-count-badge">{awaitingCount}</span>
                 )}
                 {val === 'unpaid' && unpaidCount > 0 && (
                   <span style={{

@@ -251,13 +251,19 @@ export default function HomePage({ setPage, onSelectProduct, user, cart, setCart
               {[
                 { title:'產品系列', links:NAV_LINKS },
                 { title:'服務', links:['關於我們','美容師專區','常見問題'] },
-                { title:'購物說明', links:['訂單查詢','配送說明','退換貨政策','隱私政策'] },
+                { title:'購物說明', links:['訪客訂單查詢','配送說明','退換貨政策','隱私政策'] },
               ].map(col => (
                 <div key={col.title}>
                   <div style={{ fontSize: isMobile ? 10 : 11, letterSpacing:'0.18em', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom: isMobile ? 10 : 16 }}>{col.title}</div>
                   <div style={{ display:'flex', flexDirection:'column', gap: isMobile ? 8 : 10 }}>
                     {col.links.map(link => {
-                      const href = link === '隱私政策' ? '/privacy' : link === '退換貨政策' ? '/info' : '#';
+                      const href = link === '訪客訂單查詢'
+                        ? '/order-lookup'
+                        : link === '隱私政策'
+                          ? '/privacy'
+                          : link === '退換貨政策'
+                            ? '/info'
+                            : '#';
                       return <a key={link} href={href} style={{ fontSize: isMobile ? 12 : 13, color:'rgba(255,255,255,0.4)', textDecoration:'none', letterSpacing:'0.04em', transition:'color 0.2s', cursor:'pointer' }}
                         onMouseEnter={e=>e.target.style.color='var(--white)'}
                         onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.4)'}

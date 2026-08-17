@@ -418,6 +418,7 @@ test('訪客以短查詢碼與手機取得付款資訊，且回應不洩漏個�
         id: 'ECL-GUEST-001', user_id: null, member: '訪客', email: 'guest@example.com',
         phone: '0912-345-678', public_lookup_code: 'ABCDE-12345', status: 'unpaid',
         total: 4100, subtotal: 3980, discount: 0, items: [], payment_due_at: '2099-01-01T00:00:00.000Z',
+        created_at: '2026-08-17T01:00:00.000Z', tracking: null, shipping_carrier: null, shipped_at: null,
       }]), { status: 200 });
     }
     if (String(url).includes('/rest/v1/order_payment_instructions?')) {
@@ -439,7 +440,75 @@ test('訪客以短查詢碼與手機取得付款資訊，且回應不洩漏個�
     assert.equal(body.order.email, undefined);
     assert.equal(body.order.phone, undefined);
     assert.equal(body.order.address, undefined);
+    assert.equal(body.order.created_at, '2026-08-17T01:00:00.000Z');
     assert.equal(server.verifyGuestAccessToken(body.guestAccessToken, 'ECL-GUEST-001'), true);
+  } finally {
+    global.fetch = originalFetch;
+    await new Promise(resolve => listener.close(resolve));
+  }
+});
+
+test('訪客短效憑證可更新已出貨訂單，且已付款後不回傳付款入口', async () => {
+  const originalFetch = global.fetch;
+  const { listener, baseUrl } = await listenForTest();
+  global.fetch = async url => {
+    if (String(url).includes('/rest/v1/orders?')) {
+      assert.equal(new URL(String(url)).searchParams.get('id'), 'eq.ECL-GUEST-SHIPPED-001');
+      return new Response(JSON.stringify([{
+        id: 'ECL-GUEST-SHIPPED-001', user_id: null, status: 'shipped',
+        total: 4100, subtotal: 3980, discount: 0, items: [{ name: '測試商品', qty: 1 }],
+        payment_due_at: '2026-08-19T00:00:00.000Z', created_at: '2026-08-17T01:00:00.000Z',
+        tracking: 'SF1234567890', shipping_carrier: 'sf_express', shipped_at: '2026-08-18T03:00:00.000Z',
+      }]), { status: 200 });
+    }
+    if (String(url).includes('/rest/v1/order_payment_instructions?')) {
+      return new Response(JSON.stringify([{
+        order_id: 'ECL-GUEST-SHIPPED-001', payment_method: 'atm',
+        provider_transaction_no: 'PRIVATE-TSNO', atm_bank_code: '807', atm_account: '8079988776655443',
+        payment_url: 'https://private-pay.example.test', payment_due_at: '2026-08-19T00:00:00.000Z',
+      }]), { status: 200 });
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+  try {
+    const token = server.createGuestAccessToken('ECL-GUEST-SHIPPED-001');
+    const response = await originalFetch(`${baseUrl}/api/orders/guest-details`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderNo: 'ECL-GUEST-SHIPPED-001', guestAccessToken: token }),
+    });
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.order.status, 'shipped');
+    assert.equal(body.order.tracking, 'SF1234567890');
+    assert.equal(body.order.shipping_carrier, 'sf_express');
+    assert.equal(body.paymentState, 'paid');
+    assert.equal(body.instruction.payment_method, 'atm');
+    assert.equal(body.instruction.atm_account, undefined);
+    assert.equal(body.instruction.payment_url, undefined);
+    assert.equal(body.instruction.provider_transaction_no, undefined);
+  } finally {
+    global.fetch = originalFetch;
+    await new Promise(resolve => listener.close(resolve));
+  }
+});
+
+test('訪客訂單更新端點拒絕過期或錯誤憑證', async () => {
+  const originalFetch = global.fetch;
+  const { listener, baseUrl } = await listenForTest();
+  let dataRead = false;
+  global.fetch = async () => {
+    dataRead = true;
+    throw new Error('should not fetch data');
+  };
+  try {
+    const response = await originalFetch(`${baseUrl}/api/orders/guest-details`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderNo: 'ECL-GUEST-001', guestAccessToken: 'invalid-token' }),
+    });
+    const body = await response.json();
+    assert.equal(response.status, 401);
+    assert.match(body.error, /授權已過期/);
+    assert.equal(dataRead, false);
   } finally {
     global.fetch = originalFetch;
     await new Promise(resolve => listener.close(resolve));

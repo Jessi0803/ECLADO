@@ -110,6 +110,23 @@ test('主要路徑可開啟且不白屏', async ({ page }) => {
   }
 });
 
+test('首頁頁尾訪客訂單查詢可進入查詢頁並返回首頁', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: '訪客訂單查詢' }).click();
+  await expect(page).toHaveURL(/\/order-lookup$/);
+  await expect(page.getByRole('heading', { name: '訪客訂單查詢' })).toBeVisible();
+  await page.getByRole('button', { name: '返回' }).click();
+  await expect(page).toHaveURL(/\/$/);
+});
+
+test('從登入頁進入訪客訂單查詢時返回登入頁', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByRole('button', { name: '訪客訂單查詢' }).click();
+  await expect(page).toHaveURL(/\/order-lookup$/);
+  await page.getByRole('button', { name: '返回' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+});
+
 test('商品 API 尚未完成時不顯示內建 fallback 商品', async ({ page }) => {
   await mockEcladoApis(page, {
     productResponseDelayMs: 900,
@@ -918,6 +935,25 @@ test('結帳建立付款單但不寫入真實訂單或真金流', async ({ page 
   await expect(page.getByText('請於期限前完成轉帳，逾期後訂單將自動取消。')).toBeVisible();
 });
 
+test('付款單訂單明細優先顯示 product_images 的 Storage 首圖', async ({ page }) => {
+  const storagePath = 'products/product-2/storage-primary.webp';
+  await mockEcladoApis(page, {
+    products: mockProducts.map(product => Number(product.id) === 2
+      ? { ...product, image_url: 'https://legacy.example.com/product-2.jpg' }
+      : product),
+    productImages: [{
+      id: 'product-2-primary', product_id: 2, storage_path: storagePath,
+      is_primary: true, sort_order: 0, active: true,
+    }],
+  });
+
+  await createCheckoutPayment(page, /虛擬帳號匯款/);
+
+  const orderImage = page.getByRole('img', { name: '胜肽修護精華液' });
+  await expect(orderImage).toHaveAttribute('src', new RegExp(`/storage/v1/object/public/product-images/${storagePath}$`));
+  await expect(orderImage).not.toHaveAttribute('src', 'https://legacy.example.com/product-2.jpg');
+});
+
 for (const scenario of [
   { name: 'ATM', method: /虛擬帳號匯款/, restoredAction: '8071234567890123' },
   { name: '信用卡', method: /信用卡/, restoredAction: '前往付款頁' },
@@ -1065,7 +1101,7 @@ test('訪客付款單顯示短查詢碼與訂單成立信寄送結果', async ({
   expect(saved.orderEmailSent).toBe(true);
 });
 
-test('訪客可用短查詢碼與結帳手機找回原付款單', async ({ page }) => {
+test('訪客可用短查詢碼與結帳手機查看訂單，並在待付款時返回付款單', async ({ page }) => {
   const lookupRequests: Array<{ lookupCode: string; phone: string }> = [];
   await mockEcladoApis(page, {
     paymentQueryStatus: 'pending',
@@ -1081,7 +1117,19 @@ test('訪客可用短查詢碼與結帳手機找回原付款單', async ({ page 
   await page.goto('/order-lookup?lookup=ABCDE-12345');
   await expect(page.getByLabel('訪客查詢碼')).toHaveValue('ABCDE-12345');
   await page.getByLabel('結帳手機號碼').fill('0912-345-678');
-  await page.getByRole('button', { name: '查看訂單與付款資訊' }).click();
+  await page.getByRole('button', { name: '查看訂單' }).click();
+  await expect(page).toHaveURL(/\/order-lookup/);
+  await expect(page.getByRole('heading', { name: '訪客訂單明細' })).toBeVisible();
+  await expect(page.getByText('ECL-GUEST-LOOKUP-001')).toBeVisible();
+  await expect(page.getByText('胜肽修護精華液')).toBeVisible();
+  await expect(page.getByText('尚未付款')).toBeVisible();
+  await expect(page.getByText('目前尚未建立物流資料。')).toBeVisible();
+  const guestSession = await page.evaluate(() => JSON.parse(sessionStorage.getItem('eclado_guest_order_session') || 'null'));
+  expect(guestSession.orderNo).toBe('ECL-GUEST-LOOKUP-001');
+  expect(guestSession.guestAccessToken).toBe('guest-access-token-e2e');
+  expect(JSON.stringify(guestSession)).not.toContain('0912345678');
+
+  await page.getByRole('button', { name: '查看付款資訊／繼續付款' }).click();
   await expect(page).toHaveURL(/\/checkout$/);
   await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
   await expect(page.getByText('8071122334455667')).toBeVisible();
@@ -1090,6 +1138,79 @@ test('訪客可用短查詢碼與結帳手機找回原付款單', async ({ page 
   expect(saved.accessType).toBe('guest');
   expect(saved.guestAccessToken).toBe('guest-access-token-e2e');
   expect(JSON.stringify(saved)).not.toContain('0912345678');
+});
+
+test('訪客訂單查詢在重新整理後以短效憑證恢復，不需再次輸入手機', async ({ page }) => {
+  const detailsRequests: Array<{ orderNo: string; guestAccessToken: string }> = [];
+  await mockEcladoApis(page, {
+    onGuestDetailsRequest: request => detailsRequests.push(request),
+    orders: [{
+      id: 'ECL-GUEST-RESTORE-001', user_id: null, member: '訪客買家', phone: '0912345678',
+      public_lookup_code: 'ABCDE-12345', status: 'preparing', payment_method: 'card',
+      subtotal: 3980, discount: 0, shipping: 0, total: 3980,
+      items: [{ id: 2, product_id: 2, name: '胜肽修護精華液', qty: 1, price: 3980 }],
+      created_at: '2026-08-17T01:00:00.000Z',
+    }],
+  });
+  await page.goto('/order-lookup');
+  await page.getByLabel('訪客查詢碼').fill('ABCDE-12345');
+  await page.getByLabel('結帳手機號碼').fill('0912345678');
+  await page.getByRole('button', { name: '查看訂單' }).click();
+  await expect(page.getByText('備貨中')).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByRole('heading', { name: '訪客訂單明細' })).toBeVisible();
+  await expect(page.getByText('備貨中')).toBeVisible();
+  await expect(page.getByText('訂單正在備貨，出貨後將於此顯示托運單號。')).toBeVisible();
+  expect(detailsRequests).toContainEqual({
+    orderNo: 'ECL-GUEST-RESTORE-001',
+    guestAccessToken: 'guest-access-token-e2e',
+  });
+  const guestSession = await page.evaluate(() => JSON.parse(sessionStorage.getItem('eclado_guest_order_session') || 'null'));
+  expect(JSON.stringify(guestSession)).not.toContain('0912345678');
+});
+
+test('訪客可查看已出貨訂單與順豐托運資訊，已付款後不顯示付款入口', async ({ page }) => {
+  await mockEcladoApis(page, {
+    orders: [{
+      id: 'ECL-GUEST-SHIPPED-001', user_id: null, member: '訪客買家', phone: '0912345678',
+      public_lookup_code: 'ABCDE-12345', status: 'shipped', payment_method: 'card',
+      subtotal: 3980, discount: 0, shipping: 120, total: 4100,
+      items: [{ id: 2, product_id: 2, name: '胜肽修護精華液', qty: 1, price: 3980 }],
+      tracking: 'SF1234567890', shipping_carrier: 'sf-express', shipped_at: '2026-08-17T03:00:00.000Z',
+    }],
+  });
+  await page.goto('/order-lookup');
+  await page.getByLabel('訪客查詢碼').fill('ABCDE-12345');
+  await page.getByLabel('結帳手機號碼').fill('0912345678');
+  await page.getByRole('button', { name: '查看訂單' }).click();
+
+  await expect(page.getByText('已出貨')).toBeVisible();
+  await expect(page.getByText('已付款')).toBeVisible();
+  await expect(page.getByText('托運單號：SF1234567890')).toBeVisible();
+  await expect(page.getByRole('link', { name: '前往順豐查件' })).toHaveAttribute('href', /sf-express/);
+  await expect(page.getByRole('button', { name: '查看付款資訊／繼續付款' })).toHaveCount(0);
+});
+
+test('訪客逾期或已取消訂單不可重新付款或建立第二張付款單', async ({ page }) => {
+  await mockEcladoApis(page, {
+    paymentQueryStatus: 'cancelled',
+    orders: [{
+      id: 'ECL-GUEST-CANCELLED-001', user_id: null, member: '訪客買家', phone: '0912345678',
+      public_lookup_code: 'ABCDE-12345', status: 'cancelled', payment_method: 'atm',
+      subtotal: 3980, discount: 0, shipping: 120, total: 4100,
+      items: [{ id: 2, product_id: 2, name: '胜肽修護精華液', qty: 1, price: 3980 }],
+      payment_due_at: '2020-01-01T00:00:00.000Z',
+    }],
+  });
+  await page.goto('/order-lookup');
+  await page.getByLabel('訪客查詢碼').fill('ABCDE-12345');
+  await page.getByLabel('結帳手機號碼').fill('0912345678');
+  await page.getByRole('button', { name: '查看訂單' }).click();
+
+  await expect(page.locator('span').filter({ hasText: /^已取消$/ })).toBeVisible();
+  await expect(page.getByText('付款期限已過，無法重新付款或建立第二張付款單。')).toBeVisible();
+  await expect(page.getByRole('button', { name: '查看付款資訊／繼續付款' })).toHaveCount(0);
 });
 
 test('信用卡、Apple Pay、Google Pay 會送出對應金流 payType', async ({ page }) => {
@@ -1131,6 +1252,10 @@ test('信用卡、Apple Pay、Google Pay 會送出對應金流 payType', async (
     expect(paymentRequests.at(-1)?.backendUrl).toContain(`orderNo=${encodeURIComponent(String(orderInserts.at(-1)?.id))}`);
     expect(paymentRequests.at(-1)?.amount).toBe(orderInserts.at(-1)?.total);
     expect(orderInserts.at(-1)?.status).toBe('unpaid');
+    await page.evaluate(() => {
+      sessionStorage.removeItem('eclado_pending_payment');
+      localStorage.removeItem('eclado_cart_v1');
+    });
   }
 });
 
@@ -1307,6 +1432,33 @@ test('會員專區顯示自己的訂單與托運單號', async ({ page }) => {
     'href',
     'https://htm.sf-express.com/tw/tc/',
   );
+});
+
+test('從首頁捲動位置進入長訂單會員專區時回到頁首', async ({ page }) => {
+  const orders = Array.from({ length: 24 }, (_, index) => ({
+    id: `ACCOUNT-SCROLL-${String(index + 1).padStart(2, '0')}`,
+    user_id: TEST_USER_ID,
+    member: 'E2E 會員',
+    items: [{ name: '胜肽修護精華液', qty: 1, price: 3980 }],
+    total: 3980,
+    status: 'paid',
+    created_at: `2026-08-${String((index % 16) + 1).padStart(2, '0')}T00:00:00.000Z`,
+  }));
+  await mockEcladoApis(page, {
+    authUser: authUser('member@example.com'),
+    profiles: [profile('consumer')],
+    orders,
+  });
+
+  await page.goto('/');
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await page.locator('nav').getByRole('button', { name: '會員專區' }).click();
+
+  await expect(page).toHaveURL(/\/account$/);
+  await expect(page.getByRole('heading', { name: '會員專區' })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(page.getByText('24 筆')).toBeVisible();
 });
 
 test('會員可從我的訂單安全返回尚未付款的原付款單', async ({ page }) => {

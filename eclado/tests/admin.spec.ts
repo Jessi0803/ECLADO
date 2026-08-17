@@ -93,6 +93,24 @@ test('後台登入權限：管理員 session 可進入儀表板', async ({ page 
   await expect(page.getByText('ECL-20260504-0044')).toHaveCount(0);
 });
 
+test('後台側邊欄將操作紀錄歸在會員分類', async ({ page }) => {
+  await mockAdminApis(page);
+
+  await page.goto('/admin');
+  if ((page.viewportSize()?.width || 0) <= 900) {
+    await page.getByRole('button', { name: '開啟選單' }).click();
+  }
+
+  const navGroups = page.locator('.app-sidebar nav > div');
+  const operationsGroup = navGroups.filter({ has: page.getByText('營運', { exact: true }) });
+  const membersGroup = navGroups.filter({ has: page.getByText('會員', { exact: true }) });
+
+  await expect(operationsGroup.getByRole('button', { name: '操作紀錄' })).toHaveCount(0);
+  await expect(membersGroup.getByRole('button', { name: '操作紀錄' })).toBeVisible();
+  await membersGroup.getByRole('button', { name: '操作紀錄' }).click();
+  await expect(page.getByRole('heading', { name: '操作紀錄' })).toBeVisible();
+});
+
 test('後台資料為空時維持空狀態，不顯示本機示範商品、會員或訂單', async ({ page }) => {
   await mockAdminApis(page, {
     products: [],
@@ -836,6 +854,45 @@ test('後台拒絕美容師申請會同步 rejected 與 consumer', async ({ page
 
   await expect.poll(() => applicationUpdates.some(update => update.status === 'rejected')).toBe(true);
   await expect.poll(() => profileUpdates.some(update => update.role === 'consumer')).toBe(true);
+});
+
+test('會員管理操作欄的會員類型下拉選單寬度一致', async ({ page }) => {
+  await mockAdminApis(page);
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+
+  const selects = page.locator('.member-type-select');
+  await expect(selects).toHaveCount(adminProfileRows.length);
+  const widths = await selects.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().width));
+
+  expect(new Set(widths.map(width => Math.round(width))).size).toBe(1);
+  expect(Math.round(widths[0])).toBe(108);
+});
+
+test('會員管理待審核數量使用與訂單待確認相同的 badge 樣式', async ({ page }) => {
+  await mockAdminApis(page);
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+
+  const pendingButton = page.getByRole('button', { name: /待審核申請/ });
+  const pendingBadge = pendingButton.locator('.admin-filter-count-badge');
+  await expect(pendingBadge).toHaveText('1');
+  await expect(pendingButton).not.toContainText('(1)');
+  const pendingStyle = await pendingBadge.evaluate(element => {
+    const style = getComputedStyle(element);
+    return { background: style.backgroundColor, color: style.color, height: style.height, radius: style.borderRadius };
+  });
+
+  await openAdminSection(page, /訂單管理/);
+  const paymentBadge = page.getByRole('button', { name: /轉帳待確認/ }).locator('.admin-filter-count-badge');
+  await expect(paymentBadge).toBeVisible();
+  const paymentStyle = await paymentBadge.evaluate(element => {
+    const style = getComputedStyle(element);
+    return { background: style.backgroundColor, color: style.color, height: style.height, radius: style.borderRadius };
+  });
+  expect(pendingStyle).toEqual(paymentStyle);
 });
 
 test('會員管理可手動切換會員類型並同步 profile role', async ({ page }) => {

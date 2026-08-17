@@ -36,6 +36,12 @@ input, select, textarea { font-family: var(--font); }
 /* 表格水平捲動容器 */
 .table-scroll { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
 .table-scroll table { min-width: 720px; }
+.member-type-select { width: 108px; min-width: 108px; box-sizing: border-box; }
+.admin-filter-count-badge {
+  min-width: 18px; height: 18px; padding: 0 6px; border-radius: 9px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--red); color: #fff; font-size: 10px; font-weight: 600; line-height: 1;
+}
 
 /* 寬版維持有表頭的資料表；空間不足時，每筆資料改為可閱讀的小卡。 */
 @media (max-width: 1180px) {

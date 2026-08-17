@@ -233,6 +233,14 @@ begin
       'nameZh', product_row.name_zh,
       'name_en', product_row.name,
       'size', item_size,
+      'image_storage_path', (
+        select image.storage_path
+        from public.product_images image
+        where image.product_id = product_row.id
+          and image.active = true
+        order by image.is_primary desc, image.sort_order asc, image.id asc
+        limit 1
+      ),
       'img', product_row.image_url,
       'qty', quantity,
       'list_price', list_price,

@@ -15,6 +15,7 @@
 - `POST /api/sinopac/query-payment` — `OrderQuery` 查詢。
 - `POST /api/orders/payment-instructions` — 驗證會員身分與訂單所有權後，恢復原付款資訊。
 - `POST /api/orders/guest-lookup` — 以短查詢碼與結帳手機查詢訪客訂單，成功後簽發短效憑證。
+- `POST /api/orders/guest-details` — 以短效訪客憑證更新該筆訂單、付款與物流狀態；不再次傳送手機號碼。
 - `POST /api/orders/expire-overdue` — 清理逾期未付款訂單；必須帶正確的 `X-Cleanup-Key`。
 
 確認付款成功後，會轉發 `{OrderNo, Status:'S'}` 給 Vercel 端

@@ -109,11 +109,17 @@ export default function Members({
           <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
             {[['all','全部'], ['app_pending','待審核申請'], ['consumer','一般'], ['pro','美容師'], ['instructor','師資'], ['distributor','經銷商']].map(([val, label]) => (
               <button key={val} onClick={() => setFilter(val)} style={{
-                padding: '8px 16px', border: 'none', fontSize: 12,
+                padding: '8px 16px', border: 'none', fontSize: 12, letterSpacing: '0.04em',
                 background: filter === val ? 'var(--dark)' : 'transparent',
                 color: filter === val ? '#fff' : 'var(--mid)',
-                cursor: 'pointer', transition: 'all 0.15s',
-              }}>{label}{val === 'app_pending' && pendingAppCount > 0 ? ` (${pendingAppCount})` : ''}</button>
+                cursor: 'pointer', transition: 'all 0.15s', position: 'relative',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+                {label}
+                {val === 'app_pending' && pendingAppCount > 0 && (
+                  <span className="admin-filter-count-badge">{pendingAppCount}</span>
+                )}
+              </button>
             ))}
           </div>
         </div>
@@ -157,7 +163,7 @@ export default function Members({
                   <td data-label="消費總額" style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>NT$ {m.total.toLocaleString()}</td>
                   <td data-label="加入日期" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)', whiteSpace: 'nowrap' }}>{m.joined}</td>
                   <td data-label="操作" style={{ padding: '13px 14px' }}>
-                    <select value={m.type} onChange={e => { e.stopPropagation(); changeType(m.id, e.target.value); }} onClick={e => e.stopPropagation()} style={{ padding: '5px 8px', fontSize: 11, border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--dark)', cursor: 'pointer', outline: 'none' }}>
+                    <select className="member-type-select" aria-label={`${m.name}會員類型`} value={m.type} onChange={e => { e.stopPropagation(); changeType(m.id, e.target.value); }} onClick={e => e.stopPropagation()} style={{ padding: '5px 8px', fontSize: 11, border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--dark)', cursor: 'pointer', outline: 'none' }}>
                       <option value="consumer">一般會員</option>
                       <option value="pro" disabled={memberHasPendingApp(applications, m.id)}>美容師{memberHasPendingApp(applications, m.id) ? '（請先審核）' : ''}</option>
                       <option value="instructor">師資</option>

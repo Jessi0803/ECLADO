@@ -179,6 +179,7 @@ export type MockEcladoApiOptions = {
   onPaymentRequest?: (body: Record<string, unknown>) => void;
   onPaymentInstructionRequest?: (request: { authorization: string; orderNo: string }) => void;
   onGuestLookupRequest?: (request: { lookupCode: string; phone: string }) => void;
+  onGuestDetailsRequest?: (request: { orderNo: string; guestAccessToken: string }) => void;
   paymentQueryStatus?: 'paid' | 'pending' | 'failed' | 'expired' | 'cancelled';
   productWriteError?: string;
   orderWriteError?: string;
@@ -379,6 +380,10 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       const unitPrice = calculatedUnitPrice + (index === 0 ? Number(options.authoritativePriceDelta || 0) : 0);
       const qty = Number(requested.qty);
       const stock = Number(variant?.stock ?? product.stock ?? 0);
+      const primaryImage = productImages()
+        .filter(row => Number(row.product_id) === Number(product.id) && row.active !== false)
+        .sort((a, b) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary))
+          || Number(a.sort_order || 0) - Number(b.sort_order || 0))[0];
       return {
         id: Number(product.id),
         product_id: Number(product.id),
@@ -386,6 +391,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         name: Number(product.id) === 2 ? '胜肽修護精華液' : `商品 ${product.id}`,
         nameZh: Number(product.id) === 2 ? '胜肽修護精華液' : `商品 ${product.id}`,
         size: String(variant?.size || ''),
+        image_storage_path: primaryImage?.storage_path || null,
         img: '',
         qty,
         list_price: listPrice,
@@ -670,9 +676,13 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         && !candidate.user_id
       ));
       if (!order) return json(route, { ok: false, error: '查詢資料不正確，請確認查詢碼與手機號碼。' }, 400);
+      const paymentState = options.paymentQueryStatus
+        || (['paid', 'preparing', 'shipped', 'delivered'].includes(String(order.status)) ? 'paid'
+          : order.status === 'cancelled' ? 'cancelled' : 'pending');
+      const pending = paymentState === 'pending';
       return json(route, {
         ok: true,
-        paymentState: options.paymentQueryStatus || 'pending',
+        paymentState,
         order,
         guestAccessToken: 'guest-access-token-e2e',
         instruction: {
@@ -681,9 +691,40 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
           provider_transaction_no: 'GUEST-E2E-TSNO',
           provider_status: 'S',
           provider_description: '付款單建立成功',
-          atm_bank_code: order.payment_method === 'atm' ? '807' : null,
-          atm_account: order.payment_method === 'atm' ? '8071122334455667' : null,
-          payment_url: order.payment_method === 'atm' ? null : 'https://sandbox.sinopac.test/guest-pay',
+          atm_bank_code: pending && order.payment_method === 'atm' ? '807' : null,
+          atm_account: pending && order.payment_method === 'atm' ? '8071122334455667' : null,
+          payment_url: pending && order.payment_method !== 'atm' ? 'https://sandbox.sinopac.test/guest-pay' : null,
+          payment_due_at: order.payment_due_at || '2099-01-01T00:00:00.000Z',
+        },
+      });
+    });
+    await page.route('https://pay.ecladotaiwan.com/api/orders/guest-details', async route => {
+      const request = route.request().postDataJSON() || {};
+      const orderNo = String(request.orderNo || '');
+      const guestAccessToken = String(request.guestAccessToken || '');
+      options.onGuestDetailsRequest?.({ orderNo, guestAccessToken });
+      if (options.guestLookupError || guestAccessToken !== 'guest-access-token-e2e') {
+        return json(route, { ok: false, error: '訪客訂單查詢授權已過期，請重新輸入查詢碼與手機號碼。' }, 401);
+      }
+      const order = orders.find(candidate => String(candidate.id) === orderNo && !candidate.user_id);
+      if (!order) return json(route, { ok: false, error: '訪客訂單查詢授權已過期，請重新輸入查詢碼與手機號碼。' }, 401);
+      const paymentState = options.paymentQueryStatus
+        || (['paid', 'preparing', 'shipped', 'delivered'].includes(String(order.status)) ? 'paid'
+          : order.status === 'cancelled' ? 'cancelled' : 'pending');
+      const pending = paymentState === 'pending';
+      return json(route, {
+        ok: true,
+        paymentState,
+        order,
+        guestAccessToken,
+        instruction: {
+          order_id: order.id,
+          payment_method: order.payment_method || 'atm',
+          provider_status: 'S',
+          provider_description: '付款單建立成功',
+          atm_bank_code: pending && order.payment_method === 'atm' ? '807' : null,
+          atm_account: pending && order.payment_method === 'atm' ? '8071122334455667' : null,
+          payment_url: pending && order.payment_method !== 'atm' ? 'https://sandbox.sinopac.test/guest-pay' : null,
           payment_due_at: order.payment_due_at || '2099-01-01T00:00:00.000Z',
         },
       });

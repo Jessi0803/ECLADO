@@ -492,7 +492,6 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                                   <div style={{ fontSize:11, color:'var(--dark)', marginTop:2, fontFamily:'var(--font-body)' }}>{method.description}</div>
                                 </div>
                               </div>
-                              <div style={{ fontSize:11, letterSpacing:'0.08em', color:'var(--dark)', fontFamily:'var(--font-body)', fontVariantNumeric:'tabular-nums' }}>{method.payType}</div>
                             </div>
                           </button>
                         );

@@ -2,11 +2,16 @@ import { supabase } from './supabase.js';
 
 export const PRODUCT_IMAGE_BUCKET = 'product-images';
 
-export function withProductImagePublicUrl(row) {
+export function getProductImagePublicUrl(storagePath) {
+  if (!storagePath) return '';
   const { data } = supabase.storage
     .from(PRODUCT_IMAGE_BUCKET)
-    .getPublicUrl(row.storage_path);
-  return { ...row, url: data.publicUrl };
+    .getPublicUrl(storagePath);
+  return data.publicUrl;
+}
+
+export function withProductImagePublicUrl(row) {
+  return { ...row, url: getProductImagePublicUrl(row.storage_path) };
 }
 
 export async function fetchProductRows() {

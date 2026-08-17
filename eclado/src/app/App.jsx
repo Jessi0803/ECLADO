@@ -55,7 +55,10 @@ export default function App() {
 
   function setPage(newPage) {
     const path = PAGE_PATHS[newPage] || '/';
-    window.history.pushState({ page: newPage }, '', path);
+    const state = newPage === 'order-lookup'
+      ? { page: newPage, from: page }
+      : { page: newPage };
+    window.history.pushState(state, '', path);
     setPageState(newPage);
   }
   function openProduct(product, from = page) {

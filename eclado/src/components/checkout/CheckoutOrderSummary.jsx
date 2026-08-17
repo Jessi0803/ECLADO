@@ -4,6 +4,7 @@ import {
   getFulfillmentInfo,
   getMemberPrice,
 } from '../../domain/catalog.jsx';
+import { getProductImagePublicUrl } from '../../services/catalogData.js';
 
 export default function CheckoutOrderSummary({ items, summary, user }) {
   const hasPreorderItem = items.some(item => getFulfillmentInfo(item).type === 'preorder');
@@ -22,10 +23,13 @@ export default function CheckoutOrderSummary({ items, summary, user }) {
             ? getMemberPrice(item, user)
             : Number(item.unit_price);
           const fulfillment = getFulfillmentInfo(item);
+          const imageSrc = getProductImagePublicUrl(
+            item.image_storage_path || item.imageStoragePath,
+          ) || item.img || '';
           return (
             <div key={getCartKey(item)} style={{ display:'flex', gap:12, alignItems:'center' }}>
               <div style={{ width:48, height:48, flexShrink:0, position:'relative' }}>
-                <img src={item.img} alt={item.nameZh} style={{ width:'100%', height:'100%', objectFit:'contain', background:'var(--off-white)', display:'block' }} />
+                <img src={imageSrc} alt={item.nameZh} style={{ width:'100%', height:'100%', objectFit:'contain', background:'var(--off-white)', display:'block' }} />
                 <div style={{ position:'absolute', top:-6, right:-6, width:18, height:18, borderRadius:'50%', background:'var(--dark)', color:'var(--white)', fontSize:10, display:'flex', alignItems:'center', justifyContent:'center' }}>{item.qty}</div>
               </div>
               <div style={{ flex:1, minWidth:0 }}>

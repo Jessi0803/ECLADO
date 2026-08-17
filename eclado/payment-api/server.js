@@ -312,7 +312,7 @@ async function getSupabaseOrderPaymentState(orderNo) {
   }
   const params = new URLSearchParams({
     id: `eq.${orderNo}`,
-    select: 'id,user_id,member,email,phone,public_lookup_code,status,total,subtotal,discount,promotion_name,items,payment_due_at',
+    select: 'id,user_id,member,email,phone,public_lookup_code,status,total,subtotal,discount,promotion_name,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
     limit: '1',
   });
   const response = await fetch(`${supabaseUrl}/rest/v1/orders?${params}`, {
@@ -373,7 +373,7 @@ function verifyGuestAccessToken(token, orderNo) {
 async function getSupabaseGuestOrderByLookup(lookupCode) {
   const params = new URLSearchParams({
     public_lookup_code: `eq.${lookupCode}`,
-    select: 'id,user_id,member,email,phone,public_lookup_code,status,total,subtotal,discount,promotion_name,items,payment_due_at',
+    select: 'id,user_id,member,email,phone,public_lookup_code,status,total,subtotal,discount,promotion_name,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
     limit: '1',
   });
   const response = await fetch(`${supabaseUrl}/rest/v1/orders?${params}`, {
@@ -403,7 +403,33 @@ function toPublicOrderPaymentState(order) {
     promotion_name: order.promotion_name || null,
     items: Array.isArray(order.items) ? order.items : [],
     payment_due_at: order.payment_due_at,
+    date: order.date || null,
+    created_at: order.created_at || null,
+    updated_at: order.updated_at || null,
+    tracking: order.tracking || null,
+    shipping_carrier: order.shipping_carrier || null,
+    shipped_at: order.shipped_at || null,
   };
+}
+
+function toPublicGuestPaymentInstruction(instruction, paymentState) {
+  if (!instruction) return null;
+  const result = {
+    order_id: instruction.order_id,
+    payment_method: instruction.payment_method,
+    provider_status: instruction.provider_status,
+    provider_description: instruction.provider_description,
+    payment_due_at: instruction.payment_due_at,
+    gateway_created_at: instruction.gateway_created_at,
+    order_email_sent_at: instruction.order_email_sent_at,
+  };
+  if (paymentState === 'pending') {
+    result.atm_bank_code = instruction.atm_bank_code;
+    result.atm_account = instruction.atm_account;
+    result.payment_url = instruction.payment_url;
+    result.provider_transaction_no = instruction.provider_transaction_no;
+  }
+  return result;
 }
 
 function getBearerToken(req) {
@@ -525,6 +551,15 @@ async function getOrderPaymentInstruction(orderNo) {
   const rows = text ? JSON.parse(text) : [];
   if (!Array.isArray(rows) || !rows[0]?.order_id) throw new Error(`Payment instruction not found: ${orderNo}`);
   return rows[0];
+}
+
+async function getOptionalOrderPaymentInstruction(orderNo) {
+  try {
+    return await getOrderPaymentInstruction(orderNo);
+  } catch (error) {
+    if (String(error?.message || '').startsWith('Payment instruction not found:')) return null;
+    throw error;
+  }
 }
 
 async function updateOrderEmailDelivery(orderNo, { sent, error = '' }) {
@@ -980,17 +1015,40 @@ app.post('/api/orders/guest-lookup', async (req, res) => {
     if (!order || order.user_id || !safeStringEqual(normalizePhone(order.phone), phone)) {
       throw new Error('Invalid guest lookup');
     }
-    const instruction = await getOrderPaymentInstruction(order.id);
+    const instruction = await getOptionalOrderPaymentInstruction(order.id);
     const paymentState = resolvePaymentQueryState(order, {});
     res.json({
       ok: true,
       order: toPublicOrderPaymentState(order),
-      instruction,
+      instruction: toPublicGuestPaymentInstruction(instruction, paymentState),
       paymentState,
       guestAccessToken: createGuestAccessToken(order.id),
     });
   } catch (error) {
     res.status(400).json({ ok: false, error: '查詢資料不正確，請確認查詢碼與手機號碼。' });
+  }
+});
+
+app.post('/api/orders/guest-details', async (req, res) => {
+  try {
+    const orderNo = String(req.body?.orderNo || '').trim();
+    const guestAccessToken = String(req.body?.guestAccessToken || '').trim();
+    if (!orderNo || !verifyGuestAccessToken(guestAccessToken, orderNo)) {
+      throw new Error('Guest order access has expired');
+    }
+    const order = await getSupabaseOrderPaymentState(orderNo);
+    if (order.user_id) throw new Error('Guest access is not valid for member orders');
+    const instruction = await getOptionalOrderPaymentInstruction(order.id);
+    const paymentState = resolvePaymentQueryState(order, {});
+    res.json({
+      ok: true,
+      order: toPublicOrderPaymentState(order),
+      instruction: toPublicGuestPaymentInstruction(instruction, paymentState),
+      paymentState,
+      guestAccessToken,
+    });
+  } catch (error) {
+    res.status(401).json({ ok: false, error: '訪客訂單查詢授權已過期，請重新輸入查詢碼與手機號碼。' });
   }
 });
 

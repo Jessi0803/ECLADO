@@ -93,6 +93,26 @@ export async function lookupGuestOrder({ lookupCode, phone }) {
   }
 }
 
+export async function fetchGuestOrderDetails({ orderNo, guestAccessToken }) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PAYMENT_REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${SINOPAC_PAYMENT_API}/api/orders/guest-details`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderNo, guestAccessToken }),
+      signal: controller.signal,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.ok === false) {
+      throw new Error(data.error || `訪客訂單狀態讀取失敗（HTTP ${response.status}）`);
+    }
+    return data;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function getMemberPaymentInstructions(orderNo) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PAYMENT_REQUEST_TIMEOUT_MS);
