@@ -9,6 +9,8 @@ const CONTENT = {
   paid: ['付款成功', '款項已確認，我們已開始處理你的訂單。'],
   pending: ['付款結果仍在確認中', '請勿重新付款，可稍後回到會員訂單查看最新狀態。'],
   failed: ['付款未完成', '目前沒有確認到成功付款，請查看訂單或聯絡客服。'],
+  expired: ['付款期限已過', '此訂單已取消，無法重新付款；如仍需購買，請重新建立訂單。'],
+  cancelled: ['訂單已取消', '此付款單已關閉，無法重新付款。'],
 };
 
 export default function PaymentResultPage({ setPage }) {
@@ -28,11 +30,11 @@ export default function PaymentResultPage({ setPage }) {
     }
     setAmount(Number(pendingPayment.amount) || 0);
     querySinopacPayment(pendingPayment)
-      .then(response => {
+      .then(result => {
         if (cancelled) return;
-        const nextStatus = getPaymentResultStatus(response);
+        const nextStatus = result.paymentState || getPaymentResultStatus(result.response);
         setStatus(nextStatus);
-        if (nextStatus === 'paid' || nextStatus === 'failed') clearPendingPayment();
+        if (['paid', 'failed', 'expired', 'cancelled'].includes(nextStatus)) clearPendingPayment();
       })
       .catch(() => {
         if (!cancelled) setStatus(hint === 'failed' ? 'failed' : 'pending');

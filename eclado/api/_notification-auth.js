@@ -25,11 +25,18 @@ async function readJson(response) {
   return body;
 }
 
-async function requireNotificationAuthorization(req) {
+async function requireNotificationAuthorization(req, { allowPaymentSecret = false } = {}) {
   const internalKey = process.env.INTERNAL_API_KEY || '';
   const suppliedInternalKey = getHeader(req, 'x-internal-api-key');
   if (internalKey && suppliedInternalKey && safeEqual(suppliedInternalKey, internalKey)) {
     return { ok: true, kind: 'internal' };
+  }
+
+  const paymentSecret = process.env.PAYMENT_NOTIFY_SECRET || '';
+  const suppliedPaymentSecret = getHeader(req, 'x-eclado-payment-secret');
+  if (allowPaymentSecret && paymentSecret && suppliedPaymentSecret
+    && safeEqual(suppliedPaymentSecret, paymentSecret)) {
+    return { ok: true, kind: 'payment-api' };
   }
 
   const authorization = getHeader(req, 'authorization');

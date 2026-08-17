@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import useIsMobile from '../hooks/useIsMobile.js';
 import { PRODUCT_NAV_LINKS } from '../app/navigation.js';
 import {
@@ -56,6 +56,8 @@ export default function ShopPage({
   const [activeCategory, setActiveCategory] = useState(categoryFromLocation);
   const categories = PRODUCT_NAV_LINKS;
   const isMobile = useIsMobile();
+  const categoryTabsRef = useRef(null);
+  const categoryButtonRefs = useRef(new Map());
 
   useEffect(() => {
     const syncCategory = event => setActiveCategory(event.detail || categoryFromLocation());
@@ -67,6 +69,31 @@ export default function ShopPage({
       window.removeEventListener('popstate', syncPopState);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isMobile) return undefined;
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      const tabs = categoryTabsRef.current;
+      const activeButton = categoryButtonRefs.current.get(activeCategory);
+      if (!tabs || !activeButton) return;
+
+      const tabsRect = tabs.getBoundingClientRect();
+      const buttonRect = activeButton.getBoundingClientRect();
+      const centeredLeft = tabs.scrollLeft
+        + buttonRect.left
+        - tabsRect.left
+        - ((tabs.clientWidth - buttonRect.width) / 2);
+      const maxScrollLeft = Math.max(0, tabs.scrollWidth - tabs.clientWidth);
+
+      tabs.scrollTo({
+        left: Math.min(maxScrollLeft, Math.max(0, centeredLeft)),
+        behavior: 'smooth',
+      });
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [activeCategory, isMobile]);
 
   function selectCategory(category) {
     setActiveCategory(category);
@@ -120,17 +147,26 @@ export default function ShopPage({
         </div>
       </div>
       {/* 分類篩選列 */}
-      <div className="filter-tabs" style={{ background:'var(--off-white)', borderBottom:'1px solid var(--light)', padding: isMobile ? '0 16px' : '0 32px' }}>
+      <div ref={categoryTabsRef} className="filter-tabs" style={{ background:'var(--off-white)', borderBottom:'1px solid var(--light)', padding: isMobile ? '0 16px' : '0 32px' }}>
         <div style={{ maxWidth:1280, margin:'0 auto', display:'flex', alignItems:'center' }}>
           <div style={{ display:'flex' }}>
           {categories.map(cat => (
-            <button key={cat} onClick={() => selectCategory(cat)} style={{
-              background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12,
-              color: activeCategory===cat ? 'var(--black)' : 'var(--dark)',
-              padding:'16px 20px', letterSpacing:'0.08em', textTransform:'uppercase',
-              borderBottom: activeCategory===cat ? '2px solid var(--black)' : '2px solid transparent',
-              fontWeight: activeCategory===cat ? 500 : 300, transition:'all 0.2s',
-            }}>{cat}</button>
+            <button
+              key={cat}
+              ref={node => {
+                if (node) categoryButtonRefs.current.set(cat, node);
+                else categoryButtonRefs.current.delete(cat);
+              }}
+              aria-pressed={activeCategory === cat}
+              onClick={() => selectCategory(cat)}
+              style={{
+                background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12,
+                color: activeCategory===cat ? 'var(--black)' : 'var(--dark)',
+                padding:'16px 20px', letterSpacing:'0.08em', textTransform:'uppercase',
+                borderBottom: activeCategory===cat ? '2px solid var(--black)' : '2px solid transparent',
+                fontWeight: activeCategory===cat ? 500 : 300, transition:'all 0.2s',
+              }}
+            >{cat}</button>
           ))}
           </div>
         </div>

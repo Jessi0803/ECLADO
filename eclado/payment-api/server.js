@@ -19,6 +19,7 @@ function must(value, name) {
 function validateRequiredRuntimeEnv() {
   must(process.env.ORDER_CLEANUP_KEY, 'ORDER_CLEANUP_KEY');
   must(process.env.PAYMENT_NOTIFY_SECRET, 'PAYMENT_NOTIFY_SECRET');
+  must(process.env.GUEST_LOOKUP_SECRET, 'GUEST_LOOKUP_SECRET');
 }
 
 function hasValidCleanupKey(suppliedKey) {
@@ -305,6 +306,321 @@ async function authorizePaymentAccess(orderNo, paymentToken) {
   if (authorized !== true) throw new Error('Invalid payment authorization');
 }
 
+async function getSupabaseOrderPaymentState(orderNo) {
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing env: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+  }
+  const params = new URLSearchParams({
+    id: `eq.${orderNo}`,
+    select: 'id,user_id,member,email,phone,public_lookup_code,status,total,subtotal,discount,promotion_name,items,payment_due_at',
+    limit: '1',
+  });
+  const response = await fetch(`${supabaseUrl}/rest/v1/orders?${params}`, {
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
+    },
+  });
+  const text = await response.text();
+  if (!response.ok) throw new Error(`Supabase order lookup failed: ${response.status} ${text}`);
+  const rows = text ? JSON.parse(text) : [];
+  if (!Array.isArray(rows) || !rows[0]?.id) throw new Error(`Order not found: ${orderNo}`);
+  return rows[0];
+}
+
+function normalizeLookupCode(value) {
+  const compact = String(value || '').toUpperCase().replace(/[^0-9A-F]/g, '').slice(0, 10);
+  return compact.length === 10 ? `${compact.slice(0, 5)}-${compact.slice(5)}` : '';
+}
+
+function normalizePhone(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (digits.startsWith('886') && digits.length >= 11) return `0${digits.slice(3)}`;
+  return digits;
+}
+
+function safeStringEqual(left, right) {
+  const leftBuffer = Buffer.from(String(left || ''));
+  const rightBuffer = Buffer.from(String(right || ''));
+  return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function createGuestAccessToken(orderNo, ttlMs = 30 * 60 * 1000) {
+  const secret = must(process.env.GUEST_LOOKUP_SECRET, 'GUEST_LOOKUP_SECRET');
+  const payload = Buffer.from(JSON.stringify({
+    orderNo: String(orderNo),
+    exp: Date.now() + ttlMs,
+  })).toString('base64url');
+  const signature = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
+  return `${payload}.${signature}`;
+}
+
+function verifyGuestAccessToken(token, orderNo) {
+  const secret = must(process.env.GUEST_LOOKUP_SECRET, 'GUEST_LOOKUP_SECRET');
+  const [payload, suppliedSignature] = String(token || '').split('.');
+  if (!payload || !suppliedSignature) return false;
+  const expectedSignature = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
+  if (!safeStringEqual(suppliedSignature, expectedSignature)) return false;
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    return String(parsed.orderNo || '') === String(orderNo || '')
+      && Number(parsed.exp) > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+async function getSupabaseGuestOrderByLookup(lookupCode) {
+  const params = new URLSearchParams({
+    public_lookup_code: `eq.${lookupCode}`,
+    select: 'id,user_id,member,email,phone,public_lookup_code,status,total,subtotal,discount,promotion_name,items,payment_due_at',
+    limit: '1',
+  });
+  const response = await fetch(`${supabaseUrl}/rest/v1/orders?${params}`, {
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
+    },
+  });
+  const text = await response.text();
+  if (!response.ok) throw new Error(`Guest order lookup failed: ${response.status} ${text}`);
+  const rows = text ? JSON.parse(text) : [];
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+function toPublicOrderPaymentState(order) {
+  if (!order) return null;
+  const total = Number(order.total) || 0;
+  const subtotal = Number(order.subtotal) || 0;
+  const discount = Number(order.discount) || 0;
+  return {
+    id: order.id,
+    status: order.status,
+    total,
+    subtotal,
+    discount,
+    shipping: Math.max(0, total - subtotal + discount),
+    promotion_name: order.promotion_name || null,
+    items: Array.isArray(order.items) ? order.items : [],
+    payment_due_at: order.payment_due_at,
+  };
+}
+
+function getBearerToken(req) {
+  const header = String(req.get('Authorization') || '');
+  return header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+}
+
+async function getSupabaseAuthUser(req) {
+  const accessToken = getBearerToken(req);
+  if (!accessToken) throw new Error('Member authentication is required');
+  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+  const text = await response.text();
+  if (!response.ok) throw new Error(`Member authentication failed: ${response.status}`);
+  const user = text ? JSON.parse(text) : null;
+  if (!user?.id) throw new Error('Member authentication failed');
+  return user;
+}
+
+async function authorizeMemberOrderAccess(req, orderNo) {
+  const user = await getSupabaseAuthUser(req);
+  const order = await getSupabaseOrderPaymentState(orderNo);
+  if (!order.user_id || String(order.user_id) !== String(user.id)) {
+    throw new Error('Order does not belong to the signed-in member');
+  }
+  return order;
+}
+
+async function authorizePaymentRequest(req, orderNo, paymentToken) {
+  if (paymentToken) {
+    await authorizePaymentAccess(orderNo, paymentToken);
+    return getSupabaseOrderPaymentState(orderNo);
+  }
+  const guestAccessToken = String(req.body?.guestAccessToken || '');
+  if (guestAccessToken) {
+    if (!verifyGuestAccessToken(guestAccessToken, orderNo)) {
+      throw new Error('Guest payment access has expired');
+    }
+    const order = await getSupabaseOrderPaymentState(orderNo);
+    if (order.user_id) throw new Error('Guest access is not valid for member orders');
+    return order;
+  }
+  return authorizeMemberOrderAccess(req, orderNo);
+}
+
+function extractServerPaymentLink(response) {
+  const candidates = [
+    response?.PayURL,
+    response?.RedirectURL,
+    response?.PaymentURL,
+    response?.CardParam?.CardPayURL,
+    response?.CardParam?.CardURL,
+    response?.MobileParam?.MobilePayURL,
+    response?.MobileParam?.MobileURL,
+    response?.WalletParam?.WalletPayURL,
+    response?.WalletParam?.WalletURL,
+    response?.WebAtmURL,
+    response?.ATMParam?.WebAtmURL,
+  ];
+  return candidates.find(value => typeof value === 'string' && value.startsWith('http') && !value.includes('QRCode')) || null;
+}
+
+function paymentMethodFromRequest(input) {
+  if (input?.payType === 'A') return 'atm';
+  if (input?.payType === 'C') return 'card';
+  if (input?.payType === 'M' && input?.choosePay === 'A') return 'apple';
+  if (input?.payType === 'M' && input?.choosePay === 'G') return 'google';
+  return String(input?.paymentMethod || input?.payType || '').toLowerCase();
+}
+
+async function saveOrderPaymentInstruction(order, input, gatewayResponse) {
+  const record = {
+    order_id: order.id,
+    payment_method: paymentMethodFromRequest(input) || 'unknown',
+    provider_transaction_no: gatewayResponse?.TSNo || null,
+    provider_status: gatewayResponse?.Status || null,
+    provider_description: gatewayResponse?.Description || null,
+    atm_bank_code: gatewayResponse?.ATMParam?.AtmPayNo ? '807' : null,
+    atm_account: gatewayResponse?.ATMParam?.AtmPayNo || null,
+    payment_url: extractServerPaymentLink(gatewayResponse),
+    payment_due_at: order.payment_due_at,
+    gateway_created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  const response = await fetch(`${supabaseUrl}/rest/v1/order_payment_instructions?on_conflict=order_id`, {
+    method: 'POST',
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=representation',
+    },
+    body: JSON.stringify(record),
+  });
+  const text = await response.text();
+  if (!response.ok) throw new Error(`Payment instruction save failed: ${response.status} ${text}`);
+  const rows = text ? JSON.parse(text) : [];
+  return Array.isArray(rows) ? rows[0] : null;
+}
+
+async function getOrderPaymentInstruction(orderNo) {
+  const params = new URLSearchParams({
+    order_id: `eq.${orderNo}`,
+    select: 'order_id,payment_method,provider_transaction_no,provider_status,provider_description,atm_bank_code,atm_account,payment_url,payment_due_at,gateway_created_at,order_email_sent_at',
+    limit: '1',
+  });
+  const response = await fetch(`${supabaseUrl}/rest/v1/order_payment_instructions?${params}`, {
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
+    },
+  });
+  const text = await response.text();
+  if (!response.ok) throw new Error(`Payment instruction lookup failed: ${response.status} ${text}`);
+  const rows = text ? JSON.parse(text) : [];
+  if (!Array.isArray(rows) || !rows[0]?.order_id) throw new Error(`Payment instruction not found: ${orderNo}`);
+  return rows[0];
+}
+
+async function updateOrderEmailDelivery(orderNo, { sent, error = '' }) {
+  const response = await fetch(`${supabaseUrl}/rest/v1/order_payment_instructions?order_id=eq.${encodeURIComponent(orderNo)}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      order_email_sent_at: sent ? new Date().toISOString() : null,
+      order_email_error: sent ? null : String(error || 'Unknown email error').slice(0, 1000),
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Order email delivery state failed: ${response.status} ${text}`);
+  }
+}
+
+async function sendGuestOrderCreatedEmail(order) {
+  if (order.user_id || !order.email) return { sent: false, skipped: true };
+  const secret = must(process.env.PAYMENT_NOTIFY_SECRET, 'PAYMENT_NOTIFY_SECRET');
+  const emailUrl = process.env.ORDER_EMAIL_URL || 'https://ecladotaiwan.com/api/order-email';
+  const lookupCode = normalizeLookupCode(order.public_lookup_code);
+  // Avoid `code`, which Supabase auth treats as an OAuth/PKCE callback query.
+  const lookupUrl = `https://ecladotaiwan.com/order-lookup?lookup=${encodeURIComponent(lookupCode)}`;
+  try {
+    const response = await fetch(emailUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-ECLADO-Payment-Secret': secret,
+      },
+      body: JSON.stringify({
+        type: 'order_placed',
+        email: order.email,
+        orderId: order.id,
+        memberName: order.member,
+        total: Number(order.total) || 0,
+        lookupCode,
+        lookupUrl,
+        paymentDueAt: order.payment_due_at,
+      }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || `Order email HTTP ${response.status}`);
+    await updateOrderEmailDelivery(order.id, { sent: true });
+    return { sent: true };
+  } catch (error) {
+    try {
+      await updateOrderEmailDelivery(order.id, { sent: false, error: error.message });
+    } catch (stateError) {
+      console.error('[order email] delivery state failed', stateError.message);
+    }
+    console.error('[order email] failed', error.message);
+    return { sent: false, error: error.message };
+  }
+}
+
+const guestLookupAttempts = new Map();
+function consumeGuestLookupAttempt(req) {
+  const key = String(req.ip || req.socket?.remoteAddress || 'unknown');
+  const now = Date.now();
+  const existing = guestLookupAttempts.get(key);
+  const record = !existing || existing.resetAt <= now
+    ? { count: 0, resetAt: now + 15 * 60 * 1000 }
+    : existing;
+  record.count += 1;
+  guestLookupAttempts.set(key, record);
+  return record.count <= 5;
+}
+
+function resolvePaymentQueryState(order, gatewayResponse) {
+  const gatewayOrder = Array.isArray(gatewayResponse?.OrderList)
+    ? gatewayResponse.OrderList[0]
+    : gatewayResponse;
+  if (isPaidLike(gatewayOrder?.PayStatus) || isPaidLike(gatewayOrder?.PayFlag)) return 'paid';
+  if (['paid', 'preparing', 'shipped', 'delivered'].includes(String(order?.status || ''))) return 'paid';
+
+  const dueTime = new Date(order?.payment_due_at || '').getTime();
+  if (Number.isFinite(dueTime) && dueTime <= Date.now()) return 'expired';
+  if (order?.status === 'cancelled') return 'cancelled';
+  if (!['awaiting_confirm', 'unpaid'].includes(String(order?.status || ''))) return 'failed';
+
+  const payStatus = String(gatewayOrder?.PayStatus || '').trim().toUpperCase();
+  const payFlag = String(gatewayOrder?.PayFlag || '').trim().toUpperCase();
+  if ((payStatus && !isPendingLike(payStatus) && !['1C200', '1A200', '1M200', '0'].includes(payStatus))
+    || (payFlag && !isPendingLike(payFlag) && !['N', '0'].includes(payFlag))) {
+    return 'failed';
+  }
+  return 'pending';
+}
+
 async function buildAuthoritativeCreateBody(input) {
   if (!input?.orderNo) throw new Error('orderNo is required');
   if (!input?.paymentToken) throw new Error('paymentToken is required');
@@ -493,6 +809,7 @@ async function resolvePaymentStateFromWebhook(body) {
 }
 
 app.use(helmet());
+app.set('trust proxy', 'loopback');
 app.use(cors({
   origin: [
     'https://www.ecladotaiwan.com',
@@ -581,7 +898,27 @@ app.post('/api/sinopac/create-payment', async (req, res) => {
       p_success: true,
     });
     claimed = false;
-    res.json({ ok: true, request: inner, response: result.data });
+    let order = null;
+    let recoveryStored = false;
+    let orderEmailSent = false;
+    try {
+      order = await getSupabaseOrderPaymentState(orderNo);
+      await saveOrderPaymentInstruction(order, req.body || {}, result.data);
+      recoveryStored = true;
+      const emailResult = await sendGuestOrderCreatedEmail(order);
+      orderEmailSent = emailResult.sent === true;
+    } catch (lookupError) {
+      console.error('[create-payment] payment recovery save failed', lookupError.message);
+    }
+    res.json({
+      ok: true,
+      request: inner,
+      response: result.data,
+      order: toPublicOrderPaymentState(order),
+      recoveryStored,
+      guestLookupCode: order && !order.user_id ? normalizeLookupCode(order.public_lookup_code) : '',
+      orderEmailSent,
+    });
   } catch (error) {
     if (claimed && !gatewaySucceeded) {
       try {
@@ -602,12 +939,58 @@ app.post('/api/sinopac/query-payment', async (req, res) => {
   try {
     const orderNo = String(req.body?.orderNo || '').trim();
     const paymentToken = String(req.body?.paymentToken || '').trim();
-    await authorizePaymentAccess(orderNo, paymentToken);
+    if (!orderNo) throw new Error('orderNo is required');
+    const order = await authorizePaymentRequest(req, orderNo, paymentToken);
     const inner = buildQueryBody(req.body || {});
     const result = await callOrderApi('OrderQuery', inner);
-    res.json({ ok: true, request: inner, response: result.data });
+    const paymentState = resolvePaymentQueryState(order, result.data);
+    res.json({ ok: true, request: inner, response: result.data, order: toPublicOrderPaymentState(order), paymentState });
   } catch (error) {
     res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.post('/api/orders/payment-instructions', async (req, res) => {
+  try {
+    const orderNo = String(req.body?.orderNo || '').trim();
+    if (!orderNo) throw new Error('orderNo is required');
+    const order = await authorizeMemberOrderAccess(req, orderNo);
+    const instruction = await getOrderPaymentInstruction(orderNo);
+    const paymentState = resolvePaymentQueryState(order, {});
+    res.json({
+      ok: true,
+      order: toPublicOrderPaymentState(order),
+      instruction,
+      paymentState,
+    });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.post('/api/orders/guest-lookup', async (req, res) => {
+  try {
+    if (!consumeGuestLookupAttempt(req)) {
+      return res.status(429).json({ ok: false, error: '查詢次數過多，請稍後再試。' });
+    }
+    const lookupCode = normalizeLookupCode(req.body?.lookupCode);
+    const phone = normalizePhone(req.body?.phone);
+    if (!lookupCode || phone.length < 9) throw new Error('Invalid guest lookup');
+    const order = await getSupabaseGuestOrderByLookup(lookupCode);
+    if (!order || order.user_id || !safeStringEqual(normalizePhone(order.phone), phone)) {
+      throw new Error('Invalid guest lookup');
+    }
+    const instruction = await getOrderPaymentInstruction(order.id);
+    const paymentState = resolvePaymentQueryState(order, {});
+    res.json({
+      ok: true,
+      order: toPublicOrderPaymentState(order),
+      instruction,
+      paymentState,
+      guestAccessToken: createGuestAccessToken(order.id),
+    });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: '查詢資料不正確，請確認查詢碼與手機號碼。' });
   }
 });
 
@@ -695,5 +1078,13 @@ module.exports = {
   formatSinopacDeadline,
   buildQueryBody,
   buildPaymentResultUrl,
+  resolvePaymentQueryState,
+  extractServerPaymentLink,
+  paymentMethodFromRequest,
+  normalizeLookupCode,
+  normalizePhone,
+  createGuestAccessToken,
+  verifyGuestAccessToken,
+  sendGuestOrderCreatedEmail,
   forwardPaidNotification,
 };

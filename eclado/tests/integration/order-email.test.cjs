@@ -25,6 +25,8 @@ test('order email sends order placed notice through Resend', async () => {
     assert.match(body.subject, /訂單已建立/);
     assert.match(body.text, /訂單編號：ORDER-PLACED-001/);
     assert.match(body.text, /訂單金額：NT\$ 3,702/);
+    assert.match(body.text, /訪客查詢碼：ABCDE-12345/);
+    assert.match(body.text, /https:\/\/ecladotaiwan\.com\/order-lookup\?lookup=ABCDE-12345/);
     return jsonResponse(200, { id: 'email_placed_001' });
   };
 
@@ -40,6 +42,9 @@ test('order email sends order placed notice through Resend', async () => {
         orderId: 'ORDER-PLACED-001',
         total: 3702,
         memberName: '登入買家',
+        lookupCode: 'ABCDE-12345',
+        lookupUrl: 'https://ecladotaiwan.com/order-lookup?lookup=ABCDE-12345',
+        paymentDueAt: '2026-08-19T15:59:00.000Z',
       },
     }, res);
   } finally {
@@ -50,6 +55,34 @@ test('order email sends order placed notice through Resend', async () => {
   assert.equal(res.statusCode, 200);
   assert.deepEqual(res.jsonBody, { status: 'sent', id: 'email_placed_001' });
   assert.equal(calls.length, 1);
+});
+
+test('order email accepts Payment API secret only for the opted-in email endpoint', async () => {
+  const originalFetch = global.fetch;
+  const originalEnv = {
+    INTERNAL_API_KEY: process.env.INTERNAL_API_KEY,
+    PAYMENT_NOTIFY_SECRET: process.env.PAYMENT_NOTIFY_SECRET,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+  };
+  delete process.env.INTERNAL_API_KEY;
+  process.env.PAYMENT_NOTIFY_SECRET = 'payment-api-email-secret';
+  process.env.RESEND_API_KEY = 'test-resend-key';
+  global.fetch = async url => {
+    assert.equal(String(url), 'https://api.resend.com/emails');
+    return textJsonResponse(200, { id: 'email_payment_api_001' });
+  };
+  const res = createRes();
+  try {
+    await orderEmail({
+      method: 'POST',
+      headers: { 'x-eclado-payment-secret': 'payment-api-email-secret' },
+      body: { email: 'guest@example.com', orderId: 'ORDER-GUEST-001' },
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv(originalEnv);
+  }
+  assert.equal(res.statusCode, 200);
 });
 
 test('order email sends shipment notice with tracking link', async () => {

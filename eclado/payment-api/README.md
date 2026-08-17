@@ -13,6 +13,8 @@
   token 查詢權威狀態。
 - `POST /api/sinopac/notify` — 各付款方式的非同步通知（BackendURL）。確認後標記已付款。
 - `POST /api/sinopac/query-payment` — `OrderQuery` 查詢。
+- `POST /api/orders/payment-instructions` — 驗證會員身分與訂單所有權後，恢復原付款資訊。
+- `POST /api/orders/guest-lookup` — 以短查詢碼與結帳手機查詢訪客訂單，成功後簽發短效憑證。
 - `POST /api/orders/expire-overdue` — 清理逾期未付款訂單；必須帶正確的 `X-Cleanup-Key`。
 
 確認付款成功後，會轉發 `{OrderNo, Status:'S'}` 給 Vercel 端
@@ -26,6 +28,9 @@
 `ORDER_CLEANUP_KEY` 是必填環境變數。未設定時服務會拒絕啟動，清理端點也不會執行。
 `PAYMENT_NOTIFY_SECRET` 同樣為必填，Vultr 轉發付款完成通知時會以
 `X-ECLADO-Payment-Secret` header 傳給 Vercel；Vercel 只接受密鑰完全一致的請求。
+`GUEST_LOOKUP_SECRET` 也是必填且應使用另一組獨立隨機值；訪客手機只在伺服器端比對，
+不會寫入瀏覽器。訪客付款單建立成功後，Payment API 會以 `PAYMENT_NOTIFY_SECRET`
+呼叫 Vercel 的訂單信 API，寄出短查詢碼與查詢連結。
 逾期判斷以 Supabase 訂單的 `payment_due_at` 為唯一依據；新訂單預設為建立後 48 小時。
 建立永豐 ATM 付款單時，`ExpireDate`／`ExpireTime` 同樣由 `payment_due_at` 轉換，不接受前端自訂期限。
 資料庫只保存 token hash，且會原子鎖定建單流程，避免同一訂單重複建立付款單。

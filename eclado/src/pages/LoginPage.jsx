@@ -205,6 +205,11 @@ export default function LoginPage({ setPage }) {
           phone={phone}
           view={view}
         />
+        {view !== 'forgot' && (
+          <button type="button" onClick={() => setPage('order-lookup')} style={{ display:'block', margin:'24px auto 0', background:'none', border:'none', color:'var(--dark)', fontFamily:'var(--font-body)', fontSize:12, textDecoration:'underline', textUnderlineOffset:3, cursor:'pointer' }}>
+            訪客訂單查詢
+          </button>
+        )}
       </div>
     </div>
   );

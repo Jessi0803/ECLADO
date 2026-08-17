@@ -14,6 +14,8 @@ import {
 } from '../services/membership.js';
 import { fetchAccountOrders } from '../services/accountOrders.js';
 import { fetchProfessionalApplicationStatus } from '../services/professionalApplications.js';
+import { getMemberPaymentInstructions } from '../services/paymentApi.js';
+import { getPendingPayment, savePendingPayment } from '../services/pendingPayment.js';
 
 export default function AccountPage({ user, setPage, onSignOut }) {
   const isMobile = useIsMobile();
@@ -23,6 +25,80 @@ export default function AccountPage({ user, setPage, onSignOut }) {
   const [error, setError] = useState('');
   const [proAppStatus, setProAppStatus] = useState(null); // null | 'pending' | 'approved' | 'rejected'
   const [copiedTracking, setCopiedTracking] = useState('');
+  const [openingPaymentOrder, setOpeningPaymentOrder] = useState('');
+  const [paymentErrors, setPaymentErrors] = useState({});
+
+  function paymentDeadlineFromIso(value) {
+    const date = new Date(value || '');
+    if (Number.isNaN(date.getTime())) return null;
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Taipei',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(date);
+    const part = type => parts.find(item => item.type === type)?.value || '';
+    return {
+      expireDate: `${part('year')}${part('month')}${part('day')}`,
+      expireTime: `${part('hour')}${part('minute')}`,
+    };
+  }
+
+  async function openPendingPayment(order) {
+    setOpeningPaymentOrder(order.id);
+    setPaymentErrors(current => ({ ...current, [order.id]: '' }));
+    try {
+      if (getPendingPayment(order.id)) {
+        setPage('checkout');
+        return;
+      }
+      const result = await getMemberPaymentInstructions(order.id);
+      const authoritativeOrder = result.order || order;
+      const instruction = result.instruction || {};
+      const subtotal = Number(authoritativeOrder.subtotal ?? order.subtotal) || 0;
+      const discount = Number(authoritativeOrder.discount ?? order.discount) || 0;
+      const shipping = Number(authoritativeOrder.shipping ?? order.shipping) || 0;
+      const total = Number(authoritativeOrder.total ?? order.total) || 0;
+      const saved = savePendingPayment({
+        orderNo: order.id,
+        accessType: 'member',
+        amount: total,
+        method: instruction.payment_method || authoritativeOrder.payment_method || order.payment_method || 'atm',
+        paymentLink: instruction.payment_url || '',
+        paymentDeadline: paymentDeadlineFromIso(instruction.payment_due_at || authoritativeOrder.payment_due_at),
+        paymentDueAt: instruction.payment_due_at || authoritativeOrder.payment_due_at,
+        response: {
+          Status: instruction.provider_status || '',
+          Description: instruction.provider_description || '',
+          TSNo: instruction.provider_transaction_no || '',
+          ATMParam: instruction.atm_account ? { AtmPayNo: instruction.atm_account } : undefined,
+        },
+        summary: {
+          subtotal,
+          discount,
+          finalSubtotal: subtotal - discount,
+          shipping,
+          total,
+          promotion: authoritativeOrder.promotion_name
+            ? { id: `order-${order.id}`, name: authoritativeOrder.promotion_name }
+            : null,
+          items: Array.isArray(authoritativeOrder.items) ? authoritativeOrder.items : [],
+        },
+      });
+      if (!saved) throw new Error('瀏覽器無法保存付款資訊');
+      setPage('checkout');
+    } catch (paymentError) {
+      setPaymentErrors(current => ({
+        ...current,
+        [order.id]: paymentError?.message || '付款資訊無法載入，請稍後再試。',
+      }));
+    } finally {
+      setOpeningPaymentOrder('');
+    }
+  }
 
   async function copyTracking(tracking) {
     try {
@@ -164,6 +240,10 @@ export default function AccountPage({ user, setPage, onSignOut }) {
             <div style={{ display:'grid', gap:14 }}>
               {orders.map(order => {
                 const items = Array.isArray(order.items) ? order.items : [];
+                const paymentDueTime = new Date(order.payment_due_at || '').getTime();
+                const paymentExpired = Number.isFinite(paymentDueTime) && paymentDueTime <= Date.now();
+                const canResumePayment = ['awaiting_confirm', 'unpaid'].includes(order.status)
+                  && !paymentExpired;
                 return (
                   <div key={order.id} style={{ border:'1px solid var(--light)', padding:isMobile ? 16 : 20, background:'var(--white)' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', gap:16, alignItems:'flex-start', marginBottom:14 }}>
@@ -207,8 +287,26 @@ export default function AccountPage({ user, setPage, onSignOut }) {
                       <div style={{ textAlign:isMobile ? 'left' : 'right' }}>
                         <div style={{ fontSize:12, color:'var(--dark)', marginBottom:5 }}>{order.date || order.created_at?.slice(0, 10) || ''}</div>
                         <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'var(--black)' }}>NT$ {Number(order.total || 0).toLocaleString()}</div>
+                        {canResumePayment && (
+                          <button
+                            type="button"
+                            onClick={() => openPendingPayment(order)}
+                            disabled={openingPaymentOrder === order.id}
+                            style={{ marginTop:12, border:'1px solid var(--black)', background:'var(--black)', color:'var(--white)', padding:'9px 12px', fontSize:11, letterSpacing:'0.08em', cursor:openingPaymentOrder === order.id ? 'wait' : 'pointer', fontFamily:'inherit', opacity:openingPaymentOrder === order.id ? 0.65 : 1 }}
+                          >
+                            {openingPaymentOrder === order.id ? '正在讀取…' : '查看付款資訊'}
+                          </button>
+                        )}
+                        {paymentExpired && ['awaiting_confirm', 'unpaid'].includes(order.status) && (
+                          <div style={{ marginTop:10, fontSize:11, color:'#8a3c2c' }}>付款期限已過</div>
+                        )}
                       </div>
                     </div>
+                    {paymentErrors[order.id] && (
+                      <div role="alert" style={{ marginTop:12, border:'1px solid #fecaca', background:'#fef2f2', color:'#991b1b', padding:'10px 12px', fontSize:12, lineHeight:1.6 }}>
+                        {paymentErrors[order.id]}
+                      </div>
+                    )}
                   </div>
                 );
               })}

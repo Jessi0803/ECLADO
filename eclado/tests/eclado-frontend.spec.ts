@@ -56,6 +56,29 @@ async function proceedToCheckout(page: import('@playwright/test').Page) {
   }
 }
 
+async function createCheckoutPayment(
+  page: import('@playwright/test').Page,
+  methodName: RegExp,
+) {
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+  await proceedToCheckout(page);
+
+  const checkoutInputs = page.locator('form input');
+  await checkoutInputs.nth(0).fill('付款恢復測試');
+  await checkoutInputs.nth(1).fill('0912345678');
+  await checkoutInputs.nth(2).fill('restore@example.com');
+  await page.getByPlaceholder('縣市').fill('台北市');
+  await page.getByPlaceholder('區域').fill('大安區');
+  await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('恢復路 1 號');
+  await page.getByRole('button', { name: /繼續確認付款/ }).click();
+  await page.getByRole('button', { name: methodName }).click();
+  await page.getByRole('button', { name: /^建立付款單$/ }).click();
+  await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
+}
+
 async function openAdminCatalog(page: import('@playwright/test').Page) {
   await page.goto('/admin');
   const openMenu = page.getByRole('button', { name: '開啟選單' });
@@ -79,7 +102,7 @@ async function triggerProductsRealtime(page: import('@playwright/test').Page) {
 
 test('主要路徑可開啟且不白屏', async ({ page }) => {
   test.slow();
-  for (const path of ['/', '/shop', '/products/peptide-repair-serum', '/cart', '/checkout', '/login', '/professional-apply', '/about', '/info', '/privacy', '/contact', '/admin']) {
+  for (const path of ['/', '/shop', '/products/peptide-repair-serum', '/cart', '/checkout', '/login', '/order-lookup', '/professional-apply', '/about', '/info', '/privacy', '/contact', '/admin']) {
     await page.goto(path, { waitUntil: 'domcontentloaded' });
     const body = page.locator('body');
     await expect(body).toBeVisible();
@@ -194,6 +217,29 @@ test('商品新分類正確，院線商品不重複出現在一般分類', async
 
   await page.getByRole('button', { name: '其他', exact: true }).click();
   await expect(page.getByText('此分類目前無商品')).toBeVisible();
+});
+
+test('手機分類橫向選單會自動捲入目前選取項目', async ({ page, isMobile }) => {
+  test.skip(!isMobile, '僅驗證手機版橫向分類列');
+
+  await page.goto(`/shop?category=${encodeURIComponent('院線課程儀器（含試用包）')}`);
+
+  const tabs = page.locator('.filter-tabs');
+  const selectedCategory = page.getByRole('button', {
+    name: '院線課程儀器（含試用包）',
+    exact: true,
+  });
+
+  await expect(selectedCategory).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => {
+    const [tabsBox, selectedBox] = await Promise.all([
+      tabs.boundingBox(),
+      selectedCategory.boundingBox(),
+    ]);
+    if (!tabsBox || !selectedBox) return false;
+    return selectedBox.x >= tabsBox.x - 1
+      && selectedBox.x + selectedBox.width <= tabsBox.x + tabsBox.width + 1;
+  }).toBe(true);
 });
 
 test('導覽列所有產品下拉分類會帶入商城分類並保留可分享網址', async ({ page, isMobile }) => {
@@ -868,6 +914,57 @@ test('結帳建立付款單但不寫入真實訂單或真金流', async ({ page 
   await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
   await expect(page.getByText('807 永豐銀行')).toBeVisible();
   await expect(page.getByText('8071234567890123')).toBeVisible();
+  await expect(page.getByText('2026/08/19 23:59 前')).toBeVisible();
+  await expect(page.getByText('請於期限前完成轉帳，逾期後訂單將自動取消。')).toBeVisible();
+});
+
+for (const scenario of [
+  { name: 'ATM', method: /虛擬帳號匯款/, restoredAction: '8071234567890123' },
+  { name: '信用卡', method: /信用卡/, restoredAction: '前往付款頁' },
+  { name: 'Apple Pay', method: /Apple Pay/, restoredAction: '前往付款頁' },
+  { name: 'Google Pay', method: /Google Pay/, restoredAction: '前往付款頁' },
+]) {
+  test(`${scenario.name} 付款單在重新整理後恢復原付款資訊`, async ({ page }) => {
+    await mockEcladoApis(page, { paymentQueryStatus: 'pending' });
+    await createCheckoutPayment(page, scenario.method);
+
+    const saved = await page.evaluate(() => JSON.parse(
+      sessionStorage.getItem('eclado_pending_payment') || 'null',
+    ));
+    expect(saved?.version).toBe(2);
+    expect(saved?.orderNo).toMatch(/^ECL-/);
+    expect(saved?.paymentToken).toBeTruthy();
+    expect(saved?.summary?.items).toHaveLength(1);
+
+    await page.reload();
+    await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
+    if (scenario.name === 'ATM') {
+      await expect(page.getByText(scenario.restoredAction)).toBeVisible();
+      await expect(page.getByRole('button', { name: '複製虛擬帳號' })).toBeVisible();
+    } else {
+      await expect(page.getByRole('button', { name: scenario.restoredAction })).toBeVisible();
+    }
+  });
+}
+
+test('逾期付款單重新整理後停用付款入口且不建立第二張付款單', async ({ page }) => {
+  const paymentRequests: Record<string, unknown>[] = [];
+  await mockEcladoApis(page, {
+    paymentQueryStatus: 'expired',
+    onPaymentRequest: request => paymentRequests.push(request),
+  });
+  await createCheckoutPayment(page, /信用卡/);
+  expect(paymentRequests).toHaveLength(1);
+
+  await page.reload();
+  await expect(page.getByText('付款期限已過，此訂單已取消，無法重新付款。')).toBeVisible();
+  await expect(page.getByRole('button', { name: '前往付款頁' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '複製付款連結' })).toHaveCount(0);
+  expect(paymentRequests).toHaveLength(1);
+
+  await page.reload();
+  await expect(page.getByText('付款期限已過，此訂單已取消，無法重新付款。')).toBeVisible();
+  expect(paymentRequests).toHaveLength(1);
 });
 
 test('後端成交價與預覽不同時必須再次確認才建立付款單', async ({ page }) => {
@@ -944,6 +1041,55 @@ test('登入會員結帳會寫入訂單 payload 與 user_id，付款前不扣庫
   const items = capturedOrder?.items as Array<Record<string, unknown>>;
   expect(items[0].stock_at_order).toBe(2);
   expect(orderEmails).toEqual([]);
+});
+
+test('訪客付款單顯示短查詢碼與訂單成立信寄送結果', async ({ page }) => {
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+  await proceedToCheckout(page);
+  const inputs = page.locator('form input');
+  await inputs.nth(0).fill('訪客買家');
+  await inputs.nth(1).fill('0912345678');
+  await inputs.nth(2).fill('guest@example.com');
+  await page.getByPlaceholder('縣市').fill('台北市');
+  await page.getByPlaceholder('區域').fill('大安區');
+  await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('訪客路 1 號');
+  await page.getByRole('button', { name: /繼續確認付款/ }).click();
+  await page.getByRole('button', { name: /^建立付款單$/ }).click();
+  await expect(page.getByText('ABCDE-12345')).toBeVisible();
+  await expect(page.getByText(/訂單成立信已寄出/)).toBeVisible();
+  const saved = await page.evaluate(() => JSON.parse(sessionStorage.getItem('eclado_pending_payment') || 'null'));
+  expect(saved.lookupCode).toBe('ABCDE-12345');
+  expect(saved.orderEmailSent).toBe(true);
+});
+
+test('訪客可用短查詢碼與結帳手機找回原付款單', async ({ page }) => {
+  const lookupRequests: Array<{ lookupCode: string; phone: string }> = [];
+  await mockEcladoApis(page, {
+    paymentQueryStatus: 'pending',
+    onGuestLookupRequest: request => lookupRequests.push(request),
+    orders: [{
+      id: 'ECL-GUEST-LOOKUP-001', user_id: null, member: '訪客買家', phone: '0912345678',
+      public_lookup_code: 'ABCDE-12345', status: 'awaiting_confirm', payment_method: 'atm',
+      subtotal: 3980, discount: 0, shipping: 120, total: 4100,
+      items: [{ id: 2, product_id: 2, name: '胜肽修護精華液', qty: 1, price: 3980 }],
+      payment_due_at: '2099-01-01T00:00:00.000Z',
+    }],
+  });
+  await page.goto('/order-lookup?lookup=ABCDE-12345');
+  await expect(page.getByLabel('訪客查詢碼')).toHaveValue('ABCDE-12345');
+  await page.getByLabel('結帳手機號碼').fill('0912-345-678');
+  await page.getByRole('button', { name: '查看訂單與付款資訊' }).click();
+  await expect(page).toHaveURL(/\/checkout$/);
+  await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
+  await expect(page.getByText('8071122334455667')).toBeVisible();
+  expect(lookupRequests).toEqual([{ lookupCode: 'ABCDE-12345', phone: '0912-345-678' }]);
+  const saved = await page.evaluate(() => JSON.parse(sessionStorage.getItem('eclado_pending_payment') || 'null'));
+  expect(saved.accessType).toBe('guest');
+  expect(saved.guestAccessToken).toBe('guest-access-token-e2e');
+  expect(JSON.stringify(saved)).not.toContain('0912345678');
 });
 
 test('信用卡、Apple Pay、Google Pay 會送出對應金流 payType', async ({ page }) => {
@@ -1161,6 +1307,73 @@ test('會員專區顯示自己的訂單與托運單號', async ({ page }) => {
     'href',
     'https://htm.sf-express.com/tw/tc/',
   );
+});
+
+test('會員可從我的訂單安全返回尚未付款的原付款單', async ({ page }) => {
+  const instructionRequests: Array<{ authorization: string; orderNo: string }> = [];
+  await mockEcladoApis(page, {
+    authUser: authUser('member@example.com'),
+    profiles: [profile('consumer')],
+    paymentQueryStatus: 'pending',
+    onPaymentInstructionRequest: request => instructionRequests.push(request),
+    orders: [
+      {
+        id: 'ECL-MEMBER-PENDING-001',
+        user_id: TEST_USER_ID,
+        member: 'E2E 會員',
+        items: [{ id: 2, product_id: 2, name: '胜肽修護精華液', nameZh: '胜肽修護精華液', qty: 1, price: 3980, unit_price: 3980 }],
+        subtotal: 3980,
+        discount: 0,
+        shipping: 120,
+        total: 4100,
+        status: 'awaiting_confirm',
+        payment_method: 'atm',
+        payment_due_at: '2099-01-01T00:00:00.000Z',
+        created_at: '2026-08-17T00:00:00.000Z',
+      },
+    ],
+  });
+
+  await page.goto('/account');
+  await page.getByRole('button', { name: '查看付款資訊' }).click();
+
+  await expect(page).toHaveURL(/\/checkout$/);
+  await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
+  await expect(page.getByText('8079988776655443')).toBeVisible();
+  await expect(page.getByRole('button', { name: '複製虛擬帳號' })).toBeVisible();
+  expect(instructionRequests).toEqual([{
+    authorization: 'Bearer mock-access-token',
+    orderNo: 'ECL-MEMBER-PENDING-001',
+  }]);
+  const saved = await page.evaluate(() => JSON.parse(
+    sessionStorage.getItem('eclado_pending_payment') || 'null',
+  ));
+  expect(saved?.accessType).toBe('member');
+  expect(saved?.paymentToken).toBe('');
+});
+
+test('會員訂單付款期限已過時不顯示付款入口', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: authUser('member@example.com'),
+    profiles: [profile('consumer')],
+    orders: [
+      {
+        id: 'ECL-MEMBER-EXPIRED-001',
+        user_id: TEST_USER_ID,
+        member: 'E2E 會員',
+        items: [{ name: '胜肽修護精華液', qty: 1, price: 3980 }],
+        total: 3980,
+        status: 'unpaid',
+        payment_method: 'card',
+        payment_due_at: '2020-01-01T00:00:00.000Z',
+        created_at: '2026-08-15T00:00:00.000Z',
+      },
+    ],
+  });
+
+  await page.goto('/account');
+  await expect(page.getByText('付款期限已過')).toBeVisible();
+  await expect(page.getByRole('button', { name: '查看付款資訊' })).toHaveCount(0);
 });
 
 test('手機版主要購物流程可使用', async ({ page, isMobile }) => {

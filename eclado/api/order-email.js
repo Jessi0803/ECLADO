@@ -6,14 +6,28 @@ function currency(value) {
   return Number.isFinite(Number(value)) ? `NT$ ${Number(value).toLocaleString('zh-TW')}` : '';
 }
 
-function textForOrderPlaced({ orderId, total, memberName }) {
+function formatDeadline(value) {
+  const date = new Date(value || '');
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('zh-TW', {
+    timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+}
+
+function textForOrderPlaced({ orderId, total, memberName, lookupCode, lookupUrl, paymentDueAt }) {
+  const deadline = formatDeadline(paymentDueAt);
   return [
     `${memberName || '您好'}，您的訂單已建立。`,
     '',
     `訂單編號：${orderId}`,
     currency(total) ? `訂單金額：${currency(total)}` : null,
+    deadline ? `付款期限：${deadline}` : null,
+    lookupCode ? `訪客查詢碼：${lookupCode}` : null,
     '',
     '我們已收到您的訂單，請依頁面付款資訊完成付款。付款完成後將安排後續處理。',
+    lookupCode ? '訪客可使用「查詢碼＋結帳手機號碼」重新查看此付款單：' : null,
+    lookupUrl || null,
     '',
     'ECLADO Taiwan',
   ].filter(line => line !== null).join('\n');
@@ -55,7 +69,7 @@ function textForShipment({ orderId, tracking, memberName }) {
   ].filter(line => line !== null).join('\n');
 }
 
-function buildEmail({ type = 'order_placed', orderId, total, tracking, memberName }) {
+function buildEmail({ type = 'order_placed', orderId, total, tracking, memberName, lookupCode, lookupUrl, paymentDueAt }) {
   if (type === 'shipment') {
     return {
       subject: `ECLADO 訂單已出貨｜${orderId}`,
@@ -70,19 +84,19 @@ function buildEmail({ type = 'order_placed', orderId, total, tracking, memberNam
   }
   return {
     subject: `ECLADO 訂單已建立｜${orderId}`,
-    text: textForOrderPlaced({ orderId, total, memberName }),
+    text: textForOrderPlaced({ orderId, total, memberName, lookupCode, lookupUrl, paymentDueAt }),
   };
 }
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const authorization = await requireNotificationAuthorization(req);
+  const authorization = await requireNotificationAuthorization(req, { allowPaymentSecret: true });
   if (!authorization.ok) {
     return res.status(authorization.status).json({ error: authorization.error });
   }
 
-  const { email, orderId, type, total, tracking, memberName } = req.body || {};
+  const { email, orderId, type, total, tracking, memberName, lookupCode, lookupUrl, paymentDueAt } = req.body || {};
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.ORDER_EMAIL_FROM || DEFAULT_FROM;
 
@@ -90,7 +104,7 @@ module.exports = async function handler(req, res) {
   if (!email) return res.status(400).json({ error: 'email required' });
   if (!orderId) return res.status(400).json({ error: 'orderId required' });
 
-  const message = buildEmail({ type, orderId, total, tracking, memberName });
+  const message = buildEmail({ type, orderId, total, tracking, memberName, lookupCode, lookupUrl, paymentDueAt });
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {

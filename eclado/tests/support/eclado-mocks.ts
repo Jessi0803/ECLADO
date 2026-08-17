@@ -177,12 +177,16 @@ export type MockEcladoApiOptions = {
   onLinePush?: (body: Record<string, unknown>) => void;
   onOrderEmail?: (body: Record<string, unknown>) => void;
   onPaymentRequest?: (body: Record<string, unknown>) => void;
-  paymentQueryStatus?: 'paid' | 'pending' | 'failed';
+  onPaymentInstructionRequest?: (request: { authorization: string; orderNo: string }) => void;
+  onGuestLookupRequest?: (request: { lookupCode: string; phone: string }) => void;
+  paymentQueryStatus?: 'paid' | 'pending' | 'failed' | 'expired' | 'cancelled';
   productWriteError?: string;
   orderWriteError?: string;
   promotionWriteError?: string;
   linePushError?: string;
   paymentError?: string;
+  paymentInstructionError?: string;
+  guestLookupError?: string;
   paymentResponseDelayMs?: number;
   productResponseDelayMs?: number;
   authoritativePriceDelta?: number;
@@ -569,6 +573,21 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       const payToken = `PAYTOKEN${Date.now()}`;
       return json(route, {
         ok: true,
+        recoveryStored: true,
+        guestLookupCode: authUser ? '' : 'ABCDE-12345',
+        orderEmailSent: !authUser,
+        order: {
+          id: request.orderNo,
+          status: request.payType === 'A' ? 'awaiting_confirm' : 'unpaid',
+          total: request.amount,
+          payment_due_at: '2026-08-19T15:59:00.000Z',
+        },
+        request: {
+          PayType: request.payType,
+          ATMParam: request.payType === 'A'
+            ? { ExpireDate: '20260819', ExpireTime: '2359' }
+            : undefined,
+        },
         response: {
           Status: 'S',
           Description: '付款單建立成功',
@@ -576,6 +595,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
           PayToken: request.payType === 'C' ? undefined : payToken,
           CardParam: request.payType === 'C'
             ? { PayToken: payToken, CardPayURL: 'https://sandbox.sinopac.test/pay' }
+            : undefined,
+          MobileParam: request.payType === 'M'
+            ? { PayToken: payToken, MobilePayURL: 'https://sandbox.sinopac.test/mobile-pay' }
             : undefined,
           ATMParam: request.payType === 'A'
             ? { AtmPayNo: '8071234567890123' }
@@ -586,12 +608,83 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     });
     await page.route('https://pay.ecladotaiwan.com/api/sinopac/query-payment', async route => {
       const status = options.paymentQueryStatus || 'paid';
-      const payStatus = status === 'paid' ? '1C400' : status === 'pending' ? '1C200' : '1C250';
+      const payStatus = status === 'paid' ? '1C400' : status === 'pending' || status === 'expired' || status === 'cancelled' ? '1C200' : '1C250';
+      const orderStatus = status === 'paid' ? 'paid' : status === 'cancelled' || status === 'expired' ? 'cancelled' : 'unpaid';
       return json(route, {
         ok: true,
+        paymentState: status,
+        order: {
+          id: route.request().postDataJSON()?.orderNo,
+          status: orderStatus,
+          total: 3702,
+          payment_due_at: status === 'expired' ? '2020-01-01T00:00:00.000Z' : '2026-08-19T15:59:00.000Z',
+        },
         response: {
           Status: 'S',
           OrderList: [{ OrderNo: route.request().postDataJSON()?.orderNo, PayStatus: payStatus }],
+        },
+      });
+    });
+    await page.route('https://pay.ecladotaiwan.com/api/orders/payment-instructions', async route => {
+      if (options.paymentInstructionError) {
+        return json(route, { ok: false, error: options.paymentInstructionError }, 400);
+      }
+      const orderNo = String(route.request().postDataJSON()?.orderNo || '');
+      options.onPaymentInstructionRequest?.({
+        authorization: route.request().headers().authorization || '',
+        orderNo,
+      });
+      const order = orders.find(candidate => String(candidate.id) === orderNo);
+      if (!order) return json(route, { ok: false, error: 'Payment instruction not found' }, 404);
+      return json(route, {
+        ok: true,
+        paymentState: options.paymentQueryStatus || 'pending',
+        order,
+        instruction: {
+          order_id: orderNo,
+          payment_method: order.payment_method || 'atm',
+          provider_transaction_no: 'MEMBER-E2E-TSNO',
+          provider_status: 'S',
+          provider_description: '付款單建立成功',
+          atm_bank_code: order.payment_method === 'atm' ? '807' : null,
+          atm_account: order.payment_method === 'atm' ? '8079988776655443' : null,
+          payment_url: order.payment_method === 'atm' ? null : 'https://sandbox.sinopac.test/member-pay',
+          payment_due_at: order.payment_due_at || '2099-01-01T00:00:00.000Z',
+        },
+      });
+    });
+    await page.route('https://pay.ecladotaiwan.com/api/orders/guest-lookup', async route => {
+      const request = route.request().postDataJSON() || {};
+      options.onGuestLookupRequest?.({
+        lookupCode: String(request.lookupCode || ''),
+        phone: String(request.phone || ''),
+      });
+      if (options.guestLookupError) {
+        return json(route, { ok: false, error: options.guestLookupError }, 400);
+      }
+      const compactCode = String(request.lookupCode || '').toUpperCase().replace(/[^0-9A-F]/g, '');
+      const normalizedPhone = String(request.phone || '').replace(/\D/g, '');
+      const order = orders.find(candidate => (
+        String(candidate.public_lookup_code || '').replace(/[^0-9A-F]/gi, '').toUpperCase() === compactCode
+        && String(candidate.phone || '').replace(/\D/g, '') === normalizedPhone
+        && !candidate.user_id
+      ));
+      if (!order) return json(route, { ok: false, error: '查詢資料不正確，請確認查詢碼與手機號碼。' }, 400);
+      return json(route, {
+        ok: true,
+        paymentState: options.paymentQueryStatus || 'pending',
+        order,
+        guestAccessToken: 'guest-access-token-e2e',
+        instruction: {
+          order_id: order.id,
+          payment_method: order.payment_method || 'atm',
+          provider_transaction_no: 'GUEST-E2E-TSNO',
+          provider_status: 'S',
+          provider_description: '付款單建立成功',
+          atm_bank_code: order.payment_method === 'atm' ? '807' : null,
+          atm_account: order.payment_method === 'atm' ? '8071122334455667' : null,
+          payment_url: order.payment_method === 'atm' ? null : 'https://sandbox.sinopac.test/guest-pay',
+          payment_due_at: order.payment_due_at || '2099-01-01T00:00:00.000Z',
         },
       });
     });

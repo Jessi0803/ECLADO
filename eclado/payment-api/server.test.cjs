@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const http = require('node:http');
 
 // 在 require server.js 前先備妥金鑰環境（豐收款 sandbox 範例值），
 // getAesKey / buildCreateBody 於呼叫時才讀取，設定於此即可。
@@ -13,8 +14,20 @@ process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://supabase.example
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'test-service-role-key';
 process.env.ORDER_CLEANUP_KEY = process.env.ORDER_CLEANUP_KEY || 'test-cleanup-key';
 process.env.PAYMENT_NOTIFY_SECRET = process.env.PAYMENT_NOTIFY_SECRET || 'test-payment-notify-secret';
+process.env.GUEST_LOOKUP_SECRET = process.env.GUEST_LOOKUP_SECRET || 'test-guest-lookup-secret';
 
 const server = require('./server.js');
+
+async function listenForTest() {
+  const listener = http.createServer(server.app);
+  await new Promise(resolve => {
+    listener.listen(0, '127.0.0.1', resolve);
+  });
+  return {
+    listener,
+    baseUrl: `http://127.0.0.1:${listener.address().port}`,
+  };
+}
 
 test('exports pure helpers without starting the server', () => {
   for (const fn of ['getAesKey', 'encryptMessage', 'decryptMessage', 'isPaidLike', 'buildCreateBody', 'signableString', 'generateSign']) {
@@ -42,6 +55,48 @@ test('PAYMENT_NOTIFY_SECRET 必須設定', () => {
 
   process.env.PAYMENT_NOTIFY_SECRET = originalSecret;
   assert.doesNotThrow(() => server.validateRequiredRuntimeEnv());
+});
+
+test('訪客查詢碼、手機正規化與短效查詢憑證', () => {
+  assert.equal(server.normalizeLookupCode('abcde 12345'), 'ABCDE-12345');
+  assert.equal(server.normalizeLookupCode('too-short'), '');
+  assert.equal(server.normalizePhone('+886 912-345-678'), '0912345678');
+  const token = server.createGuestAccessToken('ECL-GUEST-001', 60_000);
+  assert.equal(server.verifyGuestAccessToken(token, 'ECL-GUEST-001'), true);
+  assert.equal(server.verifyGuestAccessToken(token, 'ECL-GUEST-OTHER'), false);
+  assert.equal(server.verifyGuestAccessToken(server.createGuestAccessToken('ECL-GUEST-001', -1), 'ECL-GUEST-001'), false);
+});
+
+test('訪客付款單建立後寄送含查詢碼的訂單成立信並記錄結果', async () => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+    if (String(url) === 'https://ecladotaiwan.com/api/order-email') {
+      assert.equal(options.headers['X-ECLADO-Payment-Secret'], process.env.PAYMENT_NOTIFY_SECRET);
+      const body = JSON.parse(options.body);
+      assert.equal(body.lookupCode, 'ABCDE-12345');
+      assert.equal(body.lookupUrl, 'https://ecladotaiwan.com/order-lookup?lookup=ABCDE-12345');
+      return new Response(JSON.stringify({ status: 'sent' }), { status: 200 });
+    }
+    if (String(url).includes('/rest/v1/order_payment_instructions?order_id=eq.')) {
+      const body = JSON.parse(options.body);
+      assert.ok(body.order_email_sent_at);
+      assert.equal(body.order_email_error, null);
+      return new Response(null, { status: 204 });
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+  try {
+    const result = await server.sendGuestOrderCreatedEmail({
+      id: 'ECL-GUEST-EMAIL-001', user_id: null, member: '訪客買家', email: 'guest@example.com',
+      total: 4100, public_lookup_code: 'ABCDE-12345', payment_due_at: '2099-01-01T00:00:00.000Z',
+    });
+    assert.equal(result.sent, true);
+    assert.equal(calls.length, 2);
+  } finally {
+    global.fetch = originalFetch;
+  }
 });
 
 test('付款通知轉發會帶共用密鑰，且檢查 Vercel 回應', async () => {
@@ -212,4 +267,209 @@ test('付款返回網址只包含訂單與結果，不洩漏任何 token', () =>
   assert.equal(url.searchParams.get('result'), 'paid');
   assert.equal(url.searchParams.has('payToken'), false);
   assert.equal(url.searchParams.has('paymentToken'), false);
+});
+
+test('resolvePaymentQueryState: 付款成功優先，逾期與取消不可再付款', () => {
+  const futureOrder = {
+    status: 'unpaid',
+    payment_due_at: '2099-01-01T00:00:00.000Z',
+  };
+  assert.equal(server.resolvePaymentQueryState(futureOrder, {
+    OrderList: [{ PayStatus: '1C400' }],
+  }), 'paid');
+  assert.equal(server.resolvePaymentQueryState({
+    status: 'unpaid',
+    payment_due_at: '2020-01-01T00:00:00.000Z',
+  }, {
+    OrderList: [{ PayStatus: '1C200' }],
+  }), 'expired');
+  assert.equal(server.resolvePaymentQueryState({
+    status: 'cancelled',
+    payment_due_at: '2099-01-01T00:00:00.000Z',
+  }, {
+    OrderList: [{ PayStatus: '1C200' }],
+  }), 'cancelled');
+  assert.equal(server.resolvePaymentQueryState(futureOrder, {
+    OrderList: [{ PayStatus: '1C200' }],
+  }), 'pending');
+});
+
+test('付款資訊持久化只選取可恢復的付款連結與付款方式', () => {
+  assert.equal(server.extractServerPaymentLink({
+    CardParam: { CardPayURL: 'https://bank.example/card' },
+  }), 'https://bank.example/card');
+  assert.equal(server.extractServerPaymentLink({
+    MobileParam: { MobilePayURL: 'https://bank.example/mobile' },
+  }), 'https://bank.example/mobile');
+  assert.equal(server.extractServerPaymentLink({
+    QRCodeURL: 'https://bank.example/QRCode-only',
+  }), null);
+  assert.equal(server.paymentMethodFromRequest({ payType: 'A' }), 'atm');
+  assert.equal(server.paymentMethodFromRequest({ payType: 'C' }), 'card');
+  assert.equal(server.paymentMethodFromRequest({ payType: 'M', choosePay: 'A' }), 'apple');
+  assert.equal(server.paymentMethodFromRequest({ payType: 'M', choosePay: 'G' }), 'google');
+});
+
+test('會員付款資訊端點會驗證登入身分與訂單所有權', async () => {
+  const originalFetch = global.fetch;
+  const { listener, baseUrl } = await listenForTest();
+  const calls = [];
+  global.fetch = async (url, options = {}) => {
+    calls.push(String(url));
+    if (String(url).endsWith('/auth/v1/user')) {
+      assert.equal(options.headers.Authorization, 'Bearer member-access-token');
+      return new Response(JSON.stringify({ id: 'member-001' }), { status: 200 });
+    }
+    if (String(url).includes('/rest/v1/orders?')) {
+      return new Response(JSON.stringify([{
+        id: 'ECL-MEMBER-001',
+        user_id: 'member-001',
+        status: 'unpaid',
+        total: 4100,
+        subtotal: 3980,
+        discount: 0,
+        items: [],
+        payment_due_at: '2099-01-01T00:00:00.000Z',
+      }]), { status: 200 });
+    }
+    if (String(url).includes('/rest/v1/order_payment_instructions?')) {
+      return new Response(JSON.stringify([{
+        order_id: 'ECL-MEMBER-001',
+        payment_method: 'atm',
+        atm_bank_code: '807',
+        atm_account: '8079988776655443',
+        payment_due_at: '2099-01-01T00:00:00.000Z',
+      }]), { status: 200 });
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  try {
+    const response = await originalFetch(`${baseUrl}/api/orders/payment-instructions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer member-access-token',
+      },
+      body: JSON.stringify({ orderNo: 'ECL-MEMBER-001' }),
+    });
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.ok, true);
+    assert.equal(body.instruction.atm_account, '8079988776655443');
+    assert.equal(body.order.shipping, 120);
+    assert.equal(calls.length, 3);
+  } finally {
+    global.fetch = originalFetch;
+    await new Promise(resolve => listener.close(resolve));
+  }
+});
+
+test('會員不能讀取其他會員的付款資訊', async () => {
+  const originalFetch = global.fetch;
+  const { listener, baseUrl } = await listenForTest();
+  let instructionRead = false;
+  global.fetch = async url => {
+    if (String(url).endsWith('/auth/v1/user')) {
+      return new Response(JSON.stringify({ id: 'member-attacker' }), { status: 200 });
+    }
+    if (String(url).includes('/rest/v1/orders?')) {
+      return new Response(JSON.stringify([{
+        id: 'ECL-OTHER-001',
+        user_id: 'member-owner',
+        status: 'unpaid',
+        total: 100,
+        subtotal: 100,
+        discount: 0,
+        items: [],
+        payment_due_at: '2099-01-01T00:00:00.000Z',
+      }]), { status: 200 });
+    }
+    if (String(url).includes('/rest/v1/order_payment_instructions?')) instructionRead = true;
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  try {
+    const response = await originalFetch(`${baseUrl}/api/orders/payment-instructions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer attacker-token',
+      },
+      body: JSON.stringify({ orderNo: 'ECL-OTHER-001' }),
+    });
+    const body = await response.json();
+    assert.equal(response.status, 400);
+    assert.match(body.error, /does not belong/);
+    assert.equal(instructionRead, false);
+  } finally {
+    global.fetch = originalFetch;
+    await new Promise(resolve => listener.close(resolve));
+  }
+});
+
+test('訪客以短查詢碼與手機取得付款資訊，且回應不洩漏個資', async () => {
+  const originalFetch = global.fetch;
+  const { listener, baseUrl } = await listenForTest();
+  global.fetch = async url => {
+    if (String(url).includes('/rest/v1/orders?')) {
+      assert.equal(new URL(String(url)).searchParams.get('public_lookup_code'), 'eq.ABCDE-12345');
+      return new Response(JSON.stringify([{
+        id: 'ECL-GUEST-001', user_id: null, member: '訪客', email: 'guest@example.com',
+        phone: '0912-345-678', public_lookup_code: 'ABCDE-12345', status: 'unpaid',
+        total: 4100, subtotal: 3980, discount: 0, items: [], payment_due_at: '2099-01-01T00:00:00.000Z',
+      }]), { status: 200 });
+    }
+    if (String(url).includes('/rest/v1/order_payment_instructions?')) {
+      return new Response(JSON.stringify([{
+        order_id: 'ECL-GUEST-001', payment_method: 'atm', atm_account: '8079988776655443',
+        payment_due_at: '2099-01-01T00:00:00.000Z',
+      }]), { status: 200 });
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+  try {
+    const response = await originalFetch(`${baseUrl}/api/orders/guest-lookup`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lookupCode: 'abcde12345', phone: '+886 912 345 678' }),
+    });
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.instruction.atm_account, '8079988776655443');
+    assert.equal(body.order.email, undefined);
+    assert.equal(body.order.phone, undefined);
+    assert.equal(body.order.address, undefined);
+    assert.equal(server.verifyGuestAccessToken(body.guestAccessToken, 'ECL-GUEST-001'), true);
+  } finally {
+    global.fetch = originalFetch;
+    await new Promise(resolve => listener.close(resolve));
+  }
+});
+
+test('訪客手機不符時使用通用錯誤且不讀付款資訊', async () => {
+  const originalFetch = global.fetch;
+  const { listener, baseUrl } = await listenForTest();
+  let instructionRead = false;
+  global.fetch = async url => {
+    if (String(url).includes('/rest/v1/orders?')) {
+      return new Response(JSON.stringify([{
+        id: 'ECL-GUEST-002', user_id: null, phone: '0912345678', public_lookup_code: 'FFFFF-11111',
+      }]), { status: 200 });
+    }
+    if (String(url).includes('/rest/v1/order_payment_instructions?')) instructionRead = true;
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+  try {
+    const response = await originalFetch(`${baseUrl}/api/orders/guest-lookup`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lookupCode: 'FFFFF-11111', phone: '0999999999' }),
+    });
+    const body = await response.json();
+    assert.equal(response.status, 400);
+    assert.equal(body.error, '查詢資料不正確，請確認查詢碼與手機號碼。');
+    assert.equal(instructionRead, false);
+  } finally {
+    global.fetch = originalFetch;
+    await new Promise(resolve => listener.close(resolve));
+  }
 });

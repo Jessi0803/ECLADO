@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import CheckoutField from '../components/checkout/CheckoutField.jsx';
 import CheckoutOrderSummary from '../components/checkout/CheckoutOrderSummary.jsx';
 import CheckoutSteps from '../components/checkout/CheckoutSteps.jsx';
@@ -12,12 +12,13 @@ import {
   SINOPAC_NOTIFY_API,
   SINOPAC_PAYMENT_API,
   extractPaymentLink,
+  getPaymentResultStatus,
   getSinopacPaymentError,
   safeTrim,
 } from '../domain/payments.js';
 import { createAuthoritativeOrder } from '../services/orders.js';
-import { createSinopacPayment } from '../services/paymentApi.js';
-import { savePendingPayment } from '../services/pendingPayment.js';
+import { createSinopacPayment, querySinopacPayment } from '../services/paymentApi.js';
+import { clearPendingPayment, getPendingPayment, savePendingPayment } from '../services/pendingPayment.js';
 
 // ─── CHECKOUT PAGE ────────────────────────────────────────────────────────────
 export default function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
@@ -38,6 +39,9 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   const [paymentSnapshot, setPaymentSnapshot] = useState(null);
   const [paymentSummary, setPaymentSummary] = useState(null);
   const [paymentError, setPaymentError] = useState('');
+  const [paymentState, setPaymentState] = useState('pending');
+  const [storedPayment] = useState(() => getPendingPayment());
+  const [restoringPayment, setRestoringPayment] = useState(!!storedPayment);
   const [pendingAuthoritativeOrder, setPendingAuthoritativeOrder] = useState(null);
   const [pricingChanges, setPricingChanges] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -53,6 +57,62 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   const total = finalSubtotal + shipping;
 
   const STEPS = ['收件資訊', '確認付款', '完成'];
+
+  function hydrateStoredPayment(payment, state, queryResponse = null) {
+    const method = PAYMENT_METHODS[payment.method] || PAYMENT_METHODS.atm;
+    const summary = payment.summary || {
+      subtotal: payment.amount,
+      discount: 0,
+      finalSubtotal: payment.amount,
+      promotion: null,
+      shipping: 0,
+      total: payment.amount,
+      items: [],
+    };
+    setOrderNo(payment.orderNo);
+    setPaymentMethod(payment.method || 'atm');
+    setPaymentSummary(summary);
+    setPaymentSnapshot(summary.items || []);
+    setPaymentResult({
+      method: payment.method,
+      methodLabel: payment.methodLabel || method.label,
+      request: { paymentToken: payment.paymentToken },
+      response: payment.response || queryResponse || {},
+      paymentDeadline: payment.paymentDeadline || null,
+      paymentLink: payment.paymentLink || '',
+      lookupCode: payment.lookupCode || '',
+      orderEmailSent: typeof payment.orderEmailSent === 'boolean' ? payment.orderEmailSent : null,
+      insertError: '',
+    });
+    setPaymentState(state);
+    setStep(3);
+  }
+
+  async function restorePayment() {
+    if (!storedPayment) return;
+    setRestoringPayment(true);
+    try {
+      const result = await querySinopacPayment(storedPayment);
+      const gatewayState = getPaymentResultStatus(result.response);
+      const deadlineTime = new Date(
+        result.order?.payment_due_at || storedPayment.paymentDueAt || '',
+      ).getTime();
+      const deadlineExpired = Number.isFinite(deadlineTime) && deadlineTime <= Date.now();
+      const state = result.paymentState
+        || (gatewayState !== 'pending' ? gatewayState : deadlineExpired ? 'expired' : 'pending');
+      hydrateStoredPayment(storedPayment, state, result.response);
+    } catch {
+      hydrateStoredPayment(storedPayment, 'error');
+    } finally {
+      setRestoringPayment(false);
+    }
+  }
+
+  useEffect(() => {
+    restorePayment();
+    // The stored payment is intentionally read once when /checkout mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function setField(name) {
     return e => setForm(f => ({ ...f, [name]: e.target.value }));
@@ -170,22 +230,45 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       };
       if (method.choosePay) payload.choosePay = method.choosePay;
 
-      const apiResponse = await createSinopacPayment(payload);
+      const paymentApiResult = await createSinopacPayment(payload);
+      const apiResponse = paymentApiResult.response;
       const sinopacError = getSinopacPaymentError(apiResponse);
       if (sinopacError) throw new Error(sinopacError);
 
       const paymentLink = extractPaymentLink(apiResponse);
-      setPaymentResult({
+      const nextPaymentResult = {
         method: paymentMethod,
         methodLabel: method.label,
         request: payload,
         response: apiResponse,
+        paymentDeadline: paymentApiResult.paymentDeadline,
         paymentLink,
+        lookupCode: paymentApiResult.guestLookupCode,
+        orderEmailSent: paymentApiResult.orderEmailSent,
         insertError: '',
+      };
+      const saved = savePendingPayment({
+        orderNo: authoritativeOrderNo,
+        paymentToken: authoritativeOrder.paymentToken,
+        amount: authoritativeOrder.total,
+        method: paymentMethod,
+        methodLabel: method.label,
+        paymentLink,
+        paymentDeadline: paymentApiResult.paymentDeadline,
+        paymentDueAt: paymentApiResult.order?.payment_due_at,
+        lookupCode: paymentApiResult.guestLookupCode,
+        orderEmailSent: paymentApiResult.orderEmailSent,
+        response: apiResponse,
+        summary: authoritativeSummary,
       });
+      setPaymentResult({
+        ...nextPaymentResult,
+        recoveryWarning: saved ? '' : '瀏覽器未能保存付款資訊，請勿重新整理或重複建立付款單，並請先記下訂單編號。',
+      });
+      setPaymentState('pending');
       setPendingAuthoritativeOrder(null);
       setPricingChanges([]);
-      setCart([]);
+      if (saved) setCart([]);
       window.scrollTo(0, 0);
       setStep(3);
     } catch (err) {
@@ -207,15 +290,24 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   }
 
   function goToPayment() {
-    if (!paymentResult?.paymentLink || !paymentResult?.request?.paymentToken) return;
-    savePendingPayment({
-      orderNo,
-      paymentToken: paymentResult.request.paymentToken,
-      amount: paymentSummary?.total || total,
-      method: paymentMethod,
-    });
+    if (paymentState !== 'pending' || !paymentResult?.paymentLink) return;
     window.location.assign(paymentResult.paymentLink);
   }
+
+  function startNewOrder() {
+    clearPendingPayment();
+    setPage('shop');
+  }
+
+
+  if (restoringPayment) return (
+    <main style={{ minHeight:'75vh', paddingTop:68, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div role="status" style={{ textAlign:'center', padding:'60px 20px' }}>
+        <p style={{ fontFamily:'var(--font-display)', fontSize:24, fontWeight:300, marginBottom:12 }}>正在確認原付款單</p>
+        <p style={{ color:'var(--dark)', fontSize:13 }}>請勿重新付款或關閉頁面。</p>
+      </div>
+    </main>
+  );
 
 
   if (step === 3) return (
@@ -238,10 +330,23 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
               onCopyAtmNo={copyAtmNo}
               orderNo={orderNo}
               paymentResult={paymentResult}
+              paymentState={paymentState}
               total={paymentSummary?.total || total}
             />
 
-            <div style={{ background:'var(--off-white)', padding:'24px 28px' }}>
+            {paymentState === 'error' && (
+              <button type="button" onClick={restorePayment} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 18px', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12, letterSpacing:'0.12em' }}>
+                重新查詢付款狀態
+              </button>
+            )}
+
+            {paymentResult?.recoveryWarning && (
+              <div role="alert" style={{ border:'1px solid #c47a16', background:'#fff4e5', color:'#5a3a10', padding:'12px 14px', fontSize:12, lineHeight:1.7 }}>
+                {paymentResult.recoveryWarning}
+              </div>
+            )}
+
+            {(form.name || form.phone || form.address) && <div style={{ background:'var(--off-white)', padding:'24px 28px' }}>
               <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase', marginBottom:16 }}>配送資訊</p>
               <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'8px 20px', fontSize:13 }}>
                 {[['收件人', form.name], ['手機', form.phone], ['地址', `${form.city}${form.district}${form.address}`], ['物流','宅配到府（順豐物流）']].map(([k, v]) => (
@@ -251,7 +356,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                   </React.Fragment>
                 ))}
               </div>
-            </div>
+            </div>}
 
             <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.8, textAlign:'center' }}>
               請依付款頁或虛擬帳號完成付款。系統會在永豐通知後更新訂單狀態。<br />
@@ -262,10 +367,15 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
               <button onClick={() => setPage('shop')} style={{ flex:1, background:'none', border:'1px solid var(--black)', color:'var(--black)', padding:'13px 0', fontSize:12, letterSpacing:'0.14em', cursor:'pointer', fontFamily:'var(--font-body)' }}>繼續購物</button>
               <button onClick={() => setPage('home')} style={{ flex:1, background:'var(--black)', color:'var(--white)', border:'none', padding:'13px 0', fontSize:12, letterSpacing:'0.14em', cursor:'pointer', fontFamily:'var(--font-body)' }}>返回首頁</button>
             </div>
+            {['paid', 'expired', 'cancelled', 'failed'].includes(paymentState) && (
+              <button type="button" onClick={startNewOrder} style={{ width:'100%', background:'transparent', color:'var(--dark)', border:'none', padding:'8px 0', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12, textDecoration:'underline', textUnderlineOffset:3 }}>
+                清除此付款紀錄並建立新訂單
+              </button>
+            )}
           </div>
 
           <CheckoutOrderSummary
-            items={paymentSnapshot?.items || cart}
+            items={paymentSnapshot || cart}
             summary={paymentSummary || { subtotal, discount, finalSubtotal, promotion, shipping, total }}
             user={user}
           />
