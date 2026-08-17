@@ -54,6 +54,7 @@ test('Sinopac notify marks order paid and sends LINE payment notice', async () =
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
   };
 
   process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
@@ -61,6 +62,8 @@ test('Sinopac notify marks order paid and sends LINE payment notice', async () =
   process.env.LINE_CHANNEL_ACCESS_TOKEN = 'test-line-token';
 
   global.fetch = async (url, options = {}) => {
+    const notificationRpc = paymentNotificationRpcResponse(url, options);
+    if (notificationRpc) return notificationRpc;
     calls.push({ url: String(url), options });
 
     if (String(url).startsWith(`${SUPABASE_URL}/rest/v1/orders?id=eq.ORDER-PAID-001&select=`)) {
@@ -147,6 +150,7 @@ test('Sinopac notify does not resend LINE notice for already paid orders', async
         status: 'paid',
         total: 100,
         user_id: 'user-002',
+        payment_notification_sent_at: '2026-08-17T00:00:00.000Z',
       }]);
     }
     throw new Error(`Unexpected fetch: ${options.method} ${url}`);
@@ -177,13 +181,17 @@ test('Sinopac notify accepts cent-based amount from mobile payments', async () =
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
   };
 
   process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   delete process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  process.env.RESEND_API_KEY = 'test-resend-key';
 
   global.fetch = async (url, options = {}) => {
+    const notificationRpc = paymentNotificationRpcResponse(url, options);
+    if (notificationRpc) return notificationRpc;
     calls.push({ url: String(url), options });
 
     if (String(url).startsWith(`${SUPABASE_URL}/rest/v1/orders?id=eq.APPLE-PAID-001&select=`)) {
@@ -194,7 +202,7 @@ test('Sinopac notify accepts cent-based amount from mobile payments', async () =
         total: 5,
         user_id: null,
         member: 'Apple Pay 測試',
-        email: '',
+        email: 'apple@example.com',
       }]);
     }
 
@@ -207,8 +215,12 @@ test('Sinopac notify accepts cent-based amount from mobile payments', async () =
         total: 5,
         user_id: null,
         member: 'Apple Pay 測試',
-        email: '',
+        email: 'apple@example.com',
       }]);
+    }
+
+    if (String(url) === 'https://api.resend.com/emails') {
+      return jsonResponse(200, { id: 'email-apple-001' });
     }
 
     throw new Error(`Unexpected fetch: ${options.method} ${url}`);
@@ -229,7 +241,7 @@ test('Sinopac notify accepts cent-based amount from mobile payments', async () =
   assert.equal(res.statusCode, 200);
   assert.equal(res.jsonBody.ok, true);
   assert.equal(res.jsonBody.status, 'paid');
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 3);
 });
 
 test('Sinopac notify resolves mobile payment by PayToken when OrderNo is absent', async () => {
@@ -239,13 +251,17 @@ test('Sinopac notify resolves mobile payment by PayToken when OrderNo is absent'
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
   };
 
   process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   delete process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  process.env.RESEND_API_KEY = 'test-resend-key';
 
   global.fetch = async (url, options = {}) => {
+    const notificationRpc = paymentNotificationRpcResponse(url, options);
+    if (notificationRpc) return notificationRpc;
     calls.push({ url: String(url), options });
 
     if (String(url).startsWith(`${SUPABASE_URL}/rest/v1/orders?note=ilike.*pay_token%3APT-APPLE-001*`)) {
@@ -256,7 +272,7 @@ test('Sinopac notify resolves mobile payment by PayToken when OrderNo is absent'
         total: 5,
         user_id: null,
         member: 'Apple Pay Token 測試',
-        email: '',
+        email: 'apple-token@example.com',
       }]);
     }
 
@@ -269,8 +285,12 @@ test('Sinopac notify resolves mobile payment by PayToken when OrderNo is absent'
         total: 5,
         user_id: null,
         member: 'Apple Pay Token 測試',
-        email: '',
+        email: 'apple-token@example.com',
       }]);
+    }
+
+    if (String(url) === 'https://api.resend.com/emails') {
+      return jsonResponse(200, { id: 'email-apple-token-001' });
     }
 
     throw new Error(`Unexpected fetch: ${options.method} ${url}`);
@@ -292,7 +312,7 @@ test('Sinopac notify resolves mobile payment by PayToken when OrderNo is absent'
   assert.equal(res.jsonBody.ok, true);
   assert.equal(res.jsonBody.orderId, 'APPLE-TOKEN-001');
   assert.equal(res.jsonBody.status, 'paid');
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 3);
 });
 
 test('Sinopac notify accepts OrderNo from backendUrl query for PayToken-only mobile notices', async () => {
@@ -302,13 +322,17 @@ test('Sinopac notify accepts OrderNo from backendUrl query for PayToken-only mob
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
   };
 
   process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   delete process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  process.env.RESEND_API_KEY = 'test-resend-key';
 
   global.fetch = async (url, options = {}) => {
+    const notificationRpc = paymentNotificationRpcResponse(url, options);
+    if (notificationRpc) return notificationRpc;
     calls.push({ url: String(url), options });
 
     if (String(url).startsWith(`${SUPABASE_URL}/rest/v1/orders?id=eq.APPLE-QUERY-001&select=`)) {
@@ -319,7 +343,7 @@ test('Sinopac notify accepts OrderNo from backendUrl query for PayToken-only mob
         total: 5,
         user_id: null,
         member: 'Apple Pay Query 測試',
-        email: '',
+        email: 'apple-query@example.com',
       }]);
     }
 
@@ -332,8 +356,12 @@ test('Sinopac notify accepts OrderNo from backendUrl query for PayToken-only mob
         total: 5,
         user_id: null,
         member: 'Apple Pay Query 測試',
-        email: '',
+        email: 'apple-query@example.com',
       }]);
+    }
+
+    if (String(url) === 'https://api.resend.com/emails') {
+      return jsonResponse(200, { id: 'email-apple-query-001' });
     }
 
     throw new Error(`Unexpected fetch: ${options.method} ${url}`);
@@ -356,7 +384,7 @@ test('Sinopac notify accepts OrderNo from backendUrl query for PayToken-only mob
   assert.equal(res.jsonBody.ok, true);
   assert.equal(res.jsonBody.orderId, 'APPLE-QUERY-001');
   assert.equal(res.jsonBody.status, 'paid');
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 3);
 });
 
 test('Sinopac notify queries OrderPayQuery for credit card PayToken-only notices', async () => {
@@ -366,15 +394,19 @@ test('Sinopac notify queries OrderPayQuery for credit card PayToken-only notices
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
     SINOPAC_PAYMENT_QUERY_URL: process.env.SINOPAC_PAYMENT_QUERY_URL,
   };
 
   process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   delete process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  process.env.RESEND_API_KEY = 'test-resend-key';
   process.env.SINOPAC_PAYMENT_QUERY_URL = 'https://pay.example.test/api/sinopac/order-pay-query';
 
   global.fetch = async (url, options = {}) => {
+    const notificationRpc = paymentNotificationRpcResponse(url, options);
+    if (notificationRpc) return notificationRpc;
     calls.push({ url: String(url), options });
 
     if (String(url) === 'https://pay.example.test/api/sinopac/order-pay-query') {
@@ -410,7 +442,7 @@ test('Sinopac notify queries OrderPayQuery for credit card PayToken-only notices
         total: 5,
         user_id: null,
         member: '信用卡 Token 測試',
-        email: '',
+        email: 'card-token@example.com',
       }]);
     }
 
@@ -423,8 +455,12 @@ test('Sinopac notify queries OrderPayQuery for credit card PayToken-only notices
         total: 5,
         user_id: null,
         member: '信用卡 Token 測試',
-        email: '',
+        email: 'card-token@example.com',
       }]);
+    }
+
+    if (String(url) === 'https://api.resend.com/emails') {
+      return jsonResponse(200, { id: 'email-card-token-001' });
     }
 
     throw new Error(`Unexpected fetch: ${options.method} ${url}`);
@@ -446,7 +482,7 @@ test('Sinopac notify queries OrderPayQuery for credit card PayToken-only notices
   assert.equal(res.jsonBody.ok, true);
   assert.equal(res.jsonBody.orderId, 'CARD-TOKEN-001');
   assert.equal(res.jsonBody.status, 'paid');
-  assert.equal(calls.length, 3);
+  assert.equal(calls.length, 4);
 });
 
 test('Sinopac notify sends payment email when member has no LINE binding', async () => {
@@ -465,6 +501,8 @@ test('Sinopac notify sends payment email when member has no LINE binding', async
   process.env.RESEND_API_KEY = 'test-resend-key';
 
   global.fetch = async (url, options = {}) => {
+    const notificationRpc = paymentNotificationRpcResponse(url, options);
+    if (notificationRpc) return notificationRpc;
     calls.push({ url: String(url), options });
 
     if (String(url).startsWith(`${SUPABASE_URL}/rest/v1/orders?id=eq.ORDER-EMAIL-001&select=`)) {
@@ -522,6 +560,112 @@ test('Sinopac notify sends payment email when member has no LINE binding', async
   assert.equal(res.jsonBody.lineSent, false);
   assert.equal(res.jsonBody.emailSent, true);
   assert.equal(calls.length, 4);
+});
+
+test('Sinopac notify retries customer notice for an already-paid order that has no delivery receipt', async () => {
+  const calls = [];
+  const originalFetch = global.fetch;
+  const originalEnv = {
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+  };
+  process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  delete process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  process.env.RESEND_API_KEY = 'test-resend-key';
+
+  global.fetch = async (url, options = {}) => {
+    const notificationRpc = paymentNotificationRpcResponse(url, options);
+    if (notificationRpc) return notificationRpc;
+    calls.push({ url: String(url), options });
+    if (String(url).startsWith(`${SUPABASE_URL}/rest/v1/orders?id=eq.ORDER-RETRY-NOTICE&select=`)) {
+      return jsonResponse(200, [{
+        id: 'ORDER-RETRY-NOTICE', status: 'paid', total: 1280, user_id: null,
+        member: '補送測試', email: 'retry@example.com', payment_notification_sent_at: null,
+      }]);
+    }
+    if (String(url) === 'https://api.resend.com/emails') {
+      return jsonResponse(200, { id: 'email-retry-001' });
+    }
+    throw new Error(`Unexpected fetch: ${options.method} ${url}`);
+  };
+
+  const res = createRes();
+  try {
+    await sinopacNotify({
+      method: 'POST',
+      body: { OrderNo: 'ORDER-RETRY-NOTICE', Status: 'S', Amount: 1280 },
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.jsonBody.emailSent, true);
+  assert.equal(calls.some(call => call.options.method === 'PATCH'), false, '已付款訂單不應再次變更付款／庫存狀態');
+});
+
+test('Sinopac notify records delivery failure and asks caller to retry', async () => {
+  const originalFetch = global.fetch;
+  const originalError = console.error;
+  const originalEnv = {
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+  };
+  process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  delete process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  delete process.env.RESEND_API_KEY;
+  console.error = () => {};
+  let failureRecorded = false;
+
+  global.fetch = async (url, options = {}) => {
+    const target = String(url);
+    if (target.startsWith(`${SUPABASE_URL}/rest/v1/orders?id=eq.ORDER-NOTICE-FAIL&select=`)) {
+      return jsonResponse(200, [{
+        id: 'ORDER-NOTICE-FAIL', status: 'unpaid', total: 500,
+        user_id: null, member: '通知失敗測試', email: '',
+      }]);
+    }
+    if (target === `${SUPABASE_URL}/rest/v1/orders?id=eq.ORDER-NOTICE-FAIL`) {
+      return jsonResponse(200, [{
+        id: 'ORDER-NOTICE-FAIL', status: 'paid', total: 500,
+        user_id: null, member: '通知失敗測試', email: '',
+      }]);
+    }
+    if (target.endsWith('/rest/v1/rpc/claim_order_payment_notification')) {
+      return jsonResponse(200, { claimed: true, attempts: 1 });
+    }
+    if (target.endsWith('/rest/v1/rpc/complete_order_payment_notification')) {
+      const body = JSON.parse(options.body);
+      assert.equal(body.p_sent, false);
+      assert.match(body.p_error, /email|user_id/i);
+      failureRecorded = true;
+      return jsonResponse(200, true);
+    }
+    throw new Error(`Unexpected fetch: ${options.method} ${url}`);
+  };
+
+  const res = createRes();
+  try {
+    await sinopacNotify({
+      method: 'POST',
+      body: { OrderNo: 'ORDER-NOTICE-FAIL', Status: 'S', Amount: 500 },
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    console.error = originalError;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.statusCode, 503);
+  assert.equal(failureRecorded, true);
+  assert.match(res.jsonBody.error, /notification failed/);
 });
 
 test('Sinopac notify ignores explicit failed payment notices', async () => {
@@ -707,6 +851,24 @@ function jsonResponse(status, body) {
       return JSON.stringify(body);
     },
   };
+}
+
+function paymentNotificationRpcResponse(url, options = {}) {
+  const target = String(url);
+  if (target.endsWith('/rest/v1/rpc/claim_order_payment_notification')) {
+    assert.equal(options.method, 'POST');
+    assert.ok(JSON.parse(options.body).p_order_id);
+    return jsonResponse(200, { claimed: true, attempts: 1 });
+  }
+  if (target.endsWith('/rest/v1/rpc/complete_order_payment_notification')) {
+    assert.equal(options.method, 'POST');
+    const body = JSON.parse(options.body);
+    assert.ok(body.p_order_id);
+    assert.equal(body.p_sent, true);
+    assert.ok(['line', 'email'].includes(body.p_channel));
+    return jsonResponse(200, true);
+  }
+  return null;
 }
 
 function restoreEnv(originalEnv) {

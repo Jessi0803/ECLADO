@@ -983,6 +983,38 @@ for (const scenario of [
   });
 }
 
+test('舊付款單已付款時清除恢復紀錄，新的購物車可建立新付款單', async ({ page }) => {
+  const paymentRequests: Record<string, unknown>[] = [];
+  await mockEcladoApis(page, {
+    paymentQueryStatus: 'paid',
+    onPaymentRequest: request => paymentRequests.push(request),
+  });
+  await createCheckoutPayment(page, /虛擬帳號匯款/);
+  expect(paymentRequests).toHaveLength(1);
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+  await proceedToCheckout(page);
+
+  await expect(page.getByRole('button', { name: /繼續確認付款/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '付款單已建立' })).toHaveCount(0);
+  expect(await page.evaluate(() => sessionStorage.getItem('eclado_pending_payment'))).toBeNull();
+
+  const checkoutInputs = page.locator('form input');
+  await checkoutInputs.nth(0).fill('第二筆付款測試');
+  await checkoutInputs.nth(1).fill('0912345678');
+  await checkoutInputs.nth(2).fill('second-payment@example.com');
+  await page.getByPlaceholder('縣市').fill('台北市');
+  await page.getByPlaceholder('區域').fill('中山區');
+  await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('新訂單路 2 號');
+  await page.getByRole('button', { name: /繼續確認付款/ }).click();
+  await page.getByRole('button', { name: /^建立付款單$/ }).click();
+  await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
+  expect(paymentRequests).toHaveLength(2);
+});
+
 test('逾期付款單重新整理後停用付款入口且不建立第二張付款單', async ({ page }) => {
   const paymentRequests: Record<string, unknown>[] = [];
   await mockEcladoApis(page, {
@@ -997,9 +1029,11 @@ test('逾期付款單重新整理後停用付款入口且不建立第二張付�
   await expect(page.getByRole('button', { name: '前往付款頁' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: '複製付款連結' })).toHaveCount(0);
   expect(paymentRequests).toHaveLength(1);
+  expect(await page.evaluate(() => sessionStorage.getItem('eclado_pending_payment'))).toBeNull();
 
   await page.reload();
-  await expect(page.getByText('付款期限已過，此訂單已取消，無法重新付款。')).toBeVisible();
+  await expect(page.getByText('付款期限已過，此訂單已取消，無法重新付款。')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /繼續確認付款/ })).toBeVisible();
   expect(paymentRequests).toHaveLength(1);
 });
 

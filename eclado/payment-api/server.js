@@ -99,6 +99,17 @@ function normalizeRequestBody(body) {
   return nested;
 }
 
+function summarizePaymentWebhook(body) {
+  const normalized = normalizeRequestBody(body);
+  return {
+    keys: Object.keys(normalized).sort(),
+    orderNo: String(pickFirst(normalized, ['OrderNo', 'orderNo']) || '').trim() || undefined,
+    payType: String(pickFirst(normalized, ['PayType', 'payType']) || '').trim() || undefined,
+    payStatus: String(pickFirst(normalized, ['PayStatus', 'payStatus']) || '').trim() || undefined,
+    hasPayToken: Boolean(pickFirst(normalized, ['PayToken', 'payToken', 'TOKEN'])),
+  };
+}
+
 function isPaidLike(value) {
   const v = String(value || '').trim().toUpperCase();
   return ['Y', 'S', 'PAID', 'SUCCESS', 'OK', '1', '1C300', '1M400'].includes(v) || /^1[A-Z](300|400)$/.test(v);
@@ -711,7 +722,7 @@ async function forwardPaidNotification(orderNo) {
     });
 
     if (!response.ok) {
-      const text = await response.text();
+      const text = (await response.text()).slice(0, 500);
       throw new Error(`Vercel notify HTTP ${response.status}${text ? ` ${text}` : ''}`);
     }
 
@@ -720,6 +731,45 @@ async function forwardPaidNotification(orderNo) {
     console.error('[notify forward] failed', error.message);
     return { sent: false, reason: error.message };
   }
+}
+
+async function retryPendingPaymentNotifications({ limit = 50 } = {}) {
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing env: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+  }
+
+  const safeLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
+  const now = new Date().toISOString();
+  const params = new URLSearchParams({
+    status: 'in.(paid,preparing,shipped,delivered)',
+    payment_notification_sent_at: 'is.null',
+    or: `(payment_notification_next_retry_at.is.null,payment_notification_next_retry_at.lte.${now})`,
+    select: 'id,payment_notification_attempts,payment_notification_last_attempt_at',
+    order: 'payment_notification_last_attempt_at.asc.nullsfirst',
+    limit: String(safeLimit),
+  });
+  const response = await fetch(`${supabaseUrl}/rest/v1/orders?${params}`, {
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
+      'X-ECLADO-Audit-Source': 'payment-notification-retry',
+    },
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`Supabase payment notification lookup failed: ${response.status} ${text}`);
+  }
+  const orders = text ? JSON.parse(text) : [];
+  const results = [];
+  for (const order of Array.isArray(orders) ? orders : []) {
+    const forwarded = await forwardPaidNotification(order.id);
+    results.push({ orderNo: order.id, sent: forwarded.sent, reason: forwarded.reason });
+  }
+  return { checked: results.length, sent: results.filter(result => result.sent).length, results };
+}
+
+function canAcknowledgePaymentWebhook(payment, forwarded, stored) {
+  return !payment?.paid || forwarded?.sent === true || stored === true;
 }
 
 async function expireOverdueOrders() {
@@ -1070,38 +1120,71 @@ app.post('/api/orders/expire-overdue', async (req, res) => {
   }
 });
 
+app.post('/api/orders/retry-payment-notifications', async (req, res) => {
+  try {
+    if (!process.env.ORDER_CLEANUP_KEY) {
+      return res.status(500).json({ ok: false, error: 'Server cleanup authorization is not configured' });
+    }
+    if (!hasValidCleanupKey(req.get('X-Cleanup-Key'))) {
+      return res.status(401).json({ ok: false, error: 'Unauthorized' });
+    }
+
+    const result = await retryPendingPaymentNotifications({ limit: req.body?.limit });
+    console.log(`[payment notification retry] sent ${result.sent}/${result.checked}`);
+    const failed = result.checked - result.sent;
+    return res.status(failed > 0 ? 503 : 200).json({ ok: failed === 0, failed, ...result });
+  } catch (error) {
+    console.error('[payment notification retry] failed', error.message);
+    return res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
 app.post('/api/sinopac/notify', async (req, res) => {
   try {
     const body = normalizeRequestBody(req.body);
-    console.log('[sinopac notify] received', JSON.stringify(body));
+    console.log('[sinopac notify] received', summarizePaymentWebhook(body));
 
     const payment = await resolvePaymentStateFromWebhook(body);
     const orderNo = payment.orderNo;
 
     if (!orderNo) {
-      console.warn('[sinopac notify] missing orderNo / PayToken, nothing to update');
-      return res.json({ Status: 'S', message: 'received' });
+      console.warn('[sinopac notify] unresolved order', summarizePaymentWebhook(body));
+      return res.status(400).json({ Status: 'F', message: 'order unresolved' });
     }
 
     const nextStatus = payment.paid ? 'paid' : 'awaiting_confirm';
+    let forwarded = { sent: false, reason: 'payment not completed' };
 
     if (payment.paid) {
       // 先轉發給 Vercel 標記已付款並寄送 LINE／Email（此時訂單尚未 paid，才不會被當成已處理跳過），
       // 再由 Vultr 補寫一次作為保險。
-      await forwardPaidNotification(orderNo);
+      forwarded = await forwardPaidNotification(orderNo);
     }
 
+    let stored = false;
     try {
       await updateSupabaseOrder(orderNo, { status: nextStatus }, 'sinopac-webhook');
+      stored = true;
     } catch (e) {
       console.error('[sinopac notify] supabase write failed', e.message);
     }
+
+    // 已付款事件若既沒有被 Vercel 接手，也沒有寫入 Supabase，就不能回覆成功，
+    // 否則銀行可能停止重送而留下永久漏單。
+    if (!canAcknowledgePaymentWebhook(payment, forwarded, stored)) {
+      return res.status(503).json({ Status: 'F', OrderNo: orderNo, message: 'payment persistence unavailable' });
+    }
     console.log(`[sinopac notify] order ${orderNo} -> ${nextStatus}`);
 
-    res.json({ Status: 'S', OrderNo: orderNo, updated: nextStatus });
+    return res.json({
+      Status: 'S',
+      OrderNo: orderNo,
+      updated: nextStatus,
+      notificationForwarded: payment.paid ? forwarded.sent : undefined,
+    });
   } catch (error) {
-    console.error('[sinopac notify] update failed', error);
-    res.status(200).json({ Status: 'S', error: error.message });
+    console.error('[sinopac notify] update failed', error.message);
+    return res.status(503).json({ Status: 'F', error: 'payment notification processing failed' });
   }
 });
 
@@ -1128,6 +1211,7 @@ module.exports = {
   generateSign,
   pickFirst,
   normalizeRequestBody,
+  summarizePaymentWebhook,
   isPaidLike,
   isPendingLike,
   getSinopacPaymentError,
@@ -1145,4 +1229,6 @@ module.exports = {
   verifyGuestAccessToken,
   sendGuestOrderCreatedEmail,
   forwardPaidNotification,
+  retryPendingPaymentNotifications,
+  canAcknowledgePaymentWebhook,
 };

@@ -1,4 +1,9 @@
 export const PENDING_PAYMENT_KEY = 'eclado_pending_payment';
+export const TERMINAL_PAYMENT_STATES = new Set(['paid', 'failed', 'expired', 'cancelled']);
+
+export function isTerminalPaymentState(state) {
+  return TERMINAL_PAYMENT_STATES.has(String(state || '').toLowerCase());
+}
 
 function sanitizeResponse(response = {}) {
   return {

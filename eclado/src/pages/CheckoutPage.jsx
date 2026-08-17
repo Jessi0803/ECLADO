@@ -18,7 +18,12 @@ import {
 } from '../domain/payments.js';
 import { createAuthoritativeOrder } from '../services/orders.js';
 import { createSinopacPayment, querySinopacPayment } from '../services/paymentApi.js';
-import { clearPendingPayment, getPendingPayment, savePendingPayment } from '../services/pendingPayment.js';
+import {
+  clearPendingPayment,
+  getPendingPayment,
+  isTerminalPaymentState,
+  savePendingPayment,
+} from '../services/pendingPayment.js';
 
 // ─── CHECKOUT PAGE ────────────────────────────────────────────────────────────
 export default function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
@@ -100,6 +105,12 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       const deadlineExpired = Number.isFinite(deadlineTime) && deadlineTime <= Date.now();
       const state = result.paymentState
         || (gatewayState !== 'pending' ? gatewayState : deadlineExpired ? 'expired' : 'pending');
+      if (isTerminalPaymentState(state)) {
+        clearPendingPayment();
+        // A non-empty cart means the customer intentionally started a new
+        // checkout. Do not replace it with the completed historical payment.
+        if (cart.length > 0) return;
+      }
       hydrateStoredPayment(storedPayment, state, result.response);
     } catch {
       hydrateStoredPayment(storedPayment, 'error');

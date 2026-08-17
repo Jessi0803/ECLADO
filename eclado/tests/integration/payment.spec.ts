@@ -28,7 +28,8 @@ type QPayResponse = {
 };
 
 const paymentEnabled = process.env.RUN_PAYMENT_INTEGRATION === '1';
-const qpayApiUrl = 'https://pay.ecladotaiwan.com/api/sinopac/create-payment';
+const qpayApiUrl = process.env.PAYMENT_INTEGRATION_API_URL
+  || 'https://pay.ecladotaiwan.com/api/sinopac/create-payment';
 
 test.describe('永豐 QPay integration', () => {
   test.skip(
@@ -37,7 +38,12 @@ test.describe('永豐 QPay integration', () => {
   );
 
   test('虛擬帳號可以建立付款單並回傳 807 與虛擬帳號', async ({ request }) => {
-    const payload = buildPayload('A');
+    const credential = getControlledOrderCredential('ATM');
+    if (!credential) {
+      test.skip(true, 'Set PAYMENT_INTEGRATION_ATM_ORDER_NO and PAYMENT_INTEGRATION_ATM_TOKEN to a fresh controlled order.');
+      return;
+    }
+    const payload = buildPayload('A', credential);
     const payment = await createPayment(request, payload);
     const response = payment.response;
 
@@ -50,12 +56,15 @@ test.describe('永豐 QPay integration', () => {
     expect(atmNo).toMatch(/^\d{10,}$/);
     expect(extractPaymentLink(response)).toBeTruthy();
     expect(payload.payType).toBe('A');
-    expect(payload.backendUrl).toBe('https://ecladotaiwan.com/api/sinopac/notify');
-    expect(payload.returnUrl).toContain('https://pay.ecladotaiwan.com/return?orderNo=');
   });
 
   test('信用卡可以建立付款單並產生付款連結', async ({ request }) => {
-    const payload = buildPayload('C');
+    const credential = getControlledOrderCredential('CARD');
+    if (!credential) {
+      test.skip(true, 'Set PAYMENT_INTEGRATION_CARD_ORDER_NO and PAYMENT_INTEGRATION_CARD_TOKEN to a fresh controlled order.');
+      return;
+    }
+    const payload = buildPayload('C', credential);
     const payment = await createPayment(request, payload);
     const response = payment.response;
 
@@ -65,8 +74,6 @@ test.describe('永豐 QPay integration', () => {
     expect(response.ATMParam?.AtmPayNo).toBeFalsy();
     expect(extractPaymentLink(response)).toBeTruthy();
     expect(payload.payType).toBe('C');
-    expect(payload.backendUrl).toBe('https://ecladotaiwan.com/api/sinopac/notify');
-    expect(payload.returnUrl).toContain('https://pay.ecladotaiwan.com/return?orderNo=');
   });
 });
 
@@ -95,23 +102,30 @@ async function createPayment(
   };
 }
 
-function buildPayload(payType: 'A' | 'C') {
-  const orderNo = `PW${Date.now()}`;
-  const amount = 100;
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
+function buildPayload(payType: 'A' | 'C', credential: ControlledOrderCredential) {
   return {
-    orderNo,
-    amount,
-    prdtName: 'ECLADO QPay 測試商品',
+    orderNo: credential.orderNo,
+    paymentToken: credential.paymentToken,
     payType,
-    expireDate: formatDateCompact(expiresAt),
-    expireTime: formatTimeCompact(expiresAt),
-    returnUrl: `https://pay.ecladotaiwan.com/return?orderNo=${encodeURIComponent(orderNo)}`,
-    backendUrl: 'https://ecladotaiwan.com/api/sinopac/notify',
-    qrCodeStatus: 'Y',
-    memo: 'PW',
   };
+}
+
+type ControlledOrderCredential = {
+  orderNo: string;
+  paymentToken: string;
+};
+
+function getControlledOrderCredential(kind: 'ATM' | 'CARD'): ControlledOrderCredential | null {
+  const orderNo = String(process.env[`PAYMENT_INTEGRATION_${kind}_ORDER_NO`] || '').trim();
+  const paymentToken = String(process.env[`PAYMENT_INTEGRATION_${kind}_TOKEN`] || '').trim();
+  if (!orderNo || !paymentToken) return null;
+  if (!/^ECL[-A-Z0-9]+$/i.test(orderNo)) {
+    throw new Error(`${kind} integration order must be a real ECLADO order number`);
+  }
+  if (paymentToken.length < 32) {
+    throw new Error(`${kind} integration payment token is unexpectedly short`);
+  }
+  return { orderNo, paymentToken };
 }
 
 function extractPaymentLink(response: QPayResponse) {
@@ -146,17 +160,4 @@ function normalizePaymentResponse(body: unknown) {
     ok: record.ok,
     response: response as QPayResponse,
   };
-}
-
-function formatDateCompact(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}${m}${d}`;
-}
-
-function formatTimeCompact(date: Date) {
-  const h = String(date.getHours()).padStart(2, '0');
-  const m = String(date.getMinutes()).padStart(2, '0');
-  return `${h}${m}`;
 }

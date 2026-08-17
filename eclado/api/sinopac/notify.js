@@ -74,6 +74,19 @@ function getShopNo(payload) {
   return firstText(payload, ['ShopNo', 'shopNo', 'shop_no']) || process.env.SINOPAC_SHOP_NO || '';
 }
 
+function summarizePaymentPayload(payload) {
+  return {
+    keys: payload && typeof payload === 'object'
+      ? Object.keys(payload).filter(key => key !== '__tokenOrder').sort()
+      : [],
+    orderId: getOrderId(payload) || undefined,
+    shopNo: getShopNo(payload) || undefined,
+    payType: firstText(payload, ['PayType', 'payType']) || undefined,
+    payStatus: firstText(payload, ['PayStatus', 'payStatus']) || undefined,
+    hasPayToken: Boolean(getPayToken(payload)),
+  };
+}
+
 function amountsMatch(orderTotal, notifiedAmount) {
   if (notifiedAmount === null) return true;
   const total = Number(orderTotal);
@@ -139,6 +152,25 @@ async function supabaseRequest(path, options = {}) {
   }
 
   return body;
+}
+
+async function claimPaymentNotification(orderId) {
+  return supabaseRequest('rpc/claim_order_payment_notification', {
+    method: 'POST',
+    body: JSON.stringify({ p_order_id: orderId }),
+  });
+}
+
+async function completePaymentNotification(orderId, result) {
+  return supabaseRequest('rpc/complete_order_payment_notification', {
+    method: 'POST',
+    body: JSON.stringify({
+      p_order_id: orderId,
+      p_sent: result.sent === true,
+      p_channel: result.channel || null,
+      p_error: result.sent ? null : String(result.reason || 'notification delivery failed').slice(0, 1000),
+    }),
+  });
 }
 
 async function readJsonResponse(response) {
@@ -430,15 +462,11 @@ module.exports = async function handler(req, res) {
         if (orderPayResult) {
           Object.assign(payload, orderPayResult);
         } else if (hasOrderPayQueryConfig()) {
-          console.warn('[sinopac notify] OrderPayQuery skipped or unavailable', {
-            shopNo: shopNo || undefined,
-            payToken,
-          });
+          console.warn('[sinopac notify] OrderPayQuery skipped or unavailable', summarizePaymentPayload(payload));
         }
       } catch (error) {
         console.warn('[sinopac notify] OrderPayQuery failed; falling back to local token lookup', {
-          shopNo: shopNo || undefined,
-          payToken,
+          ...summarizePaymentPayload(payload),
           error: error.message || String(error),
         });
       }
@@ -451,11 +479,7 @@ module.exports = async function handler(req, res) {
         orderId = tokenOrder.id;
         payload.__tokenOrder = tokenOrder;
       } else {
-        console.warn('[sinopac notify] missing order id', {
-          keys: payload && typeof payload === 'object' ? Object.keys(payload) : [],
-          payToken: payToken || undefined,
-          payload,
-        });
+        console.warn('[sinopac notify] missing order id', summarizePaymentPayload(payload));
         return res.status(400).json({ ok: false, error: 'orderNo required' });
       }
     }
@@ -466,7 +490,7 @@ module.exports = async function handler(req, res) {
     let order = payload.__tokenOrder;
     if (!order) {
       const orders = await supabaseRequest(
-        `orders?id=eq.${encodeURIComponent(orderId)}&select=id,status,total,user_id,member,email`,
+        `orders?id=eq.${encodeURIComponent(orderId)}&select=id,status,total,user_id,member,email,payment_notification_sent_at,payment_notification_next_retry_at`,
         { method: 'GET' },
       );
       order = orders?.[0];
@@ -479,23 +503,53 @@ module.exports = async function handler(req, res) {
         orderId,
         orderTotal: order.total,
         notifiedAmount,
-        payload,
+        payload: summarizePaymentPayload(payload),
       });
       return res.status(400).json({ ok: false, error: 'amount mismatch', orderId });
     }
 
-    if (INVENTORY_ACTIVE_STATUSES.has(order.status)) {
+    if (order.payment_notification_sent_at) {
       return res.status(200).json({ ok: true, orderId, status: order.status, alreadyPaid: true, lineSent: false });
     }
 
-    const updated = await supabaseRequest(`orders?id=eq.${encodeURIComponent(orderId)}`, {
-      method: 'PATCH',
-      returnRepresentation: true,
-      body: JSON.stringify({ status: 'paid' }),
-    });
-    const paidOrder = updated?.[0] || { ...order, status: 'paid' };
+    let paidOrder = order;
+    if (!INVENTORY_ACTIVE_STATUSES.has(order.status)) {
+      const updated = await supabaseRequest(`orders?id=eq.${encodeURIComponent(orderId)}`, {
+        method: 'PATCH',
+        returnRepresentation: true,
+        body: JSON.stringify({ status: 'paid' }),
+      });
+      paidOrder = updated?.[0] || { ...order, status: 'paid' };
+    }
+
+    const claim = await claimPaymentNotification(orderId);
+    if (!claim?.claimed) {
+      return res.status(200).json({
+        ok: true,
+        orderId,
+        status: paidOrder.status,
+        notificationPending: true,
+        retryAt: claim?.next_retry_at || order.payment_notification_next_retry_at || null,
+      });
+    }
+
     const line = await pushLinePaymentNotice(paidOrder);
     const email = line.sent ? { sent: false } : await sendPaymentEmailNotice(paidOrder, line.fallbackEmail);
+    const delivery = line.sent
+      ? { sent: true, channel: 'line' }
+      : email.sent
+        ? { sent: true, channel: 'email' }
+        : { sent: false, reason: email.reason || line.reason || 'notification delivery failed' };
+    await completePaymentNotification(orderId, delivery);
+
+    if (!delivery.sent) {
+      return res.status(503).json({
+        ok: false,
+        orderId,
+        status: paidOrder.status,
+        error: 'payment recorded but customer notification failed',
+      });
+    }
 
     return res.status(200).json({
       ok: true,
@@ -507,7 +561,7 @@ module.exports = async function handler(req, res) {
       emailReason: email.sent || line.sent ? undefined : email.reason,
     });
   } catch (error) {
-    console.error('[sinopac notify]', error);
+    console.error('[sinopac notify]', error.message || String(error));
     return res.status(500).json({ ok: false, error: error.message || String(error), orderId });
   }
 };
@@ -525,5 +579,6 @@ module.exports.__test = {
   amountsMatch,
   getOrderId,
   getPayToken,
+  summarizePaymentPayload,
   hasValidPaymentNotifySecret,
 };

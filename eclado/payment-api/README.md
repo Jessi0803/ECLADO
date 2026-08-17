@@ -17,10 +17,16 @@
 - `POST /api/orders/guest-lookup` — 以短查詢碼與結帳手機查詢訪客訂單，成功後簽發短效憑證。
 - `POST /api/orders/guest-details` — 以短效訪客憑證更新該筆訂單、付款與物流狀態；不再次傳送手機號碼。
 - `POST /api/orders/expire-overdue` — 清理逾期未付款訂單；必須帶正確的 `X-Cleanup-Key`。
+- `POST /api/orders/retry-payment-notifications` — 重送已付款但 LINE／Email 尚未成功的通知；
+  必須帶正確的 `X-Cleanup-Key`，建議由 cron 每小時呼叫。
 
 確認付款成功後，會轉發 `{OrderNo, Status:'S'}` 給 Vercel 端
 （`ecladotaiwan.com/api/sinopac/notify`）負責標記 paid + 寄送 LINE／Email，
 本服務再補寫一次 paid 作為保險。詳見整體架構說明。
+
+正式啟用通知重試前，必須先在 Supabase SQL Editor 執行
+`supabase-payment-notification-reliability.sql`。它會新增通知送達狀態、原子 claim／complete
+RPC 與重試索引；既有已付款訂單會標記為歷史已處理，避免部署時大量重寄舊通知。
 
 訂單讀取與狀態更新一律使用 Vultr 端的 `SUPABASE_SERVICE_ROLE_KEY`；
 瀏覽器公開的 anon key 不具備訂單存取權，也不應提供給本服務作為後端權限。
@@ -51,6 +57,11 @@ cp .env.example .env   # 填入實際金鑰（不提交）
 npm start              # 本機啟動
 npm test               # 跑單元測試（node --test）
 ```
+
+正式豐收款整合測試不再自行偽造金額或訂單。先由網站建立兩張全新、可拋棄的權威訂單，
+再分別設定 `PAYMENT_INTEGRATION_ATM_ORDER_NO`／`PAYMENT_INTEGRATION_ATM_TOKEN` 與
+`PAYMENT_INTEGRATION_CARD_ORDER_NO`／`PAYMENT_INTEGRATION_CARD_TOKEN`，最後以
+`RUN_PAYMENT_INTEGRATION=1` 執行整合測試。每組 token 只能用於原本那張訂單。
 
 ## 部署到 Vultr（手動，一行）
 

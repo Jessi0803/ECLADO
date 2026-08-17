@@ -135,6 +135,69 @@ test('Vercel 拒絕付款通知時，Vultr 會留下明確失敗結果', async (
   }
 });
 
+test('付款 webhook 日誌摘要不包含 PayToken 值或完整 payload', () => {
+  const summary = server.summarizePaymentWebhook({
+    OrderNo: 'ECL-LOG-001',
+    PayToken: 'SECRET-PAY-TOKEN-123',
+    PayType: 'C',
+    PayStatus: '1C400',
+    CardNo: '4111111111111111',
+  });
+  assert.deepEqual(summary, {
+    keys: ['CardNo', 'OrderNo', 'PayStatus', 'PayToken', 'PayType'],
+    orderNo: 'ECL-LOG-001',
+    payType: 'C',
+    payStatus: '1C400',
+    hasPayToken: true,
+  });
+  assert.equal(JSON.stringify(summary).includes('SECRET-PAY-TOKEN-123'), false);
+  assert.equal(JSON.stringify(summary).includes('4111111111111111'), false);
+});
+
+test('已付款事件只有在通知轉發或 Supabase 至少一邊成功時才可回覆成功', () => {
+  assert.equal(server.canAcknowledgePaymentWebhook({ paid: true }, { sent: false }, false), false);
+  assert.equal(server.canAcknowledgePaymentWebhook({ paid: true }, { sent: true }, false), true);
+  assert.equal(server.canAcknowledgePaymentWebhook({ paid: true }, { sent: false }, true), true);
+  assert.equal(server.canAcknowledgePaymentWebhook({ paid: false }, { sent: false }, false), true);
+});
+
+test('付款通知補償工作只重送已到重試時間且尚未送達的訂單', async () => {
+  const originalFetch = global.fetch;
+  const forwarded = [];
+  global.fetch = async (url, options = {}) => {
+    const target = String(url);
+    if (target.startsWith(`${process.env.SUPABASE_URL}/rest/v1/orders?`)) {
+      const query = new URL(target).searchParams;
+      assert.equal(query.get('status'), 'in.(paid,preparing,shipped,delivered)');
+      assert.equal(query.get('payment_notification_sent_at'), 'is.null');
+      assert.match(query.get('or'), /payment_notification_next_retry_at/);
+      return new Response(JSON.stringify([
+        { id: 'ECL-RETRY-001' },
+        { id: 'ECL-RETRY-002' },
+      ]), { status: 200 });
+    }
+    if (target === 'https://ecladotaiwan.com/api/sinopac/notify') {
+      const orderNo = JSON.parse(options.body).OrderNo;
+      forwarded.push(orderNo);
+      return orderNo === 'ECL-RETRY-001'
+        ? new Response(JSON.stringify({ ok: true }), { status: 200 })
+        : new Response(JSON.stringify({ error: 'temporary failure' }), { status: 503 });
+    }
+    throw new Error(`Unexpected fetch: ${target}`);
+  };
+  const originalError = console.error;
+  console.error = () => {};
+  try {
+    const result = await server.retryPendingPaymentNotifications({ limit: 2 });
+    assert.equal(result.checked, 2);
+    assert.equal(result.sent, 1);
+    assert.deepEqual(forwarded, ['ECL-RETRY-001', 'ECL-RETRY-002']);
+  } finally {
+    global.fetch = originalFetch;
+    console.error = originalError;
+  }
+});
+
 test('isPaidLike: 授權/請款/付款完成算已付款；待付款/逾期不算', () => {
   // 已付款（規格書 §10.2）
   assert.equal(server.isPaidLike('1C300'), true, '1C300 已授權未請款');

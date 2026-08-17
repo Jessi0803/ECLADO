@@ -68,6 +68,19 @@ test('getAmount / amountsMatch handle dollar and cent amounts', () => {
   assert.equal(__test.amountsMatch(5, 999), false);
 });
 
+test('payment payload summary exposes presence but never PayToken/card values', () => {
+  const summary = __test.summarizePaymentPayload({
+    OrderNo: 'ECL-SAFE-LOG-001',
+    PayToken: 'SECRET-PAY-TOKEN',
+    CardNo: '4111111111111111',
+    PayType: 'C',
+  });
+  assert.equal(summary.hasPayToken, true);
+  assert.equal(summary.orderId, 'ECL-SAFE-LOG-001');
+  assert.equal(JSON.stringify(summary).includes('SECRET-PAY-TOKEN'), false);
+  assert.equal(JSON.stringify(summary).includes('4111111111111111'), false);
+});
+
 test('real BackendURL {ShopNo, PayToken} resolves order via OrderPayQuery (AES-256) and marks paid', async () => {
   const originalFetch = global.fetch;
   const saved = {
@@ -90,7 +103,7 @@ test('real BackendURL {ShopNo, PayToken} resolves order via OrderPayQuery (AES-2
   process.env.SINOPAC_SHOP_NO = 'NA0636_001';
   delete process.env.SINOPAC_PAYMENT_QUERY_URL; // 強制走 direct（真實加解密）
   delete process.env.LINE_CHANNEL_ACCESS_TOKEN;
-  delete process.env.RESEND_API_KEY;
+  process.env.RESEND_API_KEY = 'test-resend-key';
 
   const aesKey = __test.getAesKey();
   const respNonce = 'RESP-NONCE-7654321';
@@ -119,6 +132,17 @@ test('real BackendURL {ShopNo, PayToken} resolves order via OrderPayQuery (AES-2
   global.fetch = async (url, options = {}) => {
     const u = String(url);
 
+    if (u.endsWith('/rest/v1/rpc/claim_order_payment_notification')) {
+      assert.equal(options.method, 'POST');
+      return jsonResponse(200, { claimed: true, attempts: 1 });
+    }
+
+    if (u.endsWith('/rest/v1/rpc/complete_order_payment_notification')) {
+      assert.equal(options.method, 'POST');
+      assert.equal(JSON.parse(options.body).p_sent, true);
+      return jsonResponse(200, true);
+    }
+
     if (u === 'https://qpay.test/api/Nonce') {
       assert.equal(options.method, 'POST');
       assert.equal(options.headers['X-KeyID'], 'test-xkey');
@@ -132,14 +156,18 @@ test('real BackendURL {ShopNo, PayToken} resolves order via OrderPayQuery (AES-2
 
     if (u.startsWith(`${SUPABASE_URL}/rest/v1/orders?id=eq.CARD-REAL-001&select=`)) {
       assert.equal(options.method, 'GET');
-      return jsonResponse(200, [{ id: 'CARD-REAL-001', status: 'unpaid', total: 5, user_id: null, member: '信用卡實測', email: '' }]);
+      return jsonResponse(200, [{ id: 'CARD-REAL-001', status: 'unpaid', total: 5, user_id: null, member: '信用卡實測', email: 'card@example.com' }]);
     }
 
     if (u === `${SUPABASE_URL}/rest/v1/orders?id=eq.CARD-REAL-001`) {
       assert.equal(options.method, 'PATCH');
       assert.deepEqual(JSON.parse(options.body), { status: 'paid' });
       patched = true;
-      return jsonResponse(200, [{ id: 'CARD-REAL-001', status: 'paid', total: 5, user_id: null, member: '信用卡實測', email: '' }]);
+      return jsonResponse(200, [{ id: 'CARD-REAL-001', status: 'paid', total: 5, user_id: null, member: '信用卡實測', email: 'card@example.com' }]);
+    }
+
+    if (u === 'https://api.resend.com/emails') {
+      return jsonResponse(200, { id: 'email-card-real-001' });
     }
 
     throw new Error(`Unexpected fetch: ${options.method} ${u}`);

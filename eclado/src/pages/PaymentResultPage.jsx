@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getPaymentResultStatus } from '../domain/payments.js';
 import useIsMobile from '../hooks/useIsMobile.js';
 import { querySinopacPayment } from '../services/paymentApi.js';
-import { clearPendingPayment, getPendingPayment } from '../services/pendingPayment.js';
+import { clearPendingPayment, getPendingPayment, isTerminalPaymentState } from '../services/pendingPayment.js';
 
 const CONTENT = {
   checking: ['正在確認付款結果', '請勿關閉頁面或重複付款。'],
@@ -34,7 +34,7 @@ export default function PaymentResultPage({ setPage }) {
         if (cancelled) return;
         const nextStatus = result.paymentState || getPaymentResultStatus(result.response);
         setStatus(nextStatus);
-        if (['paid', 'failed', 'expired', 'cancelled'].includes(nextStatus)) clearPendingPayment();
+        if (isTerminalPaymentState(nextStatus)) clearPendingPayment();
       })
       .catch(() => {
         if (!cancelled) setStatus(hint === 'failed' ? 'failed' : 'pending');
