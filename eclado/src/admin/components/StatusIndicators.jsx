@@ -38,6 +38,9 @@ export function Badge({ status }) {
 
 export function StatusSelect({ status, onChange, size = 'sm' }) {
   const item = STATUS_MAP[status] || { label:status, color:'var(--mid)' };
+  if (status === 'cancelled') {
+    return <Badge status="cancelled" />;
+  }
   const padding = size === 'lg' ? '8px 32px 8px 12px' : '4px 24px 4px 10px';
   return (
     <div style={{ position:'relative', display:'inline-block' }}>

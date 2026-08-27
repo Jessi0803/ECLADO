@@ -20,7 +20,7 @@ function formatNotificationTime(value) {
   });
 }
 
-export default function Orders({ orders, setOrders, persistOrderPatch, defaultFilter = 'awaiting_confirm' }) {
+export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awaiting_confirm' }) {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState(defaultFilter);
   const [stockFilter, setStockFilter] = useState('all');
@@ -44,6 +44,7 @@ export default function Orders({ orders, setOrders, persistOrderPatch, defaultFi
   const awaitingCount = orders.filter(o => o.status === 'awaiting_confirm').length;
   const unpaidCount = orders.filter(o => o.status === 'unpaid').length;
   const returnedCount = orders.filter(o => o.status === 'returned').length;
+  const cancelledCount = orders.filter(o => o.status === 'cancelled').length;
   const preorderCount = byStatus.filter(hasPreorder).length;
   const inStockCount = byStatus.filter(o => !hasPreorder(o)).length;
 
@@ -192,15 +193,11 @@ export default function Orders({ orders, setOrders, persistOrderPatch, defaultFi
       return;
     }
     try {
-      if (status === 'shipped') {
-        await persistOrderPatch(id, patch);
-      } else {
-        setOrders(prev => prev.map(o => o.id === id ? { ...o, ...patch } : o));
-      }
+      await persistOrderPatch(id, patch);
       if (selected?.id === id) setSelected(s => ({ ...s, ...patch }));
       setFilter(status);
     } catch (error) {
-      setLineNotice('出貨資料儲存失敗：' + (error?.message || '請稍後再試'));
+      setLineNotice('訂單狀態更新失敗：' + (error?.message || '請稍後再試'));
       return;
     }
     if (shouldNotifyPaid) {
@@ -255,7 +252,7 @@ export default function Orders({ orders, setOrders, persistOrderPatch, defaultFi
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
           <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>訂單管理</h1>
           <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
-            {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['unpaid','未付款'], ['paid','已付款'], ['preparing','備貨中'], ['shipped','已出貨'], ['delivered','已到貨'], ['returned','退貨']].map(([val, label]) => (
+            {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['unpaid','未付款'], ['paid','已付款'], ['preparing','備貨中'], ['shipped','已出貨'], ['delivered','已到貨'], ['returned','退貨'], ['cancelled','已取消']].map(([val, label]) => (
               <button key={val} aria-pressed={filter === val} onClick={() => setFilter(val)} style={{
                 padding: '8px 16px', border: 'none', fontSize: 12, letterSpacing: '0.04em',
                 background: filter === val ? 'var(--dark)' : 'transparent',
@@ -280,6 +277,13 @@ export default function Orders({ orders, setOrders, persistOrderPatch, defaultFi
                     minWidth: 18, height: 18, borderRadius: 9, padding: '0 6px',
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
                   }}>{returnedCount}</span>
+                )}
+                {val === 'cancelled' && cancelledCount > 0 && (
+                  <span style={{
+                    background: 'var(--mid)', color: '#fff', fontSize: 10, fontWeight: 600,
+                    minWidth: 18, height: 18, borderRadius: 9, padding: '0 6px',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+                  }}>{cancelledCount}</span>
                 )}
               </button>
             ))}

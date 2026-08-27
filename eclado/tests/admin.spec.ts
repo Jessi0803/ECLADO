@@ -329,6 +329,10 @@ test('訂單管理可取消訂單並同步 cancelled 狀態', async ({ page }) =
   await page.getByRole('button', { name: '取消訂單' }).click();
 
   await expect.poll(() => orderUpdates.some(update => update.status === 'cancelled')).toBe(true);
+  await expect(page.getByRole('button', { name: /已取消/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.detail-panel').getByText('已取消', { exact: true })).toBeVisible();
+  await expect(page.locator('.detail-panel select')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '取消訂單' })).toHaveCount(0);
 });
 
 test('訂單改為已付款會送出 LINE 付款通知，LINE 失敗時改寄 Email', async ({ page }) => {
@@ -613,11 +617,29 @@ test('商品管理可從本機上傳圖片並以規格 RPC 建立草稿', async 
   });
 });
 
-test('商品圖片上傳會阻止未選圖片、非圖片與超過 5 MB 的檔案', async ({ page }) => {
+test('新增商品缺少必填欄位時在編輯面板內顯示警示', async ({ page }) => {
+  await mockAdminApis(page, { productVariants: adminProductVariants });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /商品 & 庫存/);
+  await page.getByRole('button', { name: '+ 新增商品' }).click();
+
+  const panel = page.locator('.detail-panel');
+  await panel.getByRole('button', { name: '建立草稿' }).click();
+
+  const alert = panel.getByRole('alert');
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText('無法儲存商品');
+  await expect(alert).toContainText('請輸入中文名稱與英文名稱');
+});
+
+test('新增商品可不放圖片並建立草稿', async ({ page }) => {
   let savedRequest: Record<string, any> | null = null;
+  let savedImagesRequest: Record<string, any> | null = null;
   await mockAdminApis(page, {
     productVariants: adminProductVariants,
     onProductWithVariantsSave: request => { savedRequest = request; },
+    onProductImagesSave: request => { savedImagesRequest = request; },
   });
 
   await page.goto('/admin');
@@ -626,9 +648,28 @@ test('商品圖片上傳會阻止未選圖片、非圖片與超過 5 MB 的檔�
   const panel = page.locator('.detail-panel');
   await panel.getByLabel('中文名稱').fill('無圖商品');
   await panel.getByLabel('英文名稱').fill('Missing Image Product');
+  await panel.getByLabel('規格 1 名稱').fill('50ml');
+  await panel.getByLabel('規格 1 SKU').fill('NO-IMAGE-50');
 
   await panel.getByRole('button', { name: '建立草稿' }).click();
-  await expect(page.getByText('請選擇至少一張商品圖片')).toBeVisible();
+
+  await expect.poll(() => savedRequest).not.toBeNull();
+  await expect.poll(() => savedImagesRequest).not.toBeNull();
+  expect(savedRequest?.p_product).toMatchObject({
+    name: 'Missing Image Product',
+    name_zh: '無圖商品',
+    publication_status: 'draft',
+  });
+  expect(savedImagesRequest?.p_images).toEqual([]);
+});
+
+test('商品圖片上傳會阻止非圖片與超過 5 MB 的檔案', async ({ page }) => {
+  await mockAdminApis(page, { productVariants: adminProductVariants });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /商品 & 庫存/);
+  await page.getByRole('button', { name: '+ 新增商品' }).click();
+  const panel = page.locator('.detail-panel');
 
   await panel.getByLabel('商品圖片').setInputFiles({
     name: 'not-an-image.txt',
@@ -643,7 +684,6 @@ test('商品圖片上傳會阻止未選圖片、非圖片與超過 5 MB 的檔�
     buffer: Buffer.alloc(5 * 1024 * 1024 + 1),
   });
   await expect(page.getByText('too-large.png 超過 5 MB')).toBeVisible();
-  expect(savedRequest).toBeNull();
 });
 
 test('新增商品寫入失敗時顯示錯誤且不加入商品清單', async ({ page }) => {

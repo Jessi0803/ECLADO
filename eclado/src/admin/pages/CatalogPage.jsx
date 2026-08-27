@@ -237,10 +237,6 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
       setError('請輸入中文名稱與英文名稱');
       return;
     }
-    if (editing.isNew && !editing.productImages.length) {
-      setError('請選擇至少一張商品圖片');
-      return;
-    }
     if (editing.productImages.length) {
       const primaryImages = editing.productImages.filter(image => image.active !== false && image.isPrimary);
       if (primaryImages.length !== 1) {
@@ -327,7 +323,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
         <button onClick={openNew} style={{ padding: '10px 24px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>+ 新增商品</button>
       </div>
 
-      {error && (
+      {error && !editing && (
         <div style={{ background: 'oklch(0.60 0.18 25 / 0.05)', border: '1px solid oklch(0.60 0.18 25 / 0.2)', padding: '12px 16px', marginBottom: 20, fontSize: 12, color: 'var(--red)' }}>
           {error}
         </div>
@@ -480,6 +476,22 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
               <button type="button" aria-label="關閉商品編輯" onClick={() => setEditing(null)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--mid)', lineHeight: 1, padding: '0 0 0 8px' }}>✕</button>
             </div>
 
+            {error && (
+              <div
+                role="alert"
+                aria-live="assertive"
+                style={{
+                  position: 'sticky', top: 0, zIndex: 3,
+                  background: '#fff4f2', border: '1px solid oklch(0.60 0.18 25 / 0.35)',
+                  padding: '12px 14px', marginBottom: 18, fontSize: 12,
+                  color: 'var(--red)', lineHeight: 1.6, boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                }}
+              >
+                <strong style={{ display: 'block', marginBottom: 2 }}>無法儲存商品</strong>
+                {error}
+              </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
@@ -535,9 +547,9 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
               <div style={{ height: 1, background: 'var(--border)' }} />
 
               <div>
-                <label htmlFor="productImageFiles" style={lbl}>商品圖片</label>
+                <label htmlFor="productImageFiles" style={lbl}>商品圖片（選填）</label>
                 <input id="productImageFiles" type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={setImageFiles} style={{ ...inp, padding: '8px 0', cursor: 'pointer' }} />
-                <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 6 }}>可一次選擇多張 JPG、PNG、WebP；每張上限 5 MB。儲存商品時才會上傳。</p>
+                <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 6 }}>可先建立無圖片商品，之後再補圖。支援多張 JPG、PNG、WebP；每張上限 5 MB。</p>
                 {(editing.productImages || []).length > 0 && (
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(190px, 1fr))', gap:12, marginTop:14 }}>
                     {editing.productImages.map((image, index) => (
