@@ -278,7 +278,10 @@ begin
     when new.user_id is not null then 'user:' || new.user_id::text
     else 'guest:' || lower(trim(coalesce(new.email, ''))) || ':' || regexp_replace(coalesce(new.phone, ''), '[^0-9]', '', 'g')
   end;
-  identity_hash := encode(digest(identity_value, 'sha256'), 'hex');
+  identity_hash := encode(
+    extensions.digest(identity_value::text, 'sha256'::text),
+    'hex'
+  );
 
   if not public.consume_rate_limit_internal('order:create', identity_hash, 8, 900) then
     raise exception 'Too many order attempts. Please try again later.' using errcode = 'P0001';
