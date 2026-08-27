@@ -111,6 +111,38 @@ test('後台側邊欄將操作紀錄歸在會員分類', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '操作紀錄' })).toBeVisible();
 });
 
+test('後台切換左側導覽時主內容自動回到頂部', async ({ page }) => {
+  await page.setViewportSize({ width: 430, height: 700 });
+  await mockAdminApis(page);
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+  await openAdminSection(page, /商品 & 庫存/);
+  await expect.poll(() => page.evaluate(() => ({
+    windowTop: window.scrollY,
+    mainTop: document.querySelector('.app-main')?.scrollTop || 0,
+  }))).toEqual({ windowTop: 0, mainTop: 0 });
+});
+
+test('儀表板最新訂單的查看全部會前往訂單管理', async ({ page }) => {
+  await mockAdminApis(page);
+
+  await page.goto('/admin');
+  await page.getByRole('button', { name: '查看全部' }).click();
+
+  await expect(page.getByRole('heading', { name: '訂單管理' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '全部', exact: true }).first()).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('E2E-ORDER-001')).toBeVisible();
+  await expect(page.getByText('E2E-ORDER-002')).toBeVisible();
+
+  await openAdminSection(page, /商品 & 庫存/);
+  await openAdminSection(page, /訂單管理/);
+  await expect(page.getByRole('button', { name: /轉帳待確認/ })).toHaveAttribute('aria-pressed', 'true');
+});
+
 test('後台資料為空時維持空狀態，不顯示本機示範商品、會員或訂單', async ({ page }) => {
   await mockAdminApis(page, {
     products: [],
@@ -480,6 +512,31 @@ test('商品庫存可依庫存狀態篩選', async ({ page }) => {
   await page.getByLabel('庫存狀態篩選').selectOption('ok');
   await expect(table.getByText('深層清潔泡沫洗面乳')).toBeVisible();
   await expect(table.getByText('NK細胞活化安瓶')).toHaveCount(0);
+});
+
+test('商品庫存可依中文或英文名稱搜尋，並與庫存狀態共同篩選', async ({ page }) => {
+  await mockAdminApis(page);
+
+  await page.goto('/admin');
+  await openAdminSection(page, /商品 & 庫存/);
+
+  const table = page.locator('.table-scroll').first();
+  const search = page.getByLabel('搜尋商品名稱');
+
+  await search.fill('胜肽');
+  await expect(table.getByText('胜肽修護精華液')).toBeVisible();
+  await expect(table.getByText('深層清潔泡沫洗面乳')).toHaveCount(0);
+  await expect(table.getByText('NK細胞活化安瓶')).toHaveCount(0);
+
+  await search.fill('  deep cleansing  ');
+  await expect(table.getByText('深層清潔泡沫洗面乳')).toBeVisible();
+  await expect(table.getByText('胜肽修護精華液')).toHaveCount(0);
+
+  await page.getByLabel('庫存狀態篩選').selectOption('low');
+  await expect(table.getByText('目前沒有符合名稱搜尋與庫存條件的商品')).toBeVisible();
+
+  await search.fill('PEPTIDE');
+  await expect(table.getByText('胜肽修護精華液')).toBeVisible();
 });
 
 test('商品管理可編輯名稱、規格價格與院線限定並透過 RPC 儲存', async ({ page }) => {
@@ -868,6 +925,78 @@ test('會員管理操作欄的會員類型下拉選單寬度一致', async ({ pa
 
   expect(new Set(widths.map(width => Math.round(width))).size).toBe(1);
   expect(Math.round(widths[0])).toBe(108);
+});
+
+test('會員管理長 Email 不會壓縮類型與申請狀態欄', async ({ page }) => {
+  const longEmail = 'very-long-member-email-address-for-layout-check@example-long-domain.com';
+  await mockAdminApis(page, {
+    profiles: [{
+      ...adminProfileRows[0],
+      id: 'long-email-member',
+      email: longEmail,
+      role: 'consumer',
+    }],
+    applications: [{
+      ...adminApplicationRows[0],
+      id: 'long-email-application',
+      user_id: 'long-email-member',
+      status: 'pending',
+    }],
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+
+  const row = page.locator('.admin-members-table tbody tr').first();
+  const emailCell = row.locator('td').nth(1);
+  const typeCell = row.locator('td').nth(3);
+  const applicationCell = row.locator('td').nth(4);
+
+  await expect(emailCell).toHaveAttribute('title', longEmail);
+  const layout = await Promise.all([emailCell, typeCell, applicationCell].map(cell => cell.evaluate(element => {
+    const style = getComputedStyle(element);
+    return {
+      width: element.getBoundingClientRect().width,
+      whiteSpace: style.whiteSpace,
+      overflow: style.overflow,
+      textOverflow: style.textOverflow,
+    };
+  })));
+
+  expect(layout[0]).toMatchObject({ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' });
+  expect(layout[1].whiteSpace).toBe('nowrap');
+  expect(layout[1].width).toBeGreaterThanOrEqual(107);
+  expect(layout[2].whiteSpace).toBe('nowrap');
+  expect(layout[2].width).toBeGreaterThanOrEqual(95);
+});
+
+test('手機會員管理標題與篩選列上下排列，篩選項目維持三欄等寬', async ({ page }) => {
+  await page.setViewportSize({ width: 430, height: 932 });
+  await mockAdminApis(page);
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+
+  const header = page.locator('.members-page-header');
+  const heading = page.locator('.members-page-heading');
+  const tabs = page.locator('.members-filter-tabs');
+  const tabButtons = tabs.locator('.members-filter-tab');
+  const [headingBox, tabsBox] = await Promise.all([heading.boundingBox(), tabs.boundingBox()]);
+
+  expect(headingBox).not.toBeNull();
+  expect(tabsBox).not.toBeNull();
+  expect(tabsBox!.y).toBeGreaterThanOrEqual(headingBox!.y + headingBox!.height);
+  const responsiveLayout = await Promise.all([header, tabs].map(element => element.evaluate(node => {
+    const style = getComputedStyle(node);
+    return { display: style.display, columns: style.gridTemplateColumns.split(' ') };
+  })));
+  expect(responsiveLayout[0]).toMatchObject({ display: 'grid' });
+  expect(responsiveLayout[0].columns).toHaveLength(1);
+  expect(responsiveLayout[1]).toMatchObject({ display: 'grid' });
+  expect(responsiveLayout[1].columns).toHaveLength(3);
+
+  const firstRowWidths = await tabButtons.evaluateAll(buttons => buttons.slice(0, 3).map(button => button.getBoundingClientRect().width));
+  expect(Math.max(...firstRowWidths) - Math.min(...firstRowWidths)).toBeLessThan(1);
 });
 
 test('會員管理待審核數量使用與訂單待確認相同的 badge 樣式', async ({ page }) => {

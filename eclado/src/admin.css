@@ -37,6 +37,41 @@ input, select, textarea { font-family: var(--font); }
 .table-scroll { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
 .table-scroll table { min-width: 720px; }
 .member-type-select { width: 108px; min-width: 108px; box-sizing: border-box; }
+.catalog-list-controls {
+  display: flex; justify-content: flex-end; align-items: center; gap: 12px;
+  margin-bottom: 10px; flex-wrap: wrap;
+}
+.catalog-product-search {
+  width: 240px; min-width: 0; border: 1px solid var(--border); background: var(--white);
+  color: var(--dark); font-size: 12px; padding: 7px 10px; outline: none;
+}
+.catalog-product-search:focus { border-color: var(--mid); }
+.catalog-stock-control { display: flex; align-items: center; gap: 8px; }
+
+/* 會員列表：長 Email 優先收縮，類型與申請狀態保留單行寬度。 */
+@media (min-width: 1181px) {
+  .admin-members-table { table-layout: fixed; min-width: 1080px !important; }
+  .admin-members-table .members-col-name { width: 10%; }
+  .admin-members-table .members-col-email { width: 20%; }
+  .admin-members-table .members-col-phone { width: 12%; }
+  .admin-members-table .members-col-type { width: 108px; }
+  .admin-members-table .members-col-application { width: 96px; }
+  .admin-members-table .members-col-orders { width: 76px; }
+  .admin-members-table .members-col-total { width: 120px; }
+  .admin-members-table .members-col-joined { width: 112px; }
+  .admin-members-table .members-col-action { width: 136px; }
+  .admin-members-table th:nth-child(2),
+  .admin-members-table td:nth-child(2) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .admin-members-table th:nth-child(4),
+  .admin-members-table td:nth-child(4),
+  .admin-members-table th:nth-child(5),
+  .admin-members-table td:nth-child(5) { white-space: nowrap; }
+}
 .admin-filter-count-badge {
   min-width: 18px; height: 18px; padding: 0 6px; border-radius: 9px;
   display: inline-flex; align-items: center; justify-content: center;
@@ -45,6 +80,25 @@ input, select, textarea { font-family: var(--font); }
 
 /* 寬版維持有表頭的資料表；空間不足時，每筆資料改為可閱讀的小卡。 */
 @media (max-width: 1180px) {
+  .members-page-header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start !important;
+    gap: 18px;
+  }
+  .members-page-heading { min-width: 0; }
+  .members-filter-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+  .members-filter-tab {
+    min-width: 0;
+    min-height: 44px;
+    justify-content: center;
+    padding: 8px 6px !important;
+    white-space: nowrap;
+  }
   .table-scroll:has(.responsive-admin-table) { overflow-x: visible; background: transparent !important; border: 0 !important; }
   .responsive-admin-table { min-width: 0 !important; border-collapse: separate !important; border-spacing: 0 12px !important; }
   .responsive-admin-table thead { display: none; }
@@ -71,6 +125,8 @@ input, select, textarea { font-family: var(--font); }
 }
 
 @media (max-width: 700px) {
+  .catalog-product-search { width: 100%; flex: 1 1 100%; }
+  .catalog-stock-control { margin-left: auto; }
   .responsive-admin-table tr { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
   .responsive-admin-table td:first-child,
   .admin-members-table td:nth-child(2) { grid-column: 1 / -1; }

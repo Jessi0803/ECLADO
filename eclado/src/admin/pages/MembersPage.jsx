@@ -99,16 +99,16 @@ export default function Members({
   return (
     <div className={'detail-grid' + (selected ? '' : ' no-panel')}>
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <div>
+        <div className="members-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <div className="members-page-heading">
             <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>會員管理</h1>
             {pendingAppCount > 0 && (
               <p style={{ fontSize: 12, color: 'var(--mid)', marginTop: 4 }}>{pendingAppCount} 筆美容師申請待審核</p>
             )}
           </div>
-          <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
+          <div className="members-filter-tabs" style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
             {[['all','全部'], ['app_pending','待審核申請'], ['consumer','一般'], ['pro','美容師'], ['instructor','師資'], ['distributor','經銷商']].map(([val, label]) => (
-              <button key={val} onClick={() => setFilter(val)} style={{
+              <button className="members-filter-tab" key={val} onClick={() => setFilter(val)} style={{
                 padding: '8px 16px', border: 'none', fontSize: 12, letterSpacing: '0.04em',
                 background: filter === val ? 'var(--dark)' : 'transparent',
                 color: filter === val ? '#fff' : 'var(--mid)',
@@ -132,6 +132,17 @@ export default function Members({
 
         <div className="table-scroll" style={{ background: 'var(--white)', border: '1px solid var(--border)' }}>
           <table className="responsive-admin-table admin-members-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <colgroup>
+              <col className="members-col-name" />
+              <col className="members-col-email" />
+              <col className="members-col-phone" />
+              <col className="members-col-type" />
+              <col className="members-col-application" />
+              <col className="members-col-orders" />
+              <col className="members-col-total" />
+              <col className="members-col-joined" />
+              <col className="members-col-action" />
+            </colgroup>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
                 {['姓名', 'Email', '電話', '類型', '申請', '訂單數', '消費總額', '加入日期', '操作'].map(h => (
@@ -145,7 +156,7 @@ export default function Members({
                 onMouseEnter={e => { if (selected?.id !== m.id) e.currentTarget.style.background = 'var(--off)'; }}
                 onMouseLeave={e => { if (selected?.id !== m.id) e.currentTarget.style.background = 'transparent'; }}>
                   <td data-label="姓名" style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>{m.name}</td>
-                  <td data-label="Email" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{m.email}</td>
+                  <td data-label="Email" title={m.email} style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{m.email}</td>
                   <td data-label="電話" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{m.phone}</td>
                   <td data-label="類型" style={{ padding: '13px 14px' }}><TypeBadge type={m.type} /></td>
                   <td data-label="申請" style={{ padding: '13px 14px', fontSize: 11 }}>

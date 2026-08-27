@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '../services/supabase.js';
 import { withProductImagePublicUrl } from '../services/catalogData.js';
 import { normalizeMember, normalizeOrder, normalizeProduct } from './domain/mappers.js';
@@ -14,6 +14,8 @@ import Promotions from './pages/PromotionsPage.jsx';
 
 export default function AdminApp({ adminEmail, onSignOut }) {
   const [page, setPage] = useState('dashboard');
+  const mainRef = useRef(null);
+  const [ordersDefaultFilter, setOrdersDefaultFilter] = useState('awaiting_confirm');
   const [membersDefaultFilter, setMembersDefaultFilter] = useState('all');
   const [products, setProducts] = useState([]);
   const [members, setMembers] = useState([]);
@@ -47,12 +49,10 @@ export default function AdminApp({ adminEmail, onSignOut }) {
   async function fetchAll() {
     setApplicationsLoading(true);
     try {
-      const [ordersRes, profilesRes, productsRes, variantsRes, imagesRes, applicationsRes] = await Promise.all([
+      const [ordersRes, profilesRes, catalogRes, applicationsRes] = await Promise.all([
         supabase.from('orders').select('*').order('created_at', { ascending: false }),
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
-        supabase.from('products').select('*').order('id', { ascending: true }),
-        supabase.from('product_variants').select('*').order('sort_order', { ascending: true }),
-        supabase.from('product_images').select('*').eq('active', true).order('sort_order', { ascending: true }),
+        supabase.rpc('get_admin_catalog'),
         supabase.from('professional_applications').select('*').order('created_at', { ascending: false }),
       ]);
       if (ordersRes.error) throw ordersRes.error;
@@ -83,14 +83,18 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       const allMembers = [...realMembers, ...orphanMembers];
       setMembers(allMembers);
 
-      if (!productsRes.error) {
-        const variantsByProduct = (variantsRes.error ? [] : (variantsRes.data || [])).reduce((map, variant) => {
+      const catalog = catalogRes.data || {};
+      const productsRes = { data: catalog.products || [], error: catalogRes.error };
+      const variantsRes = { data: catalog.variants || [], error: catalogRes.error };
+      const imagesRes = { data: catalog.images || [], error: catalogRes.error };
+      if (!catalogRes.error) {
+        const variantsByProduct = (variantsRes.data || []).reduce((map, variant) => {
           const productId = Number(variant.product_id);
           if (!map.has(productId)) map.set(productId, []);
           map.get(productId).push(variant);
           return map;
         }, new Map());
-        const imagesByProduct = (imagesRes.error ? [] : (imagesRes.data || [])).reduce((map, image) => {
+        const imagesByProduct = (imagesRes.data || []).reduce((map, image) => {
           const productId = Number(image.product_id);
           if (!map.has(productId)) map.set(productId, []);
           map.get(productId).push(withProductImagePublicUrl(image));
@@ -99,20 +103,14 @@ export default function AdminApp({ adminEmail, onSignOut }) {
         setProducts((productsRes.data || []).map(row => (
           normalizeProduct(
             row,
-            variantsRes.error ? null : (variantsByProduct.get(Number(row.id)) || []),
-            imagesRes.error ? [] : (imagesByProduct.get(Number(row.id)) || []),
+            variantsByProduct.get(Number(row.id)) || [],
+            imagesByProduct.get(Number(row.id)) || [],
           )
         )));
       }
       if (productsRes.error) {
         setProducts([]);
         setLoadError('無法載入商品庫存：' + (productsRes.error.message || '請確認 Supabase products 資料表與權限設定'));
-      } else if (variantsRes.error) {
-        console.error('product variants fetch failed', variantsRes.error);
-        setLoadError('無法載入商品規格：' + (variantsRes.error.message || '請確認已執行規格資料表 migration'));
-      } else if (imagesRes.error) {
-        console.error('product images fetch failed', imagesRes.error);
-        setLoadError('無法載入商品圖片：' + (imagesRes.error.message || '請確認已執行圖片資料表 migration'));
       } else {
         setLoadError('');
       }
@@ -151,6 +149,12 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
+
+  useEffect(() => {
+    if (mainRef.current) mainRef.current.scrollTop = 0;
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    if (page !== 'orders') setOrdersDefaultFilter('awaiting_confirm');
+  }, [page]);
 
   // 訂單狀態/托運單號變動時同步到 Supabase
   async function setOrdersWithSync(updater) {
@@ -292,7 +296,10 @@ export default function AdminApp({ adminEmail, onSignOut }) {
   }
 
   async function archiveProduct(product) {
-    const { error } = await supabase.from('products').update({ publication_status: 'archived' }).eq('id', product.id);
+    const { error } = await supabase.rpc('set_product_publication_status', {
+      p_product_id: Number(product.id),
+      p_publication_status: 'archived',
+    });
     if (error) {
       return '下架商品失敗：' + (error.message || '請稍後再試');
     }
@@ -303,7 +310,10 @@ export default function AdminApp({ adminEmail, onSignOut }) {
   }
 
   async function restoreProduct(product) {
-    const { error } = await supabase.from('products').update({ publication_status: 'active' }).eq('id', product.id);
+    const { error } = await supabase.rpc('set_product_publication_status', {
+      p_product_id: Number(product.id),
+      p_publication_status: 'active',
+    });
     if (error) {
       return '重新上架失敗：' + (error.message || '請稍後再試');
     }
@@ -364,8 +374,8 @@ export default function AdminApp({ adminEmail, onSignOut }) {
   function renderPage() {
     const activeProducts = products.filter(product => product.active !== false);
     switch (page) {
-      case 'dashboard': return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} />;
-      case 'orders': return <Orders orders={orders} setOrders={setOrdersWithSync} persistOrderPatch={persistOrderPatch} />;
+      case 'dashboard': return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;
+      case 'orders': return <Orders orders={orders} setOrders={setOrdersWithSync} persistOrderPatch={persistOrderPatch} defaultFilter={ordersDefaultFilter} />;
       case 'audit': return <AuditLogsPage />;
       case 'catalog': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} />;
       // 舊路徑相容，避免有人記住 /admin#products 之類的
@@ -376,7 +386,7 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       case 'applications': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onDeleteMember={deleteMemberWithSync} defaultFilter="app_pending" />;
       case 'analytics': return <Analytics orders={orders} />;
       case 'ai': return <AIReorder products={activeProducts} orders={orders} />;
-      default: return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} />;
+      default: return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;
     }
   }
 
@@ -402,7 +412,7 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       {drawerOpen && <div className="mobile-overlay" onClick={() => setDrawerOpen(false)} />}
 
       <Sidebar page={page} setPage={setPage} open={drawerOpen} onClose={() => setDrawerOpen(false)} adminEmail={adminEmail} onSignOut={onSignOut} />
-      <main className="app-main">
+      <main ref={mainRef} className="app-main">
         {loadError && (
           <div style={{ background: 'oklch(0.60 0.18 25 / 0.08)', border: '1px solid oklch(0.60 0.18 25 / 0.3)', padding: '10px 16px', marginBottom: 20, fontSize: 12, color: 'var(--red)' }}>
             ⚠ {loadError}

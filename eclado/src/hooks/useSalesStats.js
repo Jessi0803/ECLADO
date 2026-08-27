@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  SALES_COUNTED_STATUSES,
   buildSalesStats,
   emptySalesStats,
 } from '../domain/sales.js';
@@ -8,7 +7,7 @@ import {
   removeRealtimeChannel,
   subscribeToTables,
 } from '../services/realtime.js';
-import { fetchSalesOrders } from '../services/salesData.js';
+import { fetchSalesStats } from '../services/salesData.js';
 
 export default function useSalesStats() {
   const [salesStats, setSalesStats] = useState(emptySalesStats);
@@ -17,7 +16,7 @@ export default function useSalesStats() {
     let alive = true;
 
     async function loadSalesStats() {
-      const { data, error } = await fetchSalesOrders(SALES_COUNTED_STATUSES);
+      const { data, error } = await fetchSalesStats();
       if (!alive) return;
       if (error) {
         console.warn(

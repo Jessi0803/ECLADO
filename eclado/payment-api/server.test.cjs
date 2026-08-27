@@ -198,6 +198,44 @@ test('付款通知補償工作只重送已到重試時間且尚未送達的訂�
   }
 });
 
+test('單筆付款通知補送失敗仍回覆 200，讓外部排程下次繼續執行', async () => {
+  const originalFetch = global.fetch;
+  const { listener, baseUrl } = await listenForTest();
+  global.fetch = async (url) => {
+    const target = String(url);
+    if (target.startsWith(`${process.env.SUPABASE_URL}/rest/v1/orders?`)) {
+      return new Response(JSON.stringify([{ id: 'ECL-RETRY-FAILED-001' }]), { status: 200 });
+    }
+    if (target === 'https://ecladotaiwan.com/api/sinopac/notify') {
+      return new Response(JSON.stringify({ error: 'temporary failure' }), { status: 503 });
+    }
+    throw new Error(`Unexpected fetch: ${target}`);
+  };
+  const originalError = console.error;
+  console.error = () => {};
+
+  try {
+    const response = await originalFetch(`${baseUrl}/api/orders/retry-payment-notifications`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Cleanup-Key': process.env.ORDER_CLEANUP_KEY,
+      },
+      body: '{}',
+    });
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.ok, false);
+    assert.equal(body.checked, 1);
+    assert.equal(body.sent, 0);
+    assert.equal(body.failed, 1);
+  } finally {
+    global.fetch = originalFetch;
+    console.error = originalError;
+    await new Promise(resolve => listener.close(resolve));
+  }
+});
+
 test('isPaidLike: 授權/請款/付款完成算已付款；待付款/逾期不算', () => {
   // 已付款（規格書 §10.2）
   assert.equal(server.isPaidLike('1C300'), true, '1C300 已授權未請款');
@@ -475,6 +513,9 @@ test('訪客以短查詢碼與手機取得付款資訊，且回應不洩漏個�
   const originalFetch = global.fetch;
   const { listener, baseUrl } = await listenForTest();
   global.fetch = async url => {
+    if (String(url).includes('/rest/v1/rpc/consume_service_rate_limit')) {
+      return new Response('true', { status: 200 });
+    }
     if (String(url).includes('/rest/v1/orders?')) {
       assert.equal(new URL(String(url)).searchParams.get('public_lookup_code'), 'eq.ABCDE-12345');
       return new Response(JSON.stringify([{
@@ -583,6 +624,9 @@ test('訪客手機不符時使用通用錯誤且不讀付款資訊', async () =>
   const { listener, baseUrl } = await listenForTest();
   let instructionRead = false;
   global.fetch = async url => {
+    if (String(url).includes('/rest/v1/rpc/consume_service_rate_limit')) {
+      return new Response('true', { status: 200 });
+    }
     if (String(url).includes('/rest/v1/orders?')) {
       return new Response(JSON.stringify([{
         id: 'ECL-GUEST-002', user_id: null, phone: '0912345678', public_lookup_code: 'FFFFF-11111',
@@ -600,6 +644,32 @@ test('訪客手機不符時使用通用錯誤且不讀付款資訊', async () =>
     assert.equal(response.status, 400);
     assert.equal(body.error, '查詢資料不正確，請確認查詢碼與手機號碼。');
     assert.equal(instructionRead, false);
+  } finally {
+    global.fetch = originalFetch;
+    await new Promise(resolve => listener.close(resolve));
+  }
+});
+
+test('訪客訂單查詢使用 Supabase 共享限流，超限回覆 429', async () => {
+  const originalFetch = global.fetch;
+  const { listener, baseUrl } = await listenForTest();
+  let orderRead = false;
+  global.fetch = async url => {
+    if (String(url).includes('/rest/v1/rpc/consume_service_rate_limit')) {
+      return new Response('false', { status: 200 });
+    }
+    orderRead = true;
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+  try {
+    const response = await originalFetch(`${baseUrl}/api/orders/guest-lookup`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lookupCode: 'ABCDE-12345', phone: '0912345678' }),
+    });
+    const body = await response.json();
+    assert.equal(response.status, 429);
+    assert.match(body.error, /操作次數過多/);
+    assert.equal(orderRead, false);
   } finally {
     global.fetch = originalFetch;
     await new Promise(resolve => listener.close(resolve));

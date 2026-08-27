@@ -9,6 +9,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
   const [editing, setEditing] = useState(null); // product being edited (draft copy)
   const [listMode, setListMode] = useState('active');
   const [stockFilter, setStockFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const activeProducts = products.filter(p => p.publicationStatus === 'active');
@@ -21,7 +22,13 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
   };
   const baseProducts = productsByMode[listMode] || activeProducts;
   const getStockStatus = p => p.stock === 0 ? 'out' : p.stock <= p.minStock ? 'low' : 'ok';
-  const shownProducts = stockFilter === 'all' ? baseProducts : baseProducts.filter(p => getStockStatus(p) === stockFilter);
+  const stockFilteredProducts = stockFilter === 'all' ? baseProducts : baseProducts.filter(p => getStockStatus(p) === stockFilter);
+  const normalizedSearchQuery = searchQuery.normalize('NFKC').trim().toLocaleLowerCase('en-US');
+  const shownProducts = normalizedSearchQuery
+    ? stockFilteredProducts.filter(p => [p.nameZh, p.name].some(name => (
+      String(name || '').normalize('NFKC').toLocaleLowerCase('en-US').includes(normalizedSearchQuery)
+    )))
+    : stockFilteredProducts;
   const stockCounts = {
     all: baseProducts.length,
     ok: baseProducts.filter(p => getStockStatus(p) === 'ok').length,
@@ -357,20 +364,30 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
       <div className={'detail-grid' + (editing ? '' : ' no-panel')}>
         {/* Table */}
         <div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <label htmlFor="catalog-stock-filter" style={{ color: 'var(--mid)', fontSize: 11, letterSpacing: '0.08em' }}>庫存狀態</label>
-            <select
-              id="catalog-stock-filter"
-              aria-label="庫存狀態篩選"
-              value={stockFilter}
-              onChange={e => { setStockFilter(e.target.value); setEditing(null); }}
-              style={{ width: 126, border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--dark)', fontSize: 11, padding: '7px 8px', outline: 'none', cursor: 'pointer' }}
-            >
-              <option value="all">全部 ({stockCounts.all})</option>
-              <option value="ok">正常 ({stockCounts.ok})</option>
-              <option value="low">低庫存 ({stockCounts.low})</option>
-              <option value="out">缺貨 ({stockCounts.out})</option>
-            </select>
+          <div className="catalog-list-controls">
+            <input
+              className="catalog-product-search"
+              type="search"
+              aria-label="搜尋商品名稱"
+              placeholder="搜尋中文／英文名稱"
+              value={searchQuery}
+              onChange={e => { setSearchQuery(e.target.value); setEditing(null); }}
+            />
+            <div className="catalog-stock-control">
+              <label htmlFor="catalog-stock-filter" style={{ color: 'var(--mid)', fontSize: 11, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>庫存狀態</label>
+              <select
+                id="catalog-stock-filter"
+                aria-label="庫存狀態篩選"
+                value={stockFilter}
+                onChange={e => { setStockFilter(e.target.value); setEditing(null); }}
+                style={{ width: 126, border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--dark)', fontSize: 11, padding: '7px 8px', outline: 'none', cursor: 'pointer' }}
+              >
+                <option value="all">全部 ({stockCounts.all})</option>
+                <option value="ok">正常 ({stockCounts.ok})</option>
+                <option value="low">低庫存 ({stockCounts.low})</option>
+                <option value="out">缺貨 ({stockCounts.out})</option>
+              </select>
+            </div>
           </div>
           <div className="table-scroll" style={{ background: 'var(--white)', border: '1px solid var(--border)' }}>
             <table className="responsive-admin-table admin-products-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -387,7 +404,9 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                 {shownProducts.length === 0 && (
                   <tr>
                     <td colSpan={9} style={{ padding: 40, textAlign: 'center', color: 'var(--mid)', fontSize: 13 }}>
-                      {stockFilter === 'all'
+                      {normalizedSearchQuery
+                        ? '目前沒有符合名稱搜尋與庫存條件的商品'
+                        : stockFilter === 'all'
                         ? (listMode === 'archived'
                           ? '目前沒有已下架商品'
                           : listMode === 'draft' ? '目前沒有草稿商品' : '目前沒有上架商品')

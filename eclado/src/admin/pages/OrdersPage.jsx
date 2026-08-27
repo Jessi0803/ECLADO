@@ -20,9 +20,9 @@ function formatNotificationTime(value) {
   });
 }
 
-export default function Orders({ orders, setOrders, persistOrderPatch }) {
+export default function Orders({ orders, setOrders, persistOrderPatch, defaultFilter = 'awaiting_confirm' }) {
   const [selected, setSelected] = useState(null);
-  const [filter, setFilter] = useState('awaiting_confirm');
+  const [filter, setFilter] = useState(defaultFilter);
   const [stockFilter, setStockFilter] = useState('all');
   const [trackingInput, setTrackingInput] = useState('');
   const [pushing, setPushing] = useState(false);
@@ -31,6 +31,11 @@ export default function Orders({ orders, setOrders, persistOrderPatch }) {
   useEffect(() => {
     setTrackingInput(selected?.tracking || '');
   }, [selected?.id]);
+
+  useEffect(() => {
+    setFilter(defaultFilter);
+    setSelected(null);
+  }, [defaultFilter]);
 
   const byStatus = filter === 'all' ? orders : orders.filter(o => o.status === filter);
   const filtered = stockFilter === 'all' ? byStatus
@@ -251,7 +256,7 @@ export default function Orders({ orders, setOrders, persistOrderPatch }) {
           <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>訂單管理</h1>
           <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
             {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['unpaid','未付款'], ['paid','已付款'], ['preparing','備貨中'], ['shipped','已出貨'], ['delivered','已到貨'], ['returned','退貨']].map(([val, label]) => (
-              <button key={val} onClick={() => setFilter(val)} style={{
+              <button key={val} aria-pressed={filter === val} onClick={() => setFilter(val)} style={{
                 padding: '8px 16px', border: 'none', fontSize: 12, letterSpacing: '0.04em',
                 background: filter === val ? 'var(--dark)' : 'transparent',
                 color: filter === val ? '#fff' : 'var(--mid)',

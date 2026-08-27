@@ -3,7 +3,7 @@ import { Badge } from '../components/StatusIndicators.jsx';
 import { MiniBarChart, StatCard } from '../components/DashboardWidgets.jsx';
 import { buildMonthlyRevenue, revenueGrowth } from '../domain/analytics.js';
 
-export default function Dashboard({ orders, products, members, applications = [], adminEmail, onGoToPendingMembers }) {
+export default function Dashboard({ orders, products, members, applications = [], adminEmail, onGoToPendingMembers, onGoToOrders }) {
   const today = new Date();
   const monthlyRevenue = buildMonthlyRevenue(orders, today);
   const thisMonth = monthlyRevenue[monthlyRevenue.length - 1];
@@ -82,7 +82,11 @@ export default function Dashboard({ orders, products, members, applications = []
       <div style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h3 style={{ fontSize: 14, fontWeight: 500 }}>最新訂單</h3>
-          <span style={{ fontSize: 12, color: 'var(--gold)', cursor: 'pointer', letterSpacing: '0.06em' }}>查看全部 →</span>
+          <button
+            type="button"
+            onClick={onGoToOrders}
+            style={{ padding: 0, border: 'none', background: 'none', fontSize: 12, color: 'var(--gold)', cursor: 'pointer', letterSpacing: '0.06em' }}
+          >查看全部 →</button>
         </div>
         <div className="table-scroll">
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>

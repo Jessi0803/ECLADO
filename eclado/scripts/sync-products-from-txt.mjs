@@ -182,6 +182,7 @@ function chooseProductRow(parsed, rows) {
 }
 
 function inferCategory(name) {
+  if (/試用包/.test(name)) return '院線課程儀器（含試用包）';
   if (/刮痧板|爆水按摩霜/.test(name)) return '其他';
   if (/潔顏|清潔|卸妝/.test(name)) return '清潔卸妝';
   if (/化妝水|爽膚水/.test(name)) return '化妝水';

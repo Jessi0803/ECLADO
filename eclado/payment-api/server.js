@@ -633,17 +633,29 @@ async function sendGuestOrderCreatedEmail(order) {
   }
 }
 
-const guestLookupAttempts = new Map();
-function consumeGuestLookupAttempt(req) {
-  const key = String(req.ip || req.socket?.remoteAddress || 'unknown');
-  const now = Date.now();
-  const existing = guestLookupAttempts.get(key);
-  const record = !existing || existing.resetAt <= now
-    ? { count: 0, resetAt: now + 15 * 60 * 1000 }
-    : existing;
-  record.count += 1;
-  guestLookupAttempts.set(key, record);
-  return record.count <= 5;
+function getRateLimitKeyHash(req, scope) {
+  const secret = must(process.env.GUEST_LOOKUP_SECRET, 'GUEST_LOOKUP_SECRET');
+  const ip = String(req.ip || req.socket?.remoteAddress || 'unknown').trim();
+  return crypto.createHmac('sha256', secret).update(`${scope}:${ip}`, 'utf8').digest('hex');
+}
+
+async function enforceSharedRateLimit(req, res, scope, limit, windowSeconds = 900) {
+  try {
+    const allowed = await callSupabaseRpc('consume_service_rate_limit', {
+      p_scope: scope,
+      p_key_hash: getRateLimitKeyHash(req, scope),
+      p_limit: limit,
+      p_window_seconds: windowSeconds,
+    });
+    if (allowed === true) return true;
+    res.set('Retry-After', String(windowSeconds));
+    res.status(429).json({ ok: false, error: '操作次數過多，請稍後再試。' });
+    return false;
+  } catch (error) {
+    console.error(`[rate limit] ${scope} failed`, error.message);
+    res.status(503).json({ ok: false, error: '安全檢查暫時無法使用，請稍後再試。' });
+    return false;
+  }
 }
 
 function resolvePaymentQueryState(order, gatewayResponse) {
@@ -963,6 +975,7 @@ app.post('/api/sinopac/create-payment', async (req, res) => {
   let claimed = false;
   let gatewaySucceeded = false;
   try {
+    if (!await enforceSharedRateLimit(req, res, 'payment:create', 20)) return;
     const inner = await buildAuthoritativeCreateBody(req.body || {});
     claimed = true;
     const result = await callOrderApi('OrderCreate', inner);
@@ -1022,6 +1035,7 @@ app.post('/api/sinopac/create-payment', async (req, res) => {
 
 app.post('/api/sinopac/query-payment', async (req, res) => {
   try {
+    if (!await enforceSharedRateLimit(req, res, 'payment:query', 60)) return;
     const orderNo = String(req.body?.orderNo || '').trim();
     const paymentToken = String(req.body?.paymentToken || '').trim();
     if (!orderNo) throw new Error('orderNo is required');
@@ -1055,9 +1069,7 @@ app.post('/api/orders/payment-instructions', async (req, res) => {
 
 app.post('/api/orders/guest-lookup', async (req, res) => {
   try {
-    if (!consumeGuestLookupAttempt(req)) {
-      return res.status(429).json({ ok: false, error: '查詢次數過多，請稍後再試。' });
-    }
+    if (!await enforceSharedRateLimit(req, res, 'order:guest-lookup', 5)) return;
     const lookupCode = normalizeLookupCode(req.body?.lookupCode);
     const phone = normalizePhone(req.body?.phone);
     if (!lookupCode || phone.length < 9) throw new Error('Invalid guest lookup');
@@ -1132,7 +1144,11 @@ app.post('/api/orders/retry-payment-notifications', async (req, res) => {
     const result = await retryPendingPaymentNotifications({ limit: req.body?.limit });
     console.log(`[payment notification retry] sent ${result.sent}/${result.checked}`);
     const failed = result.checked - result.sent;
-    return res.status(failed > 0 ? 503 : 200).json({ ok: failed === 0, failed, ...result });
+    // A failed individual delivery remains eligible for a later retry. Returning
+    // 5xx here would make external schedulers disable the entire recurring job,
+    // preventing that later retry from ever happening. Reserve 5xx for failures
+    // that stop the retry job itself (the catch block below).
+    return res.status(200).json({ ok: failed === 0, failed, ...result });
   } catch (error) {
     console.error('[payment notification retry] failed', error.message);
     return res.status(500).json({ ok: false, error: error.message });

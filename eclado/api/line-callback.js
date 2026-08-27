@@ -1,11 +1,37 @@
+const crypto = require('crypto');
+
 const SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
 const LINE_CHANNEL_ID = '2010106039';
 const SITE_URL = 'https://ecladotaiwan.com';
 const LINE_REDIRECT_URI = `${SITE_URL}/api/line-callback`;
 const LINE_AUTH_REDIRECT_URI = `${SITE_URL}/line-callback`;
+const LINE_STATE_COOKIE = 'eclado_line_oauth_state';
+
+function getCookie(req, name) {
+  const header = String(req.headers?.cookie || '');
+  const prefix = `${name}=`;
+  const pair = header.split(';').map(value => value.trim()).find(value => value.startsWith(prefix));
+  return pair ? decodeURIComponent(pair.slice(prefix.length)) : '';
+}
+
+function safeEqual(left, right) {
+  const a = Buffer.from(String(left || ''));
+  const b = Buffer.from(String(right || ''));
+  return a.length > 0 && a.length === b.length && crypto.timingSafeEqual(a, b);
+}
 
 module.exports = async function handler(req, res) {
-  const { code, error: lineError } = req.query;
+  const { code, state, error: lineError } = req.query || {};
+  const expectedState = getCookie(req, LINE_STATE_COOKIE);
+  res.setHeader(
+    'Set-Cookie',
+    `${LINE_STATE_COOKIE}=; Path=/api/line-callback; HttpOnly; Secure; SameSite=Lax; Max-Age=0`,
+  );
+
+  if (!safeEqual(state, expectedState)) {
+    console.warn('[LINE callback] invalid OAuth state');
+    return res.redirect(`${SITE_URL}/login?error=invalid_state`);
+  }
 
   if (lineError || !code) {
     return res.redirect(`${SITE_URL}/login?error=line_denied`);

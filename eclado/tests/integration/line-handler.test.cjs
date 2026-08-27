@@ -1,9 +1,43 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const lineCallback = require('../../api/line-callback.js');
+const lineLogin = require('../../api/line-login.js');
 const linePush = require('../../api/line-push.js');
 
 const SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
+
+test('LINE login 由伺服器產生 state 並存入 HttpOnly Cookie', () => {
+  const res = createRes();
+  lineLogin({ method: 'GET' }, res);
+
+  const location = new URL(res.redirectedTo);
+  const state = location.searchParams.get('state');
+  assert.equal(location.origin, 'https://access.line.me');
+  assert.ok(state && state.length >= 40);
+  assert.match(res.headers['set-cookie'], /eclado_line_oauth_state=/);
+  assert.match(res.headers['set-cookie'], /HttpOnly/);
+  assert.match(res.headers['set-cookie'], /Secure/);
+  assert.match(res.headers['set-cookie'], /SameSite=Lax/);
+  assert.match(res.headers['set-cookie'], new RegExp(`eclado_line_oauth_state=${state}`));
+});
+
+test('LINE callback 拒絕缺少或不相符的 state，且不交換 token', async () => {
+  const originalFetch = global.fetch;
+  let fetched = false;
+  global.fetch = async () => {
+    fetched = true;
+    throw new Error('must not fetch');
+  };
+  const res = createRes();
+  try {
+    await lineCallback({ query: { code: 'line-code', state: 'wrong' }, headers: { cookie: 'eclado_line_oauth_state=expected' } }, res);
+  } finally {
+    global.fetch = originalFetch;
+  }
+  assert.equal(res.redirectedTo, 'https://ecladotaiwan.com/login?error=invalid_state');
+  assert.equal(fetched, false);
+  assert.match(res.headers['set-cookie'], /Max-Age=0/);
+});
 
 test('LINE callback - 新使用者會建立 auth user、profiles 與 magic link', async () => {
   const calls = [];
@@ -58,7 +92,7 @@ test('LINE callback - 新使用者會建立 auth user、profiles 與 magic link'
   const res = createRes();
 
   try {
-    await lineCallback({ query: { code: 'line-code' } }, res);
+    await lineCallback(lineCallbackReq({ code: 'line-code' }), res);
   } finally {
     global.fetch = originalFetch;
     restoreEnv(originalEnv);
@@ -120,7 +154,7 @@ test('LINE callback - 已存在會員會更新名稱並重用既有帳號', asyn
   const res = createRes();
 
   try {
-    await lineCallback({ query: { code: 'line-code' } }, res);
+    await lineCallback(lineCallbackReq({ code: 'line-code' }), res);
   } finally {
     global.fetch = originalFetch;
     restoreEnv(originalEnv);
@@ -194,7 +228,7 @@ test('LINE callback - LINE email 與既有會員相同時會綁定同一個帳�
   const res = createRes();
 
   try {
-    await lineCallback({ query: { code: 'line-code' } }, res);
+    await lineCallback(lineCallbackReq({ code: 'line-code' }), res);
   } finally {
     global.fetch = originalFetch;
     restoreEnv(originalEnv);
@@ -329,6 +363,11 @@ function createRes() {
     redirectedTo: '',
     jsonBody: null,
     sentBody: null,
+    headers: {},
+    setHeader(name, value) {
+      this.headers[String(name).toLowerCase()] = value;
+      return this;
+    },
     redirect(url) {
       this.redirectedTo = url;
       return this;
@@ -345,6 +384,13 @@ function createRes() {
       this.sentBody = body;
       return this;
     },
+  };
+}
+
+function lineCallbackReq(query) {
+  return {
+    query: { ...query, state: 'test-state' },
+    headers: { cookie: 'eclado_line_oauth_state=test-state' },
   };
 }
 

@@ -14,6 +14,12 @@ export function buildSalesStats(orders) {
   const byName = {};
 
   (orders || []).forEach(order => {
+    if (order?.product_id != null && order?.sold_qty != null) {
+      const productId = Number(order.product_id);
+      const soldQty = Math.max(0, Number(order.sold_qty) || 0);
+      if (!Number.isNaN(productId) && productId > 0) byId[productId] = soldQty;
+      return;
+    }
     if (!SALES_COUNTED_STATUSES.has(order?.status)) return;
     const items = Array.isArray(order.items) ? order.items : [];
     items.forEach(item => {
