@@ -47,12 +47,10 @@ export default function AdminApp({ adminEmail, onSignOut }) {
   async function fetchAll() {
     setApplicationsLoading(true);
     try {
-      const [ordersRes, profilesRes, productsRes, variantsRes, imagesRes, applicationsRes] = await Promise.all([
+      const [ordersRes, profilesRes, catalogRes, applicationsRes] = await Promise.all([
         supabase.from('orders').select('*').order('created_at', { ascending: false }),
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
-        supabase.from('products').select('*').order('id', { ascending: true }),
-        supabase.from('product_variants').select('*').order('sort_order', { ascending: true }),
-        supabase.from('product_images').select('*').eq('active', true).order('sort_order', { ascending: true }),
+        supabase.rpc('get_admin_catalog'),
         supabase.from('professional_applications').select('*').order('created_at', { ascending: false }),
       ]);
       if (ordersRes.error) throw ordersRes.error;
@@ -83,14 +81,18 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       const allMembers = [...realMembers, ...orphanMembers];
       setMembers(allMembers);
 
-      if (!productsRes.error) {
-        const variantsByProduct = (variantsRes.error ? [] : (variantsRes.data || [])).reduce((map, variant) => {
+      const catalog = catalogRes.data || {};
+      const productsRes = { data: catalog.products || [], error: catalogRes.error };
+      const variantsRes = { data: catalog.variants || [], error: catalogRes.error };
+      const imagesRes = { data: catalog.images || [], error: catalogRes.error };
+      if (!catalogRes.error) {
+        const variantsByProduct = (variantsRes.data || []).reduce((map, variant) => {
           const productId = Number(variant.product_id);
           if (!map.has(productId)) map.set(productId, []);
           map.get(productId).push(variant);
           return map;
         }, new Map());
-        const imagesByProduct = (imagesRes.error ? [] : (imagesRes.data || [])).reduce((map, image) => {
+        const imagesByProduct = (imagesRes.data || []).reduce((map, image) => {
           const productId = Number(image.product_id);
           if (!map.has(productId)) map.set(productId, []);
           map.get(productId).push(withProductImagePublicUrl(image));
@@ -99,20 +101,14 @@ export default function AdminApp({ adminEmail, onSignOut }) {
         setProducts((productsRes.data || []).map(row => (
           normalizeProduct(
             row,
-            variantsRes.error ? null : (variantsByProduct.get(Number(row.id)) || []),
-            imagesRes.error ? [] : (imagesByProduct.get(Number(row.id)) || []),
+            variantsByProduct.get(Number(row.id)) || [],
+            imagesByProduct.get(Number(row.id)) || [],
           )
         )));
       }
       if (productsRes.error) {
         setProducts([]);
         setLoadError('無法載入商品庫存：' + (productsRes.error.message || '請確認 Supabase products 資料表與權限設定'));
-      } else if (variantsRes.error) {
-        console.error('product variants fetch failed', variantsRes.error);
-        setLoadError('無法載入商品規格：' + (variantsRes.error.message || '請確認已執行規格資料表 migration'));
-      } else if (imagesRes.error) {
-        console.error('product images fetch failed', imagesRes.error);
-        setLoadError('無法載入商品圖片：' + (imagesRes.error.message || '請確認已執行圖片資料表 migration'));
       } else {
         setLoadError('');
       }
@@ -292,7 +288,10 @@ export default function AdminApp({ adminEmail, onSignOut }) {
   }
 
   async function archiveProduct(product) {
-    const { error } = await supabase.from('products').update({ publication_status: 'archived' }).eq('id', product.id);
+    const { error } = await supabase.rpc('set_product_publication_status', {
+      p_product_id: Number(product.id),
+      p_publication_status: 'archived',
+    });
     if (error) {
       return '下架商品失敗：' + (error.message || '請稍後再試');
     }
@@ -303,7 +302,10 @@ export default function AdminApp({ adminEmail, onSignOut }) {
   }
 
   async function restoreProduct(product) {
-    const { error } = await supabase.from('products').update({ publication_status: 'active' }).eq('id', product.id);
+    const { error } = await supabase.rpc('set_product_publication_status', {
+      p_product_id: Number(product.id),
+      p_publication_status: 'active',
+    });
     if (error) {
       return '重新上架失敗：' + (error.message || '請稍後再試');
     }

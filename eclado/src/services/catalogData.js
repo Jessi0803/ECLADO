@@ -15,29 +15,17 @@ export function withProductImagePublicUrl(row) {
 }
 
 export async function fetchProductRows() {
-  const [productsResult, variantsResult, imagesResult] = await Promise.all([
-    supabase
-      .from('products')
-      .select('*')
-      .order('id', { ascending: true }),
-    supabase
-      .from('product_variants')
-      .select('*')
-      .order('sort_order', { ascending: true }),
-    supabase
-      .from('product_images')
-      .select('*')
-      .order('sort_order', { ascending: true }),
-  ]);
+  const result = await supabase.rpc('get_storefront_catalog');
+  const payload = result.data || {};
 
   return {
-    data: productsResult.data,
-    error: productsResult.error,
-    variantRows: variantsResult.data,
-    variantError: variantsResult.error,
-    imageRows: imagesResult.error
+    data: payload.products || [],
+    error: result.error,
+    variantRows: payload.variants || [],
+    variantError: result.error,
+    imageRows: result.error
       ? []
-      : (imagesResult.data || []).map(withProductImagePublicUrl),
-    imageError: imagesResult.error,
+      : (payload.images || []).map(withProductImagePublicUrl),
+    imageError: result.error,
   };
 }

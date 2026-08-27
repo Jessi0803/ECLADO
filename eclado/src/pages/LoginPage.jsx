@@ -120,19 +120,8 @@ export default function LoginPage({ setPage }) {
   }
 
   function signInWithLine() {
-    const state = Math.random().toString(36).substring(2, 15);
-    sessionStorage.setItem('line_oauth_state', state);
     sessionStorage.setItem(LINE_LOGIN_PENDING_KEY, '1');
-    const lineRedirectUri = 'https://ecladotaiwan.com/api/line-callback';
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: '2010106039',
-      redirect_uri: lineRedirectUri,
-      state,
-      scope: 'profile openid email',
-      bot_prompt: 'aggressive',
-    });
-    window.location.href = 'https://access.line.me/oauth2/v2.1/authorize?' + params;
+    window.location.href = '/api/line-login';
   }
 
   return (

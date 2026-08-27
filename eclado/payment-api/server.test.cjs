@@ -475,6 +475,9 @@ test('訪客以短查詢碼與手機取得付款資訊，且回應不洩漏個�
   const originalFetch = global.fetch;
   const { listener, baseUrl } = await listenForTest();
   global.fetch = async url => {
+    if (String(url).includes('/rest/v1/rpc/consume_service_rate_limit')) {
+      return new Response('true', { status: 200 });
+    }
     if (String(url).includes('/rest/v1/orders?')) {
       assert.equal(new URL(String(url)).searchParams.get('public_lookup_code'), 'eq.ABCDE-12345');
       return new Response(JSON.stringify([{
@@ -583,6 +586,9 @@ test('訪客手機不符時使用通用錯誤且不讀付款資訊', async () =>
   const { listener, baseUrl } = await listenForTest();
   let instructionRead = false;
   global.fetch = async url => {
+    if (String(url).includes('/rest/v1/rpc/consume_service_rate_limit')) {
+      return new Response('true', { status: 200 });
+    }
     if (String(url).includes('/rest/v1/orders?')) {
       return new Response(JSON.stringify([{
         id: 'ECL-GUEST-002', user_id: null, phone: '0912345678', public_lookup_code: 'FFFFF-11111',
@@ -600,6 +606,32 @@ test('訪客手機不符時使用通用錯誤且不讀付款資訊', async () =>
     assert.equal(response.status, 400);
     assert.equal(body.error, '查詢資料不正確，請確認查詢碼與手機號碼。');
     assert.equal(instructionRead, false);
+  } finally {
+    global.fetch = originalFetch;
+    await new Promise(resolve => listener.close(resolve));
+  }
+});
+
+test('訪客訂單查詢使用 Supabase 共享限流，超限回覆 429', async () => {
+  const originalFetch = global.fetch;
+  const { listener, baseUrl } = await listenForTest();
+  let orderRead = false;
+  global.fetch = async url => {
+    if (String(url).includes('/rest/v1/rpc/consume_service_rate_limit')) {
+      return new Response('false', { status: 200 });
+    }
+    orderRead = true;
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+  try {
+    const response = await originalFetch(`${baseUrl}/api/orders/guest-lookup`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lookupCode: 'ABCDE-12345', phone: '0912345678' }),
+    });
+    const body = await response.json();
+    assert.equal(response.status, 429);
+    assert.match(body.error, /操作次數過多/);
+    assert.equal(orderRead, false);
   } finally {
     global.fetch = originalFetch;
     await new Promise(resolve => listener.close(resolve));

@@ -275,6 +275,53 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     return json(route, allowed);
   });
 
+  await page.route('**/rest/v1/rpc/get_storefront_catalog', async route => {
+    if (options.productResponseDelayMs) {
+      await new Promise(resolve => setTimeout(resolve, options.productResponseDelayMs));
+    }
+    const role = String(
+      profiles.find(profile => String(profile.id) === String(authUser?.id))?.role || 'consumer',
+    );
+    const canViewProfessionalPrice = ['pro', 'instructor', 'distributor'].includes(role);
+    const publicProducts = products()
+      .filter(product => product.active !== false && (product.publication_status || 'active') === 'active')
+      .map(product => ({
+        ...product,
+        min_stock: undefined,
+        variants: undefined,
+        pro_price: canViewProfessionalPrice ? product.pro_price : null,
+        stock: Number(product.stock) > 0 ? 1 : 0,
+      }));
+    const publicVariants = productVariants()
+      .filter(variant => variant.active !== false)
+      .map(variant => ({
+        ...variant,
+        sku: undefined,
+        pro_price: canViewProfessionalPrice ? variant.pro_price : null,
+        stock: Number(variant.stock) > 0 ? 1 : 0,
+      }));
+    return json(route, {
+      products: publicProducts,
+      variants: publicVariants,
+      images: productImages().filter(image => image.active !== false),
+    });
+  });
+
+  await page.route('**/rest/v1/rpc/get_admin_catalog', async route => json(route, {
+    products: products(),
+    variants: productVariants(),
+    images: productImages().filter(image => image.active !== false),
+  }));
+
+  await page.route('**/rest/v1/rpc/set_product_publication_status', async route => {
+    const request = route.request().postDataJSON();
+    options.onProductUpdate?.(
+      { publication_status: request.p_publication_status },
+      `id=eq.${request.p_product_id}`,
+    );
+    return json(route, null);
+  });
+
   await page.route('**/rest/v1/product_images**', async route => {
     if (route.request().method() === 'GET') return json(route, productImages());
     return json(route, []);
@@ -476,12 +523,17 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     return json(route, result);
   });
 
-  await page.route('**/rest/v1/rpc/get_public_sales_orders', async route => {
-    const counted = orders
+  await page.route('**/rest/v1/rpc/get_public_sales_stats', async route => {
+    const totals = new Map<number, number>();
+    orders
       .filter(order => ['paid', 'preparing', 'shipped', 'delivered'].includes(String(order.status)))
-      .slice(0, 1000)
-      .map(order => ({ status: order.status, items: order.items || [] }));
-    return json(route, counted);
+      .forEach(order => (order.items || []).forEach((item: Record<string, unknown>) => {
+        const productId = Number(item.product_id);
+        if (Number.isFinite(productId) && productId > 0) {
+          totals.set(productId, (totals.get(productId) || 0) + Math.max(1, Number(item.qty) || 1));
+        }
+      }));
+    return json(route, [...totals.entries()].map(([product_id, sold_qty]) => ({ product_id, sold_qty })));
   });
 
   await page.route('**/rest/v1/rpc/submit_professional_application', async route => {
