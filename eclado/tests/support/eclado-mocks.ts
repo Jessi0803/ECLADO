@@ -42,6 +42,7 @@ export const adminOrderRows = [
     address: '台北市測試路 1 號',
     phone: '0912345678',
     email: 'member@example.com',
+    payment_method: 'atm',
     transfer_last5: '12345',
     tracking: '',
     user_id: 'user-consumer-1',
@@ -58,6 +59,7 @@ export const adminOrderRows = [
     address: '新北市測試路 2 號',
     phone: '0922222222',
     email: 'line-member@example.com',
+    payment_method: 'card',
     transfer_last5: '',
     tracking: '',
     user_id: 'user-line-1',
@@ -332,6 +334,12 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     variants: productVariants(),
     images: productImages().filter(image => image.active !== false),
   }));
+
+  await page.route('**/rest/v1/rpc/get_admin_order_payment_methods', async route => json(route,
+    orders
+      .filter(order => order.payment_method)
+      .map(order => ({ order_id: order.id, payment_method: order.payment_method })),
+  ));
 
   await page.route('**/rest/v1/rpc/get_procurement_management_data', async route => json(route, procurement));
 
@@ -647,6 +655,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     orders
       .filter(order => ['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(String(order.status)))
       .forEach(order => (order.items || []).forEach((item: Record<string, unknown>) => {
+        if (item.is_custom_order === true || item.isCustomOrder === true) return;
         const productId = Number(item.product_id);
         if (Number.isFinite(productId) && productId > 0) {
           totals.set(productId, (totals.get(productId) || 0) + Math.max(1, Number(item.qty) || 1));

@@ -1,10 +1,28 @@
 import React, { useEffect, useState } from 'react';
+import { PAYMENT_METHODS } from '../../domain/payments.js';
 import { SF_EXPRESS_TRACKING_URL } from '../../domain/shipping.js';
 import { supabase } from '../../services/supabase.js';
 import { StatusSelect, TypeBadge } from '../components/StatusIndicators.jsx';
 
 function hasPreorder(order) {
   return Array.isArray(order.items) && order.items.some(i => i.fulfillment_type === 'preorder');
+}
+
+function getPaymentMethodLabel(method) {
+  return PAYMENT_METHODS[method]?.label || '—';
+}
+
+function getStatusFilter(status) {
+  if (status === 'ready_for_pickup') return 'shipped';
+  if (status === 'picked_up') return 'delivered';
+  return status;
+}
+
+function matchesStatusFilter(order, filter) {
+  if (filter === 'all') return true;
+  if (filter === 'shipped') return ['shipped', 'ready_for_pickup'].includes(order.status);
+  if (filter === 'delivered') return ['delivered', 'picked_up'].includes(order.status);
+  return order.status === filter;
 }
 
 function formatNotificationTime(value) {
@@ -33,18 +51,17 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
   }, [selected?.id]);
 
   useEffect(() => {
-    setFilter(defaultFilter);
+    setFilter(getStatusFilter(defaultFilter));
     setSelected(null);
   }, [defaultFilter]);
 
-  const byStatus = filter === 'all' ? orders : orders.filter(o => o.status === filter);
+  const byStatus = orders.filter(order => matchesStatusFilter(order, filter));
   const filtered = stockFilter === 'all' ? byStatus
     : stockFilter === 'preorder' ? byStatus.filter(hasPreorder)
     : byStatus.filter(o => !hasPreorder(o));
   const awaitingCount = orders.filter(o => o.status === 'awaiting_confirm').length;
   const unpaidCount = orders.filter(o => o.status === 'unpaid').length;
   const returnedCount = orders.filter(o => o.status === 'returned').length;
-  const cancelledCount = orders.filter(o => o.status === 'cancelled').length;
   const preorderCount = byStatus.filter(hasPreorder).length;
   const inStockCount = byStatus.filter(o => !hasPreorder(o)).length;
 
@@ -195,7 +212,7 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
     try {
       await persistOrderPatch(id, patch);
       if (selected?.id === id) setSelected(s => ({ ...s, ...patch }));
-      setFilter(status);
+      setFilter(getStatusFilter(status));
     } catch (error) {
       setLineNotice('訂單狀態更新失敗：' + (error?.message || '請稍後再試'));
       return;
@@ -235,7 +252,7 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
         ...(isNewShipment ? { shippedAt: shipmentPatch.shipped_at } : {}),
       };
       setSelected(shipmentOrder);
-      setFilter(newStatus);
+      setFilter(getStatusFilter(newStatus));
       if (isNewShipment) {
         await sendShipmentNotice(shipmentOrder);
       }
@@ -252,7 +269,7 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
           <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>訂單管理</h1>
           <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
-            {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['unpaid','未付款'], ['paid','已付款'], ['preparing','備貨中'], ['ready_for_pickup','可取貨'], ['picked_up','已取貨'], ['shipped','已出貨'], ['delivered','已到貨'], ['returned','退貨'], ['cancelled','已取消']].map(([val, label]) => (
+            {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['unpaid','未付款'], ['paid','已付款'], ['preparing','備貨中'], ['shipped','已出貨'], ['delivered','已到貨'], ['returned','退貨'], ['cancelled','已取消']].map(([val, label]) => (
               <button key={val} aria-pressed={filter === val} onClick={() => setFilter(val)} style={{
                 padding: '8px 16px', border: 'none', fontSize: 12, letterSpacing: '0.04em',
                 background: filter === val ? 'var(--dark)' : 'transparent',
@@ -277,13 +294,6 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
                     minWidth: 18, height: 18, borderRadius: 9, padding: '0 6px',
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
                   }}>{returnedCount}</span>
-                )}
-                {val === 'cancelled' && cancelledCount > 0 && (
-                  <span style={{
-                    background: 'var(--mid)', color: '#fff', fontSize: 10, fontWeight: 600,
-                    minWidth: 18, height: 18, borderRadius: 9, padding: '0 6px',
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-                  }}>{cancelledCount}</span>
                 )}
               </button>
             ))}
@@ -328,7 +338,7 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
           <table className="responsive-admin-table admin-orders-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
-                {['訂單編號', '會員', '類型', '金額', '付款碼', '庫存', '狀態', '日期'].map(h => (
+                {['訂單編號', '會員', '類型', '金額', '付款方式', '庫存', '狀態', '日期'].map(h => (
                   <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -347,8 +357,8 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
                   <td data-label="會員" style={{ padding: '13px 14px', fontSize: 13 }}>{o.member}</td>
                   <td data-label="類型" style={{ padding: '13px 14px' }}><TypeBadge type={o.type} />{o.fulfillmentMethod === 'onsite_pickup' && <span style={{ display:'block', marginTop:5, fontSize:10, color:'var(--gold)', whiteSpace:'nowrap' }}>客訂自取</span>}</td>
                   <td data-label="金額" style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>NT$ {o.total.toLocaleString()}</td>
-                  <td data-label="付款碼" style={{ padding: '13px 14px', fontSize: 13, fontFamily: 'var(--font-d)', letterSpacing: '0.15em', color: o.transferLast5 ? 'var(--dark)' : 'var(--light)', fontWeight: 600 }}>
-                    {o.transferLast5 || '—'}
+                  <td data-label="付款方式" style={{ padding: '13px 14px', fontSize: 12, color: o.paymentMethod ? 'var(--dark)' : 'var(--light)', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                    {getPaymentMethodLabel(o.paymentMethod)}
                   </td>
                   <td data-label="庫存" style={{ padding: '13px 14px' }}>
                     {hasPreorder(o)
@@ -382,6 +392,7 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>會員</div><div style={{ fontSize: 13 }}>{selected.member}</div></div>
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>日期</div><div style={{ fontSize: 13 }}>{selected.date}</div></div>
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>類型</div><TypeBadge type={selected.type} /></div>
+            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>付款方式</div><div style={{ fontSize: 13 }}>{getPaymentMethodLabel(selected.paymentMethod)}</div></div>
           </div>
 
           {/* 狀態下拉 */}
@@ -389,26 +400,6 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
             <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 6 }}>訂單狀態</div>
             <StatusSelect status={selected.status} fulfillmentMethod={selected.fulfillmentMethod} onChange={ns => updateStatus(selected.id, ns)} size="lg" />
           </div>
-
-          {/* 付款資訊區塊 */}
-          {selected.transferLast5 && (
-            <div style={{
-              border: `1px solid ${selected.status === 'awaiting_confirm' ? 'oklch(0.60 0.18 25 / 0.4)' : 'var(--border)'}`,
-              background: selected.status === 'awaiting_confirm' ? 'oklch(0.60 0.18 25 / 0.04)' : 'var(--off)',
-              padding: '14px 16px', marginBottom: 20,
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <span style={{ fontSize: 11, color: 'var(--mid)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>付款末五碼</span>
-                {selected.status === 'awaiting_confirm' && (
-                  <span style={{ fontSize: 10, color: 'var(--red)', fontWeight: 500 }}>● 待對帳確認</span>
-                )}
-              </div>
-              <div style={{ fontFamily: 'var(--font-d)', fontSize: 26, fontWeight: 500, letterSpacing: '0.3em', color: 'var(--dark)' }}>
-                {selected.transferLast5}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--mid)', marginTop: 6 }}>應收金額：NT$ {selected.total.toLocaleString()}</div>
-            </div>
-          )}
 
           {selected.phone && (
             <div style={{ marginBottom: 12 }}>

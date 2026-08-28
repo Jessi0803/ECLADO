@@ -374,6 +374,9 @@ test('訂單管理可查看明細並更新狀態', async ({ page }) => {
 
   await page.goto('/admin');
   await openAdminSection(page, /訂單管理/);
+  await expect(page.getByRole('columnheader', { name: '付款方式' })).toBeVisible();
+  await expect(page.getByText('虛擬帳號匯款').first()).toBeVisible();
+  await expect(page.getByText('付款碼')).toHaveCount(0);
   await expect(page.getByText('E2E-ORDER-001').first()).toBeVisible();
   await page.getByText('E2E-ORDER-001').click();
   await expect(page.getByText('訂單詳情')).toBeVisible();
@@ -423,6 +426,8 @@ test('客訂自取訂單不顯示地址與托運欄位並可完成取貨流程',
 
   await page.goto('/admin');
   await openAdminSection(page, /訂單管理/);
+  await expect(page.getByRole('button', { name: '可取貨' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '已取貨' })).toHaveCount(0);
   await page.getByRole('button', { name: '備貨中' }).click();
   await page.getByText('E2E-PICKUP-001').click();
 
@@ -437,8 +442,33 @@ test('客訂自取訂單不顯示地址與托運欄位並可完成取貨流程',
 
   await panel.locator('select').selectOption('ready_for_pickup');
   await expect.poll(() => orderUpdates.some(update => update.status === 'ready_for_pickup')).toBe(true);
+  await expect(page.getByRole('button', { name: '已出貨' })).toHaveAttribute('aria-pressed', 'true');
   await panel.locator('select').selectOption('picked_up');
   await expect.poll(() => orderUpdates.some(update => update.status === 'picked_up')).toBe(true);
+  await expect(page.getByRole('button', { name: '已到貨' })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('已出貨與已到貨篩選包含對應的自取狀態', async ({ page }) => {
+  await mockAdminApis(page, {
+    orders: [
+      { ...adminOrderRows[0], id: 'E2E-SHIPPED', status: 'shipped' },
+      { ...adminOrderRows[0], id: 'E2E-READY', status: 'ready_for_pickup', fulfillment_method: 'onsite_pickup' },
+      { ...adminOrderRows[0], id: 'E2E-DELIVERED', status: 'delivered' },
+      { ...adminOrderRows[0], id: 'E2E-PICKED', status: 'picked_up', fulfillment_method: 'onsite_pickup' },
+    ],
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByRole('button', { name: '已出貨' }).click();
+  await expect(page.getByText('E2E-SHIPPED')).toBeVisible();
+  await expect(page.getByText('E2E-READY')).toBeVisible();
+  await expect(page.getByText('E2E-DELIVERED')).toHaveCount(0);
+
+  await page.getByRole('button', { name: '已到貨' }).click();
+  await expect(page.getByText('E2E-DELIVERED')).toBeVisible();
+  await expect(page.getByText('E2E-PICKED')).toBeVisible();
+  await expect(page.getByText('E2E-SHIPPED')).toHaveCount(0);
 });
 
 test('訂單管理可取消訂單並同步 cancelled 狀態', async ({ page }) => {
@@ -457,6 +487,7 @@ test('訂單管理可取消訂單並同步 cancelled 狀態', async ({ page }) =
 
   await expect.poll(() => orderUpdates.some(update => update.status === 'cancelled')).toBe(true);
   await expect(page.getByRole('button', { name: /已取消/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: '已取消', exact: true })).toBeVisible();
   await expect(page.locator('.detail-panel').getByText('已取消', { exact: true })).toBeVisible();
   await expect(page.locator('.detail-panel select')).toHaveCount(0);
   await expect(page.getByRole('button', { name: '取消訂單' })).toHaveCount(0);

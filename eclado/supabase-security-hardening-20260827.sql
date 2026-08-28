@@ -158,6 +158,7 @@ as $$
   cross join lateral jsonb_array_elements(orders.items) item(value)
   where orders.status in ('paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered')
     and coalesce(item.value ->> 'product_id', '') ~ '^[0-9]+$'
+    and coalesce(item.value ->> 'is_custom_order', 'false') <> 'true'
   group by (item.value ->> 'product_id')::integer;
 $$;
 

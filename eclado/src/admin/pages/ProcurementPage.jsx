@@ -312,7 +312,7 @@ export default function ProcurementPage() {
 
       {mode === 'list' && <>
         <div className="procurement-header">
-          <div><h1>叫貨管理</h1><p>建立與保存向韓國供應商提出的叫貨單</p></div>
+          <div><h1>叫貨管理</h1><p>建立與保存向供應商提出的叫貨單</p></div>
           <button className="admin-primary-btn" onClick={startNew}>＋ 建立叫貨單</button>
         </div>
         <div className="procurement-stats">

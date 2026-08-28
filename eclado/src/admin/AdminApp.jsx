@@ -50,16 +50,23 @@ export default function AdminApp({ adminEmail, onSignOut }) {
   async function fetchAll() {
     setApplicationsLoading(true);
     try {
-      const [ordersRes, profilesRes, catalogRes, applicationsRes] = await Promise.all([
+      const [ordersRes, profilesRes, catalogRes, applicationsRes, paymentMethodsRes] = await Promise.all([
         supabase.from('orders').select('*').order('created_at', { ascending: false }),
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
         supabase.rpc('get_admin_catalog'),
         supabase.from('professional_applications').select('*').order('created_at', { ascending: false }),
+        supabase.rpc('get_admin_order_payment_methods'),
       ]);
       if (ordersRes.error) throw ordersRes.error;
       if (profilesRes.error) throw profilesRes.error;
 
-      const realOrders = (ordersRes.data || []).map(normalizeOrder);
+      const paymentMethodByOrder = new Map(
+        (paymentMethodsRes.data || []).map(row => [String(row.order_id), row.payment_method]),
+      );
+      const realOrders = (ordersRes.data || []).map(row => normalizeOrder({
+        ...row,
+        payment_method: paymentMethodByOrder.get(String(row.id)) || '',
+      }));
       setOrders(realOrders);
 
       const realMembers = (profilesRes.data || []).map(p => normalizeMember(p, realOrders));

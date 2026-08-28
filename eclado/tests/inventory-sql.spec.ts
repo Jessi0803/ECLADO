@@ -29,6 +29,23 @@ test('現場自取運費分支不會再被宅配規則覆寫', () => {
   expect(sql).not.toContain("if normalized_fulfillment_method = 'onsite_pickup' then\n    shipping_amount := 0;\n  elsif member_role in ('pro', 'instructor', 'distributor')\n    and subtotal_amount - discount_amount < 5000");
 });
 
+test('公開熱門商品統計排除客訂規格銷量', () => {
+  for (const file of ['supabase-security-hardening-20260827.sql', 'supabase-exclude-custom-orders-from-popular.sql']) {
+    const sql = read(file);
+    expect(sql).toContain("coalesce(item.value ->> 'is_custom_order', 'false') <> 'true'");
+  }
+});
+
+test('後台付款方式查詢不暴露完整金流指示資料', () => {
+  for (const file of ['supabase-order-payment-instructions.sql', 'supabase-admin-order-payment-methods.sql']) {
+    const sql = read(file);
+    expect(sql).toContain('returns table(order_id text, payment_method text)');
+    expect(sql).toContain('if not public.is_eclado_admin()');
+    expect(sql).toContain('select instruction.order_id, instruction.payment_method');
+    expect(sql).not.toContain('select instruction.*');
+  }
+});
+
 test('重複付款狀態更新不會再次扣庫存，履約狀態互轉也不重複扣補', () => {
   for (const file of ['supabase-full-setup.sql', 'supabase-inventory-reservation.sql']) {
     const sql = read(file);

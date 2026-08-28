@@ -23,6 +23,7 @@ export function buildSalesStats(orders) {
     if (!SALES_COUNTED_STATUSES.has(order?.status)) return;
     const items = Array.isArray(order.items) ? order.items : [];
     items.forEach(item => {
+      if (item?.is_custom_order === true || item?.isCustomOrder === true) return;
       const qty = Math.max(1, Number(item?.qty) || 1);
       const productId = Number(item?.product_id ?? item?.productId ?? item?.id);
       if (!Number.isNaN(productId) && productId > 0) {
@@ -44,9 +45,17 @@ export function getProductSalesCount(product, salesStats) {
   return idCount + nameCount;
 }
 
+export function isCustomOrderOnlyProduct(product) {
+  const activeVariants = Array.isArray(product?.variants)
+    ? product.variants.filter(variant => variant?.active !== false)
+    : [];
+  return activeVariants.length > 0
+    && activeVariants.every(variant => variant?.isCustomOrder === true || variant?.is_custom_order === true);
+}
+
 export function getPopularProducts(products, salesStats, limit = DEFAULT_POPULAR_PRODUCT_LIMIT) {
   const ranked = (products || [])
-    .filter(product => product && product.active !== false)
+    .filter(product => product && product.active !== false && !isCustomOrderOnlyProduct(product))
     .map((product, index) => ({
       product,
       index,

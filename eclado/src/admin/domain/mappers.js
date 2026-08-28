@@ -26,6 +26,7 @@ export function normalizeOrder(row) {
     email: row.email,
     note: row.note,
     transferLast5: row.transfer_last5,
+    paymentMethod: row.payment_method || '',
     tracking: row.tracking,
     shippingCarrier: row.shipping_carrier || (row.tracking ? 'sf_express' : ''),
     shippedAt: row.shipped_at || null,
