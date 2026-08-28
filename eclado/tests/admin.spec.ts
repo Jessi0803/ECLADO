@@ -93,6 +93,99 @@ test('後台登入權限：管理員 session 可進入儀表板', async ({ page 
   await expect(page.getByText('ECL-20260504-0044')).toHaveCount(0);
 });
 
+test('叫貨管理可多選商品、查看庫存、計算雙幣別並匯出三種格式', async ({ page }, testInfo) => {
+  let savedRequest: Record<string, unknown> | undefined;
+  await mockAdminApis(page, { onPurchaseOrderSave: request => { savedRequest = request; } });
+  await page.goto('/admin');
+  await openAdminSection(page, /叫貨管理/);
+
+  await expect(page.getByRole('heading', { name: '叫貨管理' })).toBeVisible();
+  await page.getByRole('button', { name: /建立叫貨單/ }).click();
+  await page.getByRole('button', { name: /選擇商品/ }).click();
+
+  const picker = page.getByRole('dialog', { name: '選擇叫貨商品' });
+  await expect(picker.getByText('E-96A · 氧氣泡泡 120g')).toBeVisible();
+  await expect(picker.getByText('庫存 11')).toBeVisible();
+  await expect(picker.getByText('尚未連結庫存')).toBeVisible();
+  await picker.getByText('E-96A · 氧氣泡泡 120g').click();
+  await picker.getByText('F-63 · VONO煥膚組 1set').click();
+  await picker.getByRole('button', { name: '加入 2 項商品' }).click();
+
+  await page.getByLabel('氧氣泡泡 數量').fill('10');
+  await page.getByLabel('VONO煥膚組 數量').fill('5');
+  await page.getByLabel('美金兌台幣匯率').fill('32.5');
+  await expect(page.getByText('USD$194.45')).toBeVisible();
+  await expect(page.getByText('NT$6,320')).toBeVisible();
+  await expect(page.getByLabel('收件地址')).toHaveValue(/우리무역/);
+
+  await page.getByRole('button', { name: '確認建立' }).click();
+  await expect(page.getByRole('heading', { name: 'PO-20260827-0001' })).toBeVisible();
+  await expect(page.getByText('待下單').first()).toBeVisible();
+  expect(savedRequest?.p_order).toMatchObject({ shipping_address: { address_text: expect.any(String) } });
+  expect(Object.keys((savedRequest?.p_order as { shipping_address: Record<string, unknown> }).shipping_address)).toEqual(['address_text']);
+  await expect(page.getByRole('button', { name: '永久刪除' })).toBeVisible();
+  await expect(page.getByLabel('叫貨單狀態').locator('option[value="cancelled"]')).toHaveCount(0);
+  await page.getByRole('button', { name: '編輯' }).click();
+  await expect(page.getByRole('heading', { name: '編輯 PO-20260827-0001' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '儲存變更' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '儲存草稿' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '確認建立' })).toHaveCount(0);
+  await page.getByRole('button', { name: '儲存變更' }).click();
+  await expect(page.getByText('待下單').first()).toBeVisible();
+  await page.getByRole('button', { name: '預覽與匯出' }).click();
+
+  const preview = page.getByRole('dialog', { name: '叫貨單預覽' });
+  await expect(preview.getByText('PURCHASE ORDER')).toBeVisible();
+  await expect(preview.getByText('Total:', { exact: true })).toBeVisible();
+  await expect(preview.getByText('TWD Estimated Total')).toHaveCount(0);
+  await expect(preview.getByText('Exchange Rate')).toHaveCount(0);
+  for (const [buttonName, extension] of [['匯出 Excel', '.xlsx'], ['匯出 PNG', '.png'], ['匯出 PDF', '.pdf']] as const) {
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      preview.getByRole('button', { name: buttonName }).click(),
+    ]);
+    expect(download.suggestedFilename()).toContain(extension);
+    await download.saveAs(testInfo.outputPath(`purchase-order${extension}`));
+  }
+});
+
+test('叫貨單草稿可不填地址儲存並永久刪除，後期狀態不可降級後刪除', async ({ page }) => {
+  const deletedIds: number[] = [];
+  await mockAdminApis(page, { onPurchaseOrderDelete: id => deletedIds.push(id) });
+  await page.goto('/admin');
+  await openAdminSection(page, /叫貨管理/);
+  await page.getByRole('button', { name: /建立叫貨單/ }).click();
+  await page.getByRole('button', { name: /選擇商品/ }).click();
+  const picker = page.getByRole('dialog', { name: '選擇叫貨商品' });
+  await picker.getByText('E-96A · 氧氣泡泡 120g').click();
+  await picker.getByRole('button', { name: '加入 1 項商品' }).click();
+  await page.getByLabel('收件地址').fill('');
+  await page.getByRole('button', { name: '儲存草稿' }).click();
+
+  await expect(page.getByRole('heading', { name: 'PO-20260827-0001' })).toBeVisible();
+  await expect(page.getByText('請填寫收件地址。')).toHaveCount(0);
+  page.once('dialog', async dialog => {
+    expect(dialog.message()).toContain('PO-20260827-0001');
+    await dialog.accept();
+  });
+  await page.getByRole('button', { name: '永久刪除' }).click();
+  await expect(page.getByRole('heading', { name: '叫貨管理' })).toBeVisible();
+  await expect(page.getByText('尚未建立叫貨單')).toBeVisible();
+  expect(deletedIds).toEqual([1]);
+
+  await page.getByRole('button', { name: /建立叫貨單/ }).click();
+  await page.getByRole('button', { name: /選擇商品/ }).click();
+  await page.getByRole('dialog', { name: '選擇叫貨商品' }).getByText('F-63 · VONO煥膚組 1set').click();
+  await page.getByRole('dialog', { name: '選擇叫貨商品' }).getByRole('button', { name: '加入 1 項商品' }).click();
+  await page.getByRole('button', { name: '確認建立' }).click();
+  const status = page.getByLabel('叫貨單狀態');
+  await status.selectOption('ordered');
+  await expect(status.locator('option[value="draft"]')).toHaveCount(0);
+  await expect(status.locator('option[value="pending"]')).toHaveCount(0);
+  await expect(status.locator('option[value="cancelled"]')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '永久刪除' })).toHaveCount(0);
+});
+
 test('後台側邊欄將操作紀錄歸在會員分類', async ({ page }) => {
   await mockAdminApis(page);
 
@@ -312,6 +405,40 @@ test('訂單管理可依狀態與預購庫存篩選', async ({ page }) => {
 
   await expect(page.getByText('E2E-PREORDER-003')).toBeVisible();
   await expect(page.getByText('E2E-ORDER-002')).toHaveCount(0);
+});
+
+test('客訂自取訂單不顯示地址與托運欄位並可完成取貨流程', async ({ page }) => {
+  const orderUpdates: Record<string, unknown>[] = [];
+  await mockAdminApis(page, {
+    orders: [{
+      ...adminOrderRows[1],
+      id: 'E2E-PICKUP-001',
+      status: 'preparing',
+      fulfillment_method: 'onsite_pickup',
+      address: '',
+      items: [{ name: '客訂商品', qty: 1, price: 6382, is_custom_order: true }],
+    }],
+    onOrderUpdate: update => orderUpdates.push(update),
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByRole('button', { name: '備貨中' }).click();
+  await page.getByText('E2E-PICKUP-001').click();
+
+  const panel = page.locator('.detail-panel');
+  await expect(panel.getByText('客訂自取 · 不需收件地址與托運單號')).toBeVisible();
+  await expect(panel.getByText('收件地址', { exact: true })).toHaveCount(0);
+  await expect(panel.getByText('托運單號', { exact: true })).toHaveCount(0);
+  await expect(panel.getByPlaceholder(/順豐托運單號/)).toHaveCount(0);
+  await expect(panel.locator('option[value="ready_for_pickup"]')).toHaveText('可取貨');
+  await expect(panel.locator('option[value="picked_up"]')).toHaveText('已取貨');
+  await expect(panel.locator('option[value="shipped"]')).toHaveCount(0);
+
+  await panel.locator('select').selectOption('ready_for_pickup');
+  await expect.poll(() => orderUpdates.some(update => update.status === 'ready_for_pickup')).toBe(true);
+  await panel.locator('select').selectOption('picked_up');
+  await expect.poll(() => orderUpdates.some(update => update.status === 'picked_up')).toBe(true);
 });
 
 test('訂單管理可取消訂單並同步 cancelled 狀態', async ({ page }) => {
@@ -559,6 +686,7 @@ test('商品管理可編輯名稱、規格價格與院線限定並透過 RPC 儲
   await panel.getByLabel('中文名稱').fill('胜肽全效修護精華液');
   await panel.getByLabel('規格 1 市場價').fill('4200');
   await panel.getByLabel('規格 1 專業價').fill('3100');
+  await panel.getByLabel('規格 1 客訂規格').check();
   await panel.getByLabel(/院線限定/).check();
   await panel.getByRole('button', { name: '儲存' }).click();
 
@@ -568,7 +696,7 @@ test('商品管理可編輯名稱、規格價格與院線限定並透過 RPC 儲
     name_zh: '胜肽全效修護精華液',
     is_pro_only: true,
   });
-  expect(savedRequest?.p_variants?.[0]).toMatchObject({ price: 4200, pro_price: 3100 });
+  expect(savedRequest?.p_variants?.[0]).toMatchObject({ price: 4200, pro_price: 3100, is_custom_order: true });
 });
 
 test('商品管理可從本機上傳圖片並以規格 RPC 建立草稿', async ({ page }) => {

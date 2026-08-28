@@ -88,6 +88,17 @@ export const adminApplicationRows = [
   },
 ];
 
+export const procurementSupplierItems = [
+  { id: 1, supplier_id: 1, supplier_sku: 'E-96A', name_zh: '氧氣泡泡', name_en: 'Oxygen Bubble Cleanser', specification: '120g', price_id: 101, currency: 'USD', unit_cost: 8.52, has_inventory_link: true, available_stock: 11 },
+  { id: 2, supplier_id: 1, supplier_sku: 'F-588C', name_zh: '金箔片', name_en: 'Gold Foil Sheet', specification: '1pc', price_id: 102, currency: 'USD', unit_cost: 12.4, has_inventory_link: true, available_stock: 0 },
+  { id: 3, supplier_id: 1, supplier_sku: 'F-63', name_zh: 'VONO煥膚組', name_en: 'VONO Peeling Set', specification: '1set', price_id: 103, currency: 'USD', unit_cost: 21.85, has_inventory_link: true, available_stock: 4 },
+  { id: 4, supplier_id: 1, supplier_sku: '239', name_zh: '精萃防曬乳', name_en: 'Exo Clinica UV Suncream', specification: '50g', price_id: 104, currency: 'USD', unit_cost: 3.83, has_inventory_link: false, available_stock: null },
+];
+
+export const procurementAddresses = [
+  { id: 1, address_text: '이름:우리무역\n주소:04569\n서울특별시 중구 흥인동 125 써니빌딩 505호 (ZC8)\n전화:010-5851-0702', is_default: true, active: true, usage_count: 2 },
+];
+
 async function json(route: Route, body: unknown, status = 200) {
   await route.fulfill({
     status,
@@ -174,6 +185,8 @@ export type MockEcladoApiOptions = {
   onPromotionDelete?: (url: string) => void;
   onApplicationUpdate?: (update: Record<string, unknown>, url: string) => void;
   onApplicationInsert?: (application: Record<string, unknown>) => void;
+  onPurchaseOrderSave?: (request: Record<string, unknown>) => void;
+  onPurchaseOrderDelete?: (orderId: number) => void;
   onLinePush?: (body: Record<string, unknown>) => void;
   onOrderEmail?: (body: Record<string, unknown>) => void;
   onPaymentRequest?: (body: Record<string, unknown>) => void;
@@ -203,6 +216,7 @@ export type MockEcladoApiOptions = {
   profiles?: Record<string, unknown>[];
   applications?: Record<string, unknown>[];
   auditLogs?: Record<string, unknown>[];
+  procurementOrders?: Record<string, unknown>[];
 };
 
 export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions = {}) {
@@ -221,6 +235,12 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   const applications = options.applications || [];
   const auditLogs = options.auditLogs || [];
   const authUser = options.authUser;
+  const procurement = {
+    suppliers: [{ id: 1, code: 'ECLADO', name: 'ECLADO Korea', default_currency: 'USD', active: true }] as Record<string, unknown>[],
+    supplier_items: procurementSupplierItems.map(item => ({ ...item })) as Record<string, unknown>[],
+    addresses: procurementAddresses.map(address => ({ ...address })) as Record<string, unknown>[],
+    orders: (options.procurementOrders || []).map(order => ({ ...order })) as Record<string, unknown>[],
+  };
 
   if (authUser) {
     await page.addInitScript(session => {
@@ -313,12 +333,99 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     images: productImages().filter(image => image.active !== false),
   }));
 
+  await page.route('**/rest/v1/rpc/get_procurement_management_data', async route => json(route, procurement));
+
+  await page.route('**/rest/v1/rpc/save_procurement_address', async route => {
+    const request = route.request().postDataJSON();
+    const incoming = request.p_address || {};
+    const id = Number(incoming.id || Math.max(0, ...procurement.addresses.map(address => Number(address.id))) + 1);
+    const saved = { ...incoming, id, active: true, usage_count: Number(incoming.usage_count || 0) };
+    const index = procurement.addresses.findIndex(address => Number(address.id) === id);
+    if (index >= 0) procurement.addresses[index] = saved;
+    else procurement.addresses.unshift(saved);
+    return json(route, saved);
+  });
+
+  await page.route('**/rest/v1/rpc/archive_procurement_address', async route => {
+    const id = Number(route.request().postDataJSON()?.p_address_id);
+    procurement.addresses = procurement.addresses.filter(address => Number(address.id) !== id);
+    return json(route, null);
+  });
+
+  await page.route('**/rest/v1/rpc/save_purchase_order', async route => {
+    const request = route.request().postDataJSON();
+    options.onPurchaseOrderSave?.(request);
+    const incoming = request.p_order || {};
+    const incomingItems = Array.isArray(request.p_items) ? request.p_items : [];
+    const id = Number(incoming.id || procurement.orders.length + 1);
+    const totalUsd = incomingItems.reduce((sum: number, item: Record<string, unknown>) => (
+      sum + Number(item.quantity || 0) * Number(item.unit_cost || 0)
+    ), 0);
+    const supplier = procurement.suppliers.find(item => Number(item.id) === Number(incoming.supplier_id));
+    const savedItems = incomingItems.map((item: Record<string, unknown>, index: number) => {
+      const source = procurement.supplier_items.find(candidate => Number(candidate.id) === Number(item.supplier_item_id));
+      return {
+        ...item,
+        id: index + 1,
+        purchase_order_id: id,
+        supplier_sku: source?.supplier_sku,
+        name_zh: source?.name_zh,
+        name_en: source?.name_en,
+        specification: source?.specification,
+        subtotal_usd: Number(item.quantity || 0) * Number(item.unit_cost || 0),
+        sort_order: index,
+      };
+    });
+    const saved = {
+      ...incoming,
+      id,
+      po_number: incoming.po_number || `PO-20260827-${String(id).padStart(4, '0')}`,
+      supplier_name: supplier?.name,
+      supplier_code: supplier?.code,
+      total_usd: totalUsd,
+      total_twd: totalUsd * Number(incoming.exchange_rate || 0),
+      created_at: incoming.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      items: savedItems,
+    };
+    const index = procurement.orders.findIndex(order => Number(order.id) === id);
+    if (index >= 0) procurement.orders[index] = saved;
+    else procurement.orders.unshift(saved);
+    return json(route, saved);
+  });
+
+  await page.route('**/rest/v1/rpc/update_purchase_order_status', async route => {
+    const request = route.request().postDataJSON();
+    const order = procurement.orders.find(item => Number(item.id) === Number(request.p_order_id));
+    if (!['draft', 'pending', 'ordered', 'shipping', 'received'].includes(String(request.p_status))) {
+      return json(route, { message: 'Invalid purchase order status' }, 400);
+    }
+    if (order && ['ordered', 'shipping', 'received'].includes(String(order.status)) && ['draft', 'pending'].includes(String(request.p_status))) {
+      return json(route, { message: 'Processed purchase orders cannot return to draft or pending' }, 400);
+    }
+    if (order) order.status = request.p_status;
+    return json(route, order || null);
+  });
+
+  await page.route('**/rest/v1/rpc/delete_purchase_order', async route => {
+    const orderId = Number(route.request().postDataJSON()?.p_order_id);
+    const index = procurement.orders.findIndex(item => Number(item.id) === orderId);
+    if (index < 0) return json(route, { message: 'Purchase order not found' }, 404);
+    if (!['draft', 'pending'].includes(String(procurement.orders[index].status))) {
+      return json(route, { message: 'Only draft or pending purchase orders can be deleted' }, 400);
+    }
+    procurement.orders.splice(index, 1);
+    options.onPurchaseOrderDelete?.(orderId);
+    return json(route, null);
+  });
+
   await page.route('**/rest/v1/rpc/set_product_publication_status', async route => {
     const request = route.request().postDataJSON();
     options.onProductUpdate?.(
       { publication_status: request.p_publication_status },
       `id=eq.${request.p_product_id}`,
     );
+    if (options.productWriteError) return json(route, { message: options.productWriteError }, 400);
     return json(route, null);
   });
 
@@ -448,6 +555,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         unit_price: unitPrice,
         line_total: unitPrice * qty,
         stock_at_order: Math.max(0, stock),
+        is_custom_order: variant?.is_custom_order === true,
         fulfillment_type: stock > 0 ? 'in_stock' : 'preorder',
         fulfillment: stock > 0 ? '現貨商品' : '預購商品',
         shipping_time: stock > 0 ? '出貨時間為 5 個工作天內，每週二出貨' : '出貨時間為 7-14 個工作天',
@@ -484,8 +592,17 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     const selectedPromotion = promotionCandidates[0] || null;
     const discount = selectedPromotion?.discount || 0;
     const discountedSubtotal = Math.max(0, subtotal - discount);
+    const fulfillmentMethod = String(request.p_fulfillment_method || 'delivery');
+    if (!['delivery', 'onsite_pickup'].includes(fulfillmentMethod)) {
+      return json(route, { message: 'Invalid fulfillment method' }, 400);
+    }
+    if (fulfillmentMethod === 'onsite_pickup' && !authoritativeItems.every(item => item.is_custom_order)) {
+      return json(route, { message: 'Onsite pickup is available only for custom-order variants' }, 403);
+    }
     const professionalRole = ['pro', 'instructor', 'distributor'].includes(role);
-    const shipping = professionalRole && discountedSubtotal >= 10000
+    const shipping = fulfillmentMethod === 'onsite_pickup'
+      ? 0
+      : professionalRole && discountedSubtotal >= 10000
       ? 0
       : (authoritativeItems.every(item => item.product_id === 9) ? 0 : 120);
     const orderId = `ECL-E2E-${Date.now()}`;
@@ -499,6 +616,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       shipping,
       total: subtotal - discount + shipping,
       status,
+      fulfillment_method: fulfillmentMethod,
       promotion_id: selectedPromotion?.promotion.id || null,
       promotion_name: selectedPromotion?.promotion.name || null,
       payment_token: `payment-token-${orderId}`,
@@ -512,6 +630,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       discount,
       total: subtotal - discount + shipping,
       status,
+      fulfillment_method: fulfillmentMethod,
       address: request.p_address,
       phone: request.p_phone,
       email: request.p_email,
@@ -526,7 +645,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   await page.route('**/rest/v1/rpc/get_public_sales_stats', async route => {
     const totals = new Map<number, number>();
     orders
-      .filter(order => ['paid', 'preparing', 'shipped', 'delivered'].includes(String(order.status)))
+      .filter(order => ['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(String(order.status)))
       .forEach(order => (order.items || []).forEach((item: Record<string, unknown>) => {
         const productId = Number(item.product_id);
         if (Number.isFinite(productId) && productId > 0) {
@@ -729,7 +848,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       ));
       if (!order) return json(route, { ok: false, error: '查詢資料不正確，請確認查詢碼與手機號碼。' }, 400);
       const paymentState = options.paymentQueryStatus
-        || (['paid', 'preparing', 'shipped', 'delivered'].includes(String(order.status)) ? 'paid'
+        || (['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(String(order.status)) ? 'paid'
           : order.status === 'cancelled' ? 'cancelled' : 'pending');
       const pending = paymentState === 'pending';
       return json(route, {
@@ -761,7 +880,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       const order = orders.find(candidate => String(candidate.id) === orderNo && !candidate.user_id);
       if (!order) return json(route, { ok: false, error: '訪客訂單查詢授權已過期，請重新輸入查詢碼與手機號碼。' }, 401);
       const paymentState = options.paymentQueryStatus
-        || (['paid', 'preparing', 'shipped', 'delivered'].includes(String(order.status)) ? 'paid'
+        || (['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(String(order.status)) ? 'paid'
           : order.status === 'cancelled' ? 'cancelled' : 'pending');
       const pending = paymentState === 'pending';
       return json(route, {

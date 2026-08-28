@@ -13,6 +13,7 @@ create table if not exists public.product_variants (
   is_default boolean not null default false,
   sort_order integer not null default 0,
   active boolean not null default true,
+  is_custom_order boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -25,6 +26,7 @@ alter table public.product_variants add column if not exists stock integer;
 alter table public.product_variants add column if not exists is_default boolean not null default false;
 alter table public.product_variants add column if not exists sort_order integer not null default 0;
 alter table public.product_variants add column if not exists active boolean not null default true;
+alter table public.product_variants add column if not exists is_custom_order boolean not null default false;
 alter table public.product_variants add column if not exists created_at timestamptz not null default now();
 alter table public.product_variants add column if not exists updated_at timestamptz not null default now();
 

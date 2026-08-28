@@ -252,7 +252,7 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
           <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>訂單管理</h1>
           <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
-            {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['unpaid','未付款'], ['paid','已付款'], ['preparing','備貨中'], ['shipped','已出貨'], ['delivered','已到貨'], ['returned','退貨'], ['cancelled','已取消']].map(([val, label]) => (
+            {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['unpaid','未付款'], ['paid','已付款'], ['preparing','備貨中'], ['ready_for_pickup','可取貨'], ['picked_up','已取貨'], ['shipped','已出貨'], ['delivered','已到貨'], ['returned','退貨'], ['cancelled','已取消']].map(([val, label]) => (
               <button key={val} aria-pressed={filter === val} onClick={() => setFilter(val)} style={{
                 padding: '8px 16px', border: 'none', fontSize: 12, letterSpacing: '0.04em',
                 background: filter === val ? 'var(--dark)' : 'transparent',
@@ -345,7 +345,7 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
                 onMouseLeave={e => { if (selected?.id !== o.id) e.currentTarget.style.background = 'transparent'; }}>
                   <td data-label="訂單編號" style={{ padding: '13px 14px', fontSize: 12, fontWeight: 500, color: 'var(--dark)', whiteSpace: 'nowrap' }}>{o.id}</td>
                   <td data-label="會員" style={{ padding: '13px 14px', fontSize: 13 }}>{o.member}</td>
-                  <td data-label="類型" style={{ padding: '13px 14px' }}><TypeBadge type={o.type} /></td>
+                  <td data-label="類型" style={{ padding: '13px 14px' }}><TypeBadge type={o.type} />{o.fulfillmentMethod === 'onsite_pickup' && <span style={{ display:'block', marginTop:5, fontSize:10, color:'var(--gold)', whiteSpace:'nowrap' }}>客訂自取</span>}</td>
                   <td data-label="金額" style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>NT$ {o.total.toLocaleString()}</td>
                   <td data-label="付款碼" style={{ padding: '13px 14px', fontSize: 13, fontFamily: 'var(--font-d)', letterSpacing: '0.15em', color: o.transferLast5 ? 'var(--dark)' : 'var(--light)', fontWeight: 600 }}>
                     {o.transferLast5 || '—'}
@@ -357,7 +357,7 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
                     }
                   </td>
                   <td data-label="狀態" style={{ padding: '13px 14px' }}>
-                    <StatusSelect status={o.status} onChange={ns => updateStatus(o.id, ns)} />
+                    <StatusSelect status={o.status} fulfillmentMethod={o.fulfillmentMethod} onChange={ns => updateStatus(o.id, ns)} />
                   </td>
                   <td data-label="日期" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)', whiteSpace: 'nowrap' }}>{o.date}</td>
                 </tr>
@@ -387,7 +387,7 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
           {/* 狀態下拉 */}
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 6 }}>訂單狀態</div>
-            <StatusSelect status={selected.status} onChange={ns => updateStatus(selected.id, ns)} size="lg" />
+            <StatusSelect status={selected.status} fulfillmentMethod={selected.fulfillmentMethod} onChange={ns => updateStatus(selected.id, ns)} size="lg" />
           </div>
 
           {/* 付款資訊區塊 */}
@@ -429,8 +429,12 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
               {lineNotice}
             </div>
           )}
-          <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 8 }}>收件地址</div>
-          <div style={{ fontSize: 12, lineHeight: 1.7, marginBottom: 20, color: 'var(--dark)' }}>{selected.address}</div>
+          {selected.fulfillmentMethod === 'onsite_pickup' ? (
+            <div style={{ border:'1px solid var(--gold)', background:'oklch(0.82 0.12 80 / 0.08)', color:'var(--gold)', padding:'10px 12px', marginBottom:20, fontSize:12, fontWeight:500 }}>客訂自取 · 不需收件地址與托運單號</div>
+          ) : <>
+            <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 8 }}>收件地址</div>
+            <div style={{ fontSize: 12, lineHeight: 1.7, marginBottom: 20, color: 'var(--dark)' }}>{selected.address}</div>
+          </>}
           {selected.note && (
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>備註</div>
@@ -438,7 +442,7 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
             </div>
           )}
           {/* 托運/出貨區塊 */}
-          {!['cancelled', 'returned'].includes(selected.status) && (
+          {selected.fulfillmentMethod !== 'onsite_pickup' && !['cancelled', 'returned'].includes(selected.status) && (
             <div style={{ marginBottom: 20 }}>
               {['paid', 'preparing', 'shipped'].includes(selected.status) ? (
                 <>

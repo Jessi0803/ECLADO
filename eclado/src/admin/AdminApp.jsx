@@ -10,6 +10,7 @@ import Catalog from './pages/CatalogPage.jsx';
 import Dashboard from './pages/DashboardPage.jsx';
 import Members from './pages/MembersPage.jsx';
 import Orders from './pages/OrdersPage.jsx';
+import ProcurementPage from './pages/ProcurementPage.jsx';
 import Promotions from './pages/PromotionsPage.jsx';
 
 export default function AdminApp({ adminEmail, onSignOut }) {
@@ -156,27 +157,6 @@ export default function AdminApp({ adminEmail, onSignOut }) {
     if (page !== 'orders') setOrdersDefaultFilter('awaiting_confirm');
   }, [page]);
 
-  // 訂單狀態/托運單號變動時同步到 Supabase
-  async function setOrdersWithSync(updater) {
-    setOrders(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      next.forEach(o => {
-        const old = prev.find(p => p.id === o.id);
-        if (old) {
-          const update = {};
-          if (old.status !== o.status) update.status = o.status;
-          if (old.tracking !== o.tracking) update.tracking = o.tracking;
-          if (Object.keys(update).length) {
-            supabase.from('orders').update(update).eq('id', o.id).then(({ error }) => {
-              if (error) console.error('update order failed', error);
-            });
-          }
-        }
-      });
-      return next;
-    });
-  }
-
   async function persistOrderPatch(id, patch) {
     const { error } = await supabase.from('orders').update(patch).eq('id', id);
     if (error) throw error;
@@ -220,6 +200,7 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       is_default: !!variant.isDefault,
       sort_order: index,
       active: variant.active !== false,
+      is_custom_order: !!variant.isCustomOrder,
     }));
 
     const uploadedPaths = [];
@@ -375,13 +356,14 @@ export default function AdminApp({ adminEmail, onSignOut }) {
     const activeProducts = products.filter(product => product.active !== false);
     switch (page) {
       case 'dashboard': return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;
-      case 'orders': return <Orders orders={orders} setOrders={setOrdersWithSync} persistOrderPatch={persistOrderPatch} defaultFilter={ordersDefaultFilter} />;
+      case 'orders': return <Orders orders={orders} persistOrderPatch={persistOrderPatch} defaultFilter={ordersDefaultFilter} />;
       case 'audit': return <AuditLogsPage />;
       case 'catalog': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} />;
       // 舊路徑相容，避免有人記住 /admin#products 之類的
       case 'products':
       case 'inventory': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} />;
       case 'promotions': return <Promotions products={activeProducts} />;
+      case 'procurement': return <ProcurementPage />;
       case 'members': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onDeleteMember={deleteMemberWithSync} defaultFilter={membersDefaultFilter} />;
       case 'applications': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onDeleteMember={deleteMemberWithSync} defaultFilter="app_pending" />;
       case 'analytics': return <Analytics orders={orders} />;

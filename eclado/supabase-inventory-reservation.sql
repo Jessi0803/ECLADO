@@ -21,7 +21,7 @@ returns boolean
 language sql
 immutable
 as $$
-  select order_status in ('paid', 'preparing', 'shipped', 'delivered');
+  select order_status in ('paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered');
 $$;
 
 create or replace function public.adjust_inventory_for_order(order_items jsonb, direction integer)

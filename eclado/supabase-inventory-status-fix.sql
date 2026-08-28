@@ -11,5 +11,5 @@ returns boolean
 language sql
 immutable
 as $$
-  select order_status in ('paid', 'preparing', 'shipped', 'delivered');
+  select order_status in ('paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered');
 $$;

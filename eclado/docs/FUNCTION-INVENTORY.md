@@ -25,7 +25,7 @@
 
 | # | 測試場景 | 通過標準（畫面） | 資料庫驗證 |
 |---|----------|------------------|------------|
-| 8 | 付款才扣庫存 | 下單後庫存不變；後台改「已付款」後前台變化；後續改「備貨中／已出貨／已到貨」庫存不加回 | 下單後 `products.stock` 不變；改 `orders.status` 為 `paid` 後 `products.stock` 減少。`paid`、`preparing`、`shipped`、`delivered` 都視為占用庫存 |
+| 8 | 付款才扣庫存 | 下單後庫存不變；後台改「已付款」後前台變化；後續履約狀態庫存不加回 | 下單後 `products.stock` 不變；改 `orders.status` 為 `paid` 後 `products.stock` 減少。`paid`、`preparing`、`ready_for_pickup`、`picked_up`、`shipped`、`delivered` 都視為占用庫存 |
 | 9 | 取消／退貨加回庫存 | 已占用庫存的訂單取消／退貨後庫存回升 | `orders.status` 從 `paid`／`preparing`／`shipped`／`delivered` 改成 `cancelled` 或 `returned` 後，`products.stock` 加回 |
 | 10 | 後台改庫存 | 後台改數字後，前台刷新可見現貨／預購變化 | `products.stock` 與後台輸入一致 |
 | 11 | 48 小時未付款自動取消 | 訂單建立時寫入 `payment_due_at = created_at + 48 hours`；外部 Cron 可每小時觸發取消，Vercel Cron 作為每日補漏 | `orders.status` = `cancelled`（原為 `awaiting_confirm` 或 `unpaid`，且 `payment_due_at` 已到期） |
@@ -128,7 +128,7 @@
 |------|----------|
 | 預購可下單 | 庫存 ≤ 0 不擋結帳 |
 | 付款扣庫存 | 虛擬帳號、信用卡、行動支付皆相同：進入 `paid` 才扣庫存 |
-| 出貨流程不加回 | `paid`、`preparing`、`shipped`、`delivered` 都視為占用庫存 |
+| 出貨流程不加回 | `paid`、`preparing`、`ready_for_pickup`、`picked_up`、`shipped`、`delivered` 都視為占用庫存 |
 | 取消／退貨加回 | 已占用庫存的訂單改成 `cancelled` 或 `returned` 後，庫存加回 |
 
 ### 訂單狀態對照

@@ -30,6 +30,7 @@ declare
   normalized_stock integer;
   normalized_active boolean;
   normalized_default boolean;
+  normalized_custom_order boolean;
   normalized_publication_status text;
   default_count integer := 0;
   default_variant public.product_variants%rowtype;
@@ -271,6 +272,7 @@ begin
     normalized_stock := (variant_input ->> 'stock')::integer;
     normalized_default := coalesce((variant_input ->> 'is_default')::boolean, false);
     normalized_active := coalesce((variant_input ->> 'active')::boolean, true);
+    normalized_custom_order := coalesce((variant_input ->> 'is_custom_order')::boolean, false);
 
     if coalesce(variant_input ->> 'id', '') ~ '^[0-9]+$' then
       variant_id := (variant_input ->> 'id')::bigint;
@@ -282,6 +284,7 @@ begin
         pro_price = normalized_pro_price,
         stock = normalized_stock,
         is_default = normalized_default,
+        is_custom_order = normalized_custom_order,
         sort_order = greatest(coalesce((variant_input ->> 'sort_order')::integer, variant_position::integer - 1), 0),
         active = normalized_active,
         updated_at = now()
@@ -290,12 +293,12 @@ begin
     else
       insert into public.product_variants (
         product_id, sku, size, price, pro_price, stock,
-        is_default, sort_order, active
+        is_default, is_custom_order, sort_order, active
       )
       values (
         target_product_id, normalized_sku, normalized_size,
         normalized_price, normalized_pro_price, normalized_stock,
-        normalized_default,
+        normalized_default, normalized_custom_order,
         greatest(coalesce((variant_input ->> 'sort_order')::integer, variant_position::integer - 1), 0),
         normalized_active
       )
@@ -331,6 +334,7 @@ begin
         'proPrice', variant.pro_price,
         'stock', variant.stock,
         'isDefault', variant.is_default,
+        'isCustomOrder', variant.is_custom_order,
         'sortOrder', variant.sort_order,
         'active', variant.active
       )

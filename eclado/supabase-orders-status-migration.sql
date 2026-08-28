@@ -8,6 +8,8 @@ alter table public.orders
     'unpaid',
     'paid',
     'preparing',
+    'ready_for_pickup',
+    'picked_up',
     'shipped',
     'delivered',
     'returned',

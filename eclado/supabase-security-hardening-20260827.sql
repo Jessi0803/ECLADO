@@ -156,7 +156,7 @@ as $$
     sum(greatest(coalesce(nullif(item.value ->> 'qty', '')::integer, 1), 1))::bigint as sold_qty
   from public.orders orders
   cross join lateral jsonb_array_elements(orders.items) item(value)
-  where orders.status in ('paid', 'preparing', 'shipped', 'delivered')
+  where orders.status in ('paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered')
     and coalesce(item.value ->> 'product_id', '') ~ '^[0-9]+$'
   group by (item.value ->> 'product_id')::integer;
 $$;

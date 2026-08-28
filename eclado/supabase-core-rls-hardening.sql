@@ -240,7 +240,7 @@ set search_path = public
 as $$
   select orders.status, orders.items
   from public.orders
-  where orders.status in ('paid', 'preparing', 'shipped', 'delivered')
+  where orders.status in ('paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered')
   order by orders.created_at desc
   limit 1000;
 $$;

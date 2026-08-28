@@ -38,6 +38,7 @@ export function normalizeOrder(row) {
     promotionName: row.promotion_name,
     shipping: Number.isFinite(snapshotShipping) ? snapshotShipping : inferredShipping,
     pricingSnapshot: row.pricing_snapshot || null,
+    fulfillmentMethod: row.fulfillment_method || row.pricing_snapshot?.fulfillment_method || 'delivery',
   };
 }
 
@@ -70,6 +71,7 @@ export function normalizeProductVariant(row, index = 0) {
     isDefault: !!(row.is_default ?? row.isDefault),
     sortOrder: Math.max(0, Number(row.sort_order ?? row.sortOrder) || index),
     active: row.active !== false,
+    isCustomOrder: !!(row.is_custom_order ?? row.isCustomOrder),
   };
 }
 

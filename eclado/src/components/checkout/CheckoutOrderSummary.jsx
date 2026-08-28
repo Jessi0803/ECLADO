@@ -6,7 +6,7 @@ import {
 } from '../../domain/catalog.jsx';
 import { getProductImagePublicUrl } from '../../services/catalogData.js';
 
-export default function CheckoutOrderSummary({ items, summary, user }) {
+export default function CheckoutOrderSummary({ items, summary, user, fulfillmentMethod = 'delivery' }) {
   const hasPreorderItem = items.some(item => getFulfillmentInfo(item).type === 'preorder');
 
   return (
@@ -56,7 +56,7 @@ export default function CheckoutOrderSummary({ items, summary, user }) {
         </div>
       )}
       <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--dark)', marginBottom:14, alignItems:'center' }}>
-        <span>運費 <span style={{ fontSize:10, color:'var(--dark)' }}>（宅配到府）</span></span>
+        <span>運費 <span style={{ fontSize:10, color:'var(--dark)' }}>（{fulfillmentMethod === 'onsite_pickup' ? '現場自取' : '宅配到府'}）</span></span>
         <span style={{ fontFamily:'var(--font-display)' }}>{summary.shipping === 0 ? <span style={{ color:'var(--gold)', fontFamily:'var(--font-body)' }}>免運</span> : `NT$ ${summary.shipping}`}</span>
       </div>
       <div style={{ height:1, background:'var(--light)', marginBottom:14 }} />

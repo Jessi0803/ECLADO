@@ -50,6 +50,7 @@ export function normalizeProductVariant(variant) {
     proPrice: Number(variant.proPrice ?? variant.pro_price ?? 0),
     stock: variant.stock == null ? null : Number(variant.stock),
     isDefault: !!(variant.isDefault ?? variant.is_default),
+    isCustomOrder: !!(variant.isCustomOrder ?? variant.is_custom_order),
     sortOrder: Number(variant.sortOrder ?? variant.sort_order ?? 0),
     active: variant.active !== false,
   };
@@ -176,6 +177,7 @@ export function applyVariantToProduct(product, variant) {
     price: variant.price || product.price || 0,
     proPrice: variant.proPrice || product.proPrice || 0,
     stock: variant.stock != null ? variant.stock : product.stock,
+    isCustomOrder: !!variant.isCustomOrder,
   };
 }
 

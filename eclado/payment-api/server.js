@@ -323,7 +323,7 @@ async function getSupabaseOrderPaymentState(orderNo) {
   }
   const params = new URLSearchParams({
     id: `eq.${orderNo}`,
-    select: 'id,user_id,member,email,phone,public_lookup_code,status,total,subtotal,discount,promotion_name,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
+    select: 'id,user_id,member,email,phone,public_lookup_code,status,fulfillment_method,total,subtotal,discount,promotion_name,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
     limit: '1',
   });
   const response = await fetch(`${supabaseUrl}/rest/v1/orders?${params}`, {
@@ -384,7 +384,7 @@ function verifyGuestAccessToken(token, orderNo) {
 async function getSupabaseGuestOrderByLookup(lookupCode) {
   const params = new URLSearchParams({
     public_lookup_code: `eq.${lookupCode}`,
-    select: 'id,user_id,member,email,phone,public_lookup_code,status,total,subtotal,discount,promotion_name,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
+    select: 'id,user_id,member,email,phone,public_lookup_code,status,fulfillment_method,total,subtotal,discount,promotion_name,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
     limit: '1',
   });
   const response = await fetch(`${supabaseUrl}/rest/v1/orders?${params}`, {
@@ -419,6 +419,7 @@ function toPublicOrderPaymentState(order) {
     updated_at: order.updated_at || null,
     tracking: order.tracking || null,
     shipping_carrier: order.shipping_carrier || null,
+    fulfillment_method: order.fulfillment_method || 'delivery',
     shipped_at: order.shipped_at || null,
   };
 }

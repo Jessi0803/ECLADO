@@ -6,7 +6,12 @@ import PaymentInfo from '../components/checkout/PaymentInfo.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
 import { getMemberPrice, getMemberRole } from '../domain/catalog.jsx';
 import { calculateDiscount } from '../domain/promotions.js';
-import { calculateShipping } from '../domain/shipping.js';
+import {
+  areAllCustomOrderItems,
+  calculateShipping,
+  FULFILLMENT_DELIVERY,
+  FULFILLMENT_ONSITE_PICKUP,
+} from '../domain/shipping.js';
 import {
   PAYMENT_METHODS,
   SINOPAC_NOTIFY_API,
@@ -40,6 +45,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   });
   const [orderNo, setOrderNo] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('atm');
+  const [fulfillmentMethod, setFulfillmentMethod] = useState(FULFILLMENT_DELIVERY);
   const [paymentResult, setPaymentResult] = useState(null);
   const [paymentSnapshot, setPaymentSnapshot] = useState(null);
   const [paymentSummary, setPaymentSummary] = useState(null);
@@ -58,7 +64,9 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   // chooses the single best live promotion before any payment request is made.
   const { subtotal, discount, finalSubtotal, promotion } =
     calculateDiscount(cart, promotions, user);
-  const shipping = calculateShipping(cart, user, finalSubtotal);
+  const canPickup = areAllCustomOrderItems(cart);
+  const deliveryShipping = calculateShipping(cart, user, finalSubtotal);
+  const shipping = calculateShipping(cart, user, finalSubtotal, fulfillmentMethod);
   const total = finalSubtotal + shipping;
 
   const STEPS = ['收件資訊', '確認付款', '完成'];
@@ -76,6 +84,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     };
     setOrderNo(payment.orderNo);
     setPaymentMethod(payment.method || 'atm');
+    setFulfillmentMethod(summary.fulfillmentMethod || FULFILLMENT_DELIVERY);
     setPaymentSummary(summary);
     setPaymentSnapshot(summary.items || []);
     setPaymentResult({
@@ -125,6 +134,12 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!canPickup && fulfillmentMethod !== FULFILLMENT_DELIVERY) {
+      setFulfillmentMethod(FULFILLMENT_DELIVERY);
+    }
+  }, [canPickup, fulfillmentMethod]);
+
   function setField(name) {
     return e => setForm(f => ({ ...f, [name]: e.target.value }));
   }
@@ -145,6 +160,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       shipping: authoritativeOrder.shipping,
       total: authoritativeOrder.total,
       items,
+      fulfillmentMethod: authoritativeOrder.fulfillment_method || fulfillmentMethod,
     };
   }
 
@@ -157,6 +173,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       ['活動折抵', discount, authoritativeOrder.discount],
       ['套用活動', promotion?.id || null, authoritativeOrder.promotion?.id || null],
       ['運費', shipping, authoritativeOrder.shipping],
+      ['取貨方式', fulfillmentMethod, authoritativeOrder.fulfillment_method],
       ['訂單總額', total, authoritativeOrder.total],
     ];
     checks.forEach(([label, preview, authoritative]) => {
@@ -205,11 +222,14 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       const authoritativeOrder = pendingAuthoritativeOrder || await createAuthoritativeOrder({
           items: cart,
           member: form.name || user?.name || '訪客',
-          address: `${form.city}${form.district}${form.address}`,
+          address: fulfillmentMethod === FULFILLMENT_DELIVERY
+            ? `${form.city}${form.district}${form.address}`
+            : '',
           phone: form.phone,
           email: form.email,
           note: safeTrim(form.note),
           paymentMethod,
+          fulfillmentMethod,
         });
       const authoritativeOrderNo = authoritativeOrder.order_id;
       setOrderNo(authoritativeOrderNo);
@@ -358,9 +378,13 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
             )}
 
             {(form.name || form.phone || form.address) && <div style={{ background:'var(--off-white)', padding:'24px 28px' }}>
-              <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase', marginBottom:16 }}>配送資訊</p>
+              <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase', marginBottom:16 }}>{(paymentSummary?.fulfillmentMethod || fulfillmentMethod) === FULFILLMENT_ONSITE_PICKUP ? '取貨資訊' : '配送資訊'}</p>
               <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'8px 20px', fontSize:13 }}>
-                {[['收件人', form.name], ['手機', form.phone], ['地址', `${form.city}${form.district}${form.address}`], ['物流','宅配到府（順豐物流）']].map(([k, v]) => (
+                {[
+                  ['聯絡人', form.name], ['手機', form.phone],
+                  ...((paymentSummary?.fulfillmentMethod || fulfillmentMethod) === FULFILLMENT_DELIVERY ? [['地址', form.city + form.district + form.address]] : []),
+                  ['取貨方式', (paymentSummary?.fulfillmentMethod || fulfillmentMethod) === FULFILLMENT_ONSITE_PICKUP ? '現場自取（客訂商品）' : '宅配到府（順豐物流）'],
+                ].map(([k, v]) => (
                   <React.Fragment key={k}>
                     <span style={{ color:'var(--dark)', whiteSpace:'nowrap' }}>{k}</span>
                     <span style={{ color:'var(--black)' }}>{v}</span>
@@ -389,6 +413,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
             items={paymentSnapshot || cart}
             summary={paymentSummary || { subtotal, discount, finalSubtotal, promotion, shipping, total }}
             user={user}
+            fulfillmentMethod={paymentSummary?.fulfillmentMethod || fulfillmentMethod}
           />
         </div>
       </div>
@@ -406,13 +431,24 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
             <div>
               {step === 1 && (
                 <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
-                  <div style={{ background:'var(--off-white)', border:'1px solid var(--light)', padding:'16px 20px', display:'flex', alignItems:'center', gap:14 }}>
-                    <div style={{ width:36, height:36, background:'var(--black)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                    </div>
-                    <div>
-                      <p style={{ fontSize:12, fontWeight:500, color:'var(--black)', marginBottom:2 }}>宅配到府</p>
-                      <p style={{ fontSize:11, color:'var(--dark)' }}>順豐物流 · {shipping === 0 ? '免運' : `NT$ ${shipping}`}</p>
+                  <div>
+                    <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase', marginBottom:12 }}>取貨方式</p>
+                    <div style={{ display:'grid', gridTemplateColumns: canPickup && !isMobile ? '1fr 1fr' : '1fr', gap:12 }}>
+                      {[
+                        [FULFILLMENT_DELIVERY, '宅配到府', '順豐物流 · ' + (deliveryShipping === 0 ? '免運' : `NT$ ${deliveryShipping}`)],
+                        ...(canPickup ? [[FULFILLMENT_ONSITE_PICKUP, '現場自取', '客訂商品現場取貨 · 免運']] : []),
+                      ].map(([value, label, description]) => {
+                        const active = fulfillmentMethod === value;
+                        return (
+                          <button key={value} type="button" onClick={() => setFulfillmentMethod(value)}
+                            style={{ background:active ? 'var(--off-white)' : 'var(--white)', border:active ? '2px solid var(--black)' : '1px solid var(--light)', padding:'16px 18px', display:'flex', alignItems:'center', gap:14, textAlign:'left', cursor:'pointer', fontFamily:'var(--font-body)' }}>
+                            <span style={{ width:18, height:18, borderRadius:'50%', border:active ? '2px solid var(--black)' : '2px solid var(--mid)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                              {active && <span style={{ width:8, height:8, borderRadius:'50%', background:'var(--black)' }} />}
+                            </span>
+                            <span><span style={{ display:'block', fontSize:12, fontWeight:500, color:'var(--black)', marginBottom:2 }}>{label}</span><span style={{ display:'block', fontSize:11, color:'var(--dark)' }}>{description}</span></span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -422,7 +458,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                   </div>
                   <CheckoutField label="電子信箱" name="email" type="email" value={form.email} onChange={setField('email')} />
 
-                  <div>
+                  {fulfillmentMethod === FULFILLMENT_DELIVERY && <div>
                     <label style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:7 }}>收件地址 <span style={{ color:'var(--gold)' }}>*</span></label>
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
                       {[['city','縣市'],['district','區域']].map(([k,ph]) => (
@@ -438,7 +474,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                       onFocus={e => e.target.style.borderBottomColor='var(--black)'}
                       onBlur={e => e.target.style.borderBottomColor='var(--light)'}
                     />
-                  </div>
+                  </div>}
 
                   <div>
                     <label style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:7 }}>備註（選填）</label>
@@ -463,7 +499,11 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                       <button type="button" disabled={!!pendingAuthoritativeOrder} onClick={() => setStep(1)} style={{ background:'none', border:'none', fontSize:11, color:'var(--dark)', cursor: pendingAuthoritativeOrder ? 'not-allowed' : 'pointer', opacity: pendingAuthoritativeOrder ? 0.45 : 1, textDecoration:'underline', fontFamily:'var(--font-body)', padding:0 }}>修改</button>
                     </div>
                     <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'8px 20px', fontSize:13 }}>
-                      {[['收件人', form.name], ['手機', form.phone], ['Email', form.email], ['地址', `${form.city}${form.district}${form.address}`], ['物流','宅配到府（順豐物流）']].map(([k, v]) => (
+                      {[
+                        ['收件人', form.name], ['手機', form.phone], ['Email', form.email],
+                        ...(fulfillmentMethod === FULFILLMENT_DELIVERY ? [['地址', form.city + form.district + form.address]] : []),
+                        ['取貨方式', fulfillmentMethod === FULFILLMENT_ONSITE_PICKUP ? '現場自取（客訂商品）' : '宅配到府（順豐物流）'],
+                      ].map(([k, v]) => (
                         <React.Fragment key={k}>
                           <span style={{ color:'var(--dark)', whiteSpace:'nowrap' }}>{k}</span>
                           <span style={{ color:'var(--black)' }}>{v}</span>
@@ -495,7 +535,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                           >
                             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12 }}>
                               <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                                <div style={{ width:18, height:18, borderRadius:'50%', border:`2px solid ${active ? 'var(--black)' : 'var(--mid)'}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                <div style={{ width:18, height:18, borderRadius:'50%', border:active ? '2px solid var(--black)' : '2px solid var(--mid)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                                   {active && <div style={{ width:8, height:8, borderRadius:'50%', background:'var(--black)' }} />}
                                 </div>
                                 <div>
@@ -543,6 +583,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
               items={paymentSnapshot?.items || cart}
               summary={paymentSummary || { subtotal, discount, finalSubtotal, promotion, shipping, total }}
               user={user}
+              fulfillmentMethod={paymentSummary?.fulfillmentMethod || fulfillmentMethod}
             />
           </div>
         </form>

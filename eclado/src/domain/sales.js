@@ -1,4 +1,4 @@
-export const SALES_COUNTED_STATUSES = new Set(['paid', 'preparing', 'shipped', 'delivered']);
+export const SALES_COUNTED_STATUSES = new Set(['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered']);
 export const DEFAULT_POPULAR_PRODUCT_LIMIT = 8;
 
 export function normalizeSalesName(value) {

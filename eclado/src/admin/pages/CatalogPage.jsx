@@ -76,6 +76,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
         isDefault: true,
         sortOrder: 0,
         active: true,
+        isCustomOrder: false,
       }],
       sourceFolderName: '',
       importedFromDrive: false,
@@ -114,6 +115,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
           isDefault: prev.variants.length === 0,
           sortOrder: prev.variants.length,
           active: true,
+          isCustomOrder: false,
         },
       ],
     }));
@@ -604,10 +606,10 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                 </div>
 
                 <div style={{ overflowX: 'auto', border: '1px solid var(--border)' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
                     <thead>
                       <tr style={{ background: 'var(--off)', borderBottom: '1px solid var(--border)' }}>
-                        {['順序', '規格', 'SKU', '市場價', '專業價', '庫存', '預設', '啟用', '操作'].map(header => (
+                        {['順序', '規格', 'SKU', '市場價', '專業價', '庫存', '客訂', '預設', '啟用', '操作'].map(header => (
                           <th key={header} style={{ padding: '9px 8px', textAlign: 'left', fontSize: 10, color: 'var(--mid)', fontWeight: 500, whiteSpace: 'nowrap' }}>{header}</th>
                         ))}
                       </tr>
@@ -642,6 +644,10 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                           <td style={{ padding: '8px' }}>
                             <input aria-label={`規格 ${index + 1} 庫存`} type="number" min="0" value={variant.stock} onChange={e => updateVariant(index, 'stock', e.target.value)}
                               style={{ ...inp, width: 70 }} />
+                          </td>
+                          <td style={{ padding: '8px', textAlign: 'center' }}>
+                            <input aria-label={`規格 ${index + 1} 客訂規格`} type="checkbox" checked={!!variant.isCustomOrder}
+                              onChange={e => updateVariant(index, 'isCustomOrder', e.target.checked)} />
                           </td>
                           <td style={{ padding: '8px', textAlign: 'center' }}>
                             <input aria-label={`規格 ${index + 1} 設為預設`} type="radio" name="defaultVariant" checked={!!variant.isDefault}

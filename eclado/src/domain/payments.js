@@ -36,6 +36,8 @@ export const ORDER_STATUS_LABELS = {
   unpaid: '未付款',
   paid: '已付款',
   preparing: '備貨中',
+  ready_for_pickup: '可取貨',
+  picked_up: '已取貨',
   shipped: '已出貨',
   delivered: '已到貨',
   returned: '退貨',

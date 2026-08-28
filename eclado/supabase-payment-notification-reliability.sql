@@ -30,7 +30,7 @@ begin
   if not tracking_was_present then
     update public.orders
     set payment_notification_sent_at = coalesce(updated_at, created_at, now())
-    where status in ('paid', 'preparing', 'shipped', 'delivered')
+    where status in ('paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered')
       and payment_notification_sent_at is null
       and payment_notification_attempts = 0;
   end if;
@@ -50,7 +50,7 @@ alter table public.orders
 create index if not exists idx_orders_payment_notification_retry
   on public.orders (payment_notification_next_retry_at)
   where payment_notification_sent_at is null
-    and status in ('paid', 'preparing', 'shipped', 'delivered');
+    and status in ('paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered');
 
 create or replace function public.claim_order_payment_notification(
   p_order_id text
@@ -71,7 +71,7 @@ begin
     -- worker becomes eligible again after five minutes.
     payment_notification_next_retry_at = now() + interval '5 minutes'
   where id = p_order_id
-    and status in ('paid', 'preparing', 'shipped', 'delivered')
+    and status in ('paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered')
     and payment_notification_sent_at is null
     and (
       payment_notification_next_retry_at is null

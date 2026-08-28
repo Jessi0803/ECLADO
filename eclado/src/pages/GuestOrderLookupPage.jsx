@@ -157,6 +157,7 @@ export default function GuestOrderLookupPage({ setPage }) {
         finalSubtotal: subtotal - discount,
         shipping,
         total,
+        fulfillmentMethod: order.fulfillment_method || 'delivery',
         promotion: order.promotion_name
           ? { id: `guest-${order.id}`, name: order.promotion_name }
           : null,
@@ -281,8 +282,10 @@ export default function GuestOrderLookupPage({ setPage }) {
                 </div>
 
                 <div style={{ background:'var(--white)', border:'1px solid var(--light)', padding:22 }}>
-                  <h2 style={{ fontSize:15, fontWeight:500, marginBottom:14 }}>物流狀態</h2>
-                  {order.tracking ? (
+                  <h2 style={{ fontSize:15, fontWeight:500, marginBottom:14 }}>{order.fulfillment_method === 'onsite_pickup' ? '取貨狀態' : '物流狀態'}</h2>
+                  {order.fulfillment_method === 'onsite_pickup' ? (
+                    <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7 }}>{order.status === 'ready_for_pickup' ? '客訂商品已可現場取貨。' : order.status === 'picked_up' ? '客訂商品已完成取貨。' : '客訂商品正在處理中，完成備貨後將更新為可取貨。'}</p>
+                  ) : order.tracking ? (
                     <>
                       <div style={{ fontSize:12, color:'var(--dark)', marginBottom:5 }}>物流公司：順豐速運</div>
                       <div style={{ fontSize:12, color:'var(--dark)', marginBottom:5, overflowWrap:'anywhere' }}>托運單號：{order.tracking}</div>

@@ -8,6 +8,7 @@ export async function createAuthoritativeOrder({
   email,
   note,
   paymentMethod,
+  fulfillmentMethod = 'delivery',
 }) {
   const { data, error } = await supabase.rpc('create_order_with_pricing', {
     p_items: items.map(item => ({
@@ -21,6 +22,7 @@ export async function createAuthoritativeOrder({
     p_email: email,
     p_note: note,
     p_payment_method: paymentMethod,
+    p_fulfillment_method: fulfillmentMethod,
   });
   if (error) throw error;
   if (!data?.order_id || !Number.isFinite(Number(data.total))) {

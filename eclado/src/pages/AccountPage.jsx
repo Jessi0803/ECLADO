@@ -88,6 +88,7 @@ export default function AccountPage({ user, setPage, onSignOut }) {
           finalSubtotal: subtotal - discount,
           shipping,
           total,
+          fulfillmentMethod: authoritativeOrder.fulfillment_method || order.fulfillment_method || 'delivery',
           promotion: authoritativeOrder.promotion_name
             ? { id: `order-${order.id}`, name: authoritativeOrder.promotion_name }
             : null,
@@ -273,7 +274,12 @@ export default function AccountPage({ user, setPage, onSignOut }) {
                           </div>
                         ))}
                         {order.promotion_name && <div style={{ fontSize:12, color:'var(--gold)' }}>活動：{order.promotion_name}</div>}
-                        {order.tracking && (
+                        {order.fulfillment_method === 'onsite_pickup' && (
+                          <div style={{ marginTop:4, padding:'12px 14px', background:'var(--off-white)', border:'1px solid var(--gold)', fontSize:12, color:'var(--dark)' }}>
+                            客訂商品現場自取{order.status === 'ready_for_pickup' ? '，商品已可取貨' : order.status === 'picked_up' ? '，已完成取貨' : '，目前正在處理中'}。
+                          </div>
+                        )}
+                        {order.fulfillment_method !== 'onsite_pickup' && order.tracking && (
                           <div style={{ marginTop:4, padding:'12px 14px', background:'var(--off-white)', border:'1px solid var(--light)' }}>
                             <div style={{ fontSize:12, color:'var(--dark)', marginBottom:5 }}>物流公司：順豐速運</div>
                             <div style={{ fontSize:12, color:'var(--dark)', marginBottom:10 }}>托運單號：{order.tracking}</div>

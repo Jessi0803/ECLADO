@@ -1106,11 +1106,102 @@ test('登入會員結帳會寫入訂單 payload 與 user_id，付款前不扣庫
   expect(capturedOrder?.phone).toBe('0911111111');
   expect(capturedOrder?.address).toContain('台北市');
   expect(capturedOrder?.status).toBe('awaiting_confirm');
+  expect(capturedOrder?.fulfillment_method).toBe('delivery');
   expect(capturedOrder?.total).toBe(3702);
   expect(capturedOrder?.promotion_name).toBe('E2E 測試活動');
   const items = capturedOrder?.items as Array<Record<string, unknown>>;
   expect(items[0].stock_at_order).toBe(2);
+  expect(items[0].is_custom_order).toBe(false);
   expect(orderEmails).toEqual([]);
+});
+
+test('全部為客訂規格時可選現場自取且後端訂單運費為零', async ({ page }) => {
+  let capturedOrder: Record<string, unknown> | null = null;
+  await mockEcladoApis(page, {
+    productVariants: [{
+      id: 2001, product_id: 2, sku: 'CUSTOM-2', size: '客訂規格',
+      price: 3980, pro_price: 2980, stock: 2, is_default: true,
+      is_custom_order: true, sort_order: 0, active: true,
+    }],
+    onOrderInsert: order => { capturedOrder = order; },
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+  await proceedToCheckout(page);
+
+  await expect(page.getByRole('button', { name: /現場自取/ })).toBeVisible();
+  await page.getByRole('button', { name: /現場自取/ }).click();
+  await expect(page.getByPlaceholder('縣市')).toHaveCount(0);
+  const inputs = page.locator('form input[type="text"], form input[type="tel"], form input[type="email"]');
+  await inputs.nth(0).fill('客訂買家');
+  await inputs.nth(1).fill('0912345678');
+  await inputs.nth(2).fill('pickup@example.com');
+  await page.getByRole('button', { name: /繼續確認付款/ }).click();
+  await expect(page.getByText('現場自取（客訂商品）')).toBeVisible();
+  await page.getByRole('button', { name: /^建立付款單$/ }).click();
+
+  await expect(page.getByText('付款單已建立')).toBeVisible();
+  expect(capturedOrder?.fulfillment_method).toBe('onsite_pickup');
+  expect(capturedOrder?.address).toBe('');
+  expect(capturedOrder?.total).toBe(3582);
+});
+
+test('一般商品與混合購物車都只能宅配', async ({ page }) => {
+  await mockEcladoApis(page, {
+    productVariants: [{
+      id: 2001, product_id: 2, sku: 'CUSTOM-2', size: '客訂規格',
+      price: 3980, pro_price: 2980, stock: 2, is_default: true,
+      is_custom_order: true, sort_order: 0, active: true,
+    }],
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await page.goto('/shop');
+  await page.getByText('深層清潔泡沫洗面乳').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+  await proceedToCheckout(page);
+
+  await expect(page.getByRole('button', { name: /現場自取/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /宅配到府/ })).toBeVisible();
+  await expect(page.getByPlaceholder('縣市')).toBeVisible();
+  await expect(page.getByText('（宅配到府）')).toBeVisible();
+});
+
+test('竄改混合購物車為現場自取會被後端拒絕', async ({ page }) => {
+  await mockEcladoApis(page, {
+    productVariants: [{
+      id: 2001, product_id: 2, sku: 'CUSTOM-2', size: '客訂規格',
+      price: 3980, pro_price: 2980, stock: 2, is_default: true,
+      is_custom_order: true, sort_order: 0, active: true,
+    }],
+  });
+  await page.goto('/');
+
+  const response = await page.evaluate(async () => {
+    const result = await fetch('https://ilvdvlkdpntwmaijncaz.supabase.co/rest/v1/rpc/create_order_with_pricing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        p_items: [
+          { product_id: 2, variant_id: '2001', qty: 1 },
+          { product_id: 1, variant_id: null, qty: 1 },
+        ],
+        p_member: '竄改測試', p_address: '', p_phone: '0912345678',
+        p_email: 'tamper@example.com', p_note: '', p_payment_method: 'atm',
+        p_fulfillment_method: 'onsite_pickup',
+      }),
+    });
+    return { status: result.status, body: await result.json() };
+  });
+
+  expect(response.status).toBe(403);
+  expect(String(response.body.message)).toContain('custom-order variants');
 });
 
 test('訪客付款單顯示短查詢碼與訂單成立信寄送結果', async ({ page }) => {

@@ -16,6 +16,28 @@ create extension if not exists pgcrypto;
 alter table public.orders
   add column if not exists pricing_snapshot jsonb not null default '{}'::jsonb;
 
+alter table public.product_variants
+  add column if not exists is_custom_order boolean not null default false;
+
+alter table public.orders
+  add column if not exists fulfillment_method text not null default 'delivery';
+
+alter table public.orders
+  drop constraint if exists orders_fulfillment_method_check;
+alter table public.orders
+  add constraint orders_fulfillment_method_check
+  check (fulfillment_method in ('delivery', 'onsite_pickup'));
+
+alter table public.orders
+  drop constraint if exists orders_status_check;
+alter table public.orders
+  add constraint orders_status_check
+  check (status in (
+    'awaiting_confirm', 'unpaid', 'paid', 'preparing',
+    'ready_for_pickup', 'picked_up',
+    'shipped', 'delivered', 'returned', 'cancelled'
+  ));
+
 create table if not exists public.order_payment_authorizations (
   order_id text primary key references public.orders(id) on delete cascade,
   token_hash text not null,
@@ -79,6 +101,8 @@ create policy "membership_tiers_select_all"
   on public.membership_tiers for select
   using (true);
 
+drop function if exists public.create_order_with_pricing(jsonb, text, text, text, text, text, text);
+
 create or replace function public.create_order_with_pricing(
   p_items jsonb,
   p_member text,
@@ -86,7 +110,8 @@ create or replace function public.create_order_with_pricing(
   p_phone text,
   p_email text,
   p_note text default '',
-  p_payment_method text default 'atm'
+  p_payment_method text default 'atm',
+  p_fulfillment_method text default 'delivery'
 )
 returns jsonb
 language plpgsql
@@ -123,6 +148,8 @@ declare
   payment_token text := encode(gen_random_bytes(32), 'hex');
   order_id text;
   order_status text;
+  normalized_fulfillment_method text := coalesce(nullif(trim(p_fulfillment_method), ''), 'delivery');
+  all_custom_order_items boolean := true;
 begin
   if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
     raise exception 'Cart is empty' using errcode = '22023';
@@ -130,6 +157,14 @@ begin
 
   if jsonb_array_length(p_items) > 50 then
     raise exception 'Too many cart items' using errcode = '22023';
+  end if;
+
+  if normalized_fulfillment_method not in ('delivery', 'onsite_pickup') then
+    raise exception 'Invalid fulfillment method' using errcode = '22023';
+  end if;
+
+  if normalized_fulfillment_method = 'delivery' and nullif(trim(p_address), '') is null then
+    raise exception 'Delivery address is required' using errcode = '22023';
   end if;
 
   if current_user_id is not null then
@@ -210,6 +245,7 @@ begin
     professional_price := variant_row.pro_price;
     item_stock := greatest(coalesce(variant_row.stock, 0), 0);
     item_size := variant_row.size;
+    all_custom_order_items := all_custom_order_items and variant_row.is_custom_order;
 
     if tier.professional_price_multiplier is null then
       unit_price := list_price;
@@ -250,11 +286,17 @@ begin
       'unit_price', unit_price,
       'line_total', unit_price * quantity,
       'stock_at_order', item_stock,
+      'is_custom_order', variant_row.is_custom_order,
       'fulfillment_type', case when item_stock > 0 then 'in_stock' else 'preorder' end,
       'fulfillment', case when item_stock > 0 then '現貨商品' else '預購商品' end,
       'shipping_time', case when item_stock > 0 then '出貨時間為 5 個工作天內，每週二出貨' else '出貨時間為 7-14 個工作天' end
     ));
   end loop;
+
+  if normalized_fulfillment_method = 'onsite_pickup' and not all_custom_order_items then
+    raise exception 'Onsite pickup is available only when every item is a custom-order variant'
+      using errcode = '42501';
+  end if;
 
   -- Choose one valid promotion that produces the largest discount. Only line
   -- totals from products listed by that promotion participate in its formula.
@@ -336,7 +378,9 @@ begin
       using errcode = '22023';
   end if;
 
-  if member_role in ('pro', 'instructor', 'distributor')
+  if normalized_fulfillment_method = 'onsite_pickup' then
+    shipping_amount := 0;
+  elsif member_role in ('pro', 'instructor', 'distributor')
     and subtotal_amount - discount_amount >= 10000
   then
     shipping_amount := 0;
@@ -346,10 +390,11 @@ begin
 
   total_amount := subtotal_amount - discount_amount + shipping_amount;
   pricing_snapshot := jsonb_build_object(
-    'version', 2,
+    'version', 3,
     'calculated_at', clock_timestamp(),
     'currency', 'TWD',
     'member_role', member_role,
+    'fulfillment_method', normalized_fulfillment_method,
     'items', order_items,
     'subtotal', subtotal_amount,
     'promotion', case
@@ -370,6 +415,7 @@ begin
     'shipping_rule', jsonb_build_object(
       'version', 2,
       'code', case
+        when normalized_fulfillment_method = 'onsite_pickup' then 'onsite-pickup'
         when member_role in ('pro', 'instructor', 'distributor') then 'professional-threshold'
         else 'standard'
       end,
@@ -388,7 +434,7 @@ begin
   insert into public.orders (
     id, member, type, items, total, subtotal, discount, status, date,
     address, phone, email, note, user_id, promotion_id, promotion_name,
-    pricing_snapshot
+    pricing_snapshot, fulfillment_method
   )
   values (
     order_id,
@@ -407,7 +453,8 @@ begin
     current_user_id,
     selected_promotion_id,
     selected_promotion_name,
-    pricing_snapshot
+    pricing_snapshot,
+    normalized_fulfillment_method
   );
 
   insert into public.order_payment_authorizations (order_id, token_hash)
@@ -422,6 +469,7 @@ begin
     'shipping', shipping_amount,
     'total', total_amount,
     'status', order_status,
+    'fulfillment_method', normalized_fulfillment_method,
     'promotion_id', selected_promotion_id,
     'promotion_name', selected_promotion_name,
     'pricing_snapshot', pricing_snapshot,
@@ -431,11 +479,11 @@ end;
 $$;
 
 revoke all on function public.create_order_with_pricing(
-  jsonb, text, text, text, text, text, text
+  jsonb, text, text, text, text, text, text, text
 ) from public;
 
 grant execute on function public.create_order_with_pricing(
-  jsonb, text, text, text, text, text, text
+  jsonb, text, text, text, text, text, text, text
 ) to anon, authenticated;
 
 create or replace function public.claim_order_payment(
@@ -574,8 +622,8 @@ create policy "orders_update_admin"
   with check (public.is_eclado_admin());
 
 comment on function public.create_order_with_pricing(
-  jsonb, text, text, text, text, text, text
-) is 'Creates an order using authoritative prices and one best live promotion, with an immutable versioned pricing snapshot.';
+  jsonb, text, text, text, text, text, text, text
+) is 'Creates an order using authoritative prices and one best live promotion, validates delivery or custom-order pickup, and stores an immutable versioned pricing snapshot.';
 
 comment on function public.calculate_order_shipping(jsonb) is
   'Authoritative shipping rule v1: carts containing only product 9 are free; all other carts cost TWD 120.';

@@ -18,6 +18,7 @@ function sanitizeResult(result = {}) {
     tracking: sourceOrder.tracking,
     shipping_carrier: sourceOrder.shipping_carrier,
     shipped_at: sourceOrder.shipped_at,
+    fulfillment_method: sourceOrder.fulfillment_method || 'delivery',
   } : null;
   return {
     orderNo: String(order?.id || ''),

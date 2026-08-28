@@ -4,7 +4,7 @@ const { buildBrandedEmailHtml } = require('../_email-template.js');
 const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
 const DEFAULT_QPAY_API_BASE = 'https://apisbx.sinopac.com/funBIZ-Sbx/QPay.WebAPI/api/';
 
-const INVENTORY_ACTIVE_STATUSES = new Set(['paid', 'preparing', 'shipped', 'delivered']);
+const INVENTORY_ACTIVE_STATUSES = new Set(['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered']);
 
 function parseBody(body) {
   if (!body) return {};
