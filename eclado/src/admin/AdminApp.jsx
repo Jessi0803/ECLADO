@@ -26,25 +26,61 @@ export default function AdminApp({ adminEmail, onSignOut }) {
   const [applicationsError, setApplicationsError] = useState('');
   const [loadError, setLoadError] = useState('');
 
+  async function sendApplicationNotice(id) {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) return { ok: false, message: '審核已完成，但管理員登入狀態失效，通知尚未發送。' };
+
+      const response = await fetch('/api/professional-application-notice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ applicationId: id }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result?.ok === false) {
+        return { ok: false, message: `審核已完成，但通知發送失敗：${result?.error || `HTTP ${response.status}`}` };
+      }
+      return {
+        ok: true,
+        message: result.channel === 'line' ? '審核結果已透過 LINE 通知。' : '審核結果已透過 Email 通知。',
+      };
+    } catch (error) {
+      return { ok: false, message: `審核已完成，但通知發送失敗：${error.message || '網路錯誤'}` };
+    }
+  }
+
   // 從 Supabase 載入訂單 + 會員 + 商品庫存
   async function updateApplicationStatus(id, status) {
     const { error } = await supabase.from('professional_applications').update({ status }).eq('id', id);
     if (error) {
       console.error('update application failed', error);
-      return;
+      return { ok: false, updated: false, message: `審核狀態更新失敗：${error.message || '請稍後再試'}` };
     }
     const app = applications.find(a => a.id === id);
     if (app?.user_id) {
+      let profileResult;
       if (status === 'approved') {
-        await supabase.from('profiles').update({ role: 'pro' }).eq('id', app.user_id);
+        profileResult = await supabase.from('profiles').update({ role: 'pro' }).eq('id', app.user_id);
       } else if (status === 'rejected') {
-        await supabase.from('profiles').update({ role: 'consumer' }).eq('id', app.user_id);
+        profileResult = await supabase.from('profiles').update({ role: 'consumer' }).eq('id', app.user_id);
       } else if (status === 'pending') {
-        await supabase.from('profiles').update({ role: 'pending' }).eq('id', app.user_id);
+        profileResult = await supabase.from('profiles').update({ role: 'pending' }).eq('id', app.user_id);
+      }
+      if (profileResult?.error) {
+        console.error('update profile role failed', profileResult.error);
+        return { ok: false, updated: false, message: `申請狀態已更新，但會員類型更新失敗：${profileResult.error.message || '請稍後再試'}` };
       }
     }
     setApplications(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+    const notice = ['approved', 'rejected'].includes(status)
+      ? await sendApplicationNotice(id)
+      : { ok: true, message: '申請狀態已更新。' };
     await fetchAll();
+    return { ...notice, updated: true };
   }
 
   async function fetchAll() {
@@ -371,8 +407,8 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       case 'inventory': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} />;
       case 'promotions': return <Promotions products={activeProducts} />;
       case 'procurement': return <ProcurementPage />;
-      case 'members': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onDeleteMember={deleteMemberWithSync} defaultFilter={membersDefaultFilter} />;
-      case 'applications': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onDeleteMember={deleteMemberWithSync} defaultFilter="app_pending" />;
+      case 'members': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} defaultFilter={membersDefaultFilter} />;
+      case 'applications': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} defaultFilter="app_pending" />;
       case 'analytics': return <Analytics orders={orders} />;
       case 'ai': return <AIReorder products={activeProducts} orders={orders} />;
       default: return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;

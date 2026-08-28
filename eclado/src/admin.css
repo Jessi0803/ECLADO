@@ -37,6 +37,17 @@ input, select, textarea { font-family: var(--font); }
 .table-scroll { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
 .table-scroll table { min-width: 720px; }
 .member-type-select { width: 108px; min-width: 108px; box-sizing: border-box; }
+.member-row-actions { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.member-details-button {
+  min-height: 32px; padding: 6px 11px; border: 1px solid var(--dark); background: var(--dark);
+  color: #fff; font-size: 11px; line-height: 1.2; white-space: nowrap; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.member-details-button:hover {
+  background: var(--white);
+  color: var(--dark);
+  border-color: var(--dark);
+}
 .catalog-list-controls {
   display: flex; justify-content: flex-end; align-items: center; gap: 12px;
   margin-bottom: 10px; flex-wrap: wrap;
@@ -50,16 +61,23 @@ input, select, textarea { font-family: var(--font); }
 
 /* 會員列表：長 Email 優先收縮，類型與申請狀態保留單行寬度。 */
 @media (min-width: 1181px) {
-  .admin-members-table { table-layout: fixed; min-width: 1080px !important; }
-  .admin-members-table .members-col-name { width: 10%; }
-  .admin-members-table .members-col-email { width: 20%; }
-  .admin-members-table .members-col-phone { width: 12%; }
-  .admin-members-table .members-col-type { width: 108px; }
-  .admin-members-table .members-col-application { width: 96px; }
-  .admin-members-table .members-col-orders { width: 76px; }
-  .admin-members-table .members-col-total { width: 120px; }
-  .admin-members-table .members-col-joined { width: 112px; }
-  .admin-members-table .members-col-action { width: 136px; }
+  .admin-members-table { table-layout: fixed; min-width: 840px !important; }
+  .admin-members-table .members-col-name { width: 8%; }
+  .admin-members-table .members-col-email { width: 15%; }
+  .admin-members-table .members-col-phone { width: 9%; }
+  .admin-members-table .members-col-type { width: 84px; }
+  .admin-members-table .members-col-application { width: 74px; }
+  .admin-members-table .members-col-orders { width: 58px; }
+  .admin-members-table .members-col-total { width: 86px; }
+  .admin-members-table .members-col-joined { width: 88px; }
+  .admin-members-table .members-col-action { width: 150px; }
+  .admin-members-table .member-type-select { width: 82px; min-width: 82px; }
+  .admin-members-table .member-row-actions { gap: 6px; }
+  .admin-members-table .member-details-button { padding-inline: 8px; }
+  .admin-members-table th:last-child,
+  .admin-members-table td:last-child { padding-left: 8px !important; padding-right: 8px !important; }
+  .admin-members-table th:nth-child(7),
+  .admin-members-table td:nth-child(7) { padding-left: 8px !important; padding-right: 8px !important; white-space: nowrap; }
   .admin-members-table th:nth-child(2),
   .admin-members-table td:nth-child(2) {
     min-width: 0;
@@ -122,6 +140,8 @@ input, select, textarea { font-family: var(--font); }
   .responsive-admin-table td[colspan]::before { display: none; }
   .admin-products-table td:last-child, .admin-members-table td:last-child { grid-column: 1 / -1; }
   .admin-members-table td:nth-child(2) { grid-column: span 2; }
+  .admin-members-table .member-row-actions { width: 100%; justify-content: space-between; }
+  .admin-members-table .member-details-button { min-height: 38px; padding-inline: 16px; }
 }
 
 @media (max-width: 700px) {

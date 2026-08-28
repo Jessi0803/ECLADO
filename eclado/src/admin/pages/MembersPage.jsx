@@ -25,13 +25,15 @@ function memberHasPendingApp(applications, memberId) {
 export default function Members({
   members, setMembers, orders = [],
   applications = [], applicationsLoading = false, applicationsError = '',
-  onUpdateApplicationStatus, onDeleteMember, defaultFilter = 'all',
+  onUpdateApplicationStatus, onSendApplicationNotice, onDeleteMember, defaultFilter = 'all',
 }) {
   const [filter, setFilter] = useState(defaultFilter);
   const [selected, setSelected] = useState(null);
   const [typeNotice, setTypeNotice] = useState('');
   const [deleteNotice, setDeleteNotice] = useState('');
   const [deletingId, setDeletingId] = useState('');
+  const [reviewingId, setReviewingId] = useState('');
+  const [applicationNotice, setApplicationNotice] = useState(null);
 
   useEffect(() => { setFilter(defaultFilter); }, [defaultFilter]);
 
@@ -57,6 +59,13 @@ export default function Members({
   const latestApp = selectedApps[0] || null;
   const selectedPending = selected ? memberHasPendingApp(applications, selected.id) : false;
 
+  function openMemberDetails(member) {
+    setSelected(member);
+    setTypeNotice('');
+    setDeleteNotice('');
+    setApplicationNotice(null);
+  }
+
   function changeType(id, type) {
     if (typeof id === 'string' && id.startsWith('app:')) {
       setTypeNotice('此申請尚未綁定會員帳號，請在下方「美容師申請」區塊按「核准」或「拒絕」。');
@@ -74,7 +83,20 @@ export default function Members({
   async function reviewApplication(appId, status) {
     if (!onUpdateApplicationStatus) return;
     setTypeNotice('');
-    await onUpdateApplicationStatus(appId, status);
+    setApplicationNotice(null);
+    setReviewingId(appId);
+    const result = await onUpdateApplicationStatus(appId, status);
+    setReviewingId('');
+    if (result?.message) setApplicationNotice({ ok: result.ok, text: result.message });
+  }
+
+  async function resendApplicationNotice(appId) {
+    if (!onSendApplicationNotice) return;
+    setApplicationNotice(null);
+    setReviewingId(appId);
+    const result = await onSendApplicationNotice(appId);
+    setReviewingId('');
+    if (result?.message) setApplicationNotice({ ok: result.ok, text: result.message });
   }
 
   async function deleteMember(member) {
@@ -152,7 +174,7 @@ export default function Members({
             </thead>
             <tbody>
               {filtered.map(m => (
-                <tr key={m.id} onClick={() => { setSelected(m); setTypeNotice(''); setDeleteNotice(''); }} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: selected?.id === m.id ? 'var(--off)' : 'transparent', transition: 'background 0.1s' }}
+                <tr key={m.id} onClick={() => openMemberDetails(m)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: selected?.id === m.id ? 'var(--off)' : 'transparent', transition: 'background 0.1s' }}
                 onMouseEnter={e => { if (selected?.id !== m.id) e.currentTarget.style.background = 'var(--off)'; }}
                 onMouseLeave={e => { if (selected?.id !== m.id) e.currentTarget.style.background = 'transparent'; }}>
                   <td data-label="姓名" style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>{m.name}</td>
@@ -174,13 +196,23 @@ export default function Members({
                   <td data-label="消費總額" style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>NT$ {m.total.toLocaleString()}</td>
                   <td data-label="加入日期" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)', whiteSpace: 'nowrap' }}>{m.joined}</td>
                   <td data-label="操作" style={{ padding: '13px 14px' }}>
-                    <select className="member-type-select" aria-label={`${m.name}會員類型`} value={m.type} onChange={e => { e.stopPropagation(); changeType(m.id, e.target.value); }} onClick={e => e.stopPropagation()} style={{ padding: '5px 8px', fontSize: 11, border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--dark)', cursor: 'pointer', outline: 'none' }}>
-                      <option value="consumer">一般會員</option>
-                      <option value="pro" disabled={memberHasPendingApp(applications, m.id)}>美容師{memberHasPendingApp(applications, m.id) ? '（請先審核）' : ''}</option>
-                      <option value="instructor">師資</option>
-                      <option value="distributor">經銷商</option>
-                      <option value="pending">審核中</option>
-                    </select>
+                    <div className="member-row-actions">
+                      <select className="member-type-select" aria-label={`${m.name}會員類型`} value={m.type} onChange={e => { e.stopPropagation(); changeType(m.id, e.target.value); }} onClick={e => e.stopPropagation()} style={{ padding: '7px 8px', fontSize: 11, border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--dark)', cursor: 'pointer', outline: 'none' }}>
+                        <option value="consumer">一般會員</option>
+                        <option value="pro" disabled={memberHasPendingApp(applications, m.id)}>美容師{memberHasPendingApp(applications, m.id) ? '（請先審核）' : ''}</option>
+                        <option value="instructor">師資</option>
+                        <option value="distributor">經銷商</option>
+                        <option value="pending">審核中</option>
+                      </select>
+                      <button
+                        type="button"
+                        className="member-details-button"
+                        aria-label={`查看${m.name}詳情`}
+                        onClick={event => { event.stopPropagation(); openMemberDetails(m); }}
+                      >
+                        詳細
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -250,9 +282,17 @@ export default function Members({
                 ) : null)}
                 {latestApp.status === 'pending' && onUpdateApplicationStatus && (
                   <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-                    <button type="button" onClick={() => reviewApplication(latestApp.id, 'approved')} style={{ flex: 1, padding: '10px 0', fontSize: 12, background: 'var(--dark)', color: '#fff', border: 'none', cursor: 'pointer' }}>核准</button>
-                    <button type="button" onClick={() => reviewApplication(latestApp.id, 'rejected')} style={{ flex: 1, padding: '10px 0', fontSize: 12, background: 'var(--white)', color: 'var(--dark)', border: '1px solid var(--border)', cursor: 'pointer' }}>拒絕</button>
+                    <button type="button" disabled={reviewingId === latestApp.id} onClick={() => reviewApplication(latestApp.id, 'approved')} style={{ flex: 1, padding: '10px 0', fontSize: 12, background: 'var(--dark)', color: '#fff', border: 'none', cursor: reviewingId === latestApp.id ? 'wait' : 'pointer', opacity: reviewingId === latestApp.id ? 0.6 : 1 }}>核准</button>
+                    <button type="button" disabled={reviewingId === latestApp.id} onClick={() => reviewApplication(latestApp.id, 'rejected')} style={{ flex: 1, padding: '10px 0', fontSize: 12, background: 'var(--white)', color: 'var(--dark)', border: '1px solid var(--border)', cursor: reviewingId === latestApp.id ? 'wait' : 'pointer', opacity: reviewingId === latestApp.id ? 0.6 : 1 }}>拒絕</button>
                   </div>
+                )}
+                {['approved', 'rejected'].includes(latestApp.status) && onSendApplicationNotice && (
+                  <button type="button" disabled={reviewingId === latestApp.id} onClick={() => resendApplicationNotice(latestApp.id)} style={{ width: '100%', marginTop: 12, padding: '9px 0', fontSize: 11, background: 'var(--white)', color: 'var(--dark)', border: '1px solid var(--border)', cursor: reviewingId === latestApp.id ? 'wait' : 'pointer', opacity: reviewingId === latestApp.id ? 0.6 : 1 }}>
+                    {reviewingId === latestApp.id ? '發送中…' : '重新發送審核通知'}
+                  </button>
+                )}
+                {applicationNotice && (
+                  <p style={{ marginTop: 10, fontSize: 11, lineHeight: 1.6, color: applicationNotice.ok ? 'var(--green)' : 'var(--red)' }}>{applicationNotice.text}</p>
                 )}
                 {selectedApps.length > 1 && (
                   <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 12 }}>另有 {selectedApps.length - 1} 筆歷史申請</p>

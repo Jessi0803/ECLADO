@@ -314,7 +314,7 @@ test('商品、訂單與會員列表響應式切換，詳情使用抽屜且不�
 
   await openAdminSection(page, /會員管理/);
   await assertResponsiveList();
-  await page.getByRole('cell', { name: '測試會員' }).click();
+  await page.locator('.admin-members-table td[data-label="姓名"]').filter({ hasText: /^測試會員$/ }).click();
   await assertDrawer('會員詳情');
   await page.getByRole('dialog', { name: '會員詳情' }).getByRole('button', { name: '關閉會員詳情' }).click();
 });
@@ -1078,9 +1078,11 @@ test('活動排程：排程中活動顯示「排程中」badge，已結束顯示
 test('後台核准美容師申請會同步 application status 與 profiles.role', async ({ page }) => {
   const profileUpdates: Record<string, unknown>[] = [];
   const applicationUpdates: Record<string, unknown>[] = [];
+  const applicationNotices: Record<string, unknown>[] = [];
   await mockAdminApis(page, {
     onProfileUpdate: update => profileUpdates.push(update),
     onApplicationUpdate: update => applicationUpdates.push(update),
+    onApplicationNotice: request => applicationNotices.push(request),
   });
 
   await page.goto('/admin');
@@ -1092,14 +1094,18 @@ test('後台核准美容師申請會同步 application status 與 profiles.role'
 
   await expect.poll(() => applicationUpdates.some(update => update.status === 'approved')).toBe(true);
   await expect.poll(() => profileUpdates.some(update => update.role === 'pro')).toBe(true);
+  await expect.poll(() => applicationNotices.length).toBe(1);
+  expect(applicationNotices[0]).toEqual({ applicationId: 'app-pending-1' });
 });
 
 test('後台拒絕美容師申請會同步 rejected 與 consumer', async ({ page }) => {
   const profileUpdates: Record<string, unknown>[] = [];
   const applicationUpdates: Record<string, unknown>[] = [];
+  const applicationNotices: Record<string, unknown>[] = [];
   await mockAdminApis(page, {
     onProfileUpdate: update => profileUpdates.push(update),
     onApplicationUpdate: update => applicationUpdates.push(update),
+    onApplicationNotice: request => applicationNotices.push(request),
   });
 
   await page.goto('/admin');
@@ -1110,9 +1116,11 @@ test('後台拒絕美容師申請會同步 rejected 與 consumer', async ({ page
 
   await expect.poll(() => applicationUpdates.some(update => update.status === 'rejected')).toBe(true);
   await expect.poll(() => profileUpdates.some(update => update.role === 'consumer')).toBe(true);
+  await expect.poll(() => applicationNotices.length).toBe(1);
 });
 
 test('會員管理操作欄的會員類型下拉選單寬度一致', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
   await mockAdminApis(page);
 
   await page.goto('/admin');
@@ -1123,10 +1131,77 @@ test('會員管理操作欄的會員類型下拉選單寬度一致', async ({ pa
   const widths = await selects.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().width));
 
   expect(new Set(widths.map(width => Math.round(width))).size).toBe(1);
-  expect(Math.round(widths[0])).toBe(108);
+  expect(Math.round(widths[0])).toBe(82);
+});
+
+test('一般桌面寬度不需水平捲動即可看到會員詳細按鈕', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await mockAdminApis(page);
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+
+  const container = page.locator('.table-scroll');
+  const detailsButton = page.getByRole('button', { name: `查看${adminProfileRows[0].name}詳情` });
+  await expect(detailsButton).toBeVisible();
+  const [scroll, containerBox, buttonBox] = await Promise.all([
+    container.evaluate(element => ({ clientWidth: element.clientWidth, scrollWidth: element.scrollWidth })),
+    container.boundingBox(),
+    detailsButton.boundingBox(),
+  ]);
+
+  expect(scroll.scrollWidth).toBeLessThanOrEqual(scroll.clientWidth + 1);
+  expect(containerBox).not.toBeNull();
+  expect(buttonBox).not.toBeNull();
+  expect(buttonBox!.x + buttonBox!.width).toBeLessThanOrEqual(containerBox!.x + containerBox!.width);
+});
+
+test('會員列表提供查看詳情按鈕並開啟既有會員詳情面板', async ({ page }) => {
+  await mockAdminApis(page);
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+
+  const firstMember = adminProfileRows[0];
+  const detailsButton = page.getByRole('button', { name: `查看${firstMember.name}詳情` });
+  await expect(detailsButton).toBeVisible();
+  await expect(detailsButton).toHaveText('詳細');
+  await detailsButton.hover();
+  await expect(detailsButton).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await expect(detailsButton).toHaveCSS('color', 'rgb(26, 26, 24)');
+  await detailsButton.click();
+
+  const panel = page.getByRole('dialog', { name: '會員詳情' });
+  await expect(panel).toBeVisible();
+  await expect(panel.getByText(firstMember.name, { exact: true })).toBeVisible();
+});
+
+test('手機會員小卡的查看詳情按鈕與會員類型選單並列且可開啟詳情', async ({ page }) => {
+  await page.setViewportSize({ width: 430, height: 932 });
+  await mockAdminApis(page);
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+  await expect(page.locator('.app-sidebar')).not.toHaveClass(/\bopen\b/);
+
+  const firstMember = adminProfileRows[0];
+  const row = page.locator('.admin-members-table tbody tr').first();
+  const actions = row.locator('.member-row-actions');
+  const select = actions.locator('.member-type-select');
+  const detailsButton = actions.getByRole('button', { name: `查看${firstMember.name}詳情` });
+  const [selectBox, buttonBox] = await Promise.all([select.boundingBox(), detailsButton.boundingBox()]);
+
+  expect(selectBox).not.toBeNull();
+  expect(buttonBox).not.toBeNull();
+  const selectCenterY = selectBox!.y + selectBox!.height / 2;
+  const buttonCenterY = buttonBox!.y + buttonBox!.height / 2;
+  expect(Math.abs(selectCenterY - buttonCenterY)).toBeLessThan(1);
+  await detailsButton.click();
+  await expect(page.getByRole('dialog', { name: '會員詳情' })).toBeVisible();
 });
 
 test('會員管理長 Email 不會壓縮類型與申請狀態欄', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
   const longEmail = 'very-long-member-email-address-for-layout-check@example-long-domain.com';
   await mockAdminApis(page, {
     profiles: [{
@@ -1164,9 +1239,9 @@ test('會員管理長 Email 不會壓縮類型與申請狀態欄', async ({ page
 
   expect(layout[0]).toMatchObject({ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' });
   expect(layout[1].whiteSpace).toBe('nowrap');
-  expect(layout[1].width).toBeGreaterThanOrEqual(107);
+  expect(layout[1].width).toBeGreaterThanOrEqual(83);
   expect(layout[2].whiteSpace).toBe('nowrap');
-  expect(layout[2].width).toBeGreaterThanOrEqual(95);
+  expect(layout[2].width).toBeGreaterThanOrEqual(73);
 });
 
 test('手機會員管理標題與篩選列上下排列，篩選項目維持三欄等寬', async ({ page }) => {
@@ -1251,7 +1326,7 @@ test('會員管理可刪除會員並同步資料庫', async ({ page }) => {
 
   await page.goto('/admin');
   await openAdminSection(page, /會員管理/);
-  await page.getByRole('cell', { name: '測試會員' }).click();
+  await page.locator('.admin-members-table td[data-label="姓名"]').filter({ hasText: /^測試會員$/ }).click();
   await page.getByRole('button', { name: '刪除會員' }).click();
 
   await expect.poll(() => deletedMemberIds).toContain('user-consumer-1');

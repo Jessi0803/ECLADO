@@ -187,6 +187,7 @@ export type MockEcladoApiOptions = {
   onPromotionDelete?: (url: string) => void;
   onApplicationUpdate?: (update: Record<string, unknown>, url: string) => void;
   onApplicationInsert?: (application: Record<string, unknown>) => void;
+  onApplicationNotice?: (request: Record<string, unknown>) => void;
   onPurchaseOrderSave?: (request: Record<string, unknown>) => void;
   onPurchaseOrderDelete?: (orderId: number) => void;
   onLinePush?: (body: Record<string, unknown>) => void;
@@ -234,7 +235,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   const promotions = options.promotions || [activePromotion];
   const orders = options.orders || [];
   const profiles = [...(options.profiles || [])];
-  const applications = options.applications || [];
+  const applications = (options.applications || []).map(application => ({ ...application }));
   const auditLogs = options.auditLogs || [];
   const authUser = options.authUser;
   const procurement = {
@@ -732,6 +733,12 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     return json(route, { ok: true, memberId });
   });
 
+  await page.route('**/api/professional-application-notice', async route => {
+    const body = route.request().postDataJSON();
+    options.onApplicationNotice?.(body);
+    return json(route, { ok: true, channel: 'line', status: 'approved' });
+  });
+
   await page.route('**/rest/v1/professional_applications**', async route => {
     if (route.request().method() === 'GET') return json(route, filterRows(applications, route.request().url()));
     if (route.request().method() === 'POST') {
@@ -740,6 +747,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     if (route.request().method() === 'PATCH') {
       const body = route.request().postDataJSON();
       options.onApplicationUpdate?.(body, route.request().url());
+      const id = queryValue(route.request().url(), 'id').replace(/^eq\./, '');
+      const application = applications.find(row => String(row.id) === id);
+      if (application) Object.assign(application, body);
       return json(route, [body]);
     }
     return json(route, []);
