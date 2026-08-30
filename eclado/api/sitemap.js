@@ -5,6 +5,13 @@ const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_BasrQNdstdbX_InrQWmCuw_Jb1Lscn
 const STATIC_PATHS = [
   { path: '/', changefreq: 'weekly', priority: '1.0' },
   { path: '/shop', changefreq: 'daily', priority: '0.9' },
+  { path: '/journal', changefreq: 'monthly', priority: '0.7' },
+  { path: '/journal/peptide-hyaluronic-centella-order', changefreq: 'monthly', priority: '0.6' },
+  { path: '/journal/sensitive-skin-routine', changefreq: 'monthly', priority: '0.6' },
+  { path: '/journal/ampoule-cream-for-dry-mature-skin', changefreq: 'monthly', priority: '0.6' },
+  { path: '/journal/double-cleansing-guide', changefreq: 'monthly', priority: '0.6' },
+  { path: '/journal/ampoule-mask-routine', changefreq: 'monthly', priority: '0.6' },
+  { path: '/journal/professional-skincare-precision', changefreq: 'monthly', priority: '0.6' },
   { path: '/about', changefreq: 'monthly', priority: '0.6' },
   { path: '/info', changefreq: 'monthly', priority: '0.5' },
   { path: '/contact', changefreq: 'monthly', priority: '0.5' },

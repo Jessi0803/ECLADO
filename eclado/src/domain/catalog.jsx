@@ -297,6 +297,7 @@ export function mergeProductsWithStock(baseProducts, stockRows, variantMap, imag
       nameZh: row.name_zh || product.nameZh || '',
       subtitle: row.subtitle || product.subtitle || '',
       category: row.category || product.category || '',
+      series: row.series || product.series || '',
       size: primaryVariant?.size || row.size || product.size || '',
       stock: primaryVariant?.stock != null ? primaryVariant.stock : Number(row.stock ?? 0),
       isProOnly: row.is_pro_only != null ? !!row.is_pro_only : product.isProOnly,

@@ -10,6 +10,7 @@ import {
 import {
   PAGE_PATHS,
   getProductSlug,
+  journalSlugFromPath,
   pageFromPath,
   productSlugFromPath,
 } from './routes.js';
@@ -23,6 +24,8 @@ import ContactPage from '../pages/ContactPage.jsx';
 import HomePage from '../pages/HomePage.jsx';
 import GuestOrderLookupPage from '../pages/GuestOrderLookupPage.jsx';
 import InfoPage from '../pages/InfoPage.jsx';
+import JournalArticlePage from '../pages/JournalArticlePage.jsx';
+import JournalPage from '../pages/JournalPage.jsx';
 import LineCallbackPage from '../pages/LineCallbackPage.jsx';
 import LoginPage from '../pages/LoginPage.jsx';
 import PrivacyPage from '../pages/PrivacyPage.jsx';
@@ -43,6 +46,7 @@ import {
 import { goProfessionalApply } from '../services/membership.js';
 
 export default function App() {
+  const [journalArticleSlug, setJournalArticleSlug] = useState(() => journalSlugFromPath(window.location.pathname));
   const [page, setPageState] = useState(() => {
     if (isPasswordRecoveryUrl()) return 'reset-password';
     if (hasAuthCallbackInUrl() && !isPasswordRecoveryUrl()) {
@@ -72,6 +76,11 @@ export default function App() {
       return;
     }
     setPage('shop');
+  }
+  function openJournalArticle(article, from = page) {
+    window.history.pushState({ page:'journal-article', from }, '', `/journal/${article.slug}`);
+    setJournalArticleSlug(article.slug);
+    setPageState('journal-article');
   }
   const {
     authReady,
@@ -135,6 +144,7 @@ export default function App() {
   // 瀏覽器返回 / 前進
   useEffect(() => {
     function onPopState(e) {
+      setJournalArticleSlug(journalSlugFromPath(window.location.pathname));
       setPageState(e.state?.page || pageFromPath(window.location.pathname));
     }
     window.addEventListener('popstate', onPopState);
@@ -156,7 +166,7 @@ export default function App() {
 
   function renderPage() {
     switch (page) {
-      case 'home':     return <HomePage setPage={setPage} onSelectProduct={product => openProduct(product, 'home')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
+      case 'home':     return <HomePage setPage={setPage} onSelectProduct={product => openProduct(product, 'home')} onOpenArticle={article => openJournalArticle(article, 'home')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
       case 'shop':     return <ShopPage onSelectProduct={product => openProduct(product, 'shop')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} productsStatus={productsStatus} productsError={productsError} salesStats={salesStats} />;
       case 'product':  return <ProductPage productSlug={productSlugFromPath(window.location.pathname)} products={products} productsStatus={productsStatus} productsError={productsError} user={user} setCart={setCart} promotions={promotions} onBack={closeProduct} onShop={() => setPage('shop')} />;
       case 'cart':     return <CartPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
@@ -168,12 +178,14 @@ export default function App() {
       case 'account':  return <AccountPage user={user} setPage={setPage} onSignOut={handleSignOut} />;
       case 'about':    return <AboutPage />;
       case 'info':     return <InfoPage user={user} />;
+      case 'journal':  return <JournalPage onOpenArticle={article => openJournalArticle(article, 'journal')} />;
+      case 'journal-article': return <JournalArticlePage articleSlug={journalArticleSlug} onBack={() => setPage('journal')} onOpenArticle={article => openJournalArticle(article, 'journal-article')} />;
       case 'line-callback': return <LineCallbackPage />;
       case 'payment-result': return <PaymentResultPage setPage={setPage} />;
       case 'order-lookup': return <GuestOrderLookupPage setPage={setPage} />;
       case 'privacy':  return <PrivacyPage />;
       case 'contact':  return <ContactPage />;
-      default:         return <HomePage setPage={setPage} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
+      default:         return <HomePage setPage={setPage} onSelectProduct={product => openProduct(product, 'home')} onOpenArticle={article => openJournalArticle(article, 'home')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
     }
   }
 

@@ -497,6 +497,7 @@ test('客訂自取訂單不顯示地址與托運欄位並可完成取貨流程',
   await expect(page.getByRole('button', { name: '可取貨' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: '已取貨' })).toHaveCount(0);
   await page.getByRole('button', { name: '備貨中' }).click();
+  await expect(page.locator('.order-pickup-label')).toHaveCSS('margin-left', '10px');
   await page.getByText('E2E-PICKUP-001').click();
 
   const panel = page.locator('.detail-panel');
@@ -785,6 +786,7 @@ test('商品管理可編輯名稱、規格價格與院線限定並透過 RPC 儲
   await panel.getByLabel('中文名稱').fill('胜肽全效修護精華液');
   await panel.getByLabel('規格 1 市場價').fill('4200');
   await panel.getByLabel('規格 1 專業價').fill('3100');
+  await panel.getByLabel('系列分類').selectOption('Cell');
   await panel.getByLabel('規格 1 客訂規格').check();
   await panel.getByLabel(/院線限定/).check();
   await panel.getByRole('button', { name: '儲存' }).click();
@@ -793,6 +795,7 @@ test('商品管理可編輯名稱、規格價格與院線限定並透過 RPC 儲
   expect(savedRequest?.p_product).toMatchObject({
     id: 2,
     name_zh: '胜肽全效修護精華液',
+    series: 'Cell',
     is_pro_only: true,
   });
   expect(savedRequest?.p_variants?.[0]).toMatchObject({ price: 4200, pro_price: 3100, is_custom_order: true });

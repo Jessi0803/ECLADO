@@ -222,6 +222,7 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       name_zh: product.nameZh || '',
       subtitle: product.subtitle || null,
       category: product.category || '',
+      series: product.series || null,
       min_stock: Math.max(0, Number(product.minStock) || 0),
       is_pro_only: !!product.isProOnly,
       description: product.desc || '',

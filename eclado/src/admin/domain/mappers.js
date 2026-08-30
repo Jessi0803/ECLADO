@@ -106,6 +106,7 @@ export function normalizeProduct(row, variantRows = null, imageRows = []) {
     nameZh: row.name_zh || '',
     subtitle: row.subtitle || '',
     category: normalizeProductCategory(row.category, !!row.is_pro_only),
+    series: row.series || '',
     size: row.size || '',
     price: Number(row.price) || 0,
     proPrice: Number(row.pro_price) || 0,

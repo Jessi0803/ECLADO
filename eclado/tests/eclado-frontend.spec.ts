@@ -102,12 +102,56 @@ async function triggerProductsRealtime(page: import('@playwright/test').Page) {
 
 test('主要路徑可開啟且不白屏', async ({ page }) => {
   test.slow();
-  for (const path of ['/', '/shop', '/products/peptide-repair-serum', '/cart', '/checkout', '/login', '/order-lookup', '/professional-apply', '/about', '/info', '/privacy', '/contact', '/admin']) {
+  for (const path of ['/', '/shop', '/products/peptide-repair-serum', '/journal', '/journal/peptide-hyaluronic-centella-order', '/cart', '/checkout', '/login', '/order-lookup', '/professional-apply', '/about', '/info', '/privacy', '/contact', '/admin']) {
     await page.goto(path, { waitUntil: 'domcontentloaded' });
     const body = page.locator('body');
     await expect(body).toBeVisible();
     await expect(body).not.toBeEmpty();
   }
+});
+
+test('首頁依指定順序呈現熱門商品、品牌理念、四大系列與六篇專欄', async ({ page }) => {
+  await page.goto('/');
+
+  const headings = await page.locator('h2').allTextContents();
+  const popularIndex = headings.findIndex(text => text.includes('熱門商品'));
+  const aboutIndex = headings.findIndex(text => text.includes('源自韓國醫美診所'));
+  const seriesIndex = headings.findIndex(text => text.includes('四大系列'));
+  const journalIndex = headings.findIndex(text => text.includes('保養專欄'));
+
+  expect(popularIndex).toBeGreaterThanOrEqual(0);
+  expect(aboutIndex).toBeGreaterThan(popularIndex);
+  expect(seriesIndex).toBeGreaterThan(aboutIndex);
+  expect(journalIndex).toBeGreaterThan(seriesIndex);
+  await expect(page.getByRole('heading', { name: '精選商品' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '瀏覽全部專欄 →' })).toBeVisible();
+  await expect(page.getByText(/min read/i)).toHaveCount(0);
+
+  await page.getByRole('button', { name: /呼吸系列/ }).click();
+  await expect(page).toHaveURL(/\/shop\?view=series&series=%E5%91%BC%E5%90%B8$/);
+});
+
+test('首頁六篇專欄可進入完整文章、列表及上一篇下一篇且不顯示閱讀時間', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: /胜肽、玻尿酸、積雪草/ }).first().click();
+
+  await expect(page).toHaveURL(/\/journal\/peptide-hyaluronic-centella-order$/);
+  await expect(page.getByRole('heading', { level:1, name:'胜肽、玻尿酸、積雪草，修護型保養怎麼排先後？' })).toBeVisible();
+  await expect(page).toHaveTitle(/胜肽、玻尿酸、積雪草.*ECLADO 保養專欄/);
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /胜肽、玻尿酸、積雪草怎麼搭/);
+  await expect(page.getByText('修護，不是把所有成分一次疊上去')).toBeVisible();
+  await expect(page.getByText('ECLADO 專業保養觀點')).toBeVisible();
+  await expect(page.getByText(/min read|分鐘閱讀/i)).toHaveCount(0);
+
+  await page.getByRole('button', { name:/下一篇/ }).click();
+  await expect(page).toHaveURL(/\/journal\/sensitive-skin-routine$/);
+  await expect(page.getByRole('heading', { level:1, name:/敏弱肌日常流程/ })).toBeVisible();
+
+  await page.getByRole('button', { name:'← 返回保養專欄' }).click();
+  await expect(page).toHaveURL(/\/journal$/);
+  await expect(page.getByRole('heading', { level:1, name:'保養專欄' })).toBeVisible();
+  await expect(page.locator('.journal-list-grid > a')).toHaveCount(6);
+  await expect(page.getByText(/min read|分鐘閱讀/i)).toHaveCount(0);
 });
 
 test('首頁頁尾訪客訂單查詢可進入查詢頁並返回首頁', async ({ page }) => {
@@ -270,7 +314,7 @@ test('導覽列所有產品下拉分類會帶入商城分類並保留可分享�
   }
 
   await page.getByRole('button', { name: '安瓶精華', exact: true }).click();
-  await expect(page).toHaveURL(/\/shop\?category=%E5%AE%89%E7%93%B6%E7%B2%BE%E8%8F%AF$/);
+  await expect(page).toHaveURL(/\/shop\?view=category&category=%E5%AE%89%E7%93%B6%E7%B2%BE%E8%8F%AF$/);
   await expect(page.getByRole('button', { name: '安瓶精華', exact: true }).last()).toHaveCSS('font-weight', '500');
   await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();
   await expect(page.getByText('NK細胞活化安瓶').first()).toHaveCount(0);
@@ -278,6 +322,22 @@ test('導覽列所有產品下拉分類會帶入商城分類並保留可分享�
   await page.reload();
   await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();
   await expect(page.getByText('NK細胞活化安瓶').first()).toHaveCount(0);
+});
+
+test('商城可在功效分類與系列分類間切換並保留系列網址', async ({ page }) => {
+  await page.goto('/shop?view=series&series=Cell');
+
+  await expect(page.getByRole('button', { name: '依系列分類', exact: true }).last()).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Cell', exact: true }).last()).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();
+  await expect(page.getByText('深層清潔泡沫洗面乳').first()).toHaveCount(0);
+
+  await page.reload();
+  await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();
+
+  await page.getByRole('button', { name: '依功效分類', exact: true }).last().click();
+  await expect(page).toHaveURL('/shop');
+  await expect(page.getByText('深層清潔泡沫洗面乳').first()).toBeVisible();
 });
 
 test('後台以規格表格與交易式 RPC 儲存商品', async ({ page }) => {
@@ -445,6 +505,7 @@ for (const scenario of [
     await expect(page.getByRole('button', { name: '會員購物須知', exact: true })).toBeVisible();
     await page.getByRole('button', { name: '會員購物須知', exact: true }).click();
     await expect(page.getByRole('heading', { name: `${scenario.noticeLabel}－購物規範` })).toBeVisible();
+    await expect(page.getByText('單筆訂單折扣後商品小計滿 NT$15,000 享免運優惠。')).toBeVisible();
   });
 }
 
@@ -470,13 +531,20 @@ test('專業會員購物車即時提示最低訂購與免運門檻', async ({ pa
   await page.getByRole('button', { name: /加入購物車/ }).click();
   const cartDrawer = await openCart(page);
 
-  await expect(cartDrawer.getByRole('status')).toHaveText('尚差 NT$2,020 可達最低訂購門檻。');
+  const professionalStatus = cartDrawer.getByRole('status');
+  await expect(professionalStatus).toHaveText('尚差 NT$2,020 可達最低訂購門檻。');
+  await expect(professionalStatus).toHaveCSS('border-left-width', '1px');
+  await expect(professionalStatus).toHaveCSS('border-left-style', 'solid');
   await expect(cartDrawer.getByRole('button', { name: '前往結帳' })).toBeDisabled();
 
   const increaseQuantity = cartDrawer.getByRole('button', { name: '+' });
   await increaseQuantity.click();
-  await expect(cartDrawer.getByRole('status')).toHaveText('已符合下單資格，再消費 NT$4,040 即享免運。');
+  await expect(professionalStatus).toHaveText('再消費 NT$9,040 即享免運');
+  await expect(professionalStatus).toHaveCSS('border-left-width', '4px');
+  await expect(cartDrawer.getByText('NT$ 120', { exact: true })).toBeVisible();
 
+  await increaseQuantity.click();
+  await increaseQuantity.click();
   await increaseQuantity.click();
   await increaseQuantity.click();
   await expect(cartDrawer.getByRole('status')).toHaveText('✓ 已享免運優惠。');

@@ -1,7 +1,7 @@
 import { getMemberRole } from './catalog.jsx';
 
 export const PROFESSIONAL_ORDER_MINIMUM = 5000;
-export const PROFESSIONAL_FREE_SHIPPING_THRESHOLD = 10000;
+export const PROFESSIONAL_FREE_SHIPPING_THRESHOLD = 15000;
 export const PROFESSIONAL_ORDER_ROLES = new Set(['pro', 'instructor', 'distributor']);
 
 export function hasProfessionalOrderRules(user) {
@@ -24,7 +24,7 @@ export function getProfessionalOrderProgress(amount, user) {
       eligible: true,
       freeShipping: false,
       remaining: PROFESSIONAL_FREE_SHIPPING_THRESHOLD - merchandiseAmount,
-      message: `已符合下單資格，再消費 NT$${(PROFESSIONAL_FREE_SHIPPING_THRESHOLD - merchandiseAmount).toLocaleString()} 即享免運。`,
+      message: `再消費 NT$${(PROFESSIONAL_FREE_SHIPPING_THRESHOLD - merchandiseAmount).toLocaleString()} 即享免運`,
     };
   }
   return {

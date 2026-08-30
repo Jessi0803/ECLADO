@@ -111,14 +111,19 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
               {professionalProgress && (
                 <div
                   role="status"
+                  aria-live="polite"
                   style={{
                     border:`1px solid ${professionalProgress.eligible ? 'var(--gold)' : '#b87855'}`,
-                    background:'var(--white)',
-                    padding:'12px 14px',
+                    borderLeft: professionalProgress.eligible && !professionalProgress.freeShipping
+                      ? '4px solid var(--gold)'
+                      : `1px solid ${professionalProgress.eligible ? 'var(--gold)' : '#b87855'}`,
+                    background: professionalProgress.eligible && !professionalProgress.freeShipping ? '#fff8e8' : 'var(--white)',
+                    padding: professionalProgress.eligible && !professionalProgress.freeShipping ? '14px 16px' : '12px 14px',
                     marginBottom:18,
-                    fontSize:12,
+                    fontSize: professionalProgress.eligible && !professionalProgress.freeShipping ? 14 : 12,
+                    fontWeight: professionalProgress.eligible && !professionalProgress.freeShipping ? 600 : 400,
                     lineHeight:1.65,
-                    color: professionalProgress.eligible ? 'var(--dark)' : '#8a4c2d',
+                    color: professionalProgress.eligible && !professionalProgress.freeShipping ? '#76500a' : (professionalProgress.eligible ? 'var(--dark)' : '#8a4c2d'),
                   }}
                 >
                   {professionalProgress.message}

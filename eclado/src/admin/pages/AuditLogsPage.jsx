@@ -31,7 +31,7 @@ const FIELD_LABELS = {
   shipment_notification_sent_at: '通知時間', shipment_notification_channel: '通知管道',
   payment_due_at: '付款期限', payment_reminded_at: '第一次提醒時間', payment_second_reminded_at: '第二次提醒時間',
   claimed_at: '付款建單鎖定時間', gateway_created_at: '付款單建立時間',
-  name: '英文名稱', name_zh: '商品名稱', subtitle: '副標題', category: '分類', min_stock: '庫存警示值',
+  name: '英文名稱', name_zh: '商品名稱', subtitle: '副標題', category: '功效分類', series: '系列分類', min_stock: '庫存警示值',
   is_pro_only: '院線限定', publication_status: '上架狀態', active: '啟用狀態', product_list_image_scale: '列表圖片比例',
   product_id: '商品 ID', sku: 'SKU', size: '規格', price: '市場價', pro_price: '專業價', stock: '庫存',
   is_default: '預設規格', sort_order: '排序', is_primary: '首圖', original_name: '檔名', alt_text: '替代文字',

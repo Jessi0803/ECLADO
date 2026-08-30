@@ -1,13 +1,13 @@
 import type { Page, Route } from '@playwright/test';
 
 export const mockProducts = [
-  { id: 1, stock: 48,  is_pro_only: false, price: 1280, pro_price: 960,  active: true },
-  { id: 2, stock: 2,   is_pro_only: false, price: 3980, pro_price: 2980, active: true },
+  { id: 1, stock: 48,  is_pro_only: false, price: 1280, pro_price: 960,  series: 'Deep', active: true },
+  { id: 2, stock: 2,   is_pro_only: false, price: 3980, pro_price: 2980, series: 'Cell', active: true },
   { id: 3, stock: 15,  is_pro_only: false, price: 4800, pro_price: 3600, active: true },
   { id: 4, stock: 1,   is_pro_only: false, price: 2200, pro_price: 1650, active: true },
   { id: 5, stock: 22,  is_pro_only: false, price: 2800, pro_price: 2100, active: true },
   { id: 6, stock: 8,   is_pro_only: false, price: 3600, pro_price: 2700, active: true },
-  { id: 7, stock: 0,   is_pro_only: true,  price: 8800, pro_price: 6600, active: true },
+  { id: 7, stock: 0,   is_pro_only: true,  price: 8800, pro_price: 6600, series: 'Air jet', active: true },
   { id: 8, stock: 31,  is_pro_only: false, price: 1980, pro_price: 1485, active: true },
   { id: 9, stock: 100, is_pro_only: false, price: 5,    pro_price: 5,    active: true },
 ];
@@ -25,9 +25,9 @@ export const activePromotion = {
 };
 
 export const adminProductRows = [
-  { id: 1, name: 'Deep Cleansing Foam', name_zh: '深層清潔泡沫洗面乳', category: '清潔', size: '200ml', price: 1280, pro_price: 960, stock: 48, min_stock: 3, is_pro_only: false, active: true },
-  { id: 2, name: 'Peptide Repair Serum', name_zh: '胜肽修護精華液', category: '精華液', size: '30ml', price: 3980, pro_price: 2980, stock: 2, min_stock: 3, is_pro_only: false, active: true },
-  { id: 7, name: 'NK Cell Activator', name_zh: 'NK細胞活化安瓶', category: '急救安瓶', size: '3.5ml×10', price: 8800, pro_price: 6600, stock: 0, min_stock: 3, is_pro_only: true, active: true },
+  { id: 1, name: 'Deep Cleansing Foam', name_zh: '深層清潔泡沫洗面乳', category: '清潔', series: 'Deep', size: '200ml', price: 1280, pro_price: 960, stock: 48, min_stock: 3, is_pro_only: false, active: true },
+  { id: 2, name: 'Peptide Repair Serum', name_zh: '胜肽修護精華液', category: '精華液', series: 'Cell', size: '30ml', price: 3980, pro_price: 2980, stock: 2, min_stock: 3, is_pro_only: false, active: true },
+  { id: 7, name: 'NK Cell Activator', name_zh: 'NK細胞活化安瓶', category: '急救安瓶', series: 'Air jet', size: '3.5ml×10', price: 8800, pro_price: 6600, stock: 0, min_stock: 3, is_pro_only: true, active: true },
 ];
 
 export const adminOrderRows = [
@@ -611,7 +611,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     const professionalRole = ['pro', 'instructor', 'distributor'].includes(role);
     const shipping = fulfillmentMethod === 'onsite_pickup'
       ? 0
-      : professionalRole && discountedSubtotal >= 10000
+      : professionalRole && discountedSubtotal >= 15000
       ? 0
       : (authoritativeItems.every(item => item.product_id === 9) ? 0 : 120);
     const orderId = `ECL-E2E-${Date.now()}`;

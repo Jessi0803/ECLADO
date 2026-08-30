@@ -104,7 +104,7 @@ begin
 
   if requested_product_id is null then
     insert into public.products (
-      asset_key, name, name_zh, subtitle, category, min_stock, is_pro_only,
+      asset_key, name, name_zh, subtitle, category, series, min_stock, is_pro_only,
       image_url, image_urls, description, skin_type, ingredients, features,
       source_folder_name, imported_from_drive, product_list_image_scale, publication_status, active,
       size, price, pro_price, stock, variants
@@ -115,6 +115,7 @@ begin
       trim(p_product ->> 'name_zh'),
       nullif(trim(p_product ->> 'subtitle'), ''),
       trim(p_product ->> 'category'),
+      nullif(trim(p_product ->> 'series'), ''),
       greatest(coalesce((p_product ->> 'min_stock')::integer, 3), 0),
       coalesce((p_product ->> 'is_pro_only')::boolean, false),
       nullif(trim(p_product ->> 'image_url'), ''),
@@ -163,6 +164,10 @@ begin
         else subtitle
       end,
       category = trim(p_product ->> 'category'),
+      series = case
+        when p_product ? 'series' then nullif(trim(p_product ->> 'series'), '')
+        else series
+      end,
       min_stock = greatest(coalesce((p_product ->> 'min_stock')::integer, min_stock, 3), 0),
       is_pro_only = coalesce((p_product ->> 'is_pro_only')::boolean, is_pro_only),
       image_url = case

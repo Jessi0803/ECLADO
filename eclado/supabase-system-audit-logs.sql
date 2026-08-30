@@ -38,6 +38,7 @@ as $$
       'name_zh', row_data -> 'name_zh',
       'subtitle', row_data -> 'subtitle',
       'category', row_data -> 'category',
+      'series', row_data -> 'series',
       'min_stock', row_data -> 'min_stock',
       'is_pro_only', row_data -> 'is_pro_only',
       'publication_status', row_data -> 'publication_status',

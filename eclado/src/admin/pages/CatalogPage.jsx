@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { SERIES_LINKS } from '../../app/navigation.js';
 import { normalizeProductImageScale } from '../domain/mappers.js';
 import usePanelHistory from '../hooks/usePanelHistory.js';
 
@@ -68,6 +69,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
       nameZh: '',
       subtitle: '',
       category: PRODUCT_CATEGORIES[0],
+      series: '',
       minStock: 3,
       isProOnly: false,
       productImages: [],
@@ -402,7 +404,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
             <table className="responsive-admin-table admin-products-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
-                  {['商品名稱', '分類', '規格', '售價', '專業價', '院線', '庫存'].map(h => (
+                  {['商品名稱', '功效分類', '系列分類', '規格', '售價', '專業價', '院線', '庫存'].map(h => (
                     <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                   <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>狀態</th>
@@ -412,7 +414,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
               <tbody>
                 {shownProducts.length === 0 && (
                   <tr>
-                    <td colSpan={9} style={{ padding: 40, textAlign: 'center', color: 'var(--mid)', fontSize: 13 }}>
+                    <td colSpan={10} style={{ padding: 40, textAlign: 'center', color: 'var(--mid)', fontSize: 13 }}>
                       {normalizedSearchQuery
                         ? '目前沒有符合名稱搜尋與庫存條件的商品'
                         : stockFilter === 'all'
@@ -432,7 +434,8 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                         <div style={{ fontSize: 13, fontWeight: 500 }}>{p.nameZh}</div>
                         <div style={{ fontSize: 11, color: 'var(--mid)' }}>{p.name}</div>
                       </td>
-                      <td data-label="分類" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{p.category}</td>
+                      <td data-label="功效分類" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{p.category}</td>
+                      <td data-label="系列分類" style={{ padding: '13px 14px', fontSize: 12, color: p.series ? 'var(--mid)' : 'var(--light)' }}>{p.series || '未設定'}</td>
                       <td data-label="規格" style={{ padding: '13px 14px', fontSize: 12 }}>{p.size}</td>
                       <td data-label="售價" style={{ padding: '13px 14px', fontSize: 12, fontWeight: 500 }}>NT$ {p.price.toLocaleString()}</td>
                       <td data-label="專業價" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--gold)' }}>NT$ {p.proPrice.toLocaleString()}</td>
@@ -539,12 +542,23 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label htmlFor="productCategory" style={lbl}>分類</label>
+                  <label htmlFor="productCategory" style={lbl}>功效分類</label>
                   <select id="productCategory" value={editing.category} onChange={setF('category')}
                     style={{ ...inp, cursor: 'pointer' }}>
                     {PRODUCT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
+                <div>
+                  <label htmlFor="productSeries" style={lbl}>系列分類</label>
+                  <select id="productSeries" value={editing.series || ''} onChange={setF('series')}
+                    style={{ ...inp, cursor: 'pointer' }}>
+                    <option value="">未設定系列</option>
+                    {SERIES_LINKS.map(series => <option key={series} value={series}>{series}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <label htmlFor="productMinStock" style={lbl}>低庫存警示值</label>
                   <input id="productMinStock" type="number" min="0" value={editing.minStock} onChange={setF('minStock')} style={inp} />

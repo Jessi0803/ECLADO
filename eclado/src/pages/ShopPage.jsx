@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import useIsMobile from '../hooks/useIsMobile.js';
-import { PRODUCT_NAV_LINKS } from '../app/navigation.js';
+import { PRODUCT_NAV_LINKS, PRODUCT_SERIES_LINKS } from '../app/navigation.js';
 import {
   SHOP_CATEGORY_EVENT,
-  categoryFromLocation,
+  shopFilterFromLocation,
   shopPath,
 } from '../app/shopNavigation.js';
 import ProductCard from '../components/product/ProductCard.jsx';
@@ -43,6 +43,11 @@ function isProductInCategory(product, category) {
   return false;
 }
 
+function isProductInSeries(product, series) {
+  if (series === '所有系列') return true;
+  return String(product.series || '') === series;
+}
+
 export default function ShopPage({
   user,
   cart,
@@ -53,15 +58,15 @@ export default function ShopPage({
   productsStatus = 'ready',
   productsError = '',
 }) {
-  const [activeCategory, setActiveCategory] = useState(categoryFromLocation);
-  const categories = PRODUCT_NAV_LINKS;
+  const [activeFilter, setActiveFilter] = useState(shopFilterFromLocation);
+  const filterItems = activeFilter.view === 'series' ? PRODUCT_SERIES_LINKS : PRODUCT_NAV_LINKS;
   const isMobile = useIsMobile();
   const categoryTabsRef = useRef(null);
   const categoryButtonRefs = useRef(new Map());
 
   useEffect(() => {
-    const syncCategory = event => setActiveCategory(event.detail || categoryFromLocation());
-    const syncPopState = () => setActiveCategory(categoryFromLocation());
+    const syncCategory = event => setActiveFilter(event.detail || shopFilterFromLocation());
+    const syncPopState = () => setActiveFilter(shopFilterFromLocation());
     window.addEventListener(SHOP_CATEGORY_EVENT, syncCategory);
     window.addEventListener('popstate', syncPopState);
     return () => {
@@ -75,7 +80,7 @@ export default function ShopPage({
 
     const animationFrame = window.requestAnimationFrame(() => {
       const tabs = categoryTabsRef.current;
-      const activeButton = categoryButtonRefs.current.get(activeCategory);
+      const activeButton = categoryButtonRefs.current.get(`${activeFilter.view}:${activeFilter.value}`);
       if (!tabs || !activeButton) return;
 
       const tabsRect = tabs.getBoundingClientRect();
@@ -93,11 +98,18 @@ export default function ShopPage({
     });
 
     return () => window.cancelAnimationFrame(animationFrame);
-  }, [activeCategory, isMobile]);
+  }, [activeFilter, isMobile]);
 
-  function selectCategory(category) {
-    setActiveCategory(category);
-    window.history.pushState({ page: 'shop', category }, '', shopPath(category));
+  function selectFilter(value) {
+    const next = { view: activeFilter.view, value };
+    setActiveFilter(next);
+    window.history.pushState({ page: 'shop', ...next }, '', shopPath(next.view, next.value));
+  }
+
+  function selectView(view) {
+    const next = { view, value: view === 'series' ? '所有系列' : '所有產品' };
+    setActiveFilter(next);
+    window.history.pushState({ page: 'shop', ...next }, '', shopPath(next.view, next.value));
   }
 
   function addToCart(product) {
@@ -110,7 +122,9 @@ export default function ShopPage({
     });
   }
 
-  const filtered = products.filter(product => isProductInCategory(product, activeCategory));
+  const filtered = products.filter(product => activeFilter.view === 'series'
+    ? isProductInSeries(product, activeFilter.value)
+    : isProductInCategory(product, activeFilter.value));
 
   const livePromosShop = promotions.filter(isPromotionLive);
 
@@ -148,25 +162,31 @@ export default function ShopPage({
       </div>
       {/* 分類篩選列 */}
       <div ref={categoryTabsRef} className="filter-tabs" style={{ background:'var(--off-white)', borderBottom:'1px solid var(--light)', padding: isMobile ? '0 16px' : '0 32px' }}>
-        <div style={{ maxWidth:1280, margin:'0 auto', display:'flex', alignItems:'center' }}>
+        <div style={{ maxWidth:1280, margin:'0 auto' }}>
+          <div style={{ display:'flex', gap:8, padding:'14px 0 0' }}>
+            {[['category', '依功效分類'], ['series', '依系列分類']].map(([view, label]) => (
+              <button key={view} type="button" aria-pressed={activeFilter.view === view} onClick={() => selectView(view)} style={{ border:'1px solid var(--light)', background:activeFilter.view === view ? 'var(--black)' : 'var(--white)', color:activeFilter.view === view ? 'var(--white)' : 'var(--dark)', padding:'9px 16px', fontSize:12, cursor:'pointer', letterSpacing:'0.06em' }}>{label}</button>
+            ))}
+          </div>
           <div style={{ display:'flex' }}>
-          {categories.map(cat => (
+          {filterItems.map(item => (
             <button
-              key={cat}
+              key={`${activeFilter.view}:${item}`}
               ref={node => {
-                if (node) categoryButtonRefs.current.set(cat, node);
-                else categoryButtonRefs.current.delete(cat);
+                const key = `${activeFilter.view}:${item}`;
+                if (node) categoryButtonRefs.current.set(key, node);
+                else categoryButtonRefs.current.delete(key);
               }}
-              aria-pressed={activeCategory === cat}
-              onClick={() => selectCategory(cat)}
+              aria-pressed={activeFilter.value === item}
+              onClick={() => selectFilter(item)}
               style={{
                 background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12,
-                color: activeCategory===cat ? 'var(--black)' : 'var(--dark)',
+                color: activeFilter.value===item ? 'var(--black)' : 'var(--dark)',
                 padding:'16px 20px', letterSpacing:'0.08em', textTransform:'uppercase',
-                borderBottom: activeCategory===cat ? '2px solid var(--black)' : '2px solid transparent',
-                fontWeight: activeCategory===cat ? 500 : 300, transition:'all 0.2s',
+                borderBottom: activeFilter.value===item ? '2px solid var(--black)' : '2px solid transparent',
+                fontWeight: activeFilter.value===item ? 500 : 300, transition:'all 0.2s',
               }}
-            >{cat}</button>
+            >{item}</button>
           ))}
           </div>
         </div>

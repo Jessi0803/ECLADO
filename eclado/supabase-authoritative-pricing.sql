@@ -381,7 +381,7 @@ begin
   if normalized_fulfillment_method = 'onsite_pickup' then
     shipping_amount := 0;
   elsif member_role in ('pro', 'instructor', 'distributor')
-    and subtotal_amount - discount_amount >= 10000
+    and subtotal_amount - discount_amount >= 15000
   then
     shipping_amount := 0;
   else
@@ -421,7 +421,7 @@ begin
       end,
       'standard_fee', 120,
       'professional_minimum', 5000,
-      'professional_free_shipping_threshold', 10000,
+      'professional_free_shipping_threshold', 15000,
       'free_product_id', 9
     ),
     'shipping', shipping_amount,

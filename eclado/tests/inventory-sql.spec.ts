@@ -29,6 +29,15 @@ test('現場自取運費分支不會再被宅配規則覆寫', () => {
   expect(sql).not.toContain("if normalized_fulfillment_method = 'onsite_pickup' then\n    shipping_amount := 0;\n  elsif member_role in ('pro', 'instructor', 'distributor')\n    and subtotal_amount - discount_amount < 5000");
 });
 
+test('專業會員保留五千元起購，滿一萬五千元才免運', () => {
+  const sql = read('supabase-authoritative-pricing.sql');
+  expect(sql).toContain("subtotal_amount - discount_amount < 5000");
+  expect(sql).toContain("subtotal_amount - discount_amount >= 15000");
+  expect(sql).toContain("'professional_minimum', 5000");
+  expect(sql).toContain("'professional_free_shipping_threshold', 15000");
+  expect(sql).not.toContain("'professional_free_shipping_threshold', 10000");
+});
+
 test('公開熱門商品統計排除客訂規格銷量', () => {
   for (const file of ['supabase-security-hardening-20260827.sql', 'supabase-exclude-custom-orders-from-popular.sql']) {
     const sql = read(file);

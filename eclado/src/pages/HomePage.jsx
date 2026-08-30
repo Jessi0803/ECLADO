@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import KnowledgeJournal from '../components/home/KnowledgeJournal.jsx';
+import SeriesShowcase from '../components/home/SeriesShowcase.jsx';
 import TopProductsCarousel from '../components/home/TopProductsCarousel.jsx';
 import { NAV_LINKS } from '../app/navigation.js';
 import TrustBadges from '../components/common/TrustBadges.jsx';
-import ProductCard from '../components/product/ProductCard.jsx';
 import PromoSection from '../components/product/PromoSection.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
 import { HERO_SLIDES } from '../data/homeContent.js';
@@ -16,7 +16,7 @@ import { emptySalesStats, getPopularProducts } from '../domain/sales.js';
 import { isPromotionLive } from '../domain/promotions.js';
 import { goProfessionalApply } from '../services/membership.js';
 
-export default function HomePage({ setPage, onSelectProduct, user, cart, setCart, promotions = [], products = PRODUCTS, salesStats = emptySalesStats() }) {
+export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user, cart, setCart, promotions = [], products = PRODUCTS, salesStats = emptySalesStats() }) {
   const [slide, setSlide] = useState(0);
   const [animating, setAnimating] = useState(false);
   const isMobile = useIsMobile();
@@ -30,8 +30,6 @@ export default function HomePage({ setPage, onSelectProduct, user, cart, setCart
     }, 7500);
     return () => clearInterval(t);
   }, []);
-
-  const featured = products.filter(p => !p.isProOnly).slice(0, 4);
 
   function addToCart(product) {
     if (product.isProOnly && !isProfessionalMember(user)) return;
@@ -148,30 +146,7 @@ export default function HomePage({ setPage, onSelectProduct, user, cart, setCart
         <TrustBadges isMobile={isMobile} />
       </section>
 
-      {/* LIVE PROMOTIONS */}
-      <div id="eclado-promotions">
-        {livePromos.map(promo => (
-          <PromoSection key={promo.id} promo={promo} user={user} addToCart={addToCart} onSelect={onSelectProduct} isMobile={isMobile} promotions={promotions} products={products} />
-        ))}
-      </div>
-
       <TopProductsCarousel products={topProducts} user={user} onAdd={addToCart} onSelect={onSelectProduct} isMobile={isMobile} setPage={setPage} promotions={promotions} />
-
-      {/* FEATURED PRODUCTS */}
-      <section style={{ padding: isMobile ? '60px 0' : '100px 0', background:'var(--white)' }}>
-        <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom: isMobile ? 36 : 56 }}>
-            <div>
-              <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>Featured</p>
-              <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(24px,3.6vw,46px)', fontWeight:300, lineHeight:1.1, color:'var(--black)' }}>精選商品</h2>
-            </div>
-            <button onClick={() => setPage('shop')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'var(--dark)', fontFamily:'var(--font-body)', borderBottom:'1px solid var(--dark)', paddingBottom:2, whiteSpace:'nowrap' }}>全部商品 →</button>
-          </div>
-          <div className="g4">
-            {featured.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => onSelectProduct(p)} promotions={promotions} />)}
-          </div>
-        </div>
-      </section>
 
       {/* ABOUT STRIP */}
       <section style={{ background:'var(--off-white)', padding: isMobile ? '60px 0' : '100px 0' }}>
@@ -205,7 +180,16 @@ export default function HomePage({ setPage, onSelectProduct, user, cart, setCart
         </div>
       </section>
 
-      <KnowledgeJournal isMobile={isMobile} />
+      <SeriesShowcase products={products} setPage={setPage} isMobile={isMobile} />
+
+      <KnowledgeJournal isMobile={isMobile} onOpenArticle={onOpenArticle} onOpenJournal={() => setPage('journal')} />
+
+      {/* LIVE PROMOTIONS */}
+      <div id="eclado-promotions">
+        {livePromos.map(promo => (
+          <PromoSection key={promo.id} promo={promo} user={user} addToCart={addToCart} onSelect={onSelectProduct} isMobile={isMobile} promotions={promotions} products={products} />
+        ))}
+      </div>
 
       {/* PRO SECTION */}
       <section style={{ background:'var(--dark)', padding: isMobile ? '60px 0' : '100px 0' }}>

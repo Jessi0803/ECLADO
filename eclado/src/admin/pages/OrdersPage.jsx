@@ -361,7 +361,12 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'all
                 onMouseLeave={e => { if (selected?.id !== o.id) e.currentTarget.style.background = 'transparent'; }}>
                   <td data-label="訂單編號" style={{ padding: '13px 14px', fontSize: 12, fontWeight: 500, color: 'var(--dark)', whiteSpace: 'nowrap' }}>{o.id}</td>
                   <td data-label="訂購人" style={{ padding: '13px 14px', fontSize: 13 }}>{o.member}</td>
-                  <td data-label="類型" style={{ padding: '13px 14px' }}><TypeBadge type={getOrderDisplayType(o)} />{o.fulfillmentMethod === 'onsite_pickup' && <span style={{ display:'block', marginTop:5, fontSize:10, color:'var(--gold)', whiteSpace:'nowrap' }}>客訂自取</span>}</td>
+                  <td data-label="類型" style={{ padding: '13px 14px' }}>
+                    <div style={{ display:'inline-flex', flexDirection:'column', alignItems:'flex-start' }}>
+                      <TypeBadge type={getOrderDisplayType(o)} />
+                      {o.fulfillmentMethod === 'onsite_pickup' && <span className="order-pickup-label" style={{ marginTop:5, marginLeft:10, fontSize:10, color:'var(--gold)', whiteSpace:'nowrap' }}>客訂自取</span>}
+                    </div>
+                  </td>
                   <td data-label="金額" style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>NT$ {o.total.toLocaleString()}</td>
                   <td data-label="付款方式" style={{ padding: '13px 14px', fontSize: 12, color: o.paymentMethod ? 'var(--dark)' : 'var(--light)', fontWeight: 500, whiteSpace: 'nowrap' }}>
                     {getPaymentMethodLabel(o.paymentMethod)}

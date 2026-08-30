@@ -88,6 +88,7 @@ create table if not exists public.products (
   name_zh text not null,
   subtitle text,
   category text not null,
+  series text,
   size text,
   price numeric not null default 0,
   pro_price numeric not null default 0,
