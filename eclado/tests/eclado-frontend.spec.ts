@@ -1415,22 +1415,9 @@ test('信用卡付款使用同分頁按鈕，並在付款結果頁權威確認�
   const orderNo = await page.getByText(/^ECL-/).first().textContent();
   await goToPayment.click();
   await expect(page).toHaveURL('https://sandbox.sinopac.test/pay');
-  await page.goBack();
-  await expect.poll(() => page.evaluate(() => {
-    const stored = JSON.parse(sessionStorage.getItem('eclado_pending_payment') || 'null');
-    return {
-      orderNo: stored?.orderNo,
-      hasToken: !!stored?.paymentToken,
-      amount: stored?.amount,
-      method: stored?.method,
-    };
-  })).toEqual({
-    orderNo: orderNo?.trim(),
-    hasToken: true,
-    amount: 3702,
-    method: 'card',
-  });
-
+  // Simulate Sinopac's same-tab ReturnURL redirect. Going back to checkout first
+  // would let its recovery flow confirm payment and clear the one-time token
+  // before the result page can perform its own authoritative query.
   await page.goto(`/payment-result?orderNo=${encodeURIComponent(orderNo?.trim() || '')}&result=paid`);
   await expect(page.getByRole('heading', { name: '付款成功' })).toBeVisible();
   await expect(page.getByText('付款金額：')).toContainText('NT$ 3,702');

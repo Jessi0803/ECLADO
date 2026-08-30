@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { normalizeProductImageScale } from '../domain/mappers.js';
+import usePanelHistory from '../hooks/usePanelHistory.js';
 
 const PRODUCT_CATEGORIES = ['清潔卸妝', '化妝水', '安瓶精華', '乳霜', '面膜', '防曬底妝', '其他', '院線課程儀器（含試用包）'];
 const MAX_PRODUCT_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -12,6 +13,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
   const [searchQuery, setSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const initialDraftRef = useRef('');
   const activeProducts = products.filter(p => p.publicationStatus === 'active');
   const draftProducts = products.filter(p => p.publicationStatus === 'draft');
   const archivedProducts = products.filter(p => p.publicationStatus === 'archived');
@@ -36,6 +38,11 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
     out: baseProducts.filter(p => getStockStatus(p) === 'out').length,
   };
   const lowStock = activeProducts.filter(p => p.stock <= p.minStock);
+  const hasUnsavedChanges = !!editing && JSON.stringify(editing) !== initialDraftRef.current;
+  const closeEditing = usePanelHistory(!!editing, () => setEditing(null), {
+    shouldConfirm: hasUnsavedChanges,
+    confirmMessage: '尚有未儲存的商品變更，確定離開嗎？',
+  });
 
   const lbl = { fontSize: 11, letterSpacing: '0.1em', color: 'var(--mid)', textTransform: 'uppercase', display: 'block', marginBottom: 6 };
   const inp = { width: '100%', border: 'none', borderBottom: '1px solid var(--border)', padding: '8px 0', fontSize: 13, background: 'none', color: 'var(--dark)', outline: 'none', boxSizing: 'border-box' };
@@ -43,16 +50,18 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
 
   function openEdit(p) {
     setError('');
-    setEditing({
+    const draft = {
       ...p,
       variants: (p.variants || []).map(variant => ({ ...variant })),
       productImages: (p.productImages || []).map(image => ({ ...image })),
-    });
+    };
+    initialDraftRef.current = JSON.stringify(draft);
+    setEditing(draft);
   }
 
   function openNew() {
     setError('');
-    setEditing({
+    const draft = {
       id: null,
       assetKey: crypto.randomUUID(),
       name: '',
@@ -84,7 +93,9 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
       publicationStatus: 'draft',
       active: false,
       isNew: true,
-    });
+    };
+    initialDraftRef.current = JSON.stringify(draft);
+    setEditing(draft);
   }
 
   function setF(field) {
@@ -468,14 +479,15 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
         {/* Edit panel */}
         {editing && (
           <>
-          <button type="button" className="detail-panel-backdrop" aria-label="關閉商品編輯" onClick={() => setEditing(null)} />
+          <button type="button" className="detail-panel-backdrop" aria-label="關閉商品編輯" onClick={closeEditing} />
           <div className="detail-panel detail-panel-wide" role="dialog" aria-modal="true" aria-label={editing.isNew ? '新增商品' : '編輯商品'} style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
               <div>
+                <button type="button" className="detail-panel-mobile-back" onClick={closeEditing}>← 返回</button>
                 <div style={{ fontSize: 10, letterSpacing: '0.14em', color: 'var(--mid)', textTransform: 'uppercase', marginBottom: 4 }}>{editing.isNew ? '新增商品' : '編輯商品'}</div>
                 <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--dark)' }}>{editing.nameZh || '新商品'}</div>
               </div>
-              <button type="button" aria-label="關閉商品編輯" onClick={() => setEditing(null)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--mid)', lineHeight: 1, padding: '0 0 0 8px' }}>✕</button>
+              <button type="button" aria-label="關閉商品編輯" onClick={closeEditing} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--mid)', lineHeight: 1, padding: '0 0 0 8px' }}>✕</button>
             </div>
 
             {error && (
@@ -697,7 +709,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                     ? '建立草稿'
                     : editing.isNew ? '建立並上架' : '儲存'}
               </button>
-              <button onClick={() => setEditing(null)}
+              <button onClick={closeEditing}
                 style={{ padding: '12px 20px', background: 'none', border: '1px solid var(--border)', fontSize: 12, color: 'var(--mid)', cursor: 'pointer' }}>
                 取消
               </button>

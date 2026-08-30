@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Badge, TypeBadge } from '../components/StatusIndicators.jsx';
+import usePanelHistory from '../hooks/usePanelHistory.js';
 
 const APP_STATUS_LABEL = { pending: '待審核', approved: '已核准', rejected: '已拒絕' };
 const APP_SOURCE_LABEL = { registration: '註冊申請', upgrade: '事後申請', standalone: '表單申請' };
@@ -34,6 +35,7 @@ export default function Members({
   const [deletingId, setDeletingId] = useState('');
   const [reviewingId, setReviewingId] = useState('');
   const [applicationNotice, setApplicationNotice] = useState(null);
+  const closeDetails = usePanelHistory(!!selected, () => setSelected(null));
 
   useEffect(() => { setFilter(defaultFilter); }, [defaultFilter]);
 
@@ -224,11 +226,11 @@ export default function Members({
       {/* Member detail */}
       {selected && (
         <>
-        <button type="button" className="detail-panel-backdrop" aria-label="關閉會員詳情" onClick={() => setSelected(null)} />
+        <button type="button" className="detail-panel-backdrop" aria-label="關閉會員詳情" onClick={closeDetails} />
         <div className="detail-panel" role="dialog" aria-modal="true" aria-label="會員詳情" style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 500 }}>會員詳情</h3>
-            <button type="button" aria-label="關閉會員詳情" onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--mid)', cursor: 'pointer' }}>×</button>
+            <div><button type="button" className="detail-panel-mobile-back" onClick={closeDetails}>← 返回</button><h3 style={{ fontSize: 15, fontWeight: 500 }}>會員詳情</h3></div>
+            <button type="button" aria-label="關閉會員詳情" onClick={closeDetails} style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--mid)', cursor: 'pointer' }}>×</button>
           </div>
           <div style={{ display: 'flex', align: 'center', gap: 14, marginBottom: 24 }}>
             <div style={{ width: 48, height: 48, background: 'var(--off)', border: '1px solid var(--border)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 400, fontFamily: 'var(--font-d)' }}>

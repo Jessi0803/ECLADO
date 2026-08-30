@@ -16,7 +16,7 @@ import Promotions from './pages/PromotionsPage.jsx';
 export default function AdminApp({ adminEmail, onSignOut }) {
   const [page, setPage] = useState('dashboard');
   const mainRef = useRef(null);
-  const [ordersDefaultFilter, setOrdersDefaultFilter] = useState('awaiting_confirm');
+  const [ordersDefaultFilter, setOrdersDefaultFilter] = useState('all');
   const [membersDefaultFilter, setMembersDefaultFilter] = useState('all');
   const [products, setProducts] = useState([]);
   const [members, setMembers] = useState([]);
@@ -197,7 +197,7 @@ export default function AdminApp({ adminEmail, onSignOut }) {
   useEffect(() => {
     if (mainRef.current) mainRef.current.scrollTop = 0;
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-    if (page !== 'orders') setOrdersDefaultFilter('awaiting_confirm');
+    if (page !== 'orders') setOrdersDefaultFilter('all');
   }, [page]);
 
   async function persistOrderPatch(id, patch) {

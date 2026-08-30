@@ -61,6 +61,7 @@ export function TypeBadge({ type }) {
     instructor: { label:'師資', color:'var(--gold)' },
     distributor: { label:'經銷商', color:'var(--green)' },
     consumer: { label:'一般會員', color:'var(--mid)' },
+    guest: { label:'訪客', color:'var(--mid)' },
     pending: { label:'審核中', color:'var(--yellow)' },
   };
   const item = types[type] || { label:type, color:'var(--mid)' };

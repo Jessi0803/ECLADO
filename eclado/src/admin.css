@@ -166,6 +166,10 @@ input, select, textarea { font-family: var(--font); }
   animation: adminDrawerIn 0.22s ease-out; height: 100dvh !important;
 }
 .detail-panel.detail-panel-wide { width: min(680px, calc(100vw - var(--sidebar-w))); }
+.detail-panel-mobile-back {
+  display: none; border: 0; background: none; padding: 0; margin: 0 0 8px;
+  color: var(--mid); font-size: 12px; cursor: pointer;
+}
 @keyframes adminDrawerIn { from { transform: translateX(100%); opacity: 0.75; } to { transform: translateX(0); opacity: 1; } }
 @keyframes adminDrawerFade { from { opacity: 0; } to { opacity: 1; } }
 
@@ -337,6 +341,7 @@ input, select, textarea { font-family: var(--font); }
     display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 49;
   }
   .detail-panel, .detail-panel.detail-panel-wide { top: 56px; width: 100%; max-width: none; height: calc(100dvh - 56px) !important; }
+  .detail-panel-mobile-back { display: inline-flex; align-items: center; }
   .stat-grid-4 { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .stat-grid-3 { grid-template-columns: 1fr; gap: 10px; }
   .split-2 { grid-template-columns: 1fr; }

@@ -93,6 +93,32 @@ test('後台登入權限：管理員 session 可進入儀表板', async ({ page 
   await expect(page.getByText('ECL-20260504-0044')).toHaveCount(0);
 });
 
+test('訂單管理以 user_id 區分訪客與一般會員', async ({ page }) => {
+  const guestOrder = {
+    ...adminOrderRows[0],
+    id: 'E2E-GUEST-ORDER-001',
+    member: '訪客買家',
+    email: 'guest@example.com',
+    phone: '0933333444',
+    user_id: null,
+  };
+  await mockAdminApis(page, { orders: [...adminOrderRows, guestOrder] });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+
+  await expect(page.locator('th', { hasText: '訂購人' })).toHaveCount(1);
+  const guestRow = page.getByRole('row').filter({ hasText: 'E2E-GUEST-ORDER-001' });
+  await expect(guestRow.getByText('訪客', { exact: true })).toBeVisible();
+  const memberRow = page.getByRole('row').filter({ hasText: 'E2E-ORDER-001' });
+  await expect(memberRow.getByText('一般會員', { exact: true })).toBeVisible();
+
+  await guestRow.click();
+  const details = page.getByRole('dialog', { name: '訂單詳情' });
+  await expect(details.getByText('訂購人', { exact: true })).toBeVisible();
+  await expect(details.getByText('訪客', { exact: true })).toBeVisible();
+});
+
 test('叫貨管理可多選商品、查看庫存、計算雙幣別並匯出三種格式', async ({ page }, testInfo) => {
   let savedRequest: Record<string, unknown> | undefined;
   await mockAdminApis(page, { onPurchaseOrderSave: request => { savedRequest = request; } });
@@ -233,7 +259,9 @@ test('儀表板最新訂單的查看全部會前往訂單管理', async ({ page 
 
   await openAdminSection(page, /商品 & 庫存/);
   await openAdminSection(page, /訂單管理/);
-  await expect(page.getByRole('button', { name: /轉帳待確認/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: '全部', exact: true }).first()).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('E2E-ORDER-001')).toBeVisible();
+  await expect(page.getByText('E2E-ORDER-002')).toBeVisible();
 });
 
 test('後台資料為空時維持空狀態，不顯示本機示範商品、會員或訂單', async ({ page }) => {
@@ -319,6 +347,44 @@ test('商品、訂單與會員列表響應式切換，詳情使用抽屜且不�
   await page.getByRole('dialog', { name: '會員詳情' }).getByRole('button', { name: '關閉會員詳情' }).click();
 });
 
+test('手機上一頁會關閉後台詳情，商品未儲存時先確認', async ({ page }) => {
+  await mockAdminApis(page, { productVariants: adminProductVariants });
+  await page.goto('/admin');
+
+  await openAdminSection(page, /訂單管理/);
+  await page.getByText('E2E-ORDER-001').first().click();
+  const orderDetails = page.getByRole('dialog', { name: '訂單詳情' });
+  await expect(orderDetails).toBeVisible();
+  if ((page.viewportSize()?.width || 0) <= 900) {
+    await expect(orderDetails.getByRole('button', { name: '← 返回' })).toBeVisible();
+  }
+  await page.goBack();
+  await expect(orderDetails).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: '訂單管理' })).toBeVisible();
+
+  await openAdminSection(page, /會員管理/);
+  await page.locator('.admin-members-table td[data-label="姓名"]').filter({ hasText: /^測試會員$/ }).click();
+  const memberDetails = page.getByRole('dialog', { name: '會員詳情' });
+  await expect(memberDetails).toBeVisible();
+  await page.goBack();
+  await expect(memberDetails).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: '會員管理' })).toBeVisible();
+
+  await openAdminSection(page, /商品 & 庫存/);
+  await page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr').getByRole('button', { name: '編輯' }).click();
+  const productEditor = page.getByRole('dialog', { name: '編輯商品' });
+  await productEditor.getByLabel('中文名稱').fill('尚未儲存的名稱');
+
+  page.once('dialog', dialog => dialog.dismiss());
+  await page.goBack();
+  await expect(productEditor).toBeVisible();
+
+  page.once('dialog', dialog => dialog.accept());
+  await page.goBack();
+  await expect(productEditor).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: '商品 & 庫存' })).toBeVisible();
+});
+
 test('儀表板顯示待處理資訊，點待審核申請可前往會員審核列表', async ({ page }) => {
   await mockAdminApis(page);
 
@@ -374,7 +440,9 @@ test('訂單管理可查看明細並更新狀態', async ({ page }) => {
 
   await page.goto('/admin');
   await openAdminSection(page, /訂單管理/);
-  await expect(page.getByRole('columnheader', { name: '付款方式' })).toBeVisible();
+  if ((page.viewportSize()?.width || 0) > 900) {
+    await expect(page.getByRole('columnheader', { name: '付款方式' })).toBeVisible();
+  }
   await expect(page.getByText('虛擬帳號匯款').first()).toBeVisible();
   await expect(page.getByText('付款碼')).toHaveCount(0);
   await expect(page.getByText('E2E-ORDER-001').first()).toBeVisible();

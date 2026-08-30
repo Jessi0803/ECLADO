@@ -3,6 +3,7 @@ import { PAYMENT_METHODS } from '../../domain/payments.js';
 import { SF_EXPRESS_TRACKING_URL } from '../../domain/shipping.js';
 import { supabase } from '../../services/supabase.js';
 import { StatusSelect, TypeBadge } from '../components/StatusIndicators.jsx';
+import usePanelHistory from '../hooks/usePanelHistory.js';
 
 function hasPreorder(order) {
   return Array.isArray(order.items) && order.items.some(i => i.fulfillment_type === 'preorder');
@@ -10,6 +11,10 @@ function hasPreorder(order) {
 
 function getPaymentMethodLabel(method) {
   return PAYMENT_METHODS[method]?.label || '—';
+}
+
+function getOrderDisplayType(order) {
+  return order?.user_id ? order.type : 'guest';
 }
 
 function getStatusFilter(status) {
@@ -38,13 +43,14 @@ function formatNotificationTime(value) {
   });
 }
 
-export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awaiting_confirm' }) {
+export default function Orders({ orders, persistOrderPatch, defaultFilter = 'all' }) {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState(defaultFilter);
   const [stockFilter, setStockFilter] = useState('all');
   const [trackingInput, setTrackingInput] = useState('');
   const [pushing, setPushing] = useState(false);
   const [lineNotice, setLineNotice] = useState('');
+  const closeDetails = usePanelHistory(!!selected, () => setSelected(null));
 
   useEffect(() => {
     setTrackingInput(selected?.tracking || '');
@@ -338,7 +344,7 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
           <table className="responsive-admin-table admin-orders-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
-                {['訂單編號', '會員', '類型', '金額', '付款方式', '庫存', '狀態', '日期'].map(h => (
+                {['訂單編號', '訂購人', '類型', '金額', '付款方式', '庫存', '狀態', '日期'].map(h => (
                   <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -354,8 +360,8 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
                 onMouseEnter={e => { if (selected?.id !== o.id) e.currentTarget.style.background = 'var(--off)'; }}
                 onMouseLeave={e => { if (selected?.id !== o.id) e.currentTarget.style.background = 'transparent'; }}>
                   <td data-label="訂單編號" style={{ padding: '13px 14px', fontSize: 12, fontWeight: 500, color: 'var(--dark)', whiteSpace: 'nowrap' }}>{o.id}</td>
-                  <td data-label="會員" style={{ padding: '13px 14px', fontSize: 13 }}>{o.member}</td>
-                  <td data-label="類型" style={{ padding: '13px 14px' }}><TypeBadge type={o.type} />{o.fulfillmentMethod === 'onsite_pickup' && <span style={{ display:'block', marginTop:5, fontSize:10, color:'var(--gold)', whiteSpace:'nowrap' }}>客訂自取</span>}</td>
+                  <td data-label="訂購人" style={{ padding: '13px 14px', fontSize: 13 }}>{o.member}</td>
+                  <td data-label="類型" style={{ padding: '13px 14px' }}><TypeBadge type={getOrderDisplayType(o)} />{o.fulfillmentMethod === 'onsite_pickup' && <span style={{ display:'block', marginTop:5, fontSize:10, color:'var(--gold)', whiteSpace:'nowrap' }}>客訂自取</span>}</td>
                   <td data-label="金額" style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>NT$ {o.total.toLocaleString()}</td>
                   <td data-label="付款方式" style={{ padding: '13px 14px', fontSize: 12, color: o.paymentMethod ? 'var(--dark)' : 'var(--light)', fontWeight: 500, whiteSpace: 'nowrap' }}>
                     {getPaymentMethodLabel(o.paymentMethod)}
@@ -380,18 +386,18 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'awa
       {/* Order detail panel */}
       {selected && (
         <>
-        <button type="button" className="detail-panel-backdrop" aria-label="關閉訂單詳情" onClick={() => setSelected(null)} />
+        <button type="button" className="detail-panel-backdrop" aria-label="關閉訂單詳情" onClick={closeDetails} />
         <div className="detail-panel" role="dialog" aria-modal="true" aria-label="訂單詳情" style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 500 }}>訂單詳情</h3>
-            <button type="button" aria-label="關閉訂單詳情" onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--mid)', cursor: 'pointer', lineHeight: 1 }}>×</button>
+            <div><button type="button" className="detail-panel-mobile-back" onClick={closeDetails}>← 返回</button><h3 style={{ fontSize: 15, fontWeight: 500 }}>訂單詳情</h3></div>
+            <button type="button" aria-label="關閉訂單詳情" onClick={closeDetails} style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--mid)', cursor: 'pointer', lineHeight: 1 }}>×</button>
           </div>
           <div style={{ fontSize: 12, color: 'var(--mid)', marginBottom: 4 }}>訂單編號</div>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, color: 'var(--dark)' }}>{selected.id}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>會員</div><div style={{ fontSize: 13 }}>{selected.member}</div></div>
+            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>訂購人</div><div style={{ fontSize: 13 }}>{selected.member}</div></div>
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>日期</div><div style={{ fontSize: 13 }}>{selected.date}</div></div>
-            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>類型</div><TypeBadge type={selected.type} /></div>
+            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>類型</div><TypeBadge type={getOrderDisplayType(selected)} /></div>
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>付款方式</div><div style={{ fontSize: 13 }}>{getPaymentMethodLabel(selected.paymentMethod)}</div></div>
           </div>
 

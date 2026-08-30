@@ -1,3 +1,5 @@
+import { SALES_COUNTED_STATUSES } from '../../domain/sales.js';
+
 export function normalizeOrder(row) {
   const items = Array.isArray(row.items) ? row.items : [];
   const itemSubtotal = items.reduce(
@@ -131,6 +133,7 @@ export function normalizeProduct(row, variantRows = null, imageRows = []) {
 
 export function normalizeMember(row, allOrders) {
   const memberOrders = allOrders.filter(order => order.user_id === row.id || order.email === row.email);
+  const completedSales = memberOrders.filter(order => SALES_COUNTED_STATUSES.has(order.status));
   return {
     id: row.id,
     name: row.name || (row.email ? row.email.split('@')[0] : '未命名'),
@@ -140,6 +143,6 @@ export function normalizeMember(row, allOrders) {
     cert: row.cert || '',
     joined: row.created_at ? row.created_at.slice(0, 10) : '',
     orders: memberOrders.length,
-    total: memberOrders.reduce((sum, order) => sum + (order.total || 0), 0),
+    total: completedSales.reduce((sum, order) => sum + (Number(order.total) || 0), 0),
   };
 }
