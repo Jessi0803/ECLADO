@@ -117,15 +117,19 @@ test('LINE 內建瀏覽器只對固定導覽列啟用合成層穩定處理', asy
       get: () => 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Line/15.12.0',
     });
   });
-  await page.goto('/');
+  await page.goto('/?browser-debug=1');
 
   await expect(page.locator('html')).toHaveClass(/is-line-browser/);
   await expect(page.locator('nav.site-nav')).toHaveCSS('will-change', 'transform');
   await expect(page.locator('nav.site-nav')).not.toHaveCSS('transform', 'none');
+  await expect(page.getByTestId('browser-debug-panel')).toContainText('LINE UA：true');
+  await expect(page.getByTestId('browser-debug-panel')).toContainText('LINE class：true');
 });
 
 test('首頁依指定順序呈現熱門商品、品牌理念、三大系列與六篇專欄', async ({ page }) => {
   await page.goto('/');
+
+  await expect(page.getByTestId('browser-debug-panel')).toHaveCount(0);
 
   const headings = await page.locator('h2').allTextContents();
   const popularIndex = headings.findIndex(text => text.includes('熱門商品'));

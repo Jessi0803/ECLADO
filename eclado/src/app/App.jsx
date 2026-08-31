@@ -15,6 +15,7 @@ import {
   productSlugFromPath,
 } from './routes.js';
 import Nav from '../components/layout/Nav.jsx';
+import BrowserDebugPanel from '../components/common/BrowserDebugPanel.jsx';
 import PromoDiagnosticBar from '../components/common/PromoDiagnosticBar.jsx';
 import AboutPage from '../pages/AboutPage.jsx';
 import AccountPage from '../pages/AccountPage.jsx';
@@ -201,6 +202,7 @@ export default function App() {
 
   return (
     <>
+      <BrowserDebugPanel />
       {!authPage && <Nav setPage={setPage} onOpenCart={() => setCartOpen(true)} cartCount={cartCount} user={user} setUser={handleSignOut} page={page} />}
       {showPromoBar && (
         <PromoDiagnosticBar status={promoFetchStatus} errorText={promoFetchError} />
