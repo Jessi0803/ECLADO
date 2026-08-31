@@ -338,7 +338,13 @@ test('商品、訂單與會員列表響應式切換，詳情使用抽屜且不�
   await assertResponsiveList();
   await page.getByText('E2E-ORDER-001').first().click();
   await assertDrawer('訂單詳情');
-  await page.getByRole('dialog', { name: '訂單詳情' }).getByRole('button', { name: '關閉訂單詳情' }).click();
+  const orderDialog = page.getByRole('dialog', { name: '訂單詳情' });
+  if ((page.viewportSize()?.width || 0) <= 900) {
+    await expect(orderDialog.locator('button[aria-label="關閉訂單詳情"]')).toBeHidden();
+    await orderDialog.getByRole('button', { name: '← 返回' }).click();
+  } else {
+    await orderDialog.getByRole('button', { name: '關閉訂單詳情' }).click();
+  }
 
   await openAdminSection(page, /會員管理/);
   await assertResponsiveList();
