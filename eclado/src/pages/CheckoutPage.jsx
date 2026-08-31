@@ -4,7 +4,6 @@ import CheckoutOrderSummary from '../components/checkout/CheckoutOrderSummary.js
 import CheckoutSteps from '../components/checkout/CheckoutSteps.jsx';
 import PaymentInfo from '../components/checkout/PaymentInfo.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
-import { getMemberPrice, getMemberRole } from '../domain/catalog.jsx';
 import { calculateDiscount } from '../domain/promotions.js';
 import {
   areAllCustomOrderItems,
@@ -53,8 +52,6 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   const [paymentState, setPaymentState] = useState('pending');
   const [storedPayment] = useState(() => getPendingPayment());
   const [restoringPayment, setRestoringPayment] = useState(!!storedPayment);
-  const [pendingAuthoritativeOrder, setPendingAuthoritativeOrder] = useState(null);
-  const [pricingChanges, setPricingChanges] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const [copiedAtmNo, setCopiedAtmNo] = useState(false);
@@ -164,43 +161,6 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     };
   }
 
-  function getPricingChanges(authoritativeOrder) {
-    const changes = [];
-    const previewRole = getMemberRole(user);
-    const checks = [
-      ['會員價格資格', previewRole, authoritativeOrder.member_role],
-      ['商品小計', subtotal, authoritativeOrder.subtotal],
-      ['活動折抵', discount, authoritativeOrder.discount],
-      ['套用活動', promotion?.id || null, authoritativeOrder.promotion?.id || null],
-      ['運費', shipping, authoritativeOrder.shipping],
-      ['取貨方式', fulfillmentMethod, authoritativeOrder.fulfillment_method],
-      ['訂單總額', total, authoritativeOrder.total],
-    ];
-    checks.forEach(([label, preview, authoritative]) => {
-      if (String(preview ?? '') !== String(authoritative ?? '')) {
-        changes.push({ label, preview, authoritative });
-      }
-    });
-
-    // Only a real unit-price change should require another confirmation.
-    // Product/variant identifiers can be returned by Postgres in a different
-    // representation (for example numeric ID vs text) without changing what
-    // the customer pays, so they must not be treated as a price change.
-    const unitPricesChanged = cart.length !== authoritativeOrder.items.length
-      || cart.some((item, index) => (
-        Number(getMemberPrice(item, user))
-        !== Number(authoritativeOrder.items[index]?.unit_price ?? authoritativeOrder.items[index]?.price)
-      ));
-    if (unitPricesChanged) {
-      changes.push({
-        label: '商品成交單價',
-        preview: '畫面預覽',
-        authoritative: '後端已重新計算',
-      });
-    }
-    return changes;
-  }
-
   async function handleNext(e) {
     e.preventDefault();
     if (step === 1) {
@@ -219,7 +179,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     setPaymentError('');
     setSubmitting(true);
     try {
-      const authoritativeOrder = pendingAuthoritativeOrder || await createAuthoritativeOrder({
+      const authoritativeOrder = await createAuthoritativeOrder({
           items: cart,
           member: form.name || user?.name || '訪客',
           address: fulfillmentMethod === FULFILLMENT_DELIVERY
@@ -236,16 +196,6 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       const authoritativeSummary = toPaymentSummary(authoritativeOrder);
       setPaymentSnapshot(authoritativeSummary.items);
       setPaymentSummary(authoritativeSummary);
-
-      if (!pendingAuthoritativeOrder) {
-        const changes = getPricingChanges(authoritativeOrder);
-        if (changes.length > 0) {
-          setPendingAuthoritativeOrder(authoritativeOrder);
-          setPricingChanges(changes);
-          window.scrollTo(0, 0);
-          return;
-        }
-      }
 
       const payload = {
         orderNo: authoritativeOrderNo,
@@ -297,8 +247,6 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
         recoveryWarning: saved ? '' : '瀏覽器未能保存付款資訊，請勿重新整理或重複建立付款單，並請先記下訂單編號。',
       });
       setPaymentState('pending');
-      setPendingAuthoritativeOrder(null);
-      setPricingChanges([]);
       if (saved) setCart([]);
       window.scrollTo(0, 0);
       setStep(3);
@@ -496,7 +444,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                   <div style={{ border:'1px solid var(--light)', padding:'20px 24px' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
                       <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase' }}>收件資訊</p>
-                      <button type="button" disabled={!!pendingAuthoritativeOrder} onClick={() => setStep(1)} style={{ background:'none', border:'none', fontSize:11, color:'var(--dark)', cursor: pendingAuthoritativeOrder ? 'not-allowed' : 'pointer', opacity: pendingAuthoritativeOrder ? 0.45 : 1, textDecoration:'underline', fontFamily:'var(--font-body)', padding:0 }}>修改</button>
+                      <button type="button" onClick={() => setStep(1)} style={{ background:'none', border:'none', fontSize:11, color:'var(--dark)', cursor:'pointer', textDecoration:'underline', fontFamily:'var(--font-body)', padding:0 }}>修改</button>
                     </div>
                     <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'8px 20px', fontSize:13 }}>
                       {[
@@ -521,7 +469,6 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                           <button
                             key={key}
                             type="button"
-                            disabled={!!pendingAuthoritativeOrder}
                             onClick={() => setPaymentMethod(key)}
                             style={{
                               width:'100%',
@@ -529,8 +476,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                               border: active ? '2px solid var(--black)' : '1px solid var(--light)',
                               background: active ? 'var(--off-white)' : 'var(--white)',
                               padding:'16px 18px',
-                              cursor: pendingAuthoritativeOrder ? 'not-allowed' : 'pointer',
-                              opacity: pendingAuthoritativeOrder && !active ? 0.5 : 1,
+                              cursor:'pointer',
                             }}
                           >
                             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12 }}>
@@ -553,23 +499,8 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                   <div style={{ background:'#fffbf0', border:'1px solid #e8d9b0', padding:'12px 14px', fontSize:11, color:'#5a4a1e', lineHeight:1.85, marginBottom:10 }}>
                     ⚠ <strong>退貨說明</strong>：本訂單商品為個人衛生用品，依《消費者保護法》第 19 條之 1，<strong>已拆封商品不適用七天猶豫期退貨</strong>。未拆封商品自收到次日起 7 日內可申請退貨（運費由消費者負擔）。如有品質瑕疵，不限拆封與否均可退換（運費由本公司負擔）。詳見<a href="/info" style={{ color:'#5a4a1e' }}>退換貨政策</a>。
                   </div>
-                  {pricingChanges.length > 0 && (
-                    <div role="alert" style={{ background:'#fff4e5', border:'2px solid #c47a16', padding:'16px 18px', color:'#5a3a10', lineHeight:1.7 }}>
-                      <p style={{ fontSize:14, fontWeight:600, marginBottom:8 }}>成交金額已由後端更新，尚未建立付款單</p>
-                      <p style={{ fontSize:12, marginBottom:10 }}>請確認右側最新訂單明細。只有再次按下確認按鈕後，系統才會建立永豐付款單。</p>
-                      <ul style={{ margin:'0 0 0 18px', padding:0, fontSize:12 }}>
-                        {pricingChanges.map(change => (
-                          <li key={change.label}>{change.label}已重新確認</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
                   <button type="submit" disabled={submitting} style={{ background: submitting ? 'var(--dark)' : 'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: submitting ? 'wait' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8, opacity: submitting ? 0.7 : 1 }}>
-                    {submitting
-                      ? '建立付款單中...'
-                      : pendingAuthoritativeOrder
-                        ? '確認更新後金額並建立付款單'
-                        : '建立付款單'}
+                    {submitting ? '建立付款單中...' : '建立付款單'}
                   </button>
                   {paymentError && <p style={{ fontSize:12, color:'#c0392b', textAlign:'center', lineHeight:1.6 }}>{paymentError}</p>}
                   <p style={{ fontSize:11, color:'var(--dark)', textAlign:'center', lineHeight:1.6 }}>

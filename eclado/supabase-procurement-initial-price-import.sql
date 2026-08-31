@@ -1,4 +1,6 @@
 -- Initial ECLADO procurement catalog import.
+-- LEGACY: retired by supabase-procurement-product-variants.sql.
+-- Do not run this file on procurement v2; costs now live on product_variants.
 -- Source: ECLADO_產品價格對照表.docx (47 rows, USD).
 -- Requires supabase-procurement-catalog.sql.
 --

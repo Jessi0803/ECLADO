@@ -1,3 +1,5 @@
+-- LEGACY: retired by supabase-procurement-product-variants.sql.
+-- Do not run this file on procurement v2; the supplier catalog tables no longer exist.
 -- ECLADO procurement catalog and supplier price history.
 -- Run after products, product_variants, admin_users, is_eclado_admin(),
 -- and set_updated_at() exist.
@@ -284,4 +286,3 @@ set
   name = excluded.name,
   default_currency = excluded.default_currency,
   active = true;
-

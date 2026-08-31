@@ -61,6 +61,33 @@ input, select, textarea { font-family: var(--font); }
 
 /* 會員列表：長 Email 優先收縮，類型與申請狀態保留單行寬度。 */
 @media (min-width: 1181px) {
+  /* 商品列表：類型、庫存、狀態與操作保留可讀寬度；分類欄優先收縮。 */
+  .admin-products-table { table-layout: fixed; min-width: 1000px !important; }
+  .admin-products-table th:nth-child(1) { width: 22%; }
+  .admin-products-table th:nth-child(2) { width: 9%; }
+  .admin-products-table th:nth-child(3) { width: 8%; }
+  .admin-products-table th:nth-child(4) { width: 9%; }
+  .admin-products-table th:nth-child(5),
+  .admin-products-table th:nth-child(6) { width: 9%; }
+  .admin-products-table th:nth-child(7) { width: 82px; }
+  .admin-products-table th:nth-child(8) { width: 62px; }
+  .admin-products-table th:nth-child(9) { width: 72px; }
+  .admin-products-table th:nth-child(10) { width: 106px; }
+  .admin-products-table th:nth-child(2),
+  .admin-products-table td:nth-child(2),
+  .admin-products-table th:nth-child(3),
+  .admin-products-table td:nth-child(3) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .admin-products-table th:nth-child(7),
+  .admin-products-table td:nth-child(7),
+  .admin-products-table td:nth-child(7) > span {
+    white-space: nowrap;
+  }
+
   .admin-members-table { table-layout: fixed; min-width: 840px !important; }
   .admin-members-table .members-col-name { width: 8%; }
   .admin-members-table .members-col-email { width: 15%; }
@@ -266,6 +293,7 @@ input, select, textarea { font-family: var(--font); }
 .product-picker-list { flex: 1; min-height: 260px; overflow-y: auto; }
 .product-picker-list > label { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 13px; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border); cursor: pointer; }
 .product-picker-list > label.selected { background: #faf8f3; }
+.product-picker-list > label.disabled { cursor: not-allowed; opacity: .5; background: #f7f7f5; }
 .product-picker-list input { width: 17px; height: 17px; accent-color: var(--dark); }
 .product-picker-list strong, .product-picker-list span, .product-picker-list small { display: block; }
 .product-picker-list strong { margin-bottom: 5px; font-size: 12px; font-weight: 500; }

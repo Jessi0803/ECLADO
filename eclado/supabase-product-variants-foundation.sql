@@ -14,6 +14,7 @@ create table if not exists public.product_variants (
   sort_order integer not null default 0,
   active boolean not null default true,
   is_custom_order boolean not null default false,
+  procurement_unit_cost_usd numeric(14, 4),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -27,8 +28,15 @@ alter table public.product_variants add column if not exists is_default boolean 
 alter table public.product_variants add column if not exists sort_order integer not null default 0;
 alter table public.product_variants add column if not exists active boolean not null default true;
 alter table public.product_variants add column if not exists is_custom_order boolean not null default false;
+alter table public.product_variants add column if not exists procurement_unit_cost_usd numeric(14, 4);
 alter table public.product_variants add column if not exists created_at timestamptz not null default now();
 alter table public.product_variants add column if not exists updated_at timestamptz not null default now();
+
+alter table public.product_variants
+  drop constraint if exists product_variants_procurement_unit_cost_nonnegative;
+alter table public.product_variants
+  add constraint product_variants_procurement_unit_cost_nonnegative
+  check (procurement_unit_cost_usd is null or procurement_unit_cost_usd >= 0);
 
 -- Safely normalize existing rows before adding strict constraints.
 update public.product_variants variant

@@ -110,25 +110,32 @@ test('主要路徑可開啟且不白屏', async ({ page }) => {
   }
 });
 
-test('首頁依指定順序呈現熱門商品、品牌理念、四大系列與六篇專欄', async ({ page }) => {
+test('首頁依指定順序呈現熱門商品、品牌理念、三大系列與六篇專欄', async ({ page }) => {
   await page.goto('/');
 
   const headings = await page.locator('h2').allTextContents();
   const popularIndex = headings.findIndex(text => text.includes('熱門商品'));
   const aboutIndex = headings.findIndex(text => text.includes('源自韓國醫美診所'));
-  const seriesIndex = headings.findIndex(text => text.includes('四大系列'));
+  const memoryIndex = headings.findIndex(text => text.includes('記憶系列'));
+  const essentialIndex = headings.findIndex(text => text.includes('精粹系列'));
+  const acIndex = headings.findIndex(text => text.includes('AC 系列'));
   const journalIndex = headings.findIndex(text => text.includes('保養專欄'));
 
   expect(popularIndex).toBeGreaterThanOrEqual(0);
   expect(aboutIndex).toBeGreaterThan(popularIndex);
-  expect(seriesIndex).toBeGreaterThan(aboutIndex);
-  expect(journalIndex).toBeGreaterThan(seriesIndex);
+  expect(memoryIndex).toBeGreaterThan(aboutIndex);
+  expect(essentialIndex).toBeGreaterThan(memoryIndex);
+  expect(acIndex).toBeGreaterThan(essentialIndex);
+  expect(journalIndex).toBeGreaterThan(acIndex);
   await expect(page.getByRole('heading', { name: '精選商品' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: '四大系列' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: '呼吸系列' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: '瀏覽全部專欄 →' })).toBeVisible();
   await expect(page.getByText(/min read/i)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '上一組記憶系列商品' })).toHaveCount(0);
 
-  await page.getByRole('button', { name: /呼吸系列/ }).click();
-  await expect(page).toHaveURL(/\/shop\?view=series&series=%E5%91%BC%E5%90%B8$/);
+  await page.getByRole('button', { name: '瀏覽記憶系列商品' }).click();
+  await expect(page).toHaveURL(/\/shop\?view=series&series=Cell$/);
 });
 
 test('首頁六篇專欄可進入完整文章、列表及上一篇下一篇且不顯示閱讀時間', async ({ page }) => {
@@ -385,6 +392,7 @@ test('後台以規格表格與交易式 RPC 儲存商品', async ({ page }) => {
   await page.getByLabel('規格 2 市場價').fill('8800');
   await page.getByLabel('規格 2 專業價').fill('6600');
   await page.getByLabel('規格 2 庫存').fill('5');
+  await page.getByLabel('規格 2 進貨 USD 單價').fill('12.34');
   await page.getByRole('button', { name: '儲存', exact: true }).click();
 
   await expect.poll(() => savedRequest).not.toBeNull();
@@ -402,7 +410,9 @@ test('後台以規格表格與交易式 RPC 儲存商品', async ({ page }) => {
     is_default: false,
     sort_order: 1,
     active: true,
+    procurement_unit_cost_usd: 12.34,
   });
+  expect(savedRequest?.p_variants?.[0]?.procurement_unit_cost_usd).toBeNull();
 });
 
 test('後台新商品預設為草稿並提供三種發布狀態', async ({ page }) => {
@@ -1104,7 +1114,7 @@ test('逾期付款單重新整理後停用付款入口且不建立第二張付�
   expect(paymentRequests).toHaveLength(1);
 });
 
-test('後端成交價與預覽不同時必須再次確認才建立付款單', async ({ page }) => {
+test('後端成交價與預覽不同時直接採用權威金額建立付款單', async ({ page }) => {
   const paymentRequests: Record<string, unknown>[] = [];
   await mockEcladoApis(page, {
     authoritativePriceDelta: 100,
@@ -1127,12 +1137,8 @@ test('後端成交價與預覽不同時必須再次確認才建立付款單', as
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
 
   await page.getByRole('button', { name: /^建立付款單$/ }).click();
-  await expect(page.getByRole('alert')).toContainText('成交金額已由後端更新');
-  await expect(page.getByText('付款單已建立')).toHaveCount(0);
-  expect(paymentRequests).toHaveLength(0);
-
-  await page.getByRole('button', { name: /確認更新後金額並建立付款單/ }).click();
   await expect(page.getByText('付款單已建立')).toBeVisible();
+  await expect(page.getByText('成交金額已由後端更新')).toHaveCount(0);
   expect(paymentRequests).toHaveLength(1);
   expect(paymentRequests[0].amount).toBe(3792);
 });

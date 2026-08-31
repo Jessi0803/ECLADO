@@ -90,11 +90,11 @@ export const adminApplicationRows = [
   },
 ];
 
-export const procurementSupplierItems = [
-  { id: 1, supplier_id: 1, supplier_sku: 'E-96A', name_zh: '氧氣泡泡', name_en: 'Oxygen Bubble Cleanser', specification: '120g', price_id: 101, currency: 'USD', unit_cost: 8.52, has_inventory_link: true, available_stock: 11 },
-  { id: 2, supplier_id: 1, supplier_sku: 'F-588C', name_zh: '金箔片', name_en: 'Gold Foil Sheet', specification: '1pc', price_id: 102, currency: 'USD', unit_cost: 12.4, has_inventory_link: true, available_stock: 0 },
-  { id: 3, supplier_id: 1, supplier_sku: 'F-63', name_zh: 'VONO煥膚組', name_en: 'VONO Peeling Set', specification: '1set', price_id: 103, currency: 'USD', unit_cost: 21.85, has_inventory_link: true, available_stock: 4 },
-  { id: 4, supplier_id: 1, supplier_sku: '239', name_zh: '精萃防曬乳', name_en: 'Exo Clinica UV Suncream', specification: '50g', price_id: 104, currency: 'USD', unit_cost: 3.83, has_inventory_link: false, available_stock: null },
+export const procurementProductVariants = [
+  { id: 1, product_id: 11, sku: 'E-96A', name_zh: '氧氣泡泡', name_en: 'Oxygen Bubble Cleanser', specification: '120g', unit_cost: 8.52, cost_configured: true, available_stock: 11 },
+  { id: 2, product_id: 12, sku: 'F-588C', name_zh: '金箔片', name_en: 'Gold Foil Sheet', specification: '1pc', unit_cost: 12.4, cost_configured: true, available_stock: 0 },
+  { id: 3, product_id: 13, sku: 'F-63', name_zh: 'VONO煥膚組', name_en: 'VONO Peeling Set', specification: '1set', unit_cost: 21.85, cost_configured: true, available_stock: 4 },
+  { id: 4, product_id: 14, sku: '239', name_zh: '精萃防曬乳', name_en: 'Exo Clinica UV Suncream', specification: '50g', unit_cost: null, cost_configured: false, available_stock: 7 },
 ];
 
 export const procurementAddresses = [
@@ -241,8 +241,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   const auditLogs = options.auditLogs || [];
   const authUser = options.authUser;
   const procurement = {
-    suppliers: [{ id: 1, code: 'ECLADO', name: 'ECLADO Korea', default_currency: 'USD', active: true }] as Record<string, unknown>[],
-    supplier_items: procurementSupplierItems.map(item => ({ ...item })) as Record<string, unknown>[],
+    product_variants: procurementProductVariants.map(item => ({ ...item })) as Record<string, unknown>[],
     addresses: procurementAddresses.map(address => ({ ...address })) as Record<string, unknown>[],
     orders: (options.procurementOrders || []).map(order => ({ ...order })) as Record<string, unknown>[],
   };
@@ -372,14 +371,13 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     const totalUsd = incomingItems.reduce((sum: number, item: Record<string, unknown>) => (
       sum + Number(item.quantity || 0) * Number(item.unit_cost || 0)
     ), 0);
-    const supplier = procurement.suppliers.find(item => Number(item.id) === Number(incoming.supplier_id));
     const savedItems = incomingItems.map((item: Record<string, unknown>, index: number) => {
-      const source = procurement.supplier_items.find(candidate => Number(candidate.id) === Number(item.supplier_item_id));
+      const source = procurement.product_variants.find(candidate => Number(candidate.id) === Number(item.product_variant_id));
       return {
         ...item,
         id: index + 1,
         purchase_order_id: id,
-        supplier_sku: source?.supplier_sku,
+        product_sku: source?.sku,
         name_zh: source?.name_zh,
         name_en: source?.name_en,
         specification: source?.specification,
@@ -391,8 +389,8 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       ...incoming,
       id,
       po_number: incoming.po_number || `PO-20260827-${String(id).padStart(4, '0')}`,
-      supplier_name: supplier?.name,
-      supplier_code: supplier?.code,
+      supplier_name: 'ECLADO',
+      supplier_code: 'ECLADO',
       total_usd: totalUsd,
       total_twd: totalUsd * Number(incoming.exchange_rate || 0),
       created_at: incoming.created_at || new Date().toISOString(),

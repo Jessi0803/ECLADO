@@ -245,6 +245,9 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       sort_order: index,
       active: variant.active !== false,
       is_custom_order: !!variant.isCustomOrder,
+      procurement_unit_cost_usd: variant.procurementUnitCostUsd === '' || variant.procurementUnitCostUsd == null
+        ? null
+        : Number(variant.procurementUnitCostUsd),
     }));
 
     const uploadedPaths = [];

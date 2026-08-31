@@ -130,11 +130,13 @@ test('叫貨管理可多選商品、查看庫存、計算雙幣別並匯出三�
   await page.getByRole('button', { name: /選擇商品/ }).click();
 
   const picker = page.getByRole('dialog', { name: '選擇叫貨商品' });
-  await expect(picker.getByText('E-96A · 氧氣泡泡 120g')).toBeVisible();
+  await expect(picker.getByText('E-96A · 氧氣泡泡 · 120g')).toBeVisible();
   await expect(picker.getByText('庫存 11')).toBeVisible();
-  await expect(picker.getByText('尚未連結庫存')).toBeVisible();
-  await picker.getByText('E-96A · 氧氣泡泡 120g').click();
-  await picker.getByText('F-63 · VONO煥膚組 1set').click();
+  const missingCost = picker.getByText('239 · 精萃防曬乳 · 50g').locator('xpath=ancestor::label');
+  await expect(missingCost.getByText('進貨成本 尚未設定')).toBeVisible();
+  await expect(missingCost.locator('input[type="checkbox"]')).toBeDisabled();
+  await picker.getByText('E-96A · 氧氣泡泡 · 120g').click();
+  await picker.getByText('F-63 · VONO煥膚組 · 1set').click();
   await picker.getByRole('button', { name: '加入 2 項商品' }).click();
 
   await page.getByLabel('氧氣泡泡 數量').fill('10');
@@ -148,6 +150,11 @@ test('叫貨管理可多選商品、查看庫存、計算雙幣別並匯出三�
   await expect(page.getByRole('heading', { name: 'PO-20260827-0001' })).toBeVisible();
   await expect(page.getByText('待下單').first()).toBeVisible();
   expect(savedRequest?.p_order).toMatchObject({ shipping_address: { address_text: expect.any(String) } });
+  expect(savedRequest?.p_order).not.toHaveProperty('supplier_id');
+  expect(savedRequest?.p_items).toEqual(expect.arrayContaining([
+    expect.objectContaining({ product_variant_id: 1 }),
+    expect.objectContaining({ product_variant_id: 3 }),
+  ]));
   expect(Object.keys((savedRequest?.p_order as { shipping_address: Record<string, unknown> }).shipping_address)).toEqual(['address_text']);
   await expect(page.getByRole('button', { name: '永久刪除' })).toBeVisible();
   await expect(page.getByLabel('叫貨單狀態').locator('option[value="cancelled"]')).toHaveCount(0);
@@ -183,7 +190,7 @@ test('叫貨單草稿可不填地址儲存並永久刪除，後期狀態不可�
   await page.getByRole('button', { name: /建立叫貨單/ }).click();
   await page.getByRole('button', { name: /選擇商品/ }).click();
   const picker = page.getByRole('dialog', { name: '選擇叫貨商品' });
-  await picker.getByText('E-96A · 氧氣泡泡 120g').click();
+  await picker.getByText('E-96A · 氧氣泡泡 · 120g').click();
   await picker.getByRole('button', { name: '加入 1 項商品' }).click();
   await page.getByLabel('收件地址').fill('');
   await page.getByRole('button', { name: '儲存草稿' }).click();
@@ -201,7 +208,7 @@ test('叫貨單草稿可不填地址儲存並永久刪除，後期狀態不可�
 
   await page.getByRole('button', { name: /建立叫貨單/ }).click();
   await page.getByRole('button', { name: /選擇商品/ }).click();
-  await page.getByRole('dialog', { name: '選擇叫貨商品' }).getByText('F-63 · VONO煥膚組 1set').click();
+  await page.getByRole('dialog', { name: '選擇叫貨商品' }).getByText('F-63 · VONO煥膚組 · 1set').click();
   await page.getByRole('dialog', { name: '選擇叫貨商品' }).getByRole('button', { name: '加入 1 項商品' }).click();
   await page.getByRole('button', { name: '確認建立' }).click();
   const status = page.getByLabel('叫貨單狀態');
@@ -329,7 +336,41 @@ test('商品、訂單與會員列表響應式切換，詳情使用抽屜且不�
 
   await openAdminSection(page, /商品 & 庫存/);
   await assertResponsiveList();
-  await page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr').getByRole('button', { name: '編輯' }).click();
+  const productRow = page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr');
+  const productColumns = await productRow.evaluate(row => {
+    const cells = Array.from(row.querySelectorAll('td'));
+    const styleOf = (index: number) => {
+      const cell = cells[index];
+      const style = getComputedStyle(cell);
+      return {
+        width: cell.getBoundingClientRect().width,
+        whiteSpace: style.whiteSpace,
+        overflow: style.overflow,
+        textOverflow: style.textOverflow,
+      };
+    };
+    return {
+      viewportWidth: window.innerWidth,
+      category: styleOf(1),
+      series: styleOf(2),
+      productType: styleOf(6),
+    };
+  });
+  if (productColumns.viewportWidth > 1180) {
+    expect(productColumns.productType.width).toBeGreaterThanOrEqual(80);
+    expect(productColumns.productType.whiteSpace).toBe('nowrap');
+    expect(productColumns.category).toMatchObject({
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+    });
+    expect(productColumns.series).toMatchObject({
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+    });
+  }
+  await productRow.getByRole('button', { name: '編輯' }).click();
   await assertDrawer('編輯商品');
   await page.getByRole('dialog', { name: '編輯商品' }).getByRole('button', { name: '關閉商品編輯' }).click();
   await expect(page.getByRole('dialog', { name: '編輯商品' })).toHaveCount(0);

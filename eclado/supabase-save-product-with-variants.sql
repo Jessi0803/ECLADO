@@ -31,6 +31,7 @@ declare
   normalized_active boolean;
   normalized_default boolean;
   normalized_custom_order boolean;
+  normalized_procurement_unit_cost numeric;
   normalized_publication_status text;
   default_count integer := 0;
   default_variant public.product_variants%rowtype;
@@ -278,6 +279,11 @@ begin
     normalized_default := coalesce((variant_input ->> 'is_default')::boolean, false);
     normalized_active := coalesce((variant_input ->> 'active')::boolean, true);
     normalized_custom_order := coalesce((variant_input ->> 'is_custom_order')::boolean, false);
+    normalized_procurement_unit_cost := nullif(variant_input ->> 'procurement_unit_cost_usd', '')::numeric;
+
+    if normalized_procurement_unit_cost is not null and normalized_procurement_unit_cost < 0 then
+      raise exception 'Procurement unit cost must be zero or greater' using errcode = '22023';
+    end if;
 
     if coalesce(variant_input ->> 'id', '') ~ '^[0-9]+$' then
       variant_id := (variant_input ->> 'id')::bigint;
@@ -290,6 +296,7 @@ begin
         stock = normalized_stock,
         is_default = normalized_default,
         is_custom_order = normalized_custom_order,
+        procurement_unit_cost_usd = normalized_procurement_unit_cost,
         sort_order = greatest(coalesce((variant_input ->> 'sort_order')::integer, variant_position::integer - 1), 0),
         active = normalized_active,
         updated_at = now()
@@ -298,12 +305,12 @@ begin
     else
       insert into public.product_variants (
         product_id, sku, size, price, pro_price, stock,
-        is_default, is_custom_order, sort_order, active
+        is_default, is_custom_order, procurement_unit_cost_usd, sort_order, active
       )
       values (
         target_product_id, normalized_sku, normalized_size,
         normalized_price, normalized_pro_price, normalized_stock,
-        normalized_default, normalized_custom_order,
+        normalized_default, normalized_custom_order, normalized_procurement_unit_cost,
         greatest(coalesce((variant_input ->> 'sort_order')::integer, variant_position::integer - 1), 0),
         normalized_active
       )
@@ -340,6 +347,7 @@ begin
         'stock', variant.stock,
         'isDefault', variant.is_default,
         'isCustomOrder', variant.is_custom_order,
+        'procurementUnitCostUsd', variant.procurement_unit_cost_usd,
         'sortOrder', variant.sort_order,
         'active', variant.active
       )

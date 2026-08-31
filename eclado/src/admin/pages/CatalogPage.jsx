@@ -88,6 +88,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
         sortOrder: 0,
         active: true,
         isCustomOrder: false,
+        procurementUnitCostUsd: '',
       }],
       sourceFolderName: '',
       importedFromDrive: false,
@@ -129,6 +130,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
           sortOrder: prev.variants.length,
           active: true,
           isCustomOrder: false,
+          procurementUnitCostUsd: '',
         },
       ],
     }));
@@ -270,11 +272,16 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
       price: Number(variant.price) || 0,
       proPrice: Number(variant.proPrice) || 0,
       stock: Math.max(0, Number(variant.stock) || 0),
+      procurementUnitCostUsd: String(variant.procurementUnitCostUsd ?? '').trim() === ''
+        ? ''
+        : Number(variant.procurementUnitCostUsd),
       sortOrder: index,
       active: variant.active !== false,
     }));
     const invalidVariant = normalizedVariants.find(variant => (
       !variant.sku || !variant.size || variant.price < 0 || variant.proPrice < 0 || variant.stock < 0
+      || (variant.procurementUnitCostUsd !== ''
+        && (!Number.isFinite(variant.procurementUnitCostUsd) || variant.procurementUnitCostUsd < 0))
     ));
     if (invalidVariant) {
       setError('每個規格都必須填寫 SKU、規格名稱、非負價格與庫存');
@@ -632,10 +639,10 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                 </div>
 
                 <div style={{ overflowX: 'auto', border: '1px solid var(--border)' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1010 }}>
                     <thead>
                       <tr style={{ background: 'var(--off)', borderBottom: '1px solid var(--border)' }}>
-                        {['順序', '規格', 'SKU', '市場價', '專業價', '庫存', '客訂', '預設', '啟用', '操作'].map(header => (
+                        {['順序', '規格', 'SKU', '市場價', '專業價', '庫存', '進貨 USD', '客訂', '預設', '啟用', '操作'].map(header => (
                           <th key={header} style={{ padding: '9px 8px', textAlign: 'left', fontSize: 10, color: 'var(--mid)', fontWeight: 500, whiteSpace: 'nowrap' }}>{header}</th>
                         ))}
                       </tr>
@@ -670,6 +677,10 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                           <td style={{ padding: '8px' }}>
                             <input aria-label={`規格 ${index + 1} 庫存`} type="number" min="0" value={variant.stock} onChange={e => updateVariant(index, 'stock', e.target.value)}
                               style={{ ...inp, width: 70 }} />
+                          </td>
+                          <td style={{ padding: '8px' }}>
+                            <input aria-label={`規格 ${index + 1} 進貨 USD 單價`} type="number" min="0" step="0.01" value={variant.procurementUnitCostUsd ?? ''}
+                              onChange={e => updateVariant(index, 'procurementUnitCostUsd', e.target.value)} style={{ ...inp, width: 86 }} placeholder="未設定" />
                           </td>
                           <td style={{ padding: '8px', textAlign: 'center' }}>
                             <input aria-label={`規格 ${index + 1} 客訂規格`} type="checkbox" checked={!!variant.isCustomOrder}

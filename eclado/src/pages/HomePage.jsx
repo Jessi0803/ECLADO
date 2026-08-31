@@ -179,7 +179,15 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
         </div>
       </section>
 
-      <SeriesShowcase products={products} setPage={setPage} isMobile={isMobile} />
+      <SeriesShowcase
+        products={products}
+        user={user}
+        onAdd={addToCart}
+        onSelect={onSelectProduct}
+        setPage={setPage}
+        isMobile={isMobile}
+        promotions={promotions}
+      />
 
       <KnowledgeJournal isMobile={isMobile} onOpenArticle={onOpenArticle} onOpenJournal={() => setPage('journal')} />
 

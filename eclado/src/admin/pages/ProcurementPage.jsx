@@ -34,14 +34,13 @@ function number(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function createDraft(suppliers, addresses) {
+function createDraft(addresses) {
   const defaultAddress = addresses.find(address => address.is_default) || addresses[0];
   return {
     id: '',
     po_number: '',
-    supplier_id: suppliers[0]?.id || '',
-    supplier_code: suppliers[0]?.code || 'ECLADO',
-    supplier_name: suppliers[0]?.name || 'ECLADO Korea',
+    supplier_code: 'ECLADO',
+    supplier_name: 'ECLADO',
     status: 'draft',
     exchange_rate: 32,
     total_usd: 0,
@@ -76,7 +75,7 @@ function orderFromStored(stored) {
 }
 
 export default function ProcurementPage() {
-  const [data, setData] = useState({ suppliers: [], supplier_items: [], addresses: [], orders: [] });
+  const [data, setData] = useState({ product_variants: [], addresses: [], orders: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [mode, setMode] = useState('list');
@@ -103,8 +102,7 @@ export default function ProcurementPage() {
       return;
     }
     const normalized = {
-      suppliers: payload?.suppliers || [],
-      supplier_items: payload?.supplier_items || [],
+      product_variants: payload?.product_variants || [],
       addresses: payload?.addresses || [],
       orders: payload?.orders || [],
     };
@@ -118,21 +116,20 @@ export default function ProcurementPage() {
 
   const filteredPickerItems = useMemo(() => {
     const keyword = pickerSearch.trim().toLowerCase();
-    return data.supplier_items.filter(item => {
-      if (String(item.supplier_id) !== String(draft?.supplier_id)) return false;
-      if (pickerFilter === 'low' && !(item.has_inventory_link && number(item.available_stock) <= 5)) return false;
-      if (pickerFilter === 'zero' && !(item.has_inventory_link && number(item.available_stock) === 0)) return false;
+    return data.product_variants.filter(item => {
+      if (pickerFilter === 'low' && number(item.available_stock) > 5) return false;
+      if (pickerFilter === 'zero' && number(item.available_stock) !== 0) return false;
       if (pickerFilter === 'selected' && !pickerSelected.has(String(item.id))) return false;
       if (!keyword) return true;
-      return [item.supplier_sku, item.name_zh, item.name_en, item.specification]
+      return [item.sku, item.name_zh, item.name_en, item.specification]
         .some(value => String(value || '').toLowerCase().includes(keyword));
     });
-  }, [data.supplier_items, draft?.supplier_id, pickerFilter, pickerSearch, pickerSelected]);
+  }, [data.product_variants, pickerFilter, pickerSearch, pickerSelected]);
 
-  const displayedOrder = calculateOrder(mode === 'detail' ? selectedOrder : (draft || createDraft([], [])));
+  const displayedOrder = calculateOrder(mode === 'detail' ? selectedOrder : (draft || createDraft([])));
 
   function startNew() {
-    setDraft(createDraft(data.suppliers, data.addresses));
+    setDraft(createDraft(data.addresses));
     setSelectedOrder(null);
     setMode('edit');
   }
@@ -151,27 +148,26 @@ export default function ProcurementPage() {
   }
 
   function openPicker() {
-    setPickerSelected(new Set((draft.items || []).map(item => String(item.supplier_item_id))));
+    setPickerSelected(new Set((draft.items || []).map(item => String(item.product_variant_id))));
     setPickerSearch('');
     setPickerFilter('all');
     setPickerOpen(true);
   }
 
   function applyPicker() {
-    const existing = new Map((draft.items || []).map(item => [String(item.supplier_item_id), item]));
-    const items = data.supplier_items
-      .filter(item => pickerSelected.has(String(item.id)))
+    const existing = new Map((draft.items || []).map(item => [String(item.product_variant_id), item]));
+    const items = data.product_variants
+      .filter(item => pickerSelected.has(String(item.id)) && item.cost_configured)
       .map(item => existing.get(String(item.id)) || {
-        supplier_item_id: item.id,
-        supplier_price_id: item.price_id,
-        supplier_sku: item.supplier_sku,
+        product_variant_id: item.id,
+        product_sku: item.sku,
         name_zh: item.name_zh,
         name_en: item.name_en,
         specification: item.specification,
         quantity: 1,
         unit_cost: number(item.unit_cost),
         subtotal_usd: number(item.unit_cost),
-        stock_at_order: item.has_inventory_link ? number(item.available_stock) : null,
+        stock_at_order: number(item.available_stock),
       });
     setDraft(current => calculateOrder({ ...current, items }));
     setPickerOpen(false);
@@ -180,7 +176,7 @@ export default function ProcurementPage() {
   function updateItem(itemId, patch) {
     setDraft(current => calculateOrder({
       ...current,
-      items: current.items.map(item => String(item.supplier_item_id) === String(itemId) ? { ...item, ...patch } : item),
+      items: current.items.map(item => String(item.product_variant_id) === String(itemId) ? { ...item, ...patch } : item),
     }));
   }
 
@@ -231,7 +227,6 @@ export default function ProcurementPage() {
     const { data: saved, error: saveError } = await supabase.rpc('save_purchase_order', {
       p_order: {
         ...(calculated.id ? { id: calculated.id } : {}),
-        supplier_id: calculated.supplier_id,
         status,
         exchange_rate: calculated.exchange_rate,
         address_id: calculated.address_id || null,
@@ -239,8 +234,7 @@ export default function ProcurementPage() {
         notes: calculated.notes || null,
       },
       p_items: calculated.items.map(item => ({
-        supplier_item_id: item.supplier_item_id,
-        supplier_price_id: item.supplier_price_id || null,
+        product_variant_id: item.product_variant_id,
         quantity: item.quantity,
         unit_cost: item.unit_cost,
         stock_at_order: item.stock_at_order,
@@ -312,7 +306,7 @@ export default function ProcurementPage() {
 
       {mode === 'list' && <>
         <div className="procurement-header">
-          <div><h1>叫貨管理</h1><p>建立與保存向供應商提出的叫貨單</p></div>
+          <div><h1>叫貨管理</h1><p>建立與保存向 ECLADO 提出的叫貨單</p></div>
           <button className="admin-primary-btn" onClick={startNew}>＋ 建立叫貨單</button>
         </div>
         <div className="procurement-stats">
@@ -356,10 +350,7 @@ export default function ProcurementPage() {
 
         <div className="procurement-form-card">
           <div className="procurement-form-grid">
-            <label>供應商<select value={draft.supplier_id} onChange={event => {
-              const supplier = data.suppliers.find(item => String(item.id) === event.target.value);
-              setDraft(current => ({ ...current, supplier_id: event.target.value, supplier_code: supplier?.code || '', supplier_name: supplier?.name || '', items: [] }));
-            }}>{data.suppliers.map(supplier => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>
+            <label>供應來源<input value="ECLADO" disabled /></label>
             <label>PO 編號<input value={draft.po_number || '儲存後由系統產生'} disabled /></label>
             <label>美金兌台幣匯率<input type="number" min="0.0001" step="0.0001" value={draft.exchange_rate} onChange={event => setDraft(current => calculateOrder({ ...current, exchange_rate: event.target.value }))} /></label>
             <label>狀態<input value={STATUS_LABELS[draft.status] || '草稿'} disabled /></label>
@@ -370,13 +361,13 @@ export default function ProcurementPage() {
           <div className="procurement-section-heading"><div><h2>叫貨商品</h2><p>選擇商品時會同時顯示目前庫存與進貨價</p></div><button className="admin-secondary-btn" onClick={openPicker}>＋ 選擇商品</button></div>
           {!draft.items.length ? <div className="procurement-empty-selection"><strong>尚未選擇商品</strong><span>點擊「選擇商品」一次勾選多個品項</span></div> : <div className="table-scroll"><table className="responsive-admin-table procurement-items-table">
             <thead><tr><th>產品</th><th>建立時庫存</th><th>數量</th><th>USD 單價</th><th>小計</th><th></th></tr></thead>
-            <tbody>{displayedOrder.items.map(item => <tr key={item.supplier_item_id}>
-              <td data-label="產品"><strong>{item.supplier_sku} · {item.name_zh}</strong><small>{item.name_en} · {item.specification}</small></td>
-              <td data-label="建立時庫存">{item.stock_at_order == null ? <span className="inventory-unlinked">尚未連結</span> : `${item.stock_at_order} 件`}</td>
-              <td data-label="數量"><input aria-label={`${item.name_zh} 數量`} className="procurement-number-input" type="number" min="1" step="1" value={item.quantity} onChange={event => updateItem(item.supplier_item_id, { quantity: event.target.value })} /></td>
-              <td data-label="USD 單價"><input aria-label={`${item.name_zh} 單價`} className="procurement-price-input" type="number" min="0" step="0.01" value={item.unit_cost} onChange={event => updateItem(item.supplier_item_id, { unit_cost: event.target.value })} /></td>
+            <tbody>{displayedOrder.items.map(item => <tr key={item.product_variant_id}>
+              <td data-label="產品"><strong>{item.product_sku} · {item.name_zh} · {item.specification}</strong><small>{item.name_en}</small></td>
+              <td data-label="建立時庫存">{item.stock_at_order} 件</td>
+              <td data-label="數量"><input aria-label={`${item.name_zh} 數量`} className="procurement-number-input" type="number" min="1" step="1" value={item.quantity} onChange={event => updateItem(item.product_variant_id, { quantity: event.target.value })} /></td>
+              <td data-label="USD 單價"><input aria-label={`${item.name_zh} 單價`} className="procurement-price-input" type="number" min="0" step="0.01" value={item.unit_cost} onChange={event => updateItem(item.product_variant_id, { unit_cost: event.target.value })} /></td>
               <td data-label="小計"><strong>{formatUsd(item.subtotal_usd)}</strong></td>
-              <td data-label="操作"><button className="procurement-remove" aria-label={`移除 ${item.name_zh}`} onClick={() => setDraft(current => calculateOrder({ ...current, items: current.items.filter(row => String(row.supplier_item_id) !== String(item.supplier_item_id)) }))}>移除</button></td>
+              <td data-label="操作"><button className="procurement-remove" aria-label={`移除 ${item.name_zh}`} onClick={() => setDraft(current => calculateOrder({ ...current, items: current.items.filter(row => String(row.product_variant_id) !== String(item.product_variant_id)) }))}>移除</button></td>
             </tr>)}</tbody>
           </table></div>}
         </div>
@@ -415,11 +406,12 @@ export default function ProcurementPage() {
       </>}
 
       {pickerOpen && <div className="procurement-modal-backdrop"><div className="procurement-modal product-picker-modal" role="dialog" aria-label="選擇叫貨商品">
-        <div className="procurement-modal-header"><div><h2>選擇叫貨商品</h2><p>目前已選 {pickerSelected.size} 項 · 產品總數 {data.supplier_items.filter(item => String(item.supplier_id) === String(draft.supplier_id)).length} 項</p></div><button onClick={() => setPickerOpen(false)}>×</button></div>
+        <div className="procurement-modal-header"><div><h2>選擇叫貨商品</h2><p>目前已選 {pickerSelected.size} 項 · 規格總數 {data.product_variants.length} 項</p></div><button onClick={() => setPickerOpen(false)}>×</button></div>
         <div className="product-picker-controls"><input autoFocus placeholder="搜尋 SKU、中文名稱或英文名稱" value={pickerSearch} onChange={event => setPickerSearch(event.target.value)} /><div>{[['all','全部'],['low','低庫存'],['zero','零庫存'],['selected','已選']].map(([value,label]) => <button key={value} className={pickerFilter === value ? 'active' : ''} onClick={() => setPickerFilter(value)}>{label}</button>)}</div></div>
         <div className="product-picker-list">{filteredPickerItems.map(item => {
           const checked = pickerSelected.has(String(item.id));
-          return <label key={item.id} className={checked ? 'selected' : ''}><input type="checkbox" checked={checked} onChange={() => setPickerSelected(current => { const next = new Set(current); checked ? next.delete(String(item.id)) : next.add(String(item.id)); return next; })} /><div><strong>{item.supplier_sku} · {item.name_zh} {item.specification}</strong><span>{item.name_en || '尚未設定英文名稱'}</span><small>進貨成本 {item.unit_cost == null ? '尚未設定' : formatUsd(item.unit_cost)}</small></div>{item.has_inventory_link ? <span className={number(item.available_stock) === 0 ? 'stock-zero' : number(item.available_stock) <= 5 ? 'stock-low' : 'stock-ok'}>庫存 {item.available_stock}</span> : <span className="inventory-unlinked">尚未連結庫存</span>}</label>;
+          const selectable = item.cost_configured === true;
+          return <label key={item.id} className={`${checked ? 'selected' : ''}${selectable ? '' : ' disabled'}`}><input type="checkbox" checked={checked} disabled={!selectable} onChange={() => setPickerSelected(current => { const next = new Set(current); checked ? next.delete(String(item.id)) : next.add(String(item.id)); return next; })} /><div><strong>{item.sku} · {item.name_zh} · {item.specification}</strong><span>{item.name_en || '尚未設定英文名稱'}</span><small>進貨成本 {selectable ? formatUsd(item.unit_cost) : '尚未設定'}</small></div><span className={number(item.available_stock) === 0 ? 'stock-zero' : number(item.available_stock) <= 5 ? 'stock-low' : 'stock-ok'}>庫存 {item.available_stock}</span></label>;
         })}</div>
         <div className="procurement-modal-footer"><button className="admin-secondary-btn" onClick={() => setPickerSelected(new Set())}>清除選取</button><div><button className="admin-secondary-btn" onClick={() => setPickerOpen(false)}>取消</button><button className="admin-primary-btn" onClick={applyPicker}>加入 {pickerSelected.size} 項商品</button></div></div>
       </div></div>}

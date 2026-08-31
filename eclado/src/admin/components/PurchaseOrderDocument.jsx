@@ -13,7 +13,7 @@ export default function PurchaseOrderDocument({ order, documentRef }) {
       <h2>PURCHASE ORDER (叫貨單)</h2>
       <div className="purchase-order-document-meta">
         <div>PO Number: {order.po_number || '儲存後產生'}</div>
-        <div>Supplier ID {order.supplier_code || 'ECLADO'} / 廠商 ID {order.supplier_code || 'ECLADO'}: {order.supplier_id || ''}</div>
+        <div>Supplier / 供應來源: ECLADO</div>
         <div>Shipping Address / 收件地址:</div>
         <div>{address.address_text || ''}</div>
         <div>Status: {STATUS_LABELS[order.status] || order.status || '草稿'}</div>
@@ -27,8 +27,8 @@ export default function PurchaseOrderDocument({ order, documentRef }) {
         </tr></thead>
         <tbody>
           {(order.items || []).map(item => (
-            <tr key={item.id || item.supplier_item_id}>
-              <td>{item.supplier_sku}</td>
+            <tr key={item.id || item.product_variant_id}>
+              <td>{item.product_sku}</td>
               <td>{[item.name_zh, item.specification].filter(Boolean).join(' ')}</td>
               <td>{item.name_en || '—'}</td>
               <td>{item.quantity}</td>

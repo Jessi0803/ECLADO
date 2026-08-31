@@ -50,7 +50,7 @@ export async function exportPurchaseOrderExcel(order) {
 
   const meta = [
     [`PO Number: ${order.po_number || '儲存後產生'}`],
-    [`Supplier ID ${order.supplier_code || 'ECLADO'} / 廠商 ID ${order.supplier_code || 'ECLADO'}: ${order.supplier_id || ''}`],
+    ['Supplier / 供應來源: ECLADO'],
     [`Status: ${order.status || 'draft'}`],
     [`Created: ${new Date(order.created_at || Date.now()).toLocaleString('zh-TW')}`],
   ];
@@ -83,7 +83,7 @@ export async function exportPurchaseOrderExcel(order) {
     const rowNumber = headerRow + 1 + index;
     const row = sheet.getRow(rowNumber);
     row.values = [
-      item.supplier_sku,
+      item.product_sku,
       [item.name_zh, item.specification].filter(Boolean).join(' '),
       item.name_en || '—',
       Number(item.quantity || 0),

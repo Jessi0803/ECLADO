@@ -1,3 +1,5 @@
+-- LEGACY v1 bootstrap retained only as migration history.
+-- New installations must finish with supabase-procurement-product-variants.sql.
 -- ECLADO procurement purchase orders, line-item snapshots and reusable addresses.
 -- Run after supabase-procurement-catalog.sql and supabase-admin-users.sql.
 
