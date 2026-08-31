@@ -175,7 +175,7 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
                 ))}
               </div>
             </div>
-            <img src="assets/images/about-eclado-clinic.jpg" alt="" style={{ width:'100%', height: isMobile ? 280 : 480, objectFit:'cover', display:'block' }} />
+            <img src="assets/images/about-eclado-clinic.jpg" alt="" style={{ width:'100%', height:'auto', aspectRatio:'1 / 1', objectFit:'cover', display:'block' }} />
           </div>
         </div>
       </section>
