@@ -124,6 +124,18 @@ test('LINE 內建瀏覽器只對固定導覽列啟用合成層穩定處理', asy
   await expect(page.locator('nav.site-nav')).not.toHaveCSS('transform', 'none');
   await expect(page.getByTestId('browser-debug-panel')).toContainText('LINE UA：true');
   await expect(page.getByTestId('browser-debug-panel')).toContainText('LINE class：true');
+  const initialHeroHeight = await page.evaluate(() => (
+    document.documentElement.style.getPropertyValue('--line-home-hero-height')
+  ));
+  expect(initialHeroHeight).toMatch(/^\d+px$/);
+  await expect(page.getByTestId('browser-debug-panel')).toContainText(`LINE 固定 Hero：${initialHeroHeight}`);
+
+  await page.setViewportSize({ width:390, height:700 });
+  const resizedHeroHeight = await page.evaluate(() => (
+    document.documentElement.style.getPropertyValue('--line-home-hero-height')
+  ));
+  expect(resizedHeroHeight).toBe(initialHeroHeight);
+  await expect(page.locator('.home-hero')).toHaveCSS('height', initialHeroHeight);
 });
 
 test('首頁依指定順序呈現熱門商品、品牌理念、三大系列與六篇專欄', async ({ page }) => {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 function readBrowserSnapshot(lastEvent, eventCount) {
   const viewport = window.visualViewport;
+  const hero = document.querySelector('.home-hero');
   return {
     lastEvent,
     eventCount,
@@ -19,6 +20,8 @@ function readBrowserSnapshot(lastEvent, eventCount) {
     scrollY: window.scrollY.toFixed(1),
     screen: `${window.screen.width} × ${window.screen.height} / avail ${window.screen.availHeight}`,
     orientation: window.screen.orientation?.type || '不支援',
+    heroHeight: hero ? window.getComputedStyle(hero).height : '目前頁面無 Hero',
+    stableHeroHeight: window.getComputedStyle(document.documentElement).getPropertyValue('--line-home-hero-height').trim() || '未設定',
     userAgent: window.navigator.userAgent,
   };
 }
@@ -85,6 +88,8 @@ export default function BrowserDebugPanel() {
       <div>scrollY：{snapshot.scrollY}</div>
       <div>screen：{snapshot.screen}</div>
       <div>orientation：{snapshot.orientation}</div>
+      <div>Hero 實際高度：{snapshot.heroHeight}</div>
+      <div>LINE 固定 Hero：{snapshot.stableHeroHeight}</div>
       <div style={{ marginTop:6, overflowWrap:'anywhere' }}>UA：{snapshot.userAgent}</div>
     </aside>
   );
