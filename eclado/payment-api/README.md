@@ -9,11 +9,15 @@
   信用卡預設 `AutoBilling=Y`（自動請款）；BackendURL 一律強制指向本服務。
 - `GET|POST /return` — 信用卡(含行動支付)付款結果的同步回拋。用 PayToken 向豐收款
   `OrderPayQuery` 確認後，標記訂單已付款，再導回前台 `/payment-result`。返回網址只帶
-  訂單編號與非權威的結果提示，不會把 PayToken 暴露給瀏覽器；前端會再以付款授權
-  token 查詢權威狀態。
+  訂單編號、非權威的結果提示，以及綁定該訂單的 10 分鐘短效結果憑證，不會把
+  PayToken 暴露給瀏覽器；前端即使換分頁，也能用短效憑證輪詢權威狀態。
 - `POST /api/sinopac/notify` — 各付款方式的非同步通知（BackendURL）。確認後標記已付款。
 - `POST /api/sinopac/query-payment` — `OrderQuery` 查詢。
+- `POST /api/sinopac/retry-payment` — 信用卡／行動支付失敗後保留原網站訂單，建立新的
+  永豐付款嘗試與短效結果憑證；ATM 不使用此流程。
 - `POST /api/orders/payment-instructions` — 驗證會員身分與訂單所有權後，恢復原付款資訊。
+- `POST /api/orders/member-payment-summaries` — 只回傳登入會員本人未付款訂單的最小付款摘要，
+  供會員訂單列表安全顯示「重新付款」入口。
 - `POST /api/orders/guest-lookup` — 以短查詢碼與結帳手機查詢訪客訂單，成功後簽發短效憑證。
 - `POST /api/orders/guest-details` — 以短效訪客憑證更新該筆訂單、付款與物流狀態；不再次傳送手機號碼。
 - `POST /api/orders/expire-overdue` — 清理逾期未付款訂單；必須帶正確的 `X-Cleanup-Key`。
@@ -41,6 +45,10 @@ RPC 與重試索引；既有已付款訂單會標記為歷史已處理，避免�
 逾期判斷以 Supabase 訂單的 `payment_due_at` 為唯一依據；新訂單預設為建立後 48 小時。
 建立永豐 ATM 付款單時，`ExpireDate`／`ExpireTime` 同樣由 `payment_due_at` 轉換，不接受前端自訂期限。
 資料庫只保存 token hash，且會原子鎖定建單流程，避免同一訂單重複建立付款單。
+`order_payment_instructions.payment_state` 會另外保存最後一次查詢到的付款狀態；
+信用卡／行動支付尚未成功時維持 `unpaid`，不會誤標成「轉帳待確認」。
+每次重新付款會寫入 `order_payment_attempts`，並使用獨立的永豐訂單號；即使舊付款頁
+較晚回傳，也能追溯到原網站訂單，且舊失敗通知不會覆蓋目前的付款嘗試。
 
 ## 付款狀態判定（豐收款 PayStatus，規格書 §10.2）
 

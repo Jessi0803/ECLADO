@@ -44,7 +44,7 @@ export async function createSinopacPayment(payload) {
   }
 }
 
-export async function querySinopacPayment({ orderNo, paymentToken, guestAccessToken }) {
+export async function querySinopacPayment({ orderNo, paymentToken, guestAccessToken, resultAccessToken }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PAYMENT_REQUEST_TIMEOUT_MS);
   try {
@@ -56,6 +56,7 @@ export async function querySinopacPayment({ orderNo, paymentToken, guestAccessTo
         orderNo,
         paymentToken: paymentToken || undefined,
         guestAccessToken: guestAccessToken || undefined,
+        resultAccessToken: resultAccessToken || undefined,
       }),
       signal: controller.signal,
     });
@@ -68,6 +69,33 @@ export async function querySinopacPayment({ orderNo, paymentToken, guestAccessTo
       order: data.order || null,
       paymentState: data.paymentState || '',
     };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function retrySinopacPayment({ orderNo, paymentToken, guestAccessToken, resultAccessToken }) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PAYMENT_REQUEST_TIMEOUT_MS);
+  try {
+    const authHeaders = await memberAuthorizationHeaders();
+    const response = await fetch(`${SINOPAC_PAYMENT_API}/api/sinopac/retry-payment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({
+        orderNo,
+        paymentToken: paymentToken || undefined,
+        guestAccessToken: guestAccessToken || undefined,
+        resultAccessToken: resultAccessToken || undefined,
+      }),
+      signal: controller.signal,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.ok === false) {
+      throw new Error(data.error || `重新建立付款單失敗（HTTP ${response.status}）`);
+    }
+    if (!data.paymentLink) throw new Error('付款服務未回傳付款網址');
+    return data;
   } finally {
     clearTimeout(timeout);
   }
@@ -130,6 +158,28 @@ export async function getMemberPaymentInstructions(orderNo) {
       throw new Error(data.error || `付款資訊讀取失敗（HTTP ${response.status}）`);
     }
     return data;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function getMemberPaymentSummaries() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PAYMENT_REQUEST_TIMEOUT_MS);
+  try {
+    const authHeaders = await memberAuthorizationHeaders();
+    if (!authHeaders.Authorization) throw new Error('請先登入會員');
+    const response = await fetch(`${SINOPAC_PAYMENT_API}/api/orders/member-payment-summaries`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', ...authHeaders },
+      body: '{}',
+      signal: controller.signal,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.ok === false) {
+      throw new Error(data.error || `付款狀態讀取失敗（HTTP ${response.status}）`);
+    }
+    return Array.isArray(data.summaries) ? data.summaries : [];
   } finally {
     clearTimeout(timeout);
   }

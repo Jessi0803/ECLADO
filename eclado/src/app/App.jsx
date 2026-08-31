@@ -150,7 +150,8 @@ export default function App() {
     window.addEventListener('popstate', onPopState);
     if (!window.history.state?.page && !hasAuthCallbackInUrl()) {
       const p = pageFromPath(window.location.pathname);
-      window.history.replaceState({ page: p }, '', window.location.pathname || '/');
+      const currentUrl = `${window.location.pathname || '/'}${window.location.search}${window.location.hash}`;
+      window.history.replaceState({ page: p }, '', currentUrl);
     }
     return () => window.removeEventListener('popstate', onPopState);
   }, []);

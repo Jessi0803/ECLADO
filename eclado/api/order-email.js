@@ -26,7 +26,10 @@ function textForOrderPlaced({ orderId, total, memberName, lookupCode, lookupUrl,
     lookupCode ? `訪客查詢碼：${lookupCode}` : null,
     '',
     '我們已收到您的訂單，請依頁面付款資訊完成付款。付款完成後將安排後續處理。',
-    lookupCode ? '訪客可使用「查詢碼＋結帳手機號碼」查看訂單、付款及物流狀態：' : null,
+    lookupCode
+      ? '若信用卡或行動支付未完成，可使用「查詢碼＋結帳手機號碼」回到訪客訂單查詢，保留原訂單並重新付款。'
+      : '若信用卡或行動支付未完成，可登入會員專區，在「我的訂單」保留原訂單並重新付款。',
+    lookupCode ? '訪客訂單查詢連結：' : null,
     lookupUrl || null,
     '',
     'ECLADO Taiwan',

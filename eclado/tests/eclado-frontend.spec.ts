@@ -1363,6 +1363,39 @@ test('訪客訂單查詢在重新整理後以短效憑證恢復，不需再次�
   expect(JSON.stringify(guestSession)).not.toContain('0912345678');
 });
 
+test('訪客重新驗證查詢碼與手機後可從訂單明細重新付款', async ({ page }) => {
+  const retryRequests: Array<{ authorization:string; body:Record<string, unknown> }> = [];
+  await mockEcladoApis(page, {
+    paymentQueryStatus:'failed',
+    onPaymentRetryRequest:request => retryRequests.push(request),
+    orders:[{
+      id:'ECL-GUEST-FAILED-001', user_id:null, member:'訪客買家', phone:'0912345678',
+      public_lookup_code:'ABCDE-12345', status:'unpaid', payment_method:'card',
+      subtotal:3980, discount:0, shipping:120, total:4100,
+      items:[{ id:2, product_id:2, name:'胜肽修護精華液', qty:1, price:3980 }],
+      payment_due_at:'2099-01-01T00:00:00.000Z',
+    }],
+  });
+  await page.route('https://sandbox.sinopac.test/retry-pay', route => route.fulfill({ status:200, contentType:'text/html', body:'<h1>Retry</h1>' }));
+
+  await page.goto('/order-lookup?lookup=ABCDE-12345');
+  await page.getByLabel('結帳手機號碼').fill('0912345678');
+  await page.getByRole('button', { name:'查看訂單' }).click();
+  await expect(page.getByText('付款未完成')).toBeVisible();
+  await expect(page.getByRole('button', { name:'重新付款' })).toBeVisible();
+  await page.getByRole('button', { name:'重新付款' }).click();
+  await expect(page).toHaveURL('https://sandbox.sinopac.test/retry-pay');
+  expect(retryRequests).toEqual([{
+    authorization:'',
+    body:{ orderNo:'ECL-GUEST-FAILED-001', guestAccessToken:'guest-access-token-e2e' },
+  }]);
+  await page.goto('/');
+  const saved = await page.evaluate(() => JSON.parse(sessionStorage.getItem('eclado_pending_payment') || 'null'));
+  expect(saved).toMatchObject({
+    orderNo:'ECL-GUEST-FAILED-001', accessType:'guest', guestAccessToken:'guest-access-token-e2e', resultAccessToken:'retry-result-access-token',
+  });
+});
+
 test('訪客可查看已出貨訂單與順豐托運資訊，已付款後不顯示付款入口', async ({ page }) => {
   await mockEcladoApis(page, {
     orders: [{
@@ -1490,6 +1523,85 @@ test('信用卡付款使用同分頁按鈕，並在付款結果頁權威確認�
   await expect(page.getByRole('heading', { name: '付款成功' })).toBeVisible();
   await expect(page.getByText('付款金額：')).toContainText('NT$ 3,702');
   expect(await page.evaluate(() => sessionStorage.getItem('eclado_pending_payment'))).toBeNull();
+});
+
+test('付款回站即使沒有原分頁 session，仍可用限時結果憑證確認成功', async ({ page }) => {
+  await mockEcladoApis(page, { paymentQueryStatus: 'paid' });
+  let queryBody: Record<string, unknown> | null = null;
+  await page.route('https://pay.ecladotaiwan.com/api/sinopac/query-payment', async route => {
+    queryBody = route.request().postDataJSON();
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok:true, paymentState:'paid', order:{ id:'ECL-CROSS-TAB-001', status:'paid', total:3980 }, response:{ OrderList:[{ PayStatus:'1C400' }] } }),
+    });
+  });
+
+  await page.goto('/payment-result?orderNo=ECL-CROSS-TAB-001&result=paid&resultToken=signed-result-token');
+  await expect(page.getByRole('heading', { name:'付款成功' })).toBeVisible();
+  expect(queryBody).toMatchObject({ orderNo:'ECL-CROSS-TAB-001', resultAccessToken:'signed-result-token' });
+});
+
+test('付款回站遇到通知時間差會自動重查直到成功', async ({ page }) => {
+  await mockEcladoApis(page, { paymentQueryStatus: 'pending' });
+  let queryCount = 0;
+  await page.route('https://pay.ecladotaiwan.com/api/sinopac/query-payment', async route => {
+    queryCount += 1;
+    const paid = queryCount >= 3;
+    await route.fulfill({
+      status:200,
+      contentType:'application/json',
+      body:JSON.stringify({ ok:true, paymentState:paid ? 'paid' : 'pending', order:{ id:'ECL-POLL-001', status:paid ? 'paid' : 'unpaid', total:3980 }, response:{ OrderList:[{ PayStatus:paid ? '1C400' : '1C200' }] } }),
+    });
+  });
+
+  await page.goto('/payment-result?orderNo=ECL-POLL-001&result=pending&resultToken=poll-result-token');
+  await expect(page.getByRole('heading', { name:'正在確認付款結果' })).toBeVisible();
+  await expect(page.getByRole('heading', { name:'付款成功' })).toBeVisible({ timeout:8000 });
+  expect(queryCount).toBe(3);
+});
+
+test('付款失敗頁保留原訂單並建立新的付款嘗試', async ({ page }) => {
+  await mockEcladoApis(page, { paymentQueryStatus: 'failed' });
+  await page.route('https://sandbox.sinopac.test/retry-pay', route => route.fulfill({
+    status:200,
+    contentType:'text/html',
+    body:'<title>永豐重新付款</title><h1>Retry payment page</h1>',
+  }));
+  await page.goto('/');
+  await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();
+  await page.evaluate(() => sessionStorage.setItem('eclado_pending_payment', JSON.stringify({
+    version:2,
+    orderNo:'ECL-FAILED-001',
+    paymentToken:'failed-payment-token',
+    amount:3980,
+    method:'card',
+    methodLabel:'信用卡',
+    summary:{
+      subtotal:3980,
+      discount:0,
+      finalSubtotal:3980,
+      shipping:0,
+      total:3980,
+      fulfillmentMethod:'delivery',
+      items:[{ id:2, product_id:2, variant_id:'', qty:1 }],
+    },
+  })));
+
+  await page.goto('/payment-result?orderNo=ECL-FAILED-001&result=failed');
+  await expect(page.getByRole('heading', { name:'付款未完成' })).toBeVisible();
+  await expect(page.getByRole('alert')).toContainText('原訂單不會被視為已付款，也不會扣款出貨');
+  await expect(page.getByRole('alert')).toContainText('保留原訂單並重新建立付款單');
+  await page.getByRole('button', { name:'重新付款' }).click();
+  await expect(page).toHaveURL('https://sandbox.sinopac.test/retry-pay');
+  await page.goto('/');
+  const saved = await page.evaluate(() => JSON.parse(sessionStorage.getItem('eclado_pending_payment') || 'null'));
+  expect(saved).toMatchObject({
+    orderNo:'ECL-FAILED-001',
+    paymentToken:'',
+    resultAccessToken:'retry-result-access-token',
+    paymentLink:'https://sandbox.sinopac.test/retry-pay',
+  });
 });
 
 test('金流建單失敗時顯示錯誤且不進入付款完成畫面', async ({ page }) => {
@@ -1682,6 +1794,39 @@ test('會員可從我的訂單安全返回尚未付款的原付款單', async ({
   ));
   expect(saved?.accessType).toBe('member');
   expect(saved?.paymentToken).toBe('');
+});
+
+test('會員可從我的訂單以本人登入憑證重新付款且保留原訂單', async ({ page }) => {
+  const retryRequests: Array<{ authorization:string; body:Record<string, unknown> }> = [];
+  const summaryAuth: string[] = [];
+  await mockEcladoApis(page, {
+    authUser:authUser('member@example.com'),
+    profiles:[profile('consumer')],
+    paymentQueryStatus:'failed',
+    onPaymentRetryRequest:request => retryRequests.push(request),
+    onPaymentSummaryRequest:authorization => summaryAuth.push(authorization),
+    orders:[{
+      id:'ECL-MEMBER-FAILED-001', user_id:TEST_USER_ID, member:'E2E 會員',
+      items:[{ id:2, product_id:2, name:'胜肽修護精華液', qty:1, price:3980 }],
+      subtotal:3980, discount:0, shipping:120, total:4100,
+      status:'unpaid', payment_method:'card', payment_due_at:'2099-01-01T00:00:00.000Z',
+      created_at:'2026-08-17T00:00:00.000Z',
+    }],
+  });
+  await page.route('https://sandbox.sinopac.test/retry-pay', route => route.fulfill({ status:200, contentType:'text/html', body:'<h1>Retry</h1>' }));
+
+  await page.goto('/account');
+  await expect(page.getByRole('button', { name:'重新付款' })).toBeVisible();
+  await page.getByRole('button', { name:'重新付款' }).click();
+  await expect(page).toHaveURL('https://sandbox.sinopac.test/retry-pay');
+  expect(summaryAuth).toContain('Bearer mock-access-token');
+  expect(retryRequests).toEqual([{
+    authorization:'Bearer mock-access-token',
+    body:{ orderNo:'ECL-MEMBER-FAILED-001' },
+  }]);
+  await page.goto('/');
+  const saved = await page.evaluate(() => JSON.parse(sessionStorage.getItem('eclado_pending_payment') || 'null'));
+  expect(saved).toMatchObject({ orderNo:'ECL-MEMBER-FAILED-001', accessType:'member', resultAccessToken:'retry-result-access-token' });
 });
 
 test('會員訂單付款期限已過時不顯示付款入口', async ({ page }) => {

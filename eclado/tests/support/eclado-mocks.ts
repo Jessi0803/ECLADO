@@ -193,6 +193,8 @@ export type MockEcladoApiOptions = {
   onLinePush?: (body: Record<string, unknown>) => void;
   onOrderEmail?: (body: Record<string, unknown>) => void;
   onPaymentRequest?: (body: Record<string, unknown>) => void;
+  onPaymentRetryRequest?: (request: { authorization: string; body: Record<string, unknown> }) => void;
+  onPaymentSummaryRequest?: (authorization: string) => void;
   onPaymentInstructionRequest?: (request: { authorization: string; orderNo: string }) => void;
   onGuestLookupRequest?: (request: { lookupCode: string; phone: string }) => void;
   onGuestDetailsRequest?: (request: { orderNo: string; guestAccessToken: string }) => void;
@@ -821,6 +823,42 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         },
       });
     });
+    await page.route('https://pay.ecladotaiwan.com/api/sinopac/retry-payment', async route => {
+      const request = route.request().postDataJSON();
+      options.onPaymentRetryRequest?.({
+        authorization:route.request().headers().authorization || '',
+        body:request,
+      });
+      return json(route, {
+        ok: true,
+        order: { id: request.orderNo, status: 'unpaid', total: 3980 },
+        response: {
+          Status: 'S',
+          Description: '重新付款單建立成功',
+          CardParam: { CardPayURL: 'https://sandbox.sinopac.test/retry-pay' },
+        },
+        paymentLink: 'https://sandbox.sinopac.test/retry-pay',
+        resultAccessToken: 'retry-result-access-token',
+        attemptNo: 2,
+      });
+    });
+    await page.route('https://pay.ecladotaiwan.com/api/orders/member-payment-summaries', async route => {
+      const authorization = route.request().headers().authorization || '';
+      options.onPaymentSummaryRequest?.(authorization);
+      if (!authorization) return json(route, { ok:false, error:'請先登入會員' }, 401);
+      const summaries = orders
+        .filter(order => order.user_id && ['awaiting_confirm', 'unpaid'].includes(String(order.status)))
+        .map(order => ({
+          order_id:order.id,
+          payment_method:order.payment_method || 'atm',
+          payment_state:options.paymentQueryStatus || 'pending',
+          payment_due_at:order.payment_due_at || '2099-01-01T00:00:00.000Z',
+          can_retry:(options.paymentQueryStatus === 'failed')
+            && order.status === 'unpaid'
+            && ['card', 'apple', 'google'].includes(String(order.payment_method || '').toLowerCase()),
+        }));
+      return json(route, { ok:true, summaries });
+    });
     await page.route('https://pay.ecladotaiwan.com/api/orders/payment-instructions', async route => {
       if (options.paymentInstructionError) {
         return json(route, { ok: false, error: options.paymentInstructionError }, 400);
@@ -839,6 +877,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         instruction: {
           order_id: orderNo,
           payment_method: order.payment_method || 'atm',
+          payment_state: options.paymentQueryStatus || 'pending',
           provider_transaction_no: 'MEMBER-E2E-TSNO',
           provider_status: 'S',
           provider_description: '付款單建立成功',
@@ -878,6 +917,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         instruction: {
           order_id: order.id,
           payment_method: order.payment_method || 'atm',
+          payment_state: paymentState,
           provider_transaction_no: 'GUEST-E2E-TSNO',
           provider_status: 'S',
           provider_description: '付款單建立成功',
@@ -910,6 +950,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         instruction: {
           order_id: order.id,
           payment_method: order.payment_method || 'atm',
+          payment_state: paymentState,
           provider_status: 'S',
           provider_description: '付款單建立成功',
           atm_bank_code: pending && order.payment_method === 'atm' ? '807' : null,

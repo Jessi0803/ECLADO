@@ -14,7 +14,7 @@ import {
 } from '../services/membership.js';
 import { fetchAccountOrders } from '../services/accountOrders.js';
 import { fetchProfessionalApplicationStatus } from '../services/professionalApplications.js';
-import { getMemberPaymentInstructions } from '../services/paymentApi.js';
+import { getMemberPaymentInstructions, getMemberPaymentSummaries, retrySinopacPayment } from '../services/paymentApi.js';
 import { getPendingPayment, savePendingPayment } from '../services/pendingPayment.js';
 
 export default function AccountPage({ user, setPage, onSignOut }) {
@@ -27,6 +27,7 @@ export default function AccountPage({ user, setPage, onSignOut }) {
   const [copiedTracking, setCopiedTracking] = useState('');
   const [openingPaymentOrder, setOpeningPaymentOrder] = useState('');
   const [paymentErrors, setPaymentErrors] = useState({});
+  const [paymentSummaries, setPaymentSummaries] = useState({});
 
   useEffect(() => {
     // SPA navigation keeps the previous page's scroll position. A long order
@@ -62,6 +63,10 @@ export default function AccountPage({ user, setPage, onSignOut }) {
         return;
       }
       const result = await getMemberPaymentInstructions(order.id);
+      if (result.paymentState === 'failed') {
+        await retryFailedPayment(order, result.instruction);
+        return;
+      }
       const authoritativeOrder = result.order || order;
       const instruction = result.instruction || {};
       const subtotal = Number(authoritativeOrder.subtotal ?? order.subtotal) || 0;
@@ -107,6 +112,48 @@ export default function AccountPage({ user, setPage, onSignOut }) {
     }
   }
 
+  async function retryFailedPayment(order, instruction = {}) {
+    setOpeningPaymentOrder(order.id);
+    setPaymentErrors(current => ({ ...current, [order.id]: '' }));
+    try {
+      const result = await retrySinopacPayment({ orderNo:order.id });
+      const authoritativeOrder = result.order || order;
+      const subtotal = Number(authoritativeOrder.subtotal ?? order.subtotal) || 0;
+      const discount = Number(authoritativeOrder.discount ?? order.discount) || 0;
+      const shipping = Number(authoritativeOrder.shipping ?? order.shipping) || 0;
+      const total = Number(authoritativeOrder.total ?? order.total) || 0;
+      const saved = savePendingPayment({
+        orderNo:order.id,
+        accessType:'member',
+        resultAccessToken:result.resultAccessToken,
+        amount:total,
+        method:instruction.payment_method || paymentSummaries[order.id]?.payment_method || 'card',
+        paymentLink:result.paymentLink,
+        paymentDueAt:authoritativeOrder.payment_due_at || order.payment_due_at,
+        response:result.response,
+        summary:{
+          subtotal,
+          discount,
+          finalSubtotal:subtotal - discount,
+          shipping,
+          total,
+          fulfillmentMethod:authoritativeOrder.fulfillment_method || order.fulfillment_method || 'delivery',
+          promotion:authoritativeOrder.promotion_name ? { id:`order-${order.id}`, name:authoritativeOrder.promotion_name } : null,
+          items:Array.isArray(authoritativeOrder.items) ? authoritativeOrder.items : [],
+        },
+      });
+      if (!saved) throw new Error('瀏覽器無法保存新的付款資訊');
+      window.location.assign(result.paymentLink);
+    } catch (paymentError) {
+      setPaymentErrors(current => ({
+        ...current,
+        [order.id]:paymentError?.message || '重新建立付款單失敗，請稍後再試。',
+      }));
+    } finally {
+      setOpeningPaymentOrder('');
+    }
+  }
+
   async function copyTracking(tracking) {
     try {
       await navigator.clipboard.writeText(tracking);
@@ -142,13 +189,17 @@ export default function AccountPage({ user, setPage, onSignOut }) {
     async function loadOrders() {
       setLoading(true);
       setError('');
-      const { data, error } = await fetchAccountOrders(user.uid);
+      const [{ data, error }, summaries] = await Promise.all([
+        fetchAccountOrders(user.uid),
+        getMemberPaymentSummaries().catch(() => []),
+      ]);
       if (!alive) return;
       if (error) {
         setError('訂單資料無法載入，請稍後再試。');
         setOrders([]);
       } else {
         setOrders(data || []);
+        setPaymentSummaries(Object.fromEntries(summaries.map(summary => [summary.order_id, summary])));
       }
       setLoading(false);
     }
@@ -249,8 +300,11 @@ export default function AccountPage({ user, setPage, onSignOut }) {
                 const items = Array.isArray(order.items) ? order.items : [];
                 const paymentDueTime = new Date(order.payment_due_at || '').getTime();
                 const paymentExpired = Number.isFinite(paymentDueTime) && paymentDueTime <= Date.now();
+                const paymentSummary = paymentSummaries[order.id];
+                const canRetryPayment = paymentSummary?.can_retry === true;
                 const canResumePayment = ['awaiting_confirm', 'unpaid'].includes(order.status)
-                  && !paymentExpired;
+                  && !paymentExpired
+                  && !canRetryPayment;
                 return (
                   <div key={order.id} style={{ border:'1px solid var(--light)', padding:isMobile ? 16 : 20, background:'var(--white)' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', gap:16, alignItems:'flex-start', marginBottom:14 }}>
@@ -299,14 +353,14 @@ export default function AccountPage({ user, setPage, onSignOut }) {
                       <div style={{ textAlign:isMobile ? 'left' : 'right' }}>
                         <div style={{ fontSize:12, color:'var(--dark)', marginBottom:5 }}>{order.date || order.created_at?.slice(0, 10) || ''}</div>
                         <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'var(--black)' }}>NT$ {Number(order.total || 0).toLocaleString()}</div>
-                        {canResumePayment && (
+                        {(canResumePayment || canRetryPayment) && (
                           <button
                             type="button"
-                            onClick={() => openPendingPayment(order)}
+                            onClick={() => canRetryPayment ? retryFailedPayment(order) : openPendingPayment(order)}
                             disabled={openingPaymentOrder === order.id}
                             style={{ marginTop:12, border:'1px solid var(--black)', background:'var(--black)', color:'var(--white)', padding:'9px 12px', fontSize:11, letterSpacing:'0.08em', cursor:openingPaymentOrder === order.id ? 'wait' : 'pointer', fontFamily:'inherit', opacity:openingPaymentOrder === order.id ? 0.65 : 1 }}
                           >
-                            {openingPaymentOrder === order.id ? '正在讀取…' : '查看付款資訊'}
+                            {openingPaymentOrder === order.id ? (canRetryPayment ? '正在建立付款單…' : '正在讀取…') : (canRetryPayment ? '重新付款' : '查看付款資訊')}
                           </button>
                         )}
                         {paymentExpired && ['awaiting_confirm', 'unpaid'].includes(order.status) && (

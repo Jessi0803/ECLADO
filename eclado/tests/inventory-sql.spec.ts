@@ -83,3 +83,26 @@ test('付款建單 claim 以資料列鎖與狀態欄位阻擋同訂單並行或�
     expect(sql).toContain("raise exception 'Order payment has expired'");
   }
 });
+
+test('付款嘗試狀態與訂單履約狀態分開保存', () => {
+  for (const file of ['supabase-order-payment-instructions.sql', 'supabase-payment-result-flow.sql']) {
+    const sql = read(file);
+    expect(sql).toContain("payment_state text not null default 'pending'");
+    expect(sql).toContain("'pending', 'paid', 'failed', 'expired', 'cancelled'");
+  }
+  const migration = read('supabase-payment-result-flow.sql');
+  expect(migration).toContain("'ready_for_pickup', 'picked_up'");
+});
+
+test('重新付款保留原訂單並為每次金流建立獨立嘗試', () => {
+  const sql = read('supabase-payment-retry.sql');
+  expect(sql).toContain('create table if not exists public.order_payment_attempts');
+  expect(sql).toContain('unique (order_id, attempt_no)');
+  expect(sql).toContain('provider_order_no text not null unique');
+  expect(sql).toContain('create or replace function public.begin_order_payment_retry');
+  expect(sql).toContain("target_order.status <> 'unpaid'");
+  expect(sql).toContain("instruction.payment_state <> 'failed'");
+  expect(sql).toContain("instruction.payment_method not in ('card', 'apple', 'google')");
+  expect(sql).toContain("coalesce(payment_auth.attempt_no, 1), coalesce(instruction.attempt_no, 1)) + 1");
+  expect(sql).toContain("instruction.payment_method, 'initiated'");
+});

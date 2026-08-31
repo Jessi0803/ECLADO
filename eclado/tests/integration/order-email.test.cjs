@@ -26,7 +26,9 @@ test('order email sends order placed notice through Resend', async () => {
     assert.match(body.text, /訂單編號：ORDER-PLACED-001/);
     assert.match(body.text, /訂單金額：NT\$ 3,702/);
     assert.match(body.text, /訪客查詢碼：ABCDE-12345/);
-    assert.match(body.text, /查看訂單、付款及物流狀態/);
+    assert.match(body.text, /查詢碼＋結帳手機號碼/);
+    assert.match(body.text, /保留原訂單並重新付款/);
+    assert.match(body.text, /訪客訂單查詢連結/);
     assert.match(body.text, /https:\/\/ecladotaiwan\.com\/order-lookup\?lookup=ABCDE-12345/);
     return jsonResponse(200, { id: 'email_placed_001' });
   };
@@ -56,6 +58,47 @@ test('order email sends order placed notice through Resend', async () => {
   assert.equal(res.statusCode, 200);
   assert.deepEqual(res.jsonBody, { status: 'sent', id: 'email_placed_001' });
   assert.equal(calls.length, 1);
+});
+
+test('member order placed email directs unfinished payments back to member orders', async () => {
+  const originalFetch = global.fetch;
+  const originalEnv = {
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    INTERNAL_API_KEY: process.env.INTERNAL_API_KEY,
+  };
+
+  process.env.RESEND_API_KEY = 'test-resend-key';
+  process.env.INTERNAL_API_KEY = 'test-internal-key';
+  global.fetch = async (url, options = {}) => {
+    assert.equal(String(url), 'https://api.resend.com/emails');
+    const body = JSON.parse(options.body);
+    assert.match(body.text, /登入會員專區/);
+    assert.match(body.text, /「我的訂單」/);
+    assert.match(body.text, /保留原訂單並重新付款/);
+    assert.doesNotMatch(body.text, /訪客訂單查詢/);
+    return jsonResponse(200, { id: 'email_member_placed_001' });
+  };
+
+  const res = createRes();
+  try {
+    await orderEmail({
+      method: 'POST',
+      headers: { 'x-internal-api-key': 'test-internal-key' },
+      body: {
+        type: 'order_placed',
+        email: 'member@example.com',
+        orderId: 'ORDER-MEMBER-001',
+        total: 4100,
+        memberName: '會員買家',
+      },
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.jsonBody.id, 'email_member_placed_001');
 });
 
 test('order email accepts Payment API secret only for the opted-in email endpoint', async () => {

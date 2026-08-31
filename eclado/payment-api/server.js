@@ -308,6 +308,16 @@ async function claimSupabaseOrder(orderNo, paymentToken) {
   return order;
 }
 
+async function beginSupabasePaymentRetry(orderNo) {
+  const retry = await callSupabaseRpc('begin_order_payment_retry', {
+    p_order_id: orderNo,
+  });
+  if (!retry?.payment_token || !retry?.provider_order_no) {
+    throw new Error('Payment retry authorization is incomplete');
+  }
+  return retry;
+}
+
 async function authorizePaymentAccess(orderNo, paymentToken) {
   if (!orderNo || !paymentToken) throw new Error('orderNo and paymentToken are required');
   const authorized = await callSupabaseRpc('authorize_order_payment_access', {
@@ -364,6 +374,33 @@ function createGuestAccessToken(orderNo, ttlMs = 30 * 60 * 1000) {
   })).toString('base64url');
   const signature = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
   return `${payload}.${signature}`;
+}
+
+function createPaymentResultAccessToken(orderNo, ttlMs = 10 * 60 * 1000) {
+  const secret = must(process.env.GUEST_LOOKUP_SECRET, 'GUEST_LOOKUP_SECRET');
+  const payload = Buffer.from(JSON.stringify({
+    orderNo: String(orderNo),
+    purpose: 'payment-result',
+    exp: Date.now() + ttlMs,
+  })).toString('base64url');
+  const signature = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
+  return `${payload}.${signature}`;
+}
+
+function verifyPaymentResultAccessToken(token, orderNo) {
+  const secret = must(process.env.GUEST_LOOKUP_SECRET, 'GUEST_LOOKUP_SECRET');
+  const [payload, suppliedSignature] = String(token || '').split('.');
+  if (!payload || !suppliedSignature) return false;
+  const expectedSignature = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
+  if (!safeStringEqual(suppliedSignature, expectedSignature)) return false;
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    return parsed.purpose === 'payment-result'
+      && String(parsed.orderNo || '') === String(orderNo || '')
+      && Number(parsed.exp) > Date.now();
+  } catch {
+    return false;
+  }
 }
 
 function verifyGuestAccessToken(token, orderNo) {
@@ -488,6 +525,13 @@ async function authorizePaymentRequest(req, orderNo, paymentToken) {
     if (order.user_id) throw new Error('Guest access is not valid for member orders');
     return order;
   }
+  const resultAccessToken = String(req.body?.resultAccessToken || '');
+  if (resultAccessToken) {
+    if (!verifyPaymentResultAccessToken(resultAccessToken, orderNo)) {
+      throw new Error('Payment result access has expired');
+    }
+    return getSupabaseOrderPaymentState(orderNo);
+  }
   return authorizeMemberOrderAccess(req, orderNo);
 }
 
@@ -516,13 +560,36 @@ function paymentMethodFromRequest(input) {
   return String(input?.paymentMethod || input?.payType || '').toLowerCase();
 }
 
+function paymentRequestFromStoredMethod(method) {
+  switch (String(method || '').trim().toLowerCase()) {
+    case 'card': return { payType: 'C' };
+    case 'apple': return { payType: 'M', choosePay: 'A' };
+    case 'google': return { payType: 'M', choosePay: 'G' };
+    default: throw new Error('This payment method cannot be retried');
+  }
+}
+
+function getPaymentRetryBlockReason(order, instruction, now = Date.now()) {
+  if (order?.status !== 'unpaid') return 'Order is not eligible for another payment attempt';
+  const dueTime = new Date(order?.payment_due_at || '').getTime();
+  if (!Number.isFinite(dueTime) || dueTime <= now) return 'Order payment has expired';
+  if (instruction?.payment_state !== 'failed') return 'Only a failed payment can be retried';
+  if (!['card', 'apple', 'google'].includes(String(instruction?.payment_method || '').toLowerCase())) {
+    return 'This payment method cannot be retried';
+  }
+  return '';
+}
+
 async function saveOrderPaymentInstruction(order, input, gatewayResponse) {
   const record = {
     order_id: order.id,
+    provider_order_no: String(input.providerOrderNo || input.orderNo || order.id),
+    attempt_no: Math.max(Number(input.attemptNo) || 1, 1),
     payment_method: paymentMethodFromRequest(input) || 'unknown',
     provider_transaction_no: gatewayResponse?.TSNo || null,
     provider_status: gatewayResponse?.Status || null,
     provider_description: gatewayResponse?.Description || null,
+    payment_state: 'pending',
     atm_bank_code: gatewayResponse?.ATMParam?.AtmPayNo ? '807' : null,
     atm_account: gatewayResponse?.ATMParam?.AtmPayNo || null,
     payment_url: extractServerPaymentLink(gatewayResponse),
@@ -546,10 +613,80 @@ async function saveOrderPaymentInstruction(order, input, gatewayResponse) {
   return Array.isArray(rows) ? rows[0] : null;
 }
 
+async function saveOrderPaymentAttempt(order, input, gatewayResponse, paymentState = 'pending') {
+  const record = {
+    order_id: order.id,
+    provider_order_no: String(input.providerOrderNo || input.orderNo || order.id),
+    attempt_no: Math.max(Number(input.attemptNo) || 1, 1),
+    payment_method: paymentMethodFromRequest(input) || 'unknown',
+    payment_state: paymentState,
+    provider_transaction_no: gatewayResponse?.TSNo || null,
+    provider_status: gatewayResponse?.Status || null,
+    provider_description: gatewayResponse?.Description || null,
+    payment_url: extractServerPaymentLink(gatewayResponse),
+    updated_at: new Date().toISOString(),
+  };
+  const response = await fetch(`${supabaseUrl}/rest/v1/order_payment_attempts?on_conflict=provider_order_no`, {
+    method: 'POST',
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal',
+    },
+    body: JSON.stringify(record),
+  });
+  if (!response.ok) throw new Error(`Payment attempt save failed: ${response.status} ${(await response.text()).slice(0, 500)}`);
+  return true;
+}
+
+async function updatePaymentInstructionState(orderNo, paymentState, payment = {}, providerOrderNo = '') {
+  if (!orderNo || !paymentState) return false;
+  const providerFilter = providerOrderNo ? `&provider_order_no=eq.${encodeURIComponent(providerOrderNo)}` : '';
+  const response = await fetch(`${supabaseUrl}/rest/v1/order_payment_instructions?order_id=eq.${encodeURIComponent(orderNo)}${providerFilter}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    },
+    body: JSON.stringify({
+      payment_state: paymentState,
+      provider_status: payment.payStatus || payment.payFlag || null,
+      provider_description: payment.description || null,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  if (!response.ok) throw new Error(`Payment state save failed: ${response.status} ${(await response.text()).slice(0, 500)}`);
+  return true;
+}
+
+async function updatePaymentAttemptState(providerOrderNo, paymentState, payment = {}) {
+  if (!providerOrderNo || !paymentState) return false;
+  const response = await fetch(`${supabaseUrl}/rest/v1/order_payment_attempts?provider_order_no=eq.${encodeURIComponent(providerOrderNo)}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    },
+    body: JSON.stringify({
+      payment_state: paymentState,
+      provider_status: payment.payStatus || payment.payFlag || null,
+      provider_description: payment.description || null,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  if (!response.ok) throw new Error(`Payment attempt state save failed: ${response.status} ${(await response.text()).slice(0, 500)}`);
+  return true;
+}
+
 async function getOrderPaymentInstruction(orderNo) {
   const params = new URLSearchParams({
     order_id: `eq.${orderNo}`,
-    select: 'order_id,payment_method,provider_transaction_no,provider_status,provider_description,atm_bank_code,atm_account,payment_url,payment_due_at,gateway_created_at,order_email_sent_at',
+    select: 'order_id,provider_order_no,attempt_no,payment_method,provider_transaction_no,provider_status,provider_description,payment_state,atm_bank_code,atm_account,payment_url,payment_due_at,gateway_created_at,order_email_sent_at',
     limit: '1',
   });
   const response = await fetch(`${supabaseUrl}/rest/v1/order_payment_instructions?${params}`, {
@@ -572,6 +709,74 @@ async function getOptionalOrderPaymentInstruction(orderNo) {
     if (String(error?.message || '').startsWith('Payment instruction not found:')) return null;
     throw error;
   }
+}
+
+async function getMemberOrderPaymentSummaries(req) {
+  const user = await getSupabaseAuthUser(req);
+  const orderParams = new URLSearchParams({
+    user_id: `eq.${user.id}`,
+    status: 'in.(awaiting_confirm,unpaid)',
+    select: 'id,status,payment_due_at',
+    order: 'created_at.desc',
+    limit: '100',
+  });
+  const orderResponse = await fetch(`${supabaseUrl}/rest/v1/orders?${orderParams}`, {
+    headers: { apikey: supabaseServiceKey, Authorization: `Bearer ${supabaseServiceKey}` },
+  });
+  const orderText = await orderResponse.text();
+  if (!orderResponse.ok) throw new Error(`Member payment orders failed: ${orderResponse.status} ${orderText}`);
+  const orders = orderText ? JSON.parse(orderText) : [];
+  if (!Array.isArray(orders) || orders.length === 0) return [];
+
+  const orderIds = orders.map(order => String(order.id)).filter(Boolean);
+  const instructionParams = new URLSearchParams({
+    order_id: `in.(${orderIds.join(',')})`,
+    select: 'order_id,payment_method,payment_state,payment_due_at',
+  });
+  const instructionResponse = await fetch(`${supabaseUrl}/rest/v1/order_payment_instructions?${instructionParams}`, {
+    headers: { apikey: supabaseServiceKey, Authorization: `Bearer ${supabaseServiceKey}` },
+  });
+  const instructionText = await instructionResponse.text();
+  if (!instructionResponse.ok) throw new Error(`Member payment summaries failed: ${instructionResponse.status} ${instructionText}`);
+  const instructions = instructionText ? JSON.parse(instructionText) : [];
+  const orderMap = new Map(orders.map(order => [String(order.id), order]));
+  return (Array.isArray(instructions) ? instructions : []).map(instruction => {
+    const order = orderMap.get(String(instruction.order_id));
+    return {
+      order_id: instruction.order_id,
+      payment_method: instruction.payment_method,
+      payment_state: instruction.payment_state,
+      payment_due_at: instruction.payment_due_at || order?.payment_due_at,
+      can_retry: !getPaymentRetryBlockReason(order, instruction),
+    };
+  });
+}
+
+async function resolveSiteOrderNo(providerOrderNo, hintedOrderNo = '') {
+  const provider = String(providerOrderNo || '').trim();
+  const hint = String(hintedOrderNo || '').trim();
+  if (!provider) return hint;
+  if (hint && provider === hint) return hint;
+  if (!/-R\d+$/.test(provider)) return provider;
+  const params = new URLSearchParams({
+    provider_order_no: `eq.${provider}`,
+    select: 'order_id',
+    limit: '1',
+  });
+  const response = await fetch(`${supabaseUrl}/rest/v1/order_payment_attempts?${params}`, {
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
+    },
+  });
+  if (response.ok) {
+    const rows = JSON.parse((await response.text()) || '[]');
+    if (Array.isArray(rows) && rows[0]?.order_id) {
+      if (hint && String(rows[0].order_id) !== hint) throw new Error('Payment return order mismatch');
+      return String(rows[0].order_id);
+    }
+  }
+  return '';
 }
 
 async function updateOrderEmailDelivery(orderNo, { sent, error = '' }) {
@@ -664,7 +869,7 @@ function resolvePaymentQueryState(order, gatewayResponse) {
     ? gatewayResponse.OrderList[0]
     : gatewayResponse;
   if (isPaidLike(gatewayOrder?.PayStatus) || isPaidLike(gatewayOrder?.PayFlag)) return 'paid';
-  if (['paid', 'preparing', 'shipped', 'delivered'].includes(String(order?.status || ''))) return 'paid';
+  if (['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(String(order?.status || ''))) return 'paid';
 
   const dueTime = new Date(order?.payment_due_at || '').getTime();
   if (Number.isFinite(dueTime) && dueTime <= Date.now()) return 'expired';
@@ -680,6 +885,15 @@ function resolvePaymentQueryState(order, gatewayResponse) {
   return 'pending';
 }
 
+function getPendingOrderStatus(payType) {
+  return String(payType || '').trim().toUpperCase() === 'A' ? 'awaiting_confirm' : 'unpaid';
+}
+
+function getWebhookPaymentState(payment) {
+  if (payment?.paid) return 'paid';
+  return payment?.pending ? 'pending' : 'failed';
+}
+
 async function buildAuthoritativeCreateBody(input) {
   if (!input?.orderNo) throw new Error('orderNo is required');
   if (!input?.paymentToken) throw new Error('paymentToken is required');
@@ -691,6 +905,7 @@ async function buildAuthoritativeCreateBody(input) {
   if (!deadline) throw new Error('Order payment deadline is missing or invalid');
   return buildCreateBody({
     ...input,
+    orderNo: order.provider_order_no || input.orderNo,
     amount: Number(order.total),
     prdtName: productName,
     expireDate: deadline.expireDate,
@@ -925,10 +1140,11 @@ app.get('/health', (req, res) => {
   });
 });
 
-function buildPaymentResultUrl(orderNo, result = 'pending') {
+function buildPaymentResultUrl(orderNo, result = 'pending', resultAccessToken = '') {
   const siteUrl = new URL('https://ecladotaiwan.com/payment-result');
   if (orderNo) siteUrl.searchParams.set('orderNo', String(orderNo));
   siteUrl.searchParams.set('result', ['paid', 'failed'].includes(result) ? result : 'pending');
+  if (resultAccessToken) siteUrl.searchParams.set('resultToken', String(resultAccessToken));
   return siteUrl.toString();
 }
 
@@ -937,13 +1153,16 @@ async function redirectPaymentReturn(req, res) {
   const payToken = req.body?.PayToken || req.body?.payToken || req.query.payToken;
   let resolvedOrderNo = String(orderNo || '').trim();
   let result = 'pending';
+  let resultAccessToken = '';
 
   // 信用卡(含行動支付)的付款結果是經由 ReturnURL 同步回拋，
   // 這裡用 PayToken 向豐收款確認付款結果後更新訂單，再導回前台。
   if (payToken) {
     try {
       const payment = await resolvePaymentStateFromWebhook({ ...req.query, ...req.body });
-      resolvedOrderNo = payment.orderNo || resolvedOrderNo;
+      const providerOrderNo = payment.orderNo;
+      resolvedOrderNo = await resolveSiteOrderNo(providerOrderNo, resolvedOrderNo);
+      resultAccessToken = resolvedOrderNo ? createPaymentResultAccessToken(resolvedOrderNo) : '';
       if (resolvedOrderNo && payment.paid) {
         // 先轉發給 Vercel（此時訂單尚未標記 paid）→ Vercel 標記已付款並寄 LINE／Email，
         // 再由 Vultr 補寫一次作為保險（Vercel 失敗時仍會標記）。
@@ -959,12 +1178,21 @@ async function redirectPaymentReturn(req, res) {
         console.warn(`[return] order ${resolvedOrderNo || '?'} not marked paid (payStatus=${payment.payStatus}, payFlag=${payment.payFlag})`);
         result = payment.pending ? 'pending' : 'failed';
       }
+      if (resolvedOrderNo) {
+        try {
+          const paymentState = getWebhookPaymentState(payment);
+          await updatePaymentInstructionState(resolvedOrderNo, paymentState, payment, providerOrderNo);
+          await updatePaymentAttemptState(providerOrderNo, paymentState, payment);
+        } catch (stateError) {
+          console.error('[return] payment state save failed', stateError.message);
+        }
+      }
     } catch (error) {
       console.error('[return] payment confirm failed', error);
     }
   }
 
-  res.redirect(303, buildPaymentResultUrl(resolvedOrderNo, result));
+  res.redirect(303, buildPaymentResultUrl(resolvedOrderNo, result, resultAccessToken));
 }
 
 app.get('/return', redirectPaymentReturn);
@@ -1002,7 +1230,13 @@ app.post('/api/sinopac/create-payment', async (req, res) => {
     let orderEmailSent = false;
     try {
       order = await getSupabaseOrderPaymentState(orderNo);
-      await saveOrderPaymentInstruction(order, req.body || {}, result.data);
+      const paymentInput = {
+        ...(req.body || {}),
+        providerOrderNo: inner.OrderNo,
+        attemptNo: Number(req.body?.attemptNo) || 1,
+      };
+      await saveOrderPaymentInstruction(order, paymentInput, result.data);
+      await saveOrderPaymentAttempt(order, paymentInput, result.data);
       recoveryStored = true;
       const emailResult = await sendGuestOrderCreatedEmail(order);
       orderEmailSent = emailResult.sent === true;
@@ -1034,6 +1268,80 @@ app.post('/api/sinopac/create-payment', async (req, res) => {
   }
 });
 
+app.post('/api/sinopac/retry-payment', async (req, res) => {
+  const orderNo = String(req.body?.orderNo || '').trim();
+  let retry = null;
+  let claimed = false;
+  let gatewaySucceeded = false;
+  try {
+    if (!await enforceSharedRateLimit(req, res, 'payment:retry', 10)) return;
+    if (!orderNo) throw new Error('orderNo is required');
+    const order = await authorizePaymentRequest(req, orderNo, String(req.body?.paymentToken || '').trim());
+    const instruction = await getOrderPaymentInstruction(orderNo);
+    const retryBlockReason = getPaymentRetryBlockReason(order, instruction);
+    if (retryBlockReason) throw new Error(retryBlockReason);
+    const methodInput = paymentRequestFromStoredMethod(instruction.payment_method);
+    retry = await beginSupabasePaymentRetry(orderNo);
+    const publicUrl = process.env.PAYMENT_PUBLIC_URL || 'https://pay.ecladotaiwan.com';
+    const retryInput = {
+      orderNo,
+      paymentToken: retry.payment_token,
+      providerOrderNo: retry.provider_order_no,
+      attemptNo: retry.attempt_no,
+      ...methodInput,
+      returnUrl: `${publicUrl}/return?orderNo=${encodeURIComponent(orderNo)}`,
+      qrCodeStatus: 'Y',
+      Param1: orderNo,
+    };
+    const inner = await buildAuthoritativeCreateBody(retryInput);
+    claimed = true;
+    const result = await callOrderApi('OrderCreate', inner);
+    const sinopacError = getSinopacPaymentError(result.data);
+    if (sinopacError) {
+      await callSupabaseRpc('complete_order_payment_claim', {
+        p_order_id: orderNo,
+        p_payment_token: retry.payment_token,
+        p_success: false,
+      });
+      claimed = false;
+      await saveOrderPaymentAttempt(order, retryInput, result.data, 'failed').catch(() => null);
+      return res.status(400).json({ ok: false, error: sinopacError });
+    }
+    gatewaySucceeded = true;
+    await callSupabaseRpc('complete_order_payment_claim', {
+      p_order_id: orderNo,
+      p_payment_token: retry.payment_token,
+      p_success: true,
+    });
+    claimed = false;
+    await saveOrderPaymentInstruction(order, retryInput, result.data);
+    await saveOrderPaymentAttempt(order, retryInput, result.data);
+    const paymentLink = extractServerPaymentLink(result.data);
+    if (!paymentLink) throw new Error('Payment gateway did not return a payment URL');
+    res.json({
+      ok: true,
+      order: toPublicOrderPaymentState(order),
+      response: result.data,
+      paymentLink,
+      resultAccessToken: createPaymentResultAccessToken(orderNo),
+      attemptNo: retry.attempt_no,
+    });
+  } catch (error) {
+    if (claimed && retry?.payment_token && !gatewaySucceeded) {
+      try {
+        await callSupabaseRpc('complete_order_payment_claim', {
+          p_order_id: orderNo,
+          p_payment_token: retry.payment_token,
+          p_success: false,
+        });
+      } catch (releaseError) {
+        console.error('[retry-payment] claim release failed', releaseError.message);
+      }
+    }
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
 app.post('/api/sinopac/query-payment', async (req, res) => {
   try {
     if (!await enforceSharedRateLimit(req, res, 'payment:query', 60)) return;
@@ -1041,12 +1349,34 @@ app.post('/api/sinopac/query-payment', async (req, res) => {
     const paymentToken = String(req.body?.paymentToken || '').trim();
     if (!orderNo) throw new Error('orderNo is required');
     const order = await authorizePaymentRequest(req, orderNo, paymentToken);
-    const inner = buildQueryBody(req.body || {});
+    const instruction = await getOptionalOrderPaymentInstruction(orderNo);
+    const providerOrderNo = instruction?.provider_order_no || orderNo;
+    const inner = buildQueryBody({ ...(req.body || {}), orderNo: providerOrderNo });
     const result = await callOrderApi('OrderQuery', inner);
     const paymentState = resolvePaymentQueryState(order, result.data);
+    try {
+      const paymentDetails = {
+        payStatus: result.data?.OrderList?.[0]?.PayStatus,
+        payFlag: result.data?.OrderList?.[0]?.PayFlag,
+        description: result.data?.OrderList?.[0]?.Description,
+      };
+      await updatePaymentInstructionState(orderNo, paymentState, paymentDetails, providerOrderNo);
+      await updatePaymentAttemptState(providerOrderNo, paymentState, paymentDetails);
+    } catch (stateError) {
+      console.error('[query-payment] payment state save failed', stateError.message);
+    }
     res.json({ ok: true, request: inner, response: result.data, order: toPublicOrderPaymentState(order), paymentState });
   } catch (error) {
     res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.post('/api/orders/member-payment-summaries', async (req, res) => {
+  try {
+    const summaries = await getMemberOrderPaymentSummaries(req);
+    res.json({ ok:true, summaries });
+  } catch (error) {
+    res.status(400).json({ ok:false, error:error.message });
   }
 });
 
@@ -1162,14 +1492,17 @@ app.post('/api/sinopac/notify', async (req, res) => {
     console.log('[sinopac notify] received', summarizePaymentWebhook(body));
 
     const payment = await resolvePaymentStateFromWebhook(body);
-    const orderNo = payment.orderNo;
+    const providerOrderNo = payment.orderNo;
+    const orderNo = await resolveSiteOrderNo(providerOrderNo);
 
     if (!orderNo) {
       console.warn('[sinopac notify] unresolved order', summarizePaymentWebhook(body));
       return res.status(400).json({ Status: 'F', message: 'order unresolved' });
     }
 
-    const nextStatus = payment.paid ? 'paid' : 'awaiting_confirm';
+    const instruction = await getOptionalOrderPaymentInstruction(orderNo);
+    const isCurrentAttempt = !instruction?.provider_order_no || instruction.provider_order_no === providerOrderNo;
+    const nextStatus = payment.paid ? 'paid' : getPendingOrderStatus(payment.payType);
     let forwarded = { sent: false, reason: 'payment not completed' };
 
     if (payment.paid) {
@@ -1179,11 +1512,20 @@ app.post('/api/sinopac/notify', async (req, res) => {
     }
 
     let stored = false;
+    if (payment.paid || isCurrentAttempt) {
+      try {
+        await updateSupabaseOrder(orderNo, { status: nextStatus }, 'sinopac-webhook');
+        stored = true;
+      } catch (e) {
+        console.error('[sinopac notify] supabase write failed', e.message);
+      }
+    }
     try {
-      await updateSupabaseOrder(orderNo, { status: nextStatus }, 'sinopac-webhook');
-      stored = true;
-    } catch (e) {
-      console.error('[sinopac notify] supabase write failed', e.message);
+      const paymentState = getWebhookPaymentState(payment);
+      await updatePaymentInstructionState(orderNo, paymentState, payment, providerOrderNo);
+      await updatePaymentAttemptState(providerOrderNo, paymentState, payment);
+    } catch (stateError) {
+      console.error('[sinopac notify] payment state save failed', stateError.message);
     }
 
     // 已付款事件若既沒有被 Vercel 接手，也沒有寫入 Supabase，就不能回覆成功，
@@ -1240,10 +1582,16 @@ module.exports = {
   resolvePaymentQueryState,
   extractServerPaymentLink,
   paymentMethodFromRequest,
+  paymentRequestFromStoredMethod,
+  getPaymentRetryBlockReason,
   normalizeLookupCode,
   normalizePhone,
   createGuestAccessToken,
   verifyGuestAccessToken,
+  createPaymentResultAccessToken,
+  verifyPaymentResultAccessToken,
+  getPendingOrderStatus,
+  getWebhookPaymentState,
   sendGuestOrderCreatedEmail,
   forwardPaidNotification,
   retryPendingPaymentNotifications,

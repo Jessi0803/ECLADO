@@ -161,14 +161,14 @@ export default function ShopPage({
         </div>
       </div>
       {/* 分類篩選列 */}
-      <div ref={categoryTabsRef} className="filter-tabs" style={{ background:'var(--off-white)', borderBottom:'1px solid var(--light)', padding: isMobile ? '0 16px' : '0 32px' }}>
-        <div style={{ maxWidth:1280, margin:'0 auto' }}>
+      <div style={{ background:'var(--off-white)', borderBottom:'1px solid var(--light)', padding: isMobile ? '0 16px' : '0 32px' }}>
+        <div style={{ width:'100%', maxWidth:1280, margin:'0 auto' }}>
           <div style={{ display:'flex', gap:8, padding:'14px 0 0' }}>
             {[['category', '依功效分類'], ['series', '依系列分類']].map(([view, label]) => (
               <button key={view} type="button" aria-pressed={activeFilter.view === view} onClick={() => selectView(view)} style={{ border:'1px solid var(--light)', background:activeFilter.view === view ? 'var(--black)' : 'var(--white)', color:activeFilter.view === view ? 'var(--white)' : 'var(--dark)', padding:'9px 16px', fontSize:12, cursor:'pointer', letterSpacing:'0.06em' }}>{label}</button>
             ))}
           </div>
-          <div style={{ display:'flex' }}>
+          <div ref={categoryTabsRef} className="filter-tabs">
           {filterItems.map(item => (
             <button
               key={`${activeFilter.view}:${item}`}

@@ -42,6 +42,7 @@ export function savePendingPayment(payment) {
       paymentToken: String(payment.paymentToken || ''),
       accessType: String(payment.accessType || (payment.paymentToken ? 'token' : '')),
       guestAccessToken: String(payment.guestAccessToken || ''),
+      resultAccessToken: String(payment.resultAccessToken || ''),
       lookupCode: String(payment.lookupCode || ''),
       orderEmailSent: typeof payment.orderEmailSent === 'boolean' ? payment.orderEmailSent : null,
       amount: Number(payment.amount) || 0,
@@ -56,7 +57,8 @@ export function savePendingPayment(payment) {
     };
     const hasAccess = record.paymentToken
       || record.accessType === 'member'
-      || (record.accessType === 'guest' && record.guestAccessToken);
+      || (record.accessType === 'guest' && record.guestAccessToken)
+      || record.resultAccessToken;
     if (!record.orderNo || !hasAccess) return false;
     sessionStorage.setItem(PENDING_PAYMENT_KEY, JSON.stringify(record));
     return true;
@@ -70,7 +72,8 @@ export function getPendingPayment(orderNo = '') {
     const payment = JSON.parse(sessionStorage.getItem(PENDING_PAYMENT_KEY) || 'null');
     const hasAccess = payment?.paymentToken
       || payment?.accessType === 'member'
-      || (payment?.accessType === 'guest' && payment?.guestAccessToken);
+      || (payment?.accessType === 'guest' && payment?.guestAccessToken)
+      || payment?.resultAccessToken;
     if (!payment?.orderNo || !hasAccess) return null;
     if (orderNo && payment.orderNo !== orderNo) return null;
     return payment;

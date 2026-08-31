@@ -7,7 +7,7 @@ export const JOURNAL_ARTICLES = [
     title:'胜肽、玻尿酸、積雪草，修護型保養怎麼排先後？',
     excerpt:'從保濕、屏障到彈潤修護，整理三種常見活性成分的角色與適合膚況。',
     seoDescription:'胜肽、玻尿酸、積雪草怎麼搭？一次理解三種修護型保養成分的角色、使用順序與適合膚況，建立更精準的日常保養節奏。',
-    img:'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=1200&q=88&fit=crop',
+    img:'/assets/images/journal-01.jpg',
     sections:[
       { heading:'修護，不是把所有成分一次疊上去', paragraphs:[
         '當肌膚乾燥、緊繃或狀態不穩定時，很多人會直覺把標示「保濕、舒緩、彈潤」的產品全部疊擦。但胜肽、玻尿酸與積雪草雖然經常一起出現在修護型保養中，扮演的角色並不完全相同。',
@@ -44,7 +44,7 @@ export const JOURNAL_ARTICLES = [
     title:'敏弱肌日常流程：清潔、舒緩、鎖水的低刺激節奏',
     excerpt:'以院線保養邏輯拆解居家早晚程序，減少過度疊擦造成的負擔。',
     seoDescription:'敏弱肌保養怎麼安排？從溫和清潔、舒緩補水到乳霜鎖水，整理早晚低刺激保養流程與常見過度保養問題。',
-    img:'https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=1200&q=88&fit=crop',
+    img:'/assets/images/journal-02.jpg',
     sections:[
       { heading:'敏弱時期，保養的重點是做減法', paragraphs:[
         '肌膚出現乾燥、緊繃、泛紅感或使用產品時容易覺得不舒服，常讓人急著增加更多「修護」步驟。但對狀態不穩的肌膚來說，產品越多，不一定代表照顧得越完整。',
@@ -78,7 +78,7 @@ export const JOURNAL_ARTICLES = [
     title:'美容師如何為乾燥與熟齡肌挑選安瓶與乳霜搭配',
     excerpt:'從質地、功能與客戶膚況三個面向，建立更清楚的療程推薦方向。',
     seoDescription:'美容師如何搭配安瓶與乳霜？從乾燥程度、熟齡需求、產品質地與療程情境建立專業的保養搭配判斷。',
-    img:'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=1200&q=88&fit=crop',
+    img:'/assets/images/journal-03.png',
     sections:[
       { heading:'先判斷膚況，再決定產品', paragraphs:[
         '面對乾燥與熟齡客戶時，安瓶加乳霜是常見的集中保養組合，但「高滋潤」並不是唯一答案。同樣覺得乾燥，有些客戶是環境造成的暫時缺水，有些則長期偏乾；熟齡肌也可能同時伴隨出油、粗糙或對厚重質地不耐受。',
@@ -115,7 +115,7 @@ export const JOURNAL_ARTICLES = [
     title:'卸妝後還要洗臉嗎？依膚況判斷第二步清潔',
     excerpt:'從皮脂、彩妝殘留與乾敏肌耐受度，拆開常見清潔誤區。',
     seoDescription:'卸妝後一定要再洗臉嗎？從卸妝產品類型、彩妝與防曬程度、出油量及乾敏肌耐受度判斷是否需要二次清潔。',
-    img:'https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=1200&q=88&fit=crop',
+    img:'/assets/images/journal-04.png',
     sections:[
       { heading:'二次清潔不是每個人都必須一樣', paragraphs:[
         '「卸妝後一定要再用洗面乳嗎？」沒有一個適合所有膚質的答案。是否需要第二步清潔，應該一起看卸妝產品類型、當天彩妝與防曬程度、肌膚出油量，以及洗後的實際感受。',
@@ -145,7 +145,7 @@ export const JOURNAL_ARTICLES = [
     title:'膚況不穩時，安瓶與面膜怎麼搭才不會過度保養',
     excerpt:'整理集中護理常見順序，讓舒緩、保濕與修護更有節奏。',
     seoDescription:'安瓶和面膜可以一起用嗎？整理膚況不穩時的集中保養順序、使用頻率與減法原則，避免一次疊加過多機能產品。',
-    img:'https://images.unsplash.com/photo-1615397349754-cfa2066a298e?w=1200&q=88&fit=crop',
+    img:'/assets/images/journal-05.png',
     sections:[
       { heading:'集中護理，不代表一次做越多越好', paragraphs:[
         '安瓶與面膜都是很容易讓人產生「加強保養」感受的產品，因此也常被安排在重要活動前、季節轉換或肌膚乾燥時使用。但當膚況本來就不穩定，兩者同時大量疊加，反而會讓你難以判斷肌膚真正需要什麼。',
@@ -182,7 +182,7 @@ export const JOURNAL_ARTICLES = [
     title:'院線級保養不是更厚重，而是更精準地處理需求',
     excerpt:'從產品結構理解專業系列和一般日常保養的差異。',
     seoDescription:'院線級保養和日常保養差在哪？從膚況評估、產品角色、療程程序與居家延續理解專業保養真正強調的精準性。',
-    img:'https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=1200&q=88&fit=crop',
+    img:'/assets/images/journal-06.jpg',
     sections:[
       { heading:'「專業」不等於越濃、越厚、步驟越多', paragraphs:[
         '談到院線級或專業保養，很多人的第一印象是更濃、更滋潤，或需要一次使用很多產品。但真正的專業性，往往不在產品看起來有多強，而在於能不能先判斷需求，再把每個產品放到適合的位置。',

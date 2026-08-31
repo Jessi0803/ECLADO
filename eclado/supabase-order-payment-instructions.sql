@@ -43,10 +43,13 @@ alter table public.orders
 
 create table if not exists public.order_payment_instructions (
   order_id text primary key references public.orders(id) on delete cascade,
+  provider_order_no text,
+  attempt_no integer not null default 1,
   payment_method text not null,
   provider_transaction_no text,
   provider_status text,
   provider_description text,
+  payment_state text not null default 'pending',
   atm_bank_code text,
   atm_account text,
   payment_url text,
@@ -59,7 +62,16 @@ create table if not exists public.order_payment_instructions (
 
 alter table public.order_payment_instructions
   add column if not exists order_email_sent_at timestamptz,
-  add column if not exists order_email_error text;
+  add column if not exists order_email_error text,
+  add column if not exists payment_state text not null default 'pending',
+  add column if not exists provider_order_no text,
+  add column if not exists attempt_no integer not null default 1;
+
+alter table public.order_payment_instructions
+  drop constraint if exists order_payment_instructions_payment_state_check;
+alter table public.order_payment_instructions
+  add constraint order_payment_instructions_payment_state_check
+  check (payment_state in ('pending', 'paid', 'failed', 'expired', 'cancelled'));
 
 alter table public.order_payment_instructions enable row level security;
 
@@ -73,7 +85,7 @@ create index if not exists idx_order_payment_instructions_due
   on public.order_payment_instructions (payment_due_at);
 
 comment on table public.order_payment_instructions is
-  'Server-only payment instructions used to restore the original gateway payment without creating a second payment order.';
+  'Server-only current payment instructions used to recover the latest gateway payment; historical attempts are stored separately.';
 
 -- 後台訂單列表只需要付款方式，不開放虛擬帳號、付款連結等敏感欄位。
 create or replace function public.get_admin_order_payment_methods()

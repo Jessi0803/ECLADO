@@ -67,6 +67,13 @@ test('訪客查詢碼、手機正規化與短效查詢憑證', () => {
   assert.equal(server.verifyGuestAccessToken(server.createGuestAccessToken('ECL-GUEST-001', -1), 'ECL-GUEST-001'), false);
 });
 
+test('付款回站使用限時且綁定訂單的查詢憑證', () => {
+  const token = server.createPaymentResultAccessToken('ECL-RETURN-001', 60_000);
+  assert.equal(server.verifyPaymentResultAccessToken(token, 'ECL-RETURN-001'), true);
+  assert.equal(server.verifyPaymentResultAccessToken(token, 'ECL-RETURN-OTHER'), false);
+  assert.equal(server.verifyPaymentResultAccessToken(server.createPaymentResultAccessToken('ECL-RETURN-001', -1), 'ECL-RETURN-001'), false);
+});
+
 test('訪客付款單建立後寄送含查詢碼的訂單成立信並記錄結果', async () => {
   const originalFetch = global.fetch;
   const calls = [];
@@ -323,6 +330,8 @@ test('buildAuthoritativeCreateBody: 忽略呼叫端 amount，使用資料庫訂�
       status: 'unpaid',
       items: [{ name: '胜肽修護精華液', qty: 1 }],
       payment_due_at: '2026-07-31T07:30:00.000Z',
+      provider_order_no: 'ECL-AUTH-001-R2',
+      attempt_no: 2,
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   };
   try {
@@ -333,6 +342,7 @@ test('buildAuthoritativeCreateBody: 忽略呼叫端 amount，使用資料庫訂�
       payType: 'A',
     });
     assert.equal(body.Amount, 398000);
+    assert.equal(body.OrderNo, 'ECL-AUTH-001-R2');
     assert.equal(body.PrdtName, '胜肽修護精華液');
     assert.equal(body.ATMParam.ExpireDate, '20260731');
     assert.equal(body.ATMParam.ExpireTime, '1530');
@@ -361,13 +371,15 @@ test('getSinopacPaymentError: 失敗回傳描述，成功回空字串', () => {
   assert.match(server.getSinopacPaymentError({ Status: 'F', Description: '卡片遭拒' }), /卡片遭拒/);
 });
 
-test('付款返回網址只包含訂單與結果，不洩漏任何 token', () => {
-  const url = new URL(server.buildPaymentResultUrl('ECL-RETURN-001', 'paid'));
+test('付款返回網址不洩漏永豐或資料庫付款 token，只帶限時結果憑證', () => {
+  const resultToken = server.createPaymentResultAccessToken('ECL-RETURN-001');
+  const url = new URL(server.buildPaymentResultUrl('ECL-RETURN-001', 'paid', resultToken));
   assert.equal(url.pathname, '/payment-result');
   assert.equal(url.searchParams.get('orderNo'), 'ECL-RETURN-001');
   assert.equal(url.searchParams.get('result'), 'paid');
   assert.equal(url.searchParams.has('payToken'), false);
   assert.equal(url.searchParams.has('paymentToken'), false);
+  assert.equal(url.searchParams.get('resultToken'), resultToken);
 });
 
 test('resolvePaymentQueryState: 付款成功優先，逾期與取消不可再付款', () => {
@@ -393,6 +405,23 @@ test('resolvePaymentQueryState: 付款成功優先，逾期與取消不可再付
   assert.equal(server.resolvePaymentQueryState(futureOrder, {
     OrderList: [{ PayStatus: '1C200' }],
   }), 'pending');
+  assert.equal(server.resolvePaymentQueryState({
+    status: 'ready_for_pickup',
+    payment_due_at: '2099-01-01T00:00:00.000Z',
+  }, {}), 'paid');
+  assert.equal(server.resolvePaymentQueryState({
+    status: 'picked_up',
+    payment_due_at: '2099-01-01T00:00:00.000Z',
+  }, {}), 'paid');
+});
+
+test('未完成付款依付款方式保留正確訂單狀態', () => {
+  assert.equal(server.getPendingOrderStatus('A'), 'awaiting_confirm');
+  assert.equal(server.getPendingOrderStatus('C'), 'unpaid');
+  assert.equal(server.getPendingOrderStatus('M'), 'unpaid');
+  assert.equal(server.getWebhookPaymentState({ paid: true }), 'paid');
+  assert.equal(server.getWebhookPaymentState({ paid: false, pending: true }), 'pending');
+  assert.equal(server.getWebhookPaymentState({ paid: false, pending: false }), 'failed');
 });
 
 test('付款資訊持久化只選取可恢復的付款連結與付款方式', () => {
@@ -409,6 +438,18 @@ test('付款資訊持久化只選取可恢復的付款連結與付款方式', ()
   assert.equal(server.paymentMethodFromRequest({ payType: 'C' }), 'card');
   assert.equal(server.paymentMethodFromRequest({ payType: 'M', choosePay: 'A' }), 'apple');
   assert.equal(server.paymentMethodFromRequest({ payType: 'M', choosePay: 'G' }), 'google');
+});
+
+test('重新付款只允許信用卡與行動支付，並還原正確的永豐付款參數', () => {
+  assert.deepEqual(server.paymentRequestFromStoredMethod('card'), { payType:'C' });
+  assert.deepEqual(server.paymentRequestFromStoredMethod('apple'), { payType:'M', choosePay:'A' });
+  assert.deepEqual(server.paymentRequestFromStoredMethod('google'), { payType:'M', choosePay:'G' });
+  assert.throws(() => server.paymentRequestFromStoredMethod('atm'), /cannot be retried/);
+  const payable = { status:'unpaid', payment_due_at:'2099-01-01T00:00:00.000Z' };
+  assert.equal(server.getPaymentRetryBlockReason(payable, { payment_state:'failed', payment_method:'card' }), '');
+  assert.match(server.getPaymentRetryBlockReason({ ...payable, status:'paid' }, { payment_state:'failed', payment_method:'card' }), /not eligible/);
+  assert.match(server.getPaymentRetryBlockReason(payable, { payment_state:'pending', payment_method:'card' }), /Only a failed/);
+  assert.match(server.getPaymentRetryBlockReason(payable, { payment_state:'failed', payment_method:'atm' }), /cannot be retried/);
 });
 
 test('會員付款資訊端點會驗證登入身分與訂單所有權', async () => {
@@ -503,6 +544,48 @@ test('會員不能讀取其他會員的付款資訊', async () => {
     assert.equal(response.status, 400);
     assert.match(body.error, /does not belong/);
     assert.equal(instructionRead, false);
+  } finally {
+    global.fetch = originalFetch;
+    await new Promise(resolve => listener.close(resolve));
+  }
+});
+
+test('會員付款摘要只查詢登入會員自己的訂單並標示可重新付款', async () => {
+  const originalFetch = global.fetch;
+  const { listener, baseUrl } = await listenForTest();
+  const calls = [];
+  global.fetch = async (url, options = {}) => {
+    calls.push(String(url));
+    if (String(url).endsWith('/auth/v1/user')) {
+      assert.equal(options.headers.Authorization, 'Bearer member-summary-token');
+      return new Response(JSON.stringify({ id:'member-summary-001' }), { status:200 });
+    }
+    if (String(url).includes('/rest/v1/orders?')) {
+      const parsed = new URL(String(url));
+      assert.equal(parsed.searchParams.get('user_id'), 'eq.member-summary-001');
+      return new Response(JSON.stringify([{
+        id:'ECL-MEMBER-FAILED-001', status:'unpaid', payment_due_at:'2099-01-01T00:00:00.000Z',
+      }]), { status:200 });
+    }
+    if (String(url).includes('/rest/v1/order_payment_instructions?')) {
+      return new Response(JSON.stringify([{
+        order_id:'ECL-MEMBER-FAILED-001', payment_method:'card', payment_state:'failed', payment_due_at:'2099-01-01T00:00:00.000Z',
+      }]), { status:200 });
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+  try {
+    const response = await originalFetch(`${baseUrl}/api/orders/member-payment-summaries`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', Authorization:'Bearer member-summary-token' },
+      body:'{}',
+    });
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.deepEqual(body.summaries, [{
+      order_id:'ECL-MEMBER-FAILED-001', payment_method:'card', payment_state:'failed', payment_due_at:'2099-01-01T00:00:00.000Z', can_retry:true,
+    }]);
+    assert.equal(calls.some(url => url.includes('user_id=eq.member-summary-001')), true);
   } finally {
     global.fetch = originalFetch;
     await new Promise(resolve => listener.close(resolve));

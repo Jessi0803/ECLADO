@@ -41,6 +41,8 @@ alter table public.orders
 create table if not exists public.order_payment_authorizations (
   order_id text primary key references public.orders(id) on delete cascade,
   token_hash text not null,
+  provider_order_no text,
+  attempt_no integer not null default 1,
   claimed_at timestamptz,
   gateway_created_at timestamptz,
   created_at timestamptz not null default now()
@@ -457,8 +459,8 @@ begin
     normalized_fulfillment_method
   );
 
-  insert into public.order_payment_authorizations (order_id, token_hash)
-  values (order_id, encode(digest(payment_token, 'sha256'), 'hex'));
+  insert into public.order_payment_authorizations (order_id, token_hash, provider_order_no, attempt_no)
+  values (order_id, encode(digest(payment_token, 'sha256'), 'hex'), order_id, 1);
 
   return jsonb_build_object(
     'order_id', order_id,
@@ -537,7 +539,9 @@ begin
     'total', target_order.total,
     'status', target_order.status,
     'items', target_order.items,
-    'payment_due_at', target_order.payment_due_at
+    'payment_due_at', target_order.payment_due_at,
+    'provider_order_no', coalesce(payment_auth.provider_order_no, target_order.id),
+    'attempt_no', coalesce(payment_auth.attempt_no, 1)
   );
 end;
 $$;
