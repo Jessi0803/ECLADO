@@ -1,15 +1,15 @@
 import type { Page, Route } from '@playwright/test';
 
 export const mockProducts = [
-  { id: 1, stock: 48,  is_pro_only: false, price: 1280, pro_price: 960,  series: 'Deep', active: true },
-  { id: 2, stock: 2,   is_pro_only: false, price: 3980, pro_price: 2980, series: 'Cell', active: true },
-  { id: 3, stock: 15,  is_pro_only: false, price: 4800, pro_price: 3600, active: true },
-  { id: 4, stock: 1,   is_pro_only: false, price: 2200, pro_price: 1650, active: true },
-  { id: 5, stock: 22,  is_pro_only: false, price: 2800, pro_price: 2100, active: true },
-  { id: 6, stock: 8,   is_pro_only: false, price: 3600, pro_price: 2700, active: true },
-  { id: 7, stock: 0,   is_pro_only: true,  price: 8800, pro_price: 6600, series: 'Air jet', active: true },
-  { id: 8, stock: 31,  is_pro_only: false, price: 1980, pro_price: 1485, active: true },
-  { id: 9, stock: 100, is_pro_only: false, price: 5,    pro_price: 5,    active: true },
+  { id: 1, name: 'Deep Cleansing Foam', name_zh: '深層清潔泡沫洗面乳', category: '清潔', size: '200ml', stock: 48, is_pro_only: false, price: 1280, pro_price: 960, series: 'Deep', image_url: 'https://example.com/mock-product-1.jpg', description: '溫和清潔肌膚並維持水潤。', skin_type: '全膚質、敏感肌', ingredients: '胺基酸系界面活性劑、綠茶萃取', features: ['溫和低刺激配方', '洗後保濕不緊繃'], active: true },
+  { id: 2, name: 'Peptide Repair Serum', name_zh: '胜肽修護精華液', category: '精華液', size: '30ml', stock: 2, is_pro_only: false, price: 3980, pro_price: 2980, series: 'Cell', image_url: 'https://example.com/mock-product-2.jpg', description: '多重胜肽與保濕修護配方。', skin_type: '乾燥肌、熟齡肌', ingredients: '乙醯六胜肽-8、玻尿酸鈉', features: ['多重胜肽複合修護', '深層長效補水'], active: true },
+  { id: 3, name: 'SOS Ampoule Set', name_zh: '急救修護安瓶組', category: '急救安瓶', size: '5ml×6', stock: 15, is_pro_only: false, price: 4800, pro_price: 3600, image_url: 'https://example.com/mock-product-3.jpg', description: '膚況不穩定時的集中護理。', skin_type: '敏弱肌', ingredients: '積雪草萃取、玻尿酸鈉', features: ['即時鎮靜舒緩'], active: true },
+  { id: 4, name: 'Intensive Hydra Mask', name_zh: '密集保濕面膜', category: '面膜', size: '35ml×10', stock: 1, is_pro_only: false, price: 2200, pro_price: 1650, image_url: 'https://example.com/mock-product-4.jpg', description: '密集補水面膜。', skin_type: '乾燥缺水肌', ingredients: '玻尿酸鈉', features: ['長效肌膚保濕'], active: true },
+  { id: 5, name: 'Eye Contour Complex', name_zh: '眼周緊緻精華', category: '眼霜', size: '30ml', stock: 22, is_pro_only: false, price: 2800, pro_price: 2100, image_url: 'https://example.com/mock-product-5.jpg', description: '眼周高保濕修護精華。', skin_type: '乾燥眼周肌膚', ingredients: '植物性角鯊烷', features: ['眼周深層滋養'], active: true },
+  { id: 6, name: 'Cell Recovery Cream', name_zh: '細胞修護乳霜', category: '面霜', size: '50g', stock: 8, is_pro_only: false, price: 3600, pro_price: 2700, image_url: 'https://example.com/mock-product-6.jpg', description: '滋潤型修護乳霜。', skin_type: '熟齡肌、乾燥肌', ingredients: '維他命E、腺苷', features: ['強化肌膚保水屏障'], active: true },
+  { id: 7, name: 'NK Cell Activator', name_zh: 'NK細胞活化安瓶', category: '急救安瓶', size: '3.5ml×10', stock: 0, is_pro_only: true, price: 8800, pro_price: 6600, series: 'Air jet', image_url: 'https://example.com/mock-product-7.jpg', description: '針對彈性不足膚況設計的安瓶。', skin_type: '彈性不足肌', ingredients: '植物培養萃取', features: ['院線專業集中護理'], active: true },
+  { id: 8, name: 'AHA/BHA Peeling Gel', name_zh: 'AHA·BHA·PHA 煥膚凝膠', category: '清潔', size: '120ml', stock: 31, is_pro_only: false, price: 1980, pro_price: 1485, image_url: 'https://example.com/mock-product-8.jpg', description: '三酸溫和煥膚凝膠。', skin_type: '混合肌', ingredients: '乳酸、葡萄糖酸內酯', features: ['三酸溫和煥膚'], active: true },
+  { id: 9, name: 'Payment Test Product', name_zh: '金流測試商品', category: '清潔', size: '測試用', stock: 100, is_pro_only: false, price: 5, pro_price: 5, image_url: 'https://example.com/mock-product-9.jpg', description: '僅供自動化金流測試。', skin_type: '測試用途', ingredients: '測試品項', features: ['低金額測試'], active: true },
 ];
 
 export const activePromotion = {

@@ -9,7 +9,6 @@ import {
 import ProductCard from '../components/product/ProductCard.jsx';
 import PromoSection from '../components/product/PromoSection.jsx';
 import {
-  PRODUCTS,
   getCartKey,
   getMemberTier,
   isProfessionalMember,
@@ -54,7 +53,7 @@ export default function ShopPage({
   setCart,
   onSelectProduct,
   promotions = [],
-  products = PRODUCTS,
+  products = [],
   productsStatus = 'ready',
   productsError = '',
 }) {

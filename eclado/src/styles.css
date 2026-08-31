@@ -18,6 +18,12 @@
   p, span, button, a, label, input, select, textarea { font-family: var(--font-body); }
   #root { min-height: 100vh; }
 
+  /* 登入流程固定以視窗高度裁切左側視覺，避免切換表單時背景位移。 */
+  .auth-page { display:flex; height:100vh; overflow:hidden; }
+  @supports (height: 100dvh) {
+    .auth-page { height:100dvh; }
+  }
+
   /* 固定採用行動瀏覽器工具列展開時的安全高度，避免捲動時工具列收合造成 Hero 拉伸抖動。 */
   .home-hero { height: 100vh; }
   @supports (height: 100svh) {

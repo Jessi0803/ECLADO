@@ -8,7 +8,6 @@ import PromoSection from '../components/product/PromoSection.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
 import { HERO_SLIDES } from '../data/homeContent.js';
 import {
-  PRODUCTS,
   getCartKey,
   isProfessionalMember,
 } from '../domain/catalog.jsx';
@@ -16,7 +15,7 @@ import { emptySalesStats, getPopularProducts } from '../domain/sales.js';
 import { isPromotionLive } from '../domain/promotions.js';
 import { goProfessionalApply } from '../services/membership.js';
 
-export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user, cart, setCart, promotions = [], products = PRODUCTS, salesStats = emptySalesStats() }) {
+export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user, cart, setCart, promotions = [], products = [], salesStats = emptySalesStats() }) {
   const [slide, setSlide] = useState(0);
   const [animating, setAnimating] = useState(false);
   const isMobile = useIsMobile();

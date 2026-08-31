@@ -553,8 +553,7 @@ test('專業會員購物車即時提示最低訂購與免運門檻', async ({ pa
 });
 
 test('DB 的 is_pro_only=true 會讓原本公開商品變院線限定', async ({ page }) => {
-  // 商品 id=2（胜肽修護精華液）在 PRODUCTS 常數裡 isProOnly=false
-  // 模擬 DB 回傳 is_pro_only: true，前端應該讀 DB 值並限制非專業會員
+  // 模擬 DB 回傳 is_pro_only: true，前端應依權威商品資料限制非專業會員。
   await mockEcladoApis(page, {
     products: mockProducts.map(p => p.id === 2 ? { ...p, is_pro_only: true } : p),
   });
@@ -567,7 +566,7 @@ test('DB 的 is_pro_only=true 會讓原本公開商品變院線限定', async ({
 });
 
 test('DB 的 price 覆蓋寫死的售價', async ({ page }) => {
-  // 商品 id=2 在 PRODUCTS 常數裡 price=3980，改成 DB 回傳 price=2999
+  // 商品價格完全依 DB 回傳值顯示。
   await mockEcladoApis(page, {
     products: mockProducts.map(p => p.id === 2 ? { ...p, price: 2999 } : p),
     promotions: [],

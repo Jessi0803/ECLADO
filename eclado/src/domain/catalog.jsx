@@ -1,6 +1,3 @@
-import { PRODUCTS } from '../data/products.js';
-export { PRODUCTS };
-
 export const MEMBER_TIERS = {
   consumer:    { label:'一般會員', badge:'MEMBER', priceLabel:'一般價', multiplier:null },
   pro:         { label:'美容師', badge:'PRO', priceLabel:'專業價', multiplier:1 },
@@ -273,17 +270,13 @@ export function getFulfillmentInfo(product) {
   };
 }
 
-export function mergeProductsWithStock(baseProducts, stockRows, variantMap, imageMap = null) {
-  const productMap = new Map(baseProducts.map(product => [Number(product.id), product]));
+export function mergeProductsWithStock(stockRows, variantMap, imageMap = null) {
   return (stockRows || []).filter(row => row.active !== false).map(row => {
-    const product = productMap.get(Number(row.id)) || {};
     const rowImages = normalizeJsonArray(row.image_urls).filter(Boolean);
-    const fallbackImages = normalizeJsonArray(product.imageUrls).filter(Boolean);
     const storageImages = imageMap?.get(Number(row.id)) || [];
-    const legacyImageUrls = rowImages.length ? rowImages : fallbackImages;
     const imageUrls = storageImages.length
       ? storageImages.map(image => image.url)
-      : legacyImageUrls;
+      : rowImages;
     const primaryStorageImage = storageImages.find(image => image.isPrimary) || storageImages[0];
     const variantSource = variantMap?.get(Number(row.id)) || [];
     const variants = variantSource
@@ -291,28 +284,27 @@ export function mergeProductsWithStock(baseProducts, stockRows, variantMap, imag
       .filter(variant => variant.active && (variant.size || variant.price || variant.proPrice));
     const primaryVariant = variants.find(variant => variant.isDefault) || variants[0] || null;
     return {
-      ...product,
       id: Number(row.id),
-      name: row.name || product.name || '',
-      nameZh: row.name_zh || product.nameZh || '',
-      subtitle: row.subtitle || product.subtitle || '',
-      category: row.category || product.category || '',
-      series: row.series || product.series || '',
-      size: primaryVariant?.size || row.size || product.size || '',
+      name: row.name || '',
+      nameZh: row.name_zh || '',
+      subtitle: row.subtitle || '',
+      category: row.category || '',
+      series: row.series || '',
+      size: primaryVariant?.size || row.size || '',
       stock: primaryVariant?.stock != null ? primaryVariant.stock : Number(row.stock ?? 0),
-      isProOnly: row.is_pro_only != null ? !!row.is_pro_only : product.isProOnly,
-      price: primaryVariant?.price || (row.price != null ? Number(row.price) : product.price),
-      proPrice: primaryVariant?.proPrice || (row.pro_price != null ? Number(row.pro_price) : product.proPrice),
-      img: primaryStorageImage?.url || row.image_url || imageUrls[0] || product.img || '',
+      isProOnly: !!row.is_pro_only,
+      price: primaryVariant?.price || Number(row.price ?? 0),
+      proPrice: primaryVariant?.proPrice || Number(row.pro_price ?? 0),
+      img: primaryStorageImage?.url || row.image_url || imageUrls[0] || '',
       imageUrls,
       productImages: storageImages,
       variants,
-      desc: row.description || product.desc || '',
-      skinType: row.skin_type || product.skinType || '',
-      ingredients: row.ingredients || product.ingredients || '',
-      features: Array.isArray(row.features) ? row.features : (product.features || []),
-      listImageScale: normalizeProductImageScale(row.product_list_image_scale ?? product.listImageScale),
-      active: row.active != null ? row.active : product.active,
+      desc: row.description || '',
+      skinType: row.skin_type || '',
+      ingredients: row.ingredients || '',
+      features: Array.isArray(row.features) ? row.features : [],
+      listImageScale: normalizeProductImageScale(row.product_list_image_scale),
+      active: row.active !== false,
     };
   });
 }

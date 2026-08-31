@@ -1,13 +1,13 @@
 import React from 'react';
 
-export default function BackHomeButton({ setPage }) {
+export default function BackHomeButton({ setPage, label = '← 返回首頁', onClick }) {
   return (
     <button
       type="button"
-      onClick={() => setPage('home')}
+      onClick={onClick || (() => setPage('home'))}
       style={{ alignSelf:'flex-start', background:'none', border:'none', cursor:'pointer', fontSize:12, color:'var(--dark)', fontFamily:'var(--font-body)', letterSpacing:'0.06em', padding:0, marginBottom:24 }}
     >
-      ← 返回首頁
+      {label}
     </button>
   );
 }

@@ -125,10 +125,10 @@ export default function LoginPage({ setPage }) {
   }
 
   return (
-    <div style={{ minHeight:'100vh', display:'flex' }}>
+    <div className="auth-page">
       {/* Left visual */}
       <div className="login-visual" style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center', background:'var(--black)', padding:60, position:'relative', overflow:'hidden' }}>
-        <img src="https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=900&q=85&fit=crop" alt="" style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.35 }} />
+        <img src="/assets/images/auth-coast.jpg" alt="" style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.55 }} />
         <div style={{ position:'relative', zIndex:1, textAlign:'center' }}>
           <img src="/assets/images/ECLADO LOGO with CI_WHITE.png" alt="ECLADO Laboratory" style={{ width:190, height:'auto', display:'block', margin:'0 auto 8px' }} />
           <p style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:500, color:'var(--white)', lineHeight:1.4, marginTop:40, marginBottom:20 }}>Professional<br />Skincare.</p>
@@ -137,8 +137,12 @@ export default function LoginPage({ setPage }) {
       </div>
 
       {/* Right form */}
-      <div style={{ width:'100%', maxWidth:480, display:'flex', flexDirection:'column', justifyContent:'center', padding:'60px 32px', background:'var(--white)', overflowY:'auto' }}>
-        <BackHomeButton setPage={setPage} />
+      <div style={{ width:'100%', height:'100%', maxWidth:480, display:'flex', flexDirection:'column', justifyContent:'safe center', padding:'60px 32px', background:'var(--white)', overflowY:'auto' }}>
+        <BackHomeButton
+          setPage={setPage}
+          label={view === 'forgot' ? '← 返回登入' : '← 返回首頁'}
+          onClick={view === 'forgot' ? () => { setView('login'); reset(); } : undefined}
+        />
 
         <div style={{ marginBottom:28 }}>
           <img src="/assets/images/ECLADO LOGO with CI_WHITE.png" alt="ECLADO Laboratory" style={{ width:150, height:'auto', display:'block', filter:'brightness(0)', marginBottom:6 }} />

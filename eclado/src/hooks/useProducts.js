@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  PRODUCTS,
   applyVariantToProduct,
   getCartKey,
   getProductVariants,
@@ -61,7 +60,7 @@ export default function useProducts(user, setCart, authReady = true) {
         );
       }
       const imageMap = imageError ? null : groupProductImages(imageRows);
-      const loadedProducts = mergeProductsWithStock(PRODUCTS, data || [], variantMap, imageMap);
+      const loadedProducts = mergeProductsWithStock(data || [], variantMap, imageMap);
       hasLoadedProducts.current = true;
       setProducts(loadedProducts);
       setStatus('ready');

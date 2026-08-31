@@ -1,12 +1,11 @@
 import React from 'react';
 import {
-  PRODUCTS,
   isProfessionalMember,
 } from '../../domain/catalog.jsx';
 import { normProductIds } from '../../domain/promotions.js';
 import ProductCard from './ProductCard.jsx';
 
-export default function PromoSection({ promo, user, addToCart, onSelect, isMobile, promotions = [], products = PRODUCTS }) {
+export default function PromoSection({ promo, user, addToCart, onSelect, isMobile, promotions = [], products = [] }) {
   const ids = normProductIds(promo);
   const items = ids
     .map(id => products.find(p => p.id === id))
@@ -19,7 +18,7 @@ export default function PromoSection({ promo, user, addToCart, onSelect, isMobil
           <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', marginBottom:10 }}>限時優惠</p>
           <p style={{ fontSize:14, color:'#555', lineHeight:1.75 }}>
             活動「<strong style={{ color:'var(--black)' }}>{promo.name}</strong>」已建立，但目前<strong>沒有可顯示的商品</strong>。
-            請到後台確認已勾選商品，且商品編號需與官網一致（一般為 1～8）。
+            請到後台確認已勾選商品，且商品編號需與官網一致。
             {ids.length === 0 && '（目前 product_ids 為空）'}
           </p>
         </div>

@@ -10,10 +10,21 @@ test.describe('忘記密碼', () => {
 
   test('點「忘記密碼？」切換到忘記密碼表單，登入/註冊 tab 消失', async ({ page }) => {
     await page.goto('/login');
+    const visualBefore = (page.viewportSize()?.width || 0) > 900
+      ? await page.locator('.login-visual').boundingBox()
+      : null;
     await page.getByRole('button', { name: '忘記密碼？' }).click();
     await expect(page.getByRole('button', { name: '發送重設密碼信' })).toBeVisible();
-    await expect(page.getByRole('button', { name: '登入' })).not.toBeVisible();
-    await expect(page.getByRole('button', { name: '註冊' })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: '登入', exact: true })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: '註冊', exact: true })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: '← 返回登入' })).toBeVisible();
+    if (visualBefore) {
+      const visualAfter = await page.locator('.login-visual').boundingBox();
+      expect(visualAfter).toEqual(visualBefore);
+    }
+    await page.getByRole('button', { name: '← 返回登入' }).click();
+    await expect(page.getByRole('button', { name: '登入', exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: '註冊', exact: true })).toBeVisible();
   });
 
   test('送出後顯示「密碼重設信已發送」成功訊息', async ({ page }) => {
