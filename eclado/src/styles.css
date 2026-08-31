@@ -110,6 +110,13 @@
   .nav-desktop { display: flex; gap: 0; align-items: center; }
   .nav-right    { display: flex; gap: 20px; align-items: center; }
   .nav-hamburger{ display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+  /* 舊版 LINE iOS WebView 收合工具列時，固定導覽列使用獨立合成層以降低重繪抖動。 */
+  .is-line-browser .site-nav {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: transform;
+  }
   .mobile-drawer{
     position: fixed; top: 68px; left: 0; right: 0; bottom: 0;
     background: var(--white); z-index: 99; overflow-y: auto;

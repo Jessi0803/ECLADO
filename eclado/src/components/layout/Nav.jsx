@@ -45,7 +45,7 @@ export default function Nav({ setPage, onOpenCart, cartCount, user, setUser, pag
 
   return (
     <>
-      <nav style={{
+      <nav className="site-nav" style={{
         position:'fixed', top:0, left:0, right:0, zIndex:100,
         background: drawerOpen || darkMode ? 'var(--white)' : 'transparent',
         backdropFilter: 'none',
