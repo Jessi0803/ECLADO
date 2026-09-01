@@ -715,7 +715,6 @@ async function getMemberOrderPaymentSummaries(req) {
   const user = await getSupabaseAuthUser(req);
   const orderParams = new URLSearchParams({
     user_id: `eq.${user.id}`,
-    status: 'in.(awaiting_confirm,unpaid)',
     select: 'id,status,payment_due_at',
     order: 'created_at.desc',
     limit: '100',

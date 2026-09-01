@@ -1354,7 +1354,7 @@ test('訪客可用短查詢碼與結帳手機查看訂單，並在待付款時�
   await expect(page.getByRole('heading', { name: '訪客訂單明細' })).toBeVisible();
   await expect(page.getByText('ECL-GUEST-LOOKUP-001')).toBeVisible();
   await expect(page.getByText('胜肽修護精華液')).toBeVisible();
-  await expect(page.getByText('尚未付款')).toBeVisible();
+  await expect(page.getByText('等待付款').first()).toBeVisible();
   await expect(page.getByText('目前尚未建立物流資料。')).toBeVisible();
   const guestSession = await page.evaluate(() => JSON.parse(sessionStorage.getItem('eclado_guest_order_session') || 'null'));
   expect(guestSession.orderNo).toBe('ECL-GUEST-LOOKUP-001');
@@ -1420,7 +1420,7 @@ test('訪客重新驗證查詢碼與手機後可從訂單明細重新付款', as
   await page.goto('/order-lookup?lookup=ABCDE-12345');
   await page.getByLabel('結帳手機號碼').fill('0912345678');
   await page.getByRole('button', { name:'查看訂單' }).click();
-  await expect(page.getByText('付款未完成')).toBeVisible();
+  await expect(page.getByText('付款失敗').first()).toBeVisible();
   await expect(page.getByRole('button', { name:'重新付款' })).toBeVisible();
   await page.getByRole('button', { name:'重新付款' }).click();
   await expect(page).toHaveURL('https://sandbox.sinopac.test/retry-pay');
@@ -1451,7 +1451,7 @@ test('訪客可查看已出貨訂單與順豐托運資訊，已付款後不顯�
   await page.getByRole('button', { name: '查看訂單' }).click();
 
   await expect(page.getByText('已出貨')).toBeVisible();
-  await expect(page.getByText('已付款')).toBeVisible();
+  await expect(page.getByText('付款成功').first()).toBeVisible();
   await expect(page.getByText('托運單號：SF1234567890')).toBeVisible();
   await expect(page.getByRole('link', { name: '前往順豐查件' })).toHaveAttribute('href', /sf-express/);
   await expect(page.getByRole('button', { name: '查看付款資訊／繼續付款' })).toHaveCount(0);
@@ -1757,6 +1757,7 @@ test('會員專區顯示自己的訂單與托運單號', async ({ page }) => {
   await page.goto('/account');
   await expect(page.getByText('您好，E2E 會員')).toBeVisible();
   await expect(page.getByText('ACCOUNT-ORDER-001')).toBeVisible();
+  await expect(page.getByText('付款成功')).toBeVisible();
   await expect(page.getByText('已出貨')).toBeVisible();
   await expect(page.getByText('托運單號：SF123456789')).toBeVisible();
   await expect(page.getByRole('link', { name: '前往順豐查件' })).toHaveAttribute(
@@ -1855,6 +1856,7 @@ test('會員可從我的訂單以本人登入憑證重新付款且保留原訂�
   await page.route('https://sandbox.sinopac.test/retry-pay', route => route.fulfill({ status:200, contentType:'text/html', body:'<h1>Retry</h1>' }));
 
   await page.goto('/account');
+  await expect(page.getByText('付款失敗')).toBeVisible();
   await expect(page.getByRole('button', { name:'重新付款' })).toBeVisible();
   await page.getByRole('button', { name:'重新付款' }).click();
   await expect(page).toHaveURL('https://sandbox.sinopac.test/retry-pay');

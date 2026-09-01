@@ -16,7 +16,7 @@
 - `POST /api/sinopac/retry-payment` — 信用卡／行動支付失敗後保留原網站訂單，建立新的
   永豐付款嘗試與短效結果憑證；ATM 不使用此流程。
 - `POST /api/orders/payment-instructions` — 驗證會員身分與訂單所有權後，恢復原付款資訊。
-- `POST /api/orders/member-payment-summaries` — 只回傳登入會員本人未付款訂單的最小付款摘要，
+- `POST /api/orders/member-payment-summaries` — 只回傳登入會員本人訂單的最小付款摘要，供會員訂單顯示付款狀態與判斷是否可重新付款，
   供會員訂單列表安全顯示「重新付款」入口。
 - `POST /api/orders/guest-lookup` — 以短查詢碼與結帳手機查詢訪客訂單，成功後簽發短效憑證。
 - `POST /api/orders/guest-details` — 以短效訪客憑證更新該筆訂單、付款與物流狀態；不再次傳送手機號碼。

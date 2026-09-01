@@ -343,6 +343,27 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       .map(order => ({ order_id: order.id, payment_method: order.payment_method })),
   ));
 
+  await page.route('**/rest/v1/rpc/get_admin_order_payment_details', async route => json(route,
+    orders
+      .filter(order => order.payment_method)
+      .flatMap(order => order.id === 'E2E-ORDER-001' ? [
+        {
+          order_id: order.id, attempt_no: 1, payment_method: order.payment_method,
+          payment_state: 'pending', provider_status: '1C200', provider_description: '等待付款',
+          created_at: order.created_at, updated_at: order.created_at,
+        },
+        {
+          order_id: order.id, attempt_no: 2, payment_method: order.payment_method,
+          payment_state: 'failed', provider_status: '1C500', provider_description: '授權未完成',
+          created_at: order.created_at, updated_at: order.created_at,
+        },
+      ] : [{
+        order_id: order.id, attempt_no: 1, payment_method: order.payment_method,
+        payment_state: 'paid', provider_status: '1C400', provider_description: '交易成功',
+        created_at: order.created_at, updated_at: order.created_at,
+      }]),
+  ));
+
   await page.route('**/rest/v1/rpc/get_procurement_management_data', async route => json(route, procurement));
 
   await page.route('**/rest/v1/rpc/save_procurement_address', async route => {
@@ -845,16 +866,22 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       options.onPaymentSummaryRequest?.(authorization);
       if (!authorization) return json(route, { ok:false, error:'請先登入會員' }, 401);
       const summaries = orders
-        .filter(order => order.user_id && ['awaiting_confirm', 'unpaid'].includes(String(order.status)))
-        .map(order => ({
-          order_id:order.id,
-          payment_method:order.payment_method || 'atm',
-          payment_state:options.paymentQueryStatus || 'pending',
-          payment_due_at:order.payment_due_at || '2099-01-01T00:00:00.000Z',
-          can_retry:(options.paymentQueryStatus === 'failed')
-            && order.status === 'unpaid'
-            && ['card', 'apple', 'google'].includes(String(order.payment_method || '').toLowerCase()),
-        }));
+        .filter(order => order.user_id)
+        .map(order => {
+          const paymentState = options.paymentQueryStatus
+            || (['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(String(order.status))
+              ? 'paid'
+              : order.status === 'cancelled' ? 'cancelled' : 'pending');
+          return {
+            order_id:order.id,
+            payment_method:order.payment_method || 'atm',
+            payment_state:paymentState,
+            payment_due_at:order.payment_due_at || '2099-01-01T00:00:00.000Z',
+            can_retry:(paymentState === 'failed')
+              && order.status === 'unpaid'
+              && ['card', 'apple', 'google'].includes(String(order.payment_method || '').toLowerCase()),
+          };
+        });
       return json(route, { ok:true, summaries });
     });
     await page.route('https://pay.ecladotaiwan.com/api/orders/payment-instructions', async route => {

@@ -44,6 +44,26 @@ export const ORDER_STATUS_LABELS = {
   cancelled: '已取消',
 };
 
+export const PAYMENT_STATE_LABELS = {
+  initiated: '付款單建立中',
+  pending: '等待付款',
+  paid: '付款成功',
+  failed: '付款失敗',
+  expired: '付款已逾期',
+  cancelled: '付款已取消',
+};
+
+export function getPaymentStateLabel(state) {
+  return PAYMENT_STATE_LABELS[state] || (state ? '付款處理中' : '尚無付款紀錄');
+}
+
+export function getPaymentStateColor(state) {
+  if (state === 'paid') return 'var(--green)';
+  if (state === 'failed') return 'var(--red)';
+  if (['expired', 'cancelled'].includes(state)) return 'var(--mid)';
+  return 'var(--gold)';
+}
+
 export function getOrderStatusLabel(status) {
   return ORDER_STATUS_LABELS[status] || status || '處理中';
 }

@@ -55,6 +55,17 @@ test('後台付款方式查詢不暴露完整金流指示資料', () => {
   }
 });
 
+test('後台付款狀態查詢只回傳安全的付款嘗試摘要', () => {
+  const sql = read('supabase-admin-order-payment-details.sql');
+  expect(sql).toContain('create or replace function public.get_admin_order_payment_details()');
+  expect(sql).toContain('if not public.is_eclado_admin()');
+  expect(sql).toContain('attempt.payment_state');
+  expect(sql).toContain('left(attempt.provider_description, 300)');
+  expect(sql).not.toContain('payment_url');
+  expect(sql).not.toContain('atm_account');
+  expect(sql).not.toContain('provider_transaction_no');
+});
+
 test('重複付款狀態更新不會再次扣庫存，履約狀態互轉也不重複扣補', () => {
   for (const file of ['supabase-full-setup.sql', 'supabase-inventory-reservation.sql']) {
     const sql = read(file);

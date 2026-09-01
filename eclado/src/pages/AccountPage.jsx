@@ -3,7 +3,7 @@ import {
   getMemberTier,
   isProfessionalMember,
 } from '../domain/catalog.jsx';
-import { getOrderStatusLabel } from '../domain/payments.js';
+import { getOrderStatusLabel, getPaymentStateColor, getPaymentStateLabel } from '../domain/payments.js';
 import { SF_EXPRESS_TRACKING_URL } from '../domain/shipping.js';
 import useIsMobile from '../hooks/useIsMobile.js';
 import useAdminAccess from '../hooks/useAdminAccess.js';
@@ -301,6 +301,12 @@ export default function AccountPage({ user, setPage, onSignOut }) {
                 const paymentDueTime = new Date(order.payment_due_at || '').getTime();
                 const paymentExpired = Number.isFinite(paymentDueTime) && paymentDueTime <= Date.now();
                 const paymentSummary = paymentSummaries[order.id];
+                const paymentState = paymentSummary?.payment_state
+                  || (['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(order.status)
+                    ? 'paid'
+                    : ['awaiting_confirm', 'unpaid'].includes(order.status)
+                      ? 'pending'
+                      : order.status === 'cancelled' ? 'cancelled' : '');
                 const canRetryPayment = paymentSummary?.can_retry === true;
                 const canResumePayment = ['awaiting_confirm', 'unpaid'].includes(order.status)
                   && !paymentExpired
@@ -312,7 +318,10 @@ export default function AccountPage({ user, setPage, onSignOut }) {
                         <div style={{ fontSize:12, color:'var(--dark)', marginBottom:5 }}>訂單編號</div>
                         <div style={{ fontSize:14, color:'var(--black)', fontWeight:500, wordBreak:'break-all' }}>{order.id}</div>
                       </div>
-                      <span style={{ flexShrink:0, fontSize:11, letterSpacing:'0.08em', border:'1px solid var(--gold)', color:'var(--black)', padding:'5px 9px' }}>{getOrderStatusLabel(order.status)}</span>
+                      <div style={{ display:'flex', gap:6, flexWrap:'wrap', justifyContent:'flex-end' }}>
+                        {paymentState && <span style={{ flexShrink:0, fontSize:10, letterSpacing:'0.06em', border:`1px solid ${getPaymentStateColor(paymentState)}`, color:getPaymentStateColor(paymentState), padding:'5px 8px' }}>{getPaymentStateLabel(paymentState)}</span>}
+                        <span style={{ flexShrink:0, fontSize:11, letterSpacing:'0.08em', border:'1px solid var(--gold)', color:'var(--black)', padding:'5px 9px' }}>{getOrderStatusLabel(order.status)}</span>
+                      </div>
                     </div>
                     <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '1fr auto', gap:isMobile ? 12 : 24, borderTop:'1px solid var(--light)', paddingTop:14 }}>
                       <div style={{ display:'grid', gap:8 }}>

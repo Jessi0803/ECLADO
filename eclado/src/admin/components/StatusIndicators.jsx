@@ -1,4 +1,5 @@
 import React from 'react';
+import { getPaymentStateColor, getPaymentStateLabel } from '../../domain/payments.js';
 
 export const STATUS_MAP = {
   awaiting_confirm: { label: '轉帳待確認', color: 'var(--red)' },
@@ -37,6 +38,11 @@ export function PromoBadge({ phase }) {
 export function Badge({ status }) {
   const item = STATUS_MAP[status] || { label:status, color:'var(--mid)' };
   return <span style={{ display:'inline-block', padding:'3px 10px', fontSize:11, fontWeight:500, letterSpacing:'0.06em', background:item.color + '18', color:item.color, borderRadius:2 }}>{item.label}</span>;
+}
+
+export function PaymentStateBadge({ state }) {
+  const color = getPaymentStateColor(state);
+  return <span style={{ display:'inline-block', padding:'3px 8px', fontSize:10, fontWeight:500, letterSpacing:'0.05em', background:color + '18', color, borderRadius:2, whiteSpace:'nowrap' }}>{getPaymentStateLabel(state)}</span>;
 }
 
 export function StatusSelect({ status, onChange, size = 'sm', fulfillmentMethod = 'delivery' }) {

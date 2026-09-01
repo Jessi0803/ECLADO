@@ -550,7 +550,7 @@ test('會員不能讀取其他會員的付款資訊', async () => {
   }
 });
 
-test('會員付款摘要只查詢登入會員自己的訂單並標示可重新付款', async () => {
+test('會員付款摘要查詢登入會員自己的全部訂單並標示可重新付款', async () => {
   const originalFetch = global.fetch;
   const { listener, baseUrl } = await listenForTest();
   const calls = [];
@@ -563,6 +563,7 @@ test('會員付款摘要只查詢登入會員自己的訂單並標示可重新�
     if (String(url).includes('/rest/v1/orders?')) {
       const parsed = new URL(String(url));
       assert.equal(parsed.searchParams.get('user_id'), 'eq.member-summary-001');
+      assert.equal(parsed.searchParams.get('status'), null);
       return new Response(JSON.stringify([{
         id:'ECL-MEMBER-FAILED-001', status:'unpaid', payment_due_at:'2099-01-01T00:00:00.000Z',
       }]), { status:200 });

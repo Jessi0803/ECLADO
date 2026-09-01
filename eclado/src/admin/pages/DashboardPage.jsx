@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge } from '../components/StatusIndicators.jsx';
+import { Badge, PaymentStateBadge } from '../components/StatusIndicators.jsx';
 import { MiniBarChart, StatCard } from '../components/DashboardWidgets.jsx';
 import { buildMonthlyRevenue, revenueGrowth } from '../domain/analytics.js';
 
@@ -92,7 +92,7 @@ export default function Dashboard({ orders, products, members, applications = []
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              {['訂單編號', '會員', '金額', '狀態', '日期'].map(h => (
+              {['訂單編號', '會員', '金額', '付款狀態', '訂單狀態', '日期'].map(h => (
                 <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</th>
               ))}
             </tr>
@@ -103,6 +103,7 @@ export default function Dashboard({ orders, products, members, applications = []
                 <td style={{ padding: '12px', fontSize: 12, color: 'var(--dark)', fontWeight: 500 }}>{o.id}</td>
                 <td style={{ padding: '12px', fontSize: 13 }}>{o.member}</td>
                 <td style={{ padding: '12px', fontSize: 13, fontWeight: 500 }}>NT$ {o.total.toLocaleString()}</td>
+                <td style={{ padding: '12px' }}><PaymentStateBadge state={o.paymentState} /></td>
                 <td style={{ padding: '12px' }}><Badge status={o.status} /></td>
                 <td style={{ padding: '12px', fontSize: 12, color: 'var(--mid)' }}>{o.date}</td>
               </tr>

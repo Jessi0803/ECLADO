@@ -86,12 +86,13 @@ export default function AdminApp({ adminEmail, onSignOut }) {
   async function fetchAll() {
     setApplicationsLoading(true);
     try {
-      const [ordersRes, profilesRes, catalogRes, applicationsRes, paymentMethodsRes] = await Promise.all([
+      const [ordersRes, profilesRes, catalogRes, applicationsRes, paymentMethodsRes, paymentDetailsRes] = await Promise.all([
         supabase.from('orders').select('*').order('created_at', { ascending: false }),
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
         supabase.rpc('get_admin_catalog'),
         supabase.from('professional_applications').select('*').order('created_at', { ascending: false }),
         supabase.rpc('get_admin_order_payment_methods'),
+        supabase.rpc('get_admin_order_payment_details'),
       ]);
       if (ordersRes.error) throw ordersRes.error;
       if (profilesRes.error) throw profilesRes.error;
@@ -99,9 +100,29 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       const paymentMethodByOrder = new Map(
         (paymentMethodsRes.data || []).map(row => [String(row.order_id), row.payment_method]),
       );
+      const paymentDetailsByOrder = (paymentDetailsRes.error ? [] : (paymentDetailsRes.data || []))
+        .reduce((map, row) => {
+          const orderId = String(row.order_id);
+          if (!map.has(orderId)) map.set(orderId, []);
+          map.get(orderId).push(row);
+          return map;
+        }, new Map());
       const realOrders = (ordersRes.data || []).map(row => normalizeOrder({
         ...row,
-        payment_method: paymentMethodByOrder.get(String(row.id)) || '',
+        ...(() => {
+          const attempts = (paymentDetailsByOrder.get(String(row.id)) || [])
+            .sort((a, b) => Number(a.attempt_no || 0) - Number(b.attempt_no || 0));
+          const latest = attempts[attempts.length - 1] || {};
+          return {
+            payment_method: latest.payment_method || paymentMethodByOrder.get(String(row.id)) || '',
+            payment_state: latest.payment_state || '',
+            payment_attempt_count: attempts.length,
+            payment_attempts: attempts,
+            payment_updated_at: latest.updated_at || latest.created_at || null,
+            provider_status: latest.provider_status || '',
+            provider_description: latest.provider_description || '',
+          };
+        })(),
       }));
       setOrders(realOrders);
 

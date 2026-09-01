@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { PAYMENT_METHODS } from '../../domain/payments.js';
+import { getPaymentStateLabel, PAYMENT_METHODS } from '../../domain/payments.js';
 import { SF_EXPRESS_TRACKING_URL } from '../../domain/shipping.js';
 import { supabase } from '../../services/supabase.js';
-import { StatusSelect, TypeBadge } from '../components/StatusIndicators.jsx';
+import { PaymentStateBadge, StatusSelect, TypeBadge } from '../components/StatusIndicators.jsx';
 import usePanelHistory from '../hooks/usePanelHistory.js';
 
 function hasPreorder(order) {
@@ -40,6 +40,20 @@ function formatNotificationTime(value) {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+  });
+}
+
+function formatPaymentTime(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
   });
 }
 
@@ -344,7 +358,7 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'all
           <table className="responsive-admin-table admin-orders-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
-                {['訂單編號', '訂購人', '類型', '金額', '付款方式', '庫存', '狀態', '日期'].map(h => (
+                {['訂單編號', '訂購人', '類型', '金額', '付款方式', '付款狀態', '庫存', '訂單狀態', '日期'].map(h => (
                   <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -352,7 +366,7 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'all
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: 'var(--mid)', fontSize: 13 }}>目前沒有訂單</td>
+                  <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: 'var(--mid)', fontSize: 13 }}>目前沒有訂單</td>
                 </tr>
               )}
               {filtered.map(o => (
@@ -371,13 +385,14 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'all
                   <td data-label="付款方式" style={{ padding: '13px 14px', fontSize: 12, color: o.paymentMethod ? 'var(--dark)' : 'var(--light)', fontWeight: 500, whiteSpace: 'nowrap' }}>
                     {getPaymentMethodLabel(o.paymentMethod)}
                   </td>
+                  <td data-label="付款狀態" style={{ padding: '13px 14px' }}><PaymentStateBadge state={o.paymentState} /></td>
                   <td data-label="庫存" style={{ padding: '13px 14px' }}>
                     {hasPreorder(o)
                       ? <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--gold)', background: 'oklch(0.82 0.12 80 / 0.12)', padding: '3px 8px', whiteSpace: 'nowrap' }}>預購</span>
                       : <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--green)', background: 'oklch(0.65 0.18 145 / 0.10)', padding: '3px 8px', whiteSpace: 'nowrap' }}>現貨</span>
                     }
                   </td>
-                  <td data-label="狀態" style={{ padding: '13px 14px' }}>
+                  <td data-label="訂單狀態" style={{ padding: '13px 14px' }}>
                     <StatusSelect status={o.status} fulfillmentMethod={o.fulfillmentMethod} onChange={ns => updateStatus(o.id, ns)} />
                   </td>
                   <td data-label="日期" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)', whiteSpace: 'nowrap' }}>{o.date}</td>
@@ -410,6 +425,38 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'all
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 6 }}>訂單狀態</div>
             <StatusSelect status={selected.status} fulfillmentMethod={selected.fulfillmentMethod} onChange={ns => updateStatus(selected.id, ns)} size="lg" />
+          </div>
+
+          <div style={{ border:'1px solid var(--border)', background:'var(--off)', padding:'14px', marginBottom:20 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:10 }}>
+              <div style={{ fontSize:11, color:'var(--mid)' }}>付款狀態</div>
+              <PaymentStateBadge state={selected.paymentState} />
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px 12px', fontSize:11, color:'var(--dark)' }}>
+              <div>付款方式：{getPaymentMethodLabel(selected.paymentMethod)}</div>
+              <div>付款嘗試：{selected.paymentAttemptCount || 0} 次</div>
+              <div style={{ gridColumn:'1 / -1' }}>最後更新：{formatPaymentTime(selected.paymentUpdatedAt)}</div>
+              {selected.providerStatus && <div style={{ gridColumn:'1 / -1' }}>金流狀態：{selected.providerStatus}</div>}
+              {selected.providerDescription && <div style={{ gridColumn:'1 / -1', lineHeight:1.6, overflowWrap:'anywhere' }}>金流說明：{selected.providerDescription}</div>}
+            </div>
+            {selected.paymentAttempts.length > 0 && (
+              <details style={{ marginTop:12 }}>
+                <summary style={{ fontSize:11, color:'var(--dark)', cursor:'pointer' }}>查看付款嘗試紀錄</summary>
+                <div style={{ display:'grid', gap:8, marginTop:10 }}>
+                  {[...selected.paymentAttempts].reverse().map(attempt => (
+                    <div key={`${selected.id}-${attempt.attempt_no}`} style={{ borderTop:'1px solid var(--border)', paddingTop:8, fontSize:11, color:'var(--dark)', lineHeight:1.65 }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}>
+                        <strong>第 {attempt.attempt_no} 次</strong>
+                        <span>{getPaymentStateLabel(attempt.payment_state)}</span>
+                      </div>
+                      <div>{getPaymentMethodLabel(attempt.payment_method)} · {formatPaymentTime(attempt.updated_at || attempt.created_at)}</div>
+                      {attempt.provider_status && <div>金流狀態：{attempt.provider_status}</div>}
+                      {attempt.provider_description && <div style={{ overflowWrap:'anywhere' }}>金流說明：{attempt.provider_description}</div>}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
           </div>
 
           {selected.phone && (

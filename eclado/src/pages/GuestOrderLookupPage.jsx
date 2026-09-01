@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getProductImagePublicUrl } from '../services/catalogData.js';
-import { getOrderStatusLabel, PAYMENT_METHODS } from '../domain/payments.js';
+import { getOrderStatusLabel, getPaymentStateColor, getPaymentStateLabel, PAYMENT_METHODS } from '../domain/payments.js';
 import { SF_EXPRESS_TRACKING_URL } from '../domain/shipping.js';
 import useIsMobile from '../hooks/useIsMobile.js';
 import { fetchGuestOrderDetails, lookupGuestOrder, retrySinopacPayment } from '../services/paymentApi.js';
@@ -32,14 +32,6 @@ function formatDateTime(value) {
     timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', hour12: false,
   });
-}
-
-function paymentLabel(paymentState, orderStatus) {
-  if (orderStatus === 'returned') return '訂單已退貨';
-  return ({
-    pending: '尚未付款', paid: '已付款', expired: '付款期限已過',
-    cancelled: '已取消', failed: '付款未完成',
-  })[paymentState] || '處理中';
 }
 
 function statusColor(status) {
@@ -288,7 +280,10 @@ export default function GuestOrderLookupPage({ setPage }) {
                   <div style={{ fontSize:12, color:'var(--dark)', lineHeight:1.8, wordBreak:'break-all' }}>訂單編號：{order.id}</div>
                   <div style={{ fontSize:12, color:'var(--dark)' }}>成立時間：{formatDateTime(order.created_at || order.date) || '—'}</div>
                 </div>
-                <span style={{ border:`1px solid ${statusColor(order.status)}`, color:statusColor(order.status), padding:'7px 12px', fontSize:12, letterSpacing:'0.08em', flexShrink:0 }}>{getOrderStatusLabel(order.status)}</span>
+                <div style={{ display:'flex', gap:7, flexWrap:'wrap', justifyContent:'flex-end' }}>
+                  {result.paymentState && <span style={{ border:`1px solid ${getPaymentStateColor(result.paymentState)}`, color:getPaymentStateColor(result.paymentState), padding:'7px 10px', fontSize:11, letterSpacing:'0.06em', flexShrink:0 }}>{getPaymentStateLabel(result.paymentState)}</span>}
+                  <span style={{ border:`1px solid ${statusColor(order.status)}`, color:statusColor(order.status), padding:'7px 12px', fontSize:12, letterSpacing:'0.08em', flexShrink:0 }}>{getOrderStatusLabel(order.status)}</span>
+                </div>
               </div>
               {restoring && <p role="status" style={{ fontSize:11, color:'var(--mid)', marginTop:14 }}>正在更新最新訂單狀態…</p>}
               {error && <div role="alert" style={{ marginTop:16, color:'#991b1b', background:'#fef2f2', border:'1px solid #fecaca', padding:'12px 14px', fontSize:12, lineHeight:1.7 }}>{error}</div>}
@@ -323,7 +318,7 @@ export default function GuestOrderLookupPage({ setPage }) {
               <div style={{ display:'grid', gap:18 }}>
                 <div style={{ background:'var(--white)', border:'1px solid var(--light)', padding:22 }}>
                   <h2 style={{ fontSize:15, fontWeight:500, marginBottom:14 }}>付款狀態</h2>
-                  <div style={{ fontSize:13, marginBottom:8 }}>{paymentLabel(result.paymentState, order.status)}</div>
+                  <div style={{ fontSize:13, marginBottom:8 }}>{order.status === 'returned' ? '訂單已退貨' : getPaymentStateLabel(result.paymentState)}</div>
                   {instruction?.payment_method && <div style={{ fontSize:11, color:'var(--dark)', marginBottom:5 }}>付款方式：{PAYMENT_METHODS[instruction.payment_method]?.label || instruction.payment_method}</div>}
                   {instruction?.payment_due_at && result.paymentState === 'pending' && <div style={{ fontSize:11, color:'var(--dark)', lineHeight:1.6 }}>付款期限：{formatDateTime(instruction.payment_due_at)}</div>}
                   {canResumePayment && <button type="button" onClick={openPayment} style={{ width:'100%', marginTop:16, border:'none', background:'var(--black)', color:'var(--white)', padding:'12px 14px', fontFamily:'inherit', fontSize:12, letterSpacing:'0.08em', cursor:'pointer' }}>查看付款資訊／繼續付款</button>}
