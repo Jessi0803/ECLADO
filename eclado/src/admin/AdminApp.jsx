@@ -293,6 +293,9 @@ export default function AdminApp({ adminEmail, onSignOut }) {
         await supabase.storage.from('product-images').remove(uploadedPaths);
       }
       console.error('save product with variants failed', error);
+      if (error.code === '23505' && String(error.message || '').includes('products_slug_unique')) {
+        return '儲存商品失敗：英文名稱產生的商品網址已存在，請調整英文名稱。';
+      }
       return '儲存商品失敗：' + (error.message || '請稍後再試');
     }
     const imagesPayload = preparedImages.map((image, index) => ({

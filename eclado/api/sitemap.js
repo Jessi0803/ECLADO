@@ -79,7 +79,8 @@ function renderUrl({ path, lastmod, changefreq, priority }) {
 function buildSitemap(products = []) {
   const productEntries = products
     .map(product => {
-      const slug = getProductSlug(product.name || product.name_zh);
+      const slug = String(product.slug || '').trim()
+        || getProductSlug(product.name || product.name_zh);
       if (!slug) return null;
       return {
         path: `/products/${encodeURIComponent(slug)}`,

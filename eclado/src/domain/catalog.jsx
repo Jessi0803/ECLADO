@@ -285,6 +285,7 @@ export function mergeProductsWithStock(stockRows, variantMap, imageMap = null) {
     const primaryVariant = variants.find(variant => variant.isDefault) || variants[0] || null;
     return {
       id: Number(row.id),
+      slug: row.slug || '',
       name: row.name || '',
       nameZh: row.name_zh || '',
       subtitle: row.subtitle || '',

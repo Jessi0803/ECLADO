@@ -287,12 +287,16 @@ test('商城瀏覽、商品詳情、一般會員價格與院線商品限制', as
 test('商品具有可分享唯一路徑，重新整理與返回列表皆正常', async ({ page }) => {
   await page.goto('/shop');
   await page.getByText('胜肽修護精華液').first().click();
-  await expect(page).toHaveURL(/\/products\/peptide-repair-serum$/);
+  await expect(page).toHaveURL(/\/products\/peptide-fixed-url$/);
   await expect(page.getByRole('heading', { name: '胜肽修護精華液' })).toBeVisible();
 
   await page.reload();
-  await expect(page).toHaveURL(/\/products\/peptide-repair-serum$/);
+  await expect(page).toHaveURL(/\/products\/peptide-fixed-url$/);
   await expect(page.getByRole('heading', { name: '胜肽修護精華液' })).toBeVisible();
+
+  await page.goto('/products/peptide-repair-serum');
+  await expect(page).toHaveURL(/\/products\/peptide-fixed-url$/);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://ecladotaiwan.com/products/peptide-fixed-url');
 
   await page.getByRole('button', { name: '返回商品列表' }).click();
   await expect(page).toHaveURL(/\/shop$/);

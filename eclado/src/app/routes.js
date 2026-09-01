@@ -25,7 +25,14 @@ export function journalSlugFromPath(path) {
   }
 }
 
-export function getProductSlug(name) {
+export function getProductSlug(productOrName) {
+  if (productOrName && typeof productOrName === 'object') {
+    const fixedSlug = String(productOrName.slug || '').trim();
+    if (fixedSlug) return fixedSlug;
+  }
+  const name = productOrName && typeof productOrName === 'object'
+    ? (productOrName.name || productOrName.nameZh)
+    : productOrName;
   return String(name || '')
     .normalize('NFKD')
     .toLowerCase()

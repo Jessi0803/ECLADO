@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import ProductDetail from '../components/product/ProductDetail.jsx';
 import {
   getCartKey,
@@ -17,7 +17,31 @@ export default function ProductPage({
   onBack,
   onShop,
 }) {
-  const product = products.find(item => getProductSlug(item.name) === productSlug);
+  const product = products.find(item => (
+    getProductSlug(item) === productSlug
+    || getProductSlug(item.name) === productSlug
+    || getProductSlug(item.nameZh) === productSlug
+  ));
+
+  useEffect(() => {
+    if (!product) return undefined;
+    const canonicalSlug = getProductSlug(product);
+    const canonicalPath = `/products/${canonicalSlug}`;
+    if (window.location.pathname !== canonicalPath) {
+      window.history.replaceState(window.history.state, '', canonicalPath);
+    }
+    let canonical = document.querySelector('link[rel="canonical"]');
+    const created = !canonical;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.appendChild(canonical);
+    }
+    canonical.href = `https://ecladotaiwan.com${canonicalPath}`;
+    return () => {
+      if (created) canonical.remove();
+    };
+  }, [product]);
 
   function addToCart(selectedProduct) {
     if (selectedProduct.isProOnly && !isProfessionalMember(user)) return;

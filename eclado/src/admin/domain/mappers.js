@@ -104,6 +104,7 @@ export function normalizeProduct(row, variantRows = null, imageRows = []) {
     : (Array.isArray(row.variants) ? row.variants.map(normalizeProductVariant) : []);
   return {
     id: row.id,
+    slug: row.slug || '',
     assetKey: row.asset_key || '',
     name: row.name || '',
     nameZh: row.name_zh || '',

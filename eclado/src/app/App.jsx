@@ -67,7 +67,7 @@ export default function App() {
     setPageState(newPage);
   }
   function openProduct(product, from = page) {
-    const path = `/products/${getProductSlug(product.name)}`;
+    const path = `/products/${getProductSlug(product)}`;
     window.history.pushState({ page:'product', from }, '', path);
     setPageState('product');
   }
