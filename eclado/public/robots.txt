@@ -10,6 +10,7 @@ Disallow: /pro-login
 Disallow: /reset-password
 Disallow: /line-callback
 Disallow: /payment-result
+Disallow: /order-lookup
 Disallow: /professional-apply
 Disallow: /api/
 

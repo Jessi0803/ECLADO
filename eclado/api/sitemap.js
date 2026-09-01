@@ -48,20 +48,21 @@ async function fetchActiveProducts() {
   const anonKey = process.env.SUPABASE_ANON_KEY
     || process.env.VITE_SUPABASE_ANON_KEY
     || DEFAULT_SUPABASE_ANON_KEY;
-  const query = new URLSearchParams({
-    select: 'name,name_zh,updated_at',
-    publication_status: 'eq.active',
-    active: 'eq.true',
-    order: 'id.asc',
-  });
-  const response = await fetch(`${supabaseUrl}/rest/v1/products?${query}`, {
+  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/get_storefront_catalog`, {
+    method: 'POST',
     headers: {
       apikey: anonKey,
       Authorization: `Bearer ${anonKey}`,
+      'Content-Type': 'application/json',
     },
+    body: '{}',
   });
-  if (!response.ok) throw new Error(`Supabase products HTTP ${response.status}`);
-  return response.json();
+  if (!response.ok) throw new Error(`Supabase storefront catalog HTTP ${response.status}`);
+  const payload = await response.json();
+  if (!Array.isArray(payload?.products)) {
+    throw new Error('Supabase storefront catalog returned an invalid product payload');
+  }
+  return payload.products;
 }
 
 function renderUrl({ path, lastmod, changefreq, priority }) {
@@ -117,4 +118,5 @@ module.exports = async function handler(req, res) {
 };
 
 module.exports.buildSitemap = buildSitemap;
+module.exports.fetchActiveProducts = fetchActiveProducts;
 module.exports.getProductSlug = getProductSlug;
