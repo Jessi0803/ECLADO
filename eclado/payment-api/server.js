@@ -969,7 +969,7 @@ async function retryPendingPaymentNotifications({ limit = 50 } = {}) {
   const safeLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
   const now = new Date().toISOString();
   const params = new URLSearchParams({
-    status: 'in.(paid,preparing,shipped,delivered)',
+    status: 'in.(paid,preparing,ready_for_pickup,picked_up,shipped,delivered)',
     payment_notification_sent_at: 'is.null',
     or: `(payment_notification_next_retry_at.is.null,payment_notification_next_retry_at.lte.${now})`,
     select: 'id,payment_notification_attempts,payment_notification_last_attempt_at',
