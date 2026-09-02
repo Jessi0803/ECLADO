@@ -12,9 +12,16 @@ import Members from './pages/MembersPage.jsx';
 import Orders from './pages/OrdersPage.jsx';
 import ProcurementPage from './pages/ProcurementPage.jsx';
 import Promotions from './pages/PromotionsPage.jsx';
+import {
+  BACKOFFICE_PERMISSIONS,
+  canAccessBackofficePage,
+  getDefaultBackofficePage,
+  hasBackofficePermission,
+} from './domain/access.js';
 
-export default function AdminApp({ adminEmail, onSignOut }) {
-  const [page, setPage] = useState('dashboard');
+export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
+  const defaultPage = getDefaultBackofficePage(backofficeAccess);
+  const [page, setPage] = useState(defaultPage);
   const mainRef = useRef(null);
   const [ordersDefaultFilter, setOrdersDefaultFilter] = useState('all');
   const [membersDefaultFilter, setMembersDefaultFilter] = useState('all');
@@ -25,6 +32,11 @@ export default function AdminApp({ adminEmail, onSignOut }) {
   const [applicationsLoading, setApplicationsLoading] = useState(true);
   const [applicationsError, setApplicationsError] = useState('');
   const [loadError, setLoadError] = useState('');
+  const hasPermission = permission => hasBackofficePermission(backofficeAccess, permission);
+  const canReadOrders = hasPermission(BACKOFFICE_PERMISSIONS.ORDERS_READ);
+  const canReadMembers = hasPermission(BACKOFFICE_PERMISSIONS.MEMBERS_READ);
+  const canReadCatalog = hasPermission(BACKOFFICE_PERMISSIONS.CATALOG_READ);
+  const canManageProcurementCost = hasPermission(BACKOFFICE_PERMISSIONS.PROCUREMENT_MANAGE);
 
   async function sendApplicationNotice(id) {
     try {
@@ -84,15 +96,16 @@ export default function AdminApp({ adminEmail, onSignOut }) {
   }
 
   async function fetchAll() {
-    setApplicationsLoading(true);
+    setApplicationsLoading(canReadMembers);
     try {
+      const emptyResult = () => Promise.resolve({ data: [], error: null });
       const [ordersRes, profilesRes, catalogRes, applicationsRes, paymentMethodsRes, paymentDetailsRes] = await Promise.all([
-        supabase.from('orders').select('*').order('created_at', { ascending: false }),
-        supabase.from('profiles').select('*').order('created_at', { ascending: false }),
-        supabase.rpc('get_admin_catalog'),
-        supabase.from('professional_applications').select('*').order('created_at', { ascending: false }),
-        supabase.rpc('get_admin_order_payment_methods'),
-        supabase.rpc('get_admin_order_payment_details'),
+        canReadOrders ? supabase.from('orders').select('*').order('created_at', { ascending: false }) : emptyResult(),
+        canReadMembers ? supabase.from('profiles').select('*').order('created_at', { ascending: false }) : emptyResult(),
+        canReadCatalog ? supabase.rpc('get_admin_catalog') : Promise.resolve({ data: { products: [], variants: [], images: [] }, error: null }),
+        canReadMembers ? supabase.from('professional_applications').select('*').order('created_at', { ascending: false }) : emptyResult(),
+        canReadOrders ? supabase.rpc('get_admin_order_payment_methods') : emptyResult(),
+        canReadOrders ? supabase.rpc('get_admin_order_payment_details') : emptyResult(),
       ]);
       if (ordersRes.error) throw ordersRes.error;
       if (profilesRes.error) throw profilesRes.error;
@@ -179,7 +192,7 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       } else {
         setLoadError('');
       }
-      if (applicationsRes.error) {
+      if (canReadMembers && applicationsRes.error) {
         console.error('applications fetch failed', applicationsRes.error);
         setApplications([]);
         setApplicationsError('無法載入專業申請：' + (applicationsRes.error.message || '請確認已建立 professional_applications 資料表'));
@@ -203,17 +216,30 @@ export default function AdminApp({ adminEmail, onSignOut }) {
 
   useEffect(() => {
     fetchAll();
-    const channel = supabase
-      .channel('admin-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'product_variants' }, () => fetchAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'product_images' }, () => fetchAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'professional_applications' }, () => fetchAll())
-      .subscribe();
+    let channel = supabase.channel('admin-realtime');
+    if (canReadOrders) {
+      channel = channel.on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchAll());
+    }
+    if (canReadMembers) {
+      channel = channel
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchAll())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'professional_applications' }, () => fetchAll());
+    }
+    if (canReadCatalog) {
+      channel = channel
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchAll())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'product_variants' }, () => fetchAll())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'product_images' }, () => fetchAll());
+    }
+    channel.subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [backofficeAccess?.role, backofficeAccess?.permissions?.join('|')]);
+
+  useEffect(() => {
+    if (!canAccessBackofficePage(backofficeAccess, page)) {
+      setPage(defaultPage);
+    }
+  }, [backofficeAccess, defaultPage, page]);
 
   useEffect(() => {
     if (mainRef.current) mainRef.current.scrollTop = 0;
@@ -266,9 +292,11 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       sort_order: index,
       active: variant.active !== false,
       is_custom_order: !!variant.isCustomOrder,
-      procurement_unit_cost_usd: variant.procurementUnitCostUsd === '' || variant.procurementUnitCostUsd == null
-        ? null
-        : Number(variant.procurementUnitCostUsd),
+      ...(canManageProcurementCost ? {
+        procurement_unit_cost_usd: variant.procurementUnitCostUsd === '' || variant.procurementUnitCostUsd == null
+          ? null
+          : Number(variant.procurementUnitCostUsd),
+      } : {}),
     }));
 
     const uploadedPaths = [];
@@ -425,21 +453,26 @@ export default function AdminApp({ adminEmail, onSignOut }) {
 
   function renderPage() {
     const activeProducts = products.filter(product => product.active !== false);
+    if (!canAccessBackofficePage(backofficeAccess, page)) {
+      return canReadCatalog
+        ? <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />
+        : null;
+    }
     switch (page) {
       case 'dashboard': return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;
       case 'orders': return <Orders orders={orders} persistOrderPatch={persistOrderPatch} defaultFilter={ordersDefaultFilter} />;
       case 'audit': return <AuditLogsPage />;
-      case 'catalog': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} />;
+      case 'catalog': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       // 舊路徑相容，避免有人記住 /admin#products 之類的
       case 'products':
-      case 'inventory': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} />;
+      case 'inventory': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'promotions': return <Promotions products={activeProducts} />;
       case 'procurement': return <ProcurementPage />;
       case 'members': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} defaultFilter={membersDefaultFilter} />;
       case 'applications': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} defaultFilter="app_pending" />;
       case 'analytics': return <Analytics orders={orders} />;
       case 'ai': return <AIReorder products={activeProducts} orders={orders} />;
-      default: return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;
+      default: return null;
     }
   }
 
@@ -464,7 +497,7 @@ export default function AdminApp({ adminEmail, onSignOut }) {
       {/* 手機抽屜遮罩 */}
       {drawerOpen && <div className="mobile-overlay" onClick={() => setDrawerOpen(false)} />}
 
-      <Sidebar page={page} setPage={setPage} open={drawerOpen} onClose={() => setDrawerOpen(false)} adminEmail={adminEmail} onSignOut={onSignOut} />
+      <Sidebar page={page} setPage={setPage} open={drawerOpen} onClose={() => setDrawerOpen(false)} adminEmail={adminEmail} backofficeAccess={backofficeAccess} onSignOut={onSignOut} />
       <main ref={mainRef} className="app-main">
         {loadError && (
           <div style={{ background: 'oklch(0.60 0.18 25 / 0.08)', border: '1px solid oklch(0.60 0.18 25 / 0.3)', padding: '10px 16px', marginBottom: 20, fontSize: 12, color: 'var(--red)' }}>

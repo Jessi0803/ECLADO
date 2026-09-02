@@ -66,6 +66,47 @@ test('後台付款狀態查詢只回傳安全的付款嘗試摘要', () => {
   expect(sql).not.toContain('provider_transaction_no');
 });
 
+test('後台角色採明確能力清單且商品小編不會被視為完整管理員', () => {
+  const migration = read('supabase-backoffice-permissions.sql');
+  expect(migration).toContain("('catalog_editor', 'catalog.read')");
+  expect(migration).toContain("('catalog_editor', 'catalog.write')");
+  expect(migration).toContain("role in ('admin', 'super_admin')");
+  expect(migration).toContain('create or replace function public.has_backoffice_permission');
+  expect(migration).toContain('create or replace function public.get_my_backoffice_access');
+  expect(migration).not.toContain("('catalog_editor', 'orders.read')");
+  expect(migration).not.toContain("('catalog_editor', 'members.read')");
+
+  for (const file of [
+    'supabase-admin-users.sql',
+    'supabase-authoritative-pricing.sql',
+    'supabase-full-setup.sql',
+    'supabase-promotions.sql',
+    'supabase-promotions-fix-rls.sql',
+    'supabase-promotions-secure-rls.sql',
+  ]) {
+    expect(read(file)).toContain("role in ('admin', 'super_admin')");
+  }
+});
+
+test('商品小編的商品 RPC 與 Storage 使用能力檢查並隔離進貨成本', () => {
+  const catalog = read('supabase-security-hardening-20260827.sql');
+  expect(catalog).toContain("has_backoffice_permission('catalog.read')");
+  expect(catalog).toContain("has_backoffice_permission('catalog.write')");
+  expect(catalog).toContain("to_jsonb(variant) - 'procurement_unit_cost_usd'");
+
+  const saveProduct = read('supabase-save-product-with-variants.sql');
+  expect(saveProduct).toContain("has_backoffice_permission('catalog.write')");
+  expect(saveProduct).toContain("has_backoffice_permission('procurement.manage')");
+  expect(saveProduct).toContain('select procurement_unit_cost_usd');
+
+  const saveImages = read('supabase-save-product-images.sql');
+  expect(saveImages).toContain("has_backoffice_permission('catalog.write')");
+
+  const storage = read('supabase-product-images-foundation.sql');
+  expect(storage).toContain("has_backoffice_permission('catalog.read')");
+  expect(storage).toContain("has_backoffice_permission('catalog.write')");
+});
+
 test('重複付款狀態更新不會再次扣庫存，履約狀態互轉也不重複扣補', () => {
   for (const file of ['supabase-full-setup.sql', 'supabase-inventory-reservation.sql']) {
     const sql = read(file);

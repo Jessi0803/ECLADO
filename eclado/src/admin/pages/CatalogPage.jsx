@@ -7,7 +7,7 @@ const PRODUCT_CATEGORIES = ['清潔卸妝', '化妝水', '安瓶精華', '乳霜
 const MAX_PRODUCT_IMAGE_BYTES = 5 * 1024 * 1024;
 const PRODUCT_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
-export default function Catalog({ products, onSaveProduct, onArchiveProduct, onRestoreProduct }) {
+export default function Catalog({ products, onSaveProduct, onArchiveProduct, onRestoreProduct, canManageProcurementCost = false }) {
   const [editing, setEditing] = useState(null); // product being edited (draft copy)
   const [listMode, setListMode] = useState('active');
   const [stockFilter, setStockFilter] = useState('all');
@@ -53,6 +53,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
     setError('');
     const draft = {
       ...p,
+      features: Array.isArray(p.features) ? [...p.features] : [],
       variants: (p.variants || []).map(variant => ({ ...variant })),
       productImages: (p.productImages || []).map(image => ({ ...image })),
     };
@@ -167,6 +168,36 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
       const variants = [...prev.variants];
       [variants[index], variants[nextIndex]] = [variants[nextIndex], variants[index]];
       return { ...prev, variants };
+    });
+  }
+
+  function updateFeature(index, value) {
+    setEditing(prev => ({
+      ...prev,
+      features: (prev.features || []).map((feature, featureIndex) => (
+        featureIndex === index ? value : feature
+      )),
+    }));
+  }
+
+  function addFeature() {
+    setEditing(prev => ({ ...prev, features: [...(prev.features || []), ''] }));
+  }
+
+  function removeFeature(index) {
+    setEditing(prev => ({
+      ...prev,
+      features: (prev.features || []).filter((_, featureIndex) => featureIndex !== index),
+    }));
+  }
+
+  function moveFeature(index, direction) {
+    setEditing(prev => {
+      const features = [...(prev.features || [])];
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= features.length) return prev;
+      [features[index], features[nextIndex]] = [features[nextIndex], features[index]];
+      return { ...prev, features };
     });
   }
 
@@ -300,6 +331,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
 
     const updated = {
       ...editing,
+      features: (editing.features || []).map(feature => String(feature || '').trim()).filter(Boolean),
       variants: normalizedVariants,
       minStock: Math.max(0, Number(editing.minStock) || 0),
       listImageScale: normalizeProductImageScale(editing.listImageScale),
@@ -639,10 +671,10 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                 </div>
 
                 <div style={{ overflowX: 'auto', border: '1px solid var(--border)' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1010 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: canManageProcurementCost ? 1010 : 900 }}>
                     <thead>
                       <tr style={{ background: 'var(--off)', borderBottom: '1px solid var(--border)' }}>
-                        {['順序', '規格', 'SKU', '市場價', '專業價', '庫存', '進貨 USD', '客訂', '預設', '啟用', '操作'].map(header => (
+                        {['順序', '規格', 'SKU', '市場價', '專業價', '庫存', ...(canManageProcurementCost ? ['進貨 USD'] : []), '客訂', '預設', '啟用', '操作'].map(header => (
                           <th key={header} style={{ padding: '9px 8px', textAlign: 'left', fontSize: 10, color: 'var(--mid)', fontWeight: 500, whiteSpace: 'nowrap' }}>{header}</th>
                         ))}
                       </tr>
@@ -678,10 +710,12 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                             <input aria-label={`規格 ${index + 1} 庫存`} type="number" min="0" value={variant.stock} onChange={e => updateVariant(index, 'stock', e.target.value)}
                               style={{ ...inp, width: 70 }} />
                           </td>
-                          <td style={{ padding: '8px' }}>
-                            <input aria-label={`規格 ${index + 1} 進貨 USD 單價`} type="number" min="0" step="0.01" value={variant.procurementUnitCostUsd ?? ''}
-                              onChange={e => updateVariant(index, 'procurementUnitCostUsd', e.target.value)} style={{ ...inp, width: 86 }} placeholder="未設定" />
-                          </td>
+                          {canManageProcurementCost && (
+                            <td style={{ padding: '8px' }}>
+                              <input aria-label={`規格 ${index + 1} 進貨 USD 單價`} type="number" min="0" step="0.01" value={variant.procurementUnitCostUsd ?? ''}
+                                onChange={e => updateVariant(index, 'procurementUnitCostUsd', e.target.value)} style={{ ...inp, width: 86 }} placeholder="未設定" />
+                            </td>
+                          )}
                           <td style={{ padding: '8px', textAlign: 'center' }}>
                             <input aria-label={`規格 ${index + 1} 客訂規格`} type="checkbox" checked={!!variant.isCustomOrder}
                               onChange={e => updateVariant(index, 'isCustomOrder', e.target.checked)} />
@@ -707,6 +741,43 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                   </table>
                 </div>
                 <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 7 }}>移除既有規格後，資料庫會將它停用並保留歷史紀錄；預設規格不可停用。</p>
+              </div>
+
+              <div>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, marginBottom:10 }}>
+                  <div>
+                    <div style={{ ...lbl, marginBottom:4 }}>商品特色</div>
+                    <p style={{ fontSize:11, color:'var(--mid)', margin:0 }}>依此順序顯示在商品頁價格下方；空白項目儲存時會自動忽略。</p>
+                  </div>
+                  <button type="button" onClick={addFeature}
+                    style={{ padding:'7px 12px', background:'var(--dark)', color:'#fff', border:'none', fontSize:11, cursor:'pointer', whiteSpace:'nowrap' }}>
+                    + 新增特色
+                  </button>
+                </div>
+                {(editing.features || []).length === 0 ? (
+                  <div style={{ border:'1px dashed var(--border)', padding:'14px', color:'var(--mid)', fontSize:11 }}>
+                    尚未設定商品特色
+                  </div>
+                ) : (
+                  <div style={{ display:'grid', gap:8 }}>
+                    {editing.features.map((feature, index) => (
+                      <div key={index} style={{ display:'grid', gridTemplateColumns:'auto minmax(0, 1fr) auto', gap:8, alignItems:'center' }}>
+                        <div style={{ display:'flex', gap:4 }}>
+                          <button type="button" aria-label={`商品特色 ${index + 1} 上移`} onClick={() => moveFeature(index, -1)} disabled={index === 0}
+                            style={{ border:'1px solid var(--border)', background:'none', padding:'5px 7px', cursor:index === 0 ? 'not-allowed' : 'pointer' }}>↑</button>
+                          <button type="button" aria-label={`商品特色 ${index + 1} 下移`} onClick={() => moveFeature(index, 1)} disabled={index === editing.features.length - 1}
+                            style={{ border:'1px solid var(--border)', background:'none', padding:'5px 7px', cursor:index === editing.features.length - 1 ? 'not-allowed' : 'pointer' }}>↓</button>
+                        </div>
+                        <input aria-label={`商品特色 ${index + 1}`} value={feature} onChange={event => updateFeature(index, event.target.value)}
+                          style={inp} placeholder="例如：深層保濕・舒緩乾燥" />
+                        <button type="button" aria-label={`移除商品特色 ${index + 1}`} onClick={() => removeFeature(index)}
+                          style={{ padding:'6px 10px', background:'none', border:'1px solid var(--border)', color:'var(--mid)', fontSize:10, cursor:'pointer' }}>
+                          移除
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>

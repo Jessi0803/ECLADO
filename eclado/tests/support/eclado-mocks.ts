@@ -213,6 +213,7 @@ export type MockEcladoApiOptions = {
   signInUser?: MockAuthUser;
   signInError?: string;
   adminAccess?: boolean;
+  backofficeAccess?: { role: string; permissions: string[] };
   products?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
   productVariants?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
   productImages?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
@@ -299,6 +300,25 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     return json(route, allowed);
   });
 
+  await page.route('**/rest/v1/rpc/get_my_backoffice_access', async route => {
+    if (options.backofficeAccess) return json(route, options.backofficeAccess);
+    const currentUser = options.signInUser || authUser;
+    const allowed = options.adminAccess ?? Boolean(currentUser?.email && [
+      'baby90522@gmail.com',
+      'ecladotaiwan@gmail.com',
+      'k0919933386@gmail.com',
+      'line.u6f71cfa36c3fb2188f54396a5cb58882@ecladotaiwan.com',
+    ].includes(currentUser.email.toLowerCase()));
+    return json(route, allowed ? {
+      role: 'admin',
+      permissions: [
+        'catalog.read', 'catalog.write', 'orders.read', 'orders.write',
+        'members.read', 'members.write', 'promotions.manage', 'procurement.manage',
+        'analytics.read', 'audit_logs.read', 'notifications.send',
+      ],
+    } : { role: '', permissions: [] });
+  });
+
   await page.route('**/rest/v1/rpc/get_storefront_catalog', async route => {
     if (options.productResponseDelayMs) {
       await new Promise(resolve => setTimeout(resolve, options.productResponseDelayMs));
@@ -331,11 +351,19 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     });
   });
 
-  await page.route('**/rest/v1/rpc/get_admin_catalog', async route => json(route, {
-    products: products(),
-    variants: productVariants(),
-    images: productImages().filter(image => image.active !== false),
-  }));
+  await page.route('**/rest/v1/rpc/get_admin_catalog', async route => {
+    const canManageProcurement = !options.backofficeAccess
+      || options.backofficeAccess.permissions.includes('procurement.manage');
+    return json(route, {
+      products: products(),
+      variants: productVariants().map(variant => {
+        if (canManageProcurement) return variant;
+        const { procurement_unit_cost_usd: _hidden, ...safeVariant } = variant;
+        return safeVariant;
+      }),
+      images: productImages().filter(image => image.active !== false),
+    });
+  });
 
   await page.route('**/rest/v1/rpc/get_admin_order_payment_methods', async route => json(route,
     orders

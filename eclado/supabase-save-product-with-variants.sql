@@ -32,14 +32,16 @@ declare
   normalized_default boolean;
   normalized_custom_order boolean;
   normalized_procurement_unit_cost numeric;
+  can_manage_procurement_cost boolean;
   normalized_publication_status text;
   default_count integer := 0;
   default_variant public.product_variants%rowtype;
   response_variants jsonb;
 begin
-  if auth.uid() is null or not public.is_eclado_admin() then
-    raise exception 'Administrator authorization required' using errcode = '42501';
+  if auth.uid() is null or not public.has_backoffice_permission('catalog.write') then
+    raise exception 'Catalog write authorization required' using errcode = '42501';
   end if;
+  can_manage_procurement_cost := public.has_backoffice_permission('procurement.manage');
 
   if p_product is null or jsonb_typeof(p_product) <> 'object' then
     raise exception 'Product payload must be an object' using errcode = '22023';
@@ -279,14 +281,28 @@ begin
     normalized_default := coalesce((variant_input ->> 'is_default')::boolean, false);
     normalized_active := coalesce((variant_input ->> 'active')::boolean, true);
     normalized_custom_order := coalesce((variant_input ->> 'is_custom_order')::boolean, false);
-    normalized_procurement_unit_cost := nullif(variant_input ->> 'procurement_unit_cost_usd', '')::numeric;
+    variant_id := case
+      when coalesce(variant_input ->> 'id', '') ~ '^[0-9]+$'
+        then (variant_input ->> 'id')::bigint
+      else null
+    end;
+    if can_manage_procurement_cost then
+      normalized_procurement_unit_cost := nullif(variant_input ->> 'procurement_unit_cost_usd', '')::numeric;
+    elsif variant_id is not null then
+      select procurement_unit_cost_usd
+        into normalized_procurement_unit_cost
+      from public.product_variants
+      where id = variant_id
+        and product_id = target_product_id;
+    else
+      normalized_procurement_unit_cost := null;
+    end if;
 
     if normalized_procurement_unit_cost is not null and normalized_procurement_unit_cost < 0 then
       raise exception 'Procurement unit cost must be zero or greater' using errcode = '22023';
     end if;
 
     if coalesce(variant_input ->> 'id', '') ~ '^[0-9]+$' then
-      variant_id := (variant_input ->> 'id')::bigint;
       update public.product_variants
       set
         sku = normalized_sku,
@@ -347,7 +363,10 @@ begin
         'stock', variant.stock,
         'isDefault', variant.is_default,
         'isCustomOrder', variant.is_custom_order,
-        'procurementUnitCostUsd', variant.procurement_unit_cost_usd,
+        'procurementUnitCostUsd', case
+          when can_manage_procurement_cost then variant.procurement_unit_cost_usd
+          else null
+        end,
         'sortOrder', variant.sort_order,
         'active', variant.active
       )

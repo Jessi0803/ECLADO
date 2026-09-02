@@ -123,7 +123,7 @@ declare
   request_headers jsonb := '{}'::jsonb;
   audit_source text := 'database_trigger';
 begin
-  is_admin_action := actor_id is not null and public.is_eclado_admin();
+  is_admin_action := actor_id is not null and public.is_eclado_backoffice_user();
   is_system_action := jwt_role = 'service_role'
     and tg_table_name in ('orders', 'order_payment_authorizations');
 

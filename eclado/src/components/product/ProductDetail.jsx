@@ -160,14 +160,10 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
               </div>
             )}
 
-            {/* 特點 */}
+            {/* 商品描述 */}
             <div style={{ marginBottom:28 }}>
-              {product.features.map((f,i) => (
-                <div key={i} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-                  <div style={{ width:4, height:4, background:'var(--gold)', flexShrink:0 }} />
-                  <span style={{ fontSize:13, color:'var(--dark)', letterSpacing:'0.04em' }}>{f}</span>
-                </div>
-              ))}
+              <p style={{ fontSize:10, letterSpacing:'0.22em', color:'var(--dark)', textTransform:'uppercase', marginBottom:10 }}>商品描述</p>
+              <p style={{ fontSize:14, color:'#555', lineHeight:1.9, whiteSpace:'pre-line' }}>{product.desc}</p>
             </div>
 
             {/* 數量 + 加入購物車 — 僅限可購買商品 */}
@@ -192,13 +188,24 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
         {/* 下方詳細資訊 */}
         <div style={{ marginTop: isMobile ? 48 : 72, display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap:1, background:'var(--light)' }}>
           {[
-            { label:'商品描述', content: product.desc },
+            { label:'商品特色', content: product.features || [], isFeatureList:true },
             { label:'主要成分', content: product.ingredients },
             { label:'適合膚質', content: product.skinType },
-          ].map(({ label, content }) => (
+          ].map(({ label, content, isFeatureList }) => (
             <div key={label} style={{ background:'var(--white)', padding: isMobile ? '28px 20px' : '36px 32px' }}>
               <p style={{ fontSize:13, fontWeight:600, letterSpacing:'0.24em', color:'var(--dark)', textTransform:'uppercase', marginBottom:14 }}>{label}</p>
-              <p style={{ fontSize:14, color:'#555', lineHeight:1.9, whiteSpace:'pre-line' }}>{content}</p>
+              {isFeatureList ? (
+                <div>
+                  {content.map((feature, index) => (
+                    <div key={index} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
+                      <div style={{ width:4, height:4, background:'var(--gold)', flexShrink:0 }} />
+                      <span style={{ fontSize:14, color:'#555', lineHeight:1.9 }}>{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ fontSize:14, color:'#555', lineHeight:1.9, whiteSpace:'pre-line' }}>{content}</p>
+              )}
             </div>
           ))}
         </div>

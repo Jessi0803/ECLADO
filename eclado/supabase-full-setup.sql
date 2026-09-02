@@ -311,7 +311,7 @@ create trigger trg_professional_applications_updated_at
 
 create table if not exists public.admin_users (
   user_id uuid primary key references auth.users(id) on delete cascade,
-  role text not null default 'admin' check (role in ('admin', 'super_admin')),
+  role text not null default 'admin' check (role in ('admin', 'super_admin', 'catalog_editor')),
   active boolean not null default true,
   created_at timestamptz not null default now(),
   created_by uuid references auth.users(id)
@@ -329,7 +329,9 @@ set search_path = ''
 as $$
   select exists (
     select 1 from public.admin_users
-    where user_id = auth.uid() and active = true
+    where user_id = auth.uid()
+      and active = true
+      and role in ('admin', 'super_admin')
   );
 $$;
 

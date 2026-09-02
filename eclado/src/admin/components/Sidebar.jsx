@@ -1,4 +1,8 @@
 import React from 'react';
+import {
+  BACKOFFICE_ROLE_LABELS,
+  canAccessBackofficePage,
+} from '../domain/access.js';
 
 const MENU_GROUPS = [
   {
@@ -64,7 +68,15 @@ function SidebarIcon({ name }) {
   }
 }
 
-export default function Sidebar({ page, setPage, open, onClose, adminEmail, onSignOut }) {
+export default function Sidebar({ page, setPage, open, onClose, adminEmail, backofficeAccess, onSignOut }) {
+  const visibleGroups = MENU_GROUPS
+    .map(group => ({
+      ...group,
+      items: group.items.filter(item => canAccessBackofficePage(backofficeAccess, item.id)),
+    }))
+    .filter(group => group.items.length > 0);
+  const roleLabel = BACKOFFICE_ROLE_LABELS[backofficeAccess?.role] || '後台人員';
+
   return (
     <div className={'app-sidebar' + (open ? ' open' : '')}>
       {/* Logo */}
@@ -82,7 +94,7 @@ export default function Sidebar({ page, setPage, open, onClose, adminEmail, onSi
 
       {/* Menu */}
       <nav style={{ flex: 1, padding: '12px 0', overflowY: 'auto' }}>
-        {MENU_GROUPS.map((group, gi) => (
+        {visibleGroups.map((group, gi) => (
           <div key={group.title} style={{ marginBottom: 8, paddingTop: gi === 0 ? 4 : 12 }}>
             <div style={{
               padding: '8px 24px 6px',
@@ -136,7 +148,7 @@ export default function Sidebar({ page, setPage, open, onClose, adminEmail, onSi
           </div>
           <div style={{ overflow: 'hidden' }}>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 140 }}>{adminEmail || '管理員'}</div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.06em' }}>管理員</div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.06em' }}>{roleLabel}</div>
           </div>
         </div>
         {onSignOut && (

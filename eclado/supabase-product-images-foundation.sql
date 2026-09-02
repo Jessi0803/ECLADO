@@ -85,12 +85,12 @@ create policy "product_images_select_active"
 
 create policy "product_images_select_admin"
   on public.product_images for select to authenticated
-  using (public.is_eclado_admin());
+  using (public.has_backoffice_permission('catalog.read'));
 
 create policy "product_images_insert_admin"
   on public.product_images for insert to authenticated
   with check (
-    public.is_eclado_admin()
+    public.has_backoffice_permission('catalog.write')
     and exists (
       select 1
       from public.products product
@@ -102,9 +102,9 @@ create policy "product_images_insert_admin"
 
 create policy "product_images_update_admin"
   on public.product_images for update to authenticated
-  using (public.is_eclado_admin())
+  using (public.has_backoffice_permission('catalog.write'))
   with check (
-    public.is_eclado_admin()
+    public.has_backoffice_permission('catalog.write')
     and exists (
       select 1
       from public.products product
@@ -116,7 +116,7 @@ create policy "product_images_update_admin"
 
 create policy "product_images_delete_admin"
   on public.product_images for delete to authenticated
-  using (public.is_eclado_admin());
+  using (public.has_backoffice_permission('catalog.write'));
 
 grant select on public.product_images to anon, authenticated;
 grant insert, update, delete on public.product_images to authenticated;
@@ -145,7 +145,7 @@ create policy "product_images_storage_select_admin"
   on storage.objects for select to authenticated
   using (
     bucket_id = 'product-images'
-    and public.is_eclado_admin()
+    and public.has_backoffice_permission('catalog.read')
   );
 
 create policy "product_images_storage_insert_admin"
@@ -153,26 +153,26 @@ create policy "product_images_storage_insert_admin"
   with check (
     bucket_id = 'product-images'
     and (storage.foldername(name))[1] = 'products'
-    and public.is_eclado_admin()
+    and public.has_backoffice_permission('catalog.write')
   );
 
 create policy "product_images_storage_update_admin"
   on storage.objects for update to authenticated
   using (
     bucket_id = 'product-images'
-    and public.is_eclado_admin()
+    and public.has_backoffice_permission('catalog.write')
   )
   with check (
     bucket_id = 'product-images'
     and (storage.foldername(name))[1] = 'products'
-    and public.is_eclado_admin()
+    and public.has_backoffice_permission('catalog.write')
   );
 
 create policy "product_images_storage_delete_admin"
   on storage.objects for delete to authenticated
   using (
     bucket_id = 'product-images'
-    and public.is_eclado_admin()
+    and public.has_backoffice_permission('catalog.write')
   );
 
 comment on table public.product_images is

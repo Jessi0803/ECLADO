@@ -165,7 +165,7 @@ declare
   entity_key text := tg_argv[0];
 begin
   -- Customer and service-role changes belong to later system-event phases.
-  if actor_id is null or not public.is_eclado_admin() then
+  if actor_id is null or not public.is_eclado_backoffice_user() then
     if tg_op = 'DELETE' then return old; end if;
     return new;
   end if;

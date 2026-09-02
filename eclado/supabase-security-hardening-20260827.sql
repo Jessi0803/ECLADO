@@ -99,13 +99,19 @@ as $$
 declare
   payload jsonb;
 begin
-  if not public.is_eclado_admin() then
-    raise exception 'Admin access required' using errcode = '42501';
+  if not public.has_backoffice_permission('catalog.read') then
+    raise exception 'Catalog read access required' using errcode = '42501';
   end if;
 
   select jsonb_build_object(
     'products', coalesce((select jsonb_agg(to_jsonb(product) order by product.id) from public.products product), '[]'::jsonb),
-    'variants', coalesce((select jsonb_agg(to_jsonb(variant) order by variant.product_id, variant.sort_order, variant.id) from public.product_variants variant), '[]'::jsonb),
+    'variants', coalesce((select jsonb_agg(
+      case
+        when public.has_backoffice_permission('procurement.manage') then to_jsonb(variant)
+        else to_jsonb(variant) - 'procurement_unit_cost_usd'
+      end
+      order by variant.product_id, variant.sort_order, variant.id
+    ) from public.product_variants variant), '[]'::jsonb),
     'images', coalesce((select jsonb_agg(to_jsonb(image) order by image.product_id, image.sort_order, image.id) from public.product_images image where image.active is true), '[]'::jsonb)
   ) into payload;
   return payload;
@@ -125,8 +131,8 @@ security definer
 set search_path = ''
 as $$
 begin
-  if not public.is_eclado_admin() then
-    raise exception 'Admin access required' using errcode = '42501';
+  if not public.has_backoffice_permission('catalog.write') then
+    raise exception 'Catalog write access required' using errcode = '42501';
   end if;
   if p_publication_status not in ('draft', 'active', 'archived') then
     raise exception 'Invalid publication status' using errcode = '22023';

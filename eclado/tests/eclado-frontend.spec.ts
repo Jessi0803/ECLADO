@@ -605,6 +605,9 @@ test('DB 的 is_pro_only=true 會讓原本公開商品變院線限定', async ({
   await page.goto('/shop');
   await page.getByText('胜肽修護精華液').first().click();
   await expect(page.getByText('院線專業商品')).toBeVisible();
+  const descriptionTop = await page.getByText('商品描述', { exact: true }).evaluate(element => element.getBoundingClientRect().top);
+  const featureTop = await page.getByText('商品特色', { exact: true }).evaluate(element => element.getBoundingClientRect().top);
+  expect(descriptionTop).toBeLessThan(featureTop);
   await expect(page.getByText('多重胜肽複合修護')).toBeVisible();
   await expect(page.getByRole('button', { name: /加入購物車/ })).toHaveCount(0);
 });

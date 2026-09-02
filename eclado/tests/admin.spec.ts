@@ -78,7 +78,7 @@ test('後台登入權限：非管理員擋下，管理員可進入', async ({ pa
   await page.locator('input[type="email"]').fill('not-admin@example.com');
   await page.locator('input[type="password"]').fill('password123');
   await page.getByRole('button', { name: '進入後台' }).click();
-  await expect(page.getByText('此帳號無管理員權限')).toBeVisible();
+  await expect(page.getByText('此帳號無後台權限')).toBeVisible();
 
   await page.close();
 });
@@ -91,6 +91,72 @@ test('後台登入權限：管理員 session 可進入儀表板', async ({ page 
   await expect(page.getByText('baby90522@gmail.com')).toBeVisible();
   await expect(page.getByText('E2E-ORDER-001')).toBeVisible();
   await expect(page.getByText('ECL-20260504-0044')).toHaveCount(0);
+});
+
+test('商品小編只載入商品且無法看到營運、會員、叫貨與進貨成本', async ({ page }) => {
+  const requestedUrls: string[] = [];
+  let savedRequest: Record<string, any> | null = null;
+  page.on('request', request => {
+    if (request.url().includes('/rest/v1/')) requestedUrls.push(request.url());
+  });
+  await mockEcladoApis(page, {
+    authUser: { ...adminUser(), id: 'catalog-editor-1', email: 'editor@example.com' },
+    backofficeAccess: {
+      role: 'catalog_editor',
+      permissions: ['catalog.read', 'catalog.write'],
+    },
+    products: adminProductRows.map(product => product.id === 2 ? {
+      ...product,
+      features: ['多重胜肽複合修護', '深層長效補水'],
+    } : product),
+    productVariants: adminProductVariants.map(variant => ({
+      ...variant,
+      procurement_unit_cost_usd: 12.34,
+    })),
+    orders: adminOrderRows,
+    profiles: adminProfileRows,
+    applications: adminApplicationRows,
+    onProductWithVariantsSave: request => { savedRequest = request; },
+  });
+
+  await page.goto('/admin');
+  await expect(page.getByRole('heading', { name: '商品 & 庫存' })).toBeVisible();
+  await expect(page.getByText('商品小編')).toBeVisible();
+  for (const menuName of ['儀表板', '訂單管理', '叫貨管理', '活動管理', '會員管理', '操作紀錄', '營業分析']) {
+    await expect(page.getByRole('button', { name: menuName, exact: true })).toHaveCount(0);
+  }
+
+  expect(requestedUrls.some(url => url.includes('/rpc/get_admin_catalog'))).toBe(true);
+  for (const forbiddenPath of [
+    '/orders', '/profiles', '/professional_applications',
+    '/rpc/get_admin_order_payment_methods', '/rpc/get_admin_order_payment_details',
+    '/rpc/get_procurement_management_data',
+  ]) {
+    expect(requestedUrls.some(url => url.includes(forbiddenPath))).toBe(false);
+  }
+
+  const productRow = page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr');
+  await productRow.getByRole('button', { name: '編輯' }).click();
+  const panel = page.locator('.detail-panel');
+  await expect(panel.getByText('進貨 USD', { exact: true })).toHaveCount(0);
+  await expect(panel.getByLabel(/進貨 USD 單價/)).toHaveCount(0);
+  const featureTop = await panel.getByText('商品特色', { exact: true }).evaluate(element => element.getBoundingClientRect().top);
+  const descriptionTop = await panel.getByText('商品描述', { exact: true }).evaluate(element => element.getBoundingClientRect().top);
+  expect(featureTop).toBeLessThan(descriptionTop);
+  await expect(panel.getByRole('textbox', { name: '商品特色 1', exact: true })).toHaveValue('多重胜肽複合修護');
+  await panel.getByRole('textbox', { name: '商品特色 1', exact: true }).fill('多重胜肽集中修護');
+  await panel.getByRole('button', { name: '+ 新增特色' }).click();
+  await panel.getByRole('textbox', { name: '商品特色 3', exact: true }).fill('提升肌膚保水度');
+  await panel.getByLabel('規格 1 市場價').fill('4100');
+  await panel.getByRole('button', { name: '儲存' }).click();
+
+  await expect.poll(() => savedRequest).not.toBeNull();
+  expect(savedRequest?.p_product?.features).toEqual([
+    '多重胜肽集中修護',
+    '深層長效補水',
+    '提升肌膚保水度',
+  ]);
+  expect(savedRequest?.p_variants?.[0]).not.toHaveProperty('procurement_unit_cost_usd');
 });
 
 test('訂單管理以 user_id 區分訪客與一般會員', async ({ page }) => {

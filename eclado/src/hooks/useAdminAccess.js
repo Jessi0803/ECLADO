@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { checkAdminAccess } from '../services/membership.js';
+import { checkBackofficeAccess } from '../services/membership.js';
 
 export default function useAdminAccess(userId) {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -10,7 +10,7 @@ export default function useAdminAccess(userId) {
       setIsAdmin(false);
       return () => { alive = false; };
     }
-    checkAdminAccess().then(allowed => {
+    checkBackofficeAccess().then(allowed => {
       if (alive) setIsAdmin(allowed);
     });
     return () => { alive = false; };

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase.js';
-import { checkAdminAccess } from '../../services/membership.js';
+import { getBackofficeAccess } from '../../services/membership.js';
 
 export default function AdminGate({ children }) {
   const [session, setSession] = useState(undefined); // undefined = loading
@@ -9,7 +9,7 @@ export default function AdminGate({ children }) {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [adminAccess, setAdminAccess] = useState(undefined);
+  const [backofficeAccess, setBackofficeAccess] = useState(undefined);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -17,7 +17,7 @@ export default function AdminGate({ children }) {
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
-      if (!s) setAdminAccess(false);
+      if (!s) setBackofficeAccess(null);
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -25,12 +25,12 @@ export default function AdminGate({ children }) {
   useEffect(() => {
     let alive = true;
     if (!session) {
-      setAdminAccess(false);
+      setBackofficeAccess(null);
       return () => { alive = false; };
     }
-    setAdminAccess(undefined);
-    checkAdminAccess().then(allowed => {
-      if (alive) setAdminAccess(allowed);
+    setBackofficeAccess(undefined);
+    getBackofficeAccess().then(access => {
+      if (alive) setBackofficeAccess(access);
     });
     return () => { alive = false; };
   }, [session?.user?.id]);
@@ -42,10 +42,10 @@ export default function AdminGate({ children }) {
     const { data, error: err } = await supabase.auth.signInWithPassword({ email, password: pwd });
     setLoading(false);
     if (err) { setError('帳號或密碼錯誤'); setPwd(''); return; }
-    const allowed = await checkAdminAccess();
-    if (!allowed) {
+    const access = await getBackofficeAccess();
+    if (!access.permissions.length) {
       await supabase.auth.signOut();
-      setError('此帳號無管理員權限');
+      setError('此帳號無後台權限');
       setPwd('');
     }
   }
@@ -54,10 +54,10 @@ export default function AdminGate({ children }) {
     await supabase.auth.signOut();
   }
 
-  if (session === undefined || (session && adminAccess === undefined)) return null; // loading
+  if (session === undefined || (session && backofficeAccess === undefined)) return null; // loading
 
-  const isAdmin = session && adminAccess;
-  if (isAdmin) return React.cloneElement(children, { adminEmail: session.user.email, onSignOut: signOut });
+  const hasBackofficeAccess = session && backofficeAccess?.permissions?.length > 0;
+  if (hasBackofficeAccess) return React.cloneElement(children, { adminEmail: session.user.email, backofficeAccess, onSignOut: signOut });
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--sidebar)', padding: 16 }}>

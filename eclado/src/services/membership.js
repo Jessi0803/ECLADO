@@ -5,6 +5,21 @@ import {
   PROFESSIONAL_LOGIN_NOTICE,
 } from '../app/authSession.js';
 import { supabase } from './supabase.js';
+import { normalizeBackofficeAccess } from '../admin/domain/access.js';
+
+export async function getBackofficeAccess() {
+  const { data, error } = await supabase.rpc('get_my_backoffice_access');
+  if (error) {
+    console.error('[backoffice-access]', error);
+    return normalizeBackofficeAccess(null);
+  }
+  return normalizeBackofficeAccess(data);
+}
+
+export async function checkBackofficeAccess() {
+  const access = await getBackofficeAccess();
+  return access.permissions.length > 0;
+}
 
 export async function checkAdminAccess() {
   const { data, error } = await supabase.rpc('is_eclado_admin');

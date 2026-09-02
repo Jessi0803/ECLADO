@@ -23,7 +23,7 @@ declare
   response_images jsonb;
 begin
   if auth.role() <> 'service_role'
-    and (auth.uid() is null or not public.is_eclado_admin())
+    and (auth.uid() is null or not public.has_backoffice_permission('catalog.write'))
   then
     raise exception 'Administrator authorization required' using errcode = '42501';
   end if;
