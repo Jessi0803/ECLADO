@@ -18,7 +18,8 @@ create table if not exists public.backoffice_role_permissions (
     'orders.read', 'orders.write',
     'members.read', 'members.write',
     'promotions.manage', 'procurement.manage',
-    'analytics.read', 'audit_logs.read', 'notifications.send'
+    'analytics.read', 'audit_logs.read', 'notifications.send',
+    'backorders.manage'
   ))
 );
 
@@ -38,6 +39,10 @@ cross join (values
   ('promotions.manage'), ('procurement.manage'),
   ('analytics.read'), ('audit_logs.read'), ('notifications.send')
 ) permissions(permission)
+on conflict do nothing;
+
+insert into public.backoffice_role_permissions (role, permission) values
+  ('super_admin', 'backorders.manage')
 on conflict do nothing;
 
 insert into public.backoffice_role_permissions (role, permission) values

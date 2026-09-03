@@ -1,7 +1,86 @@
 import { SALES_COUNTED_STATUSES } from '../../domain/sales.js';
 
+const INVENTORY_ACTIVE_ORDER_STATUSES = new Set([
+  'paid',
+  'preparing',
+  'ready_for_pickup',
+  'picked_up',
+  'shipped',
+  'delivered',
+]);
+
+function nonNegativeInteger(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.floor(number)) : null;
+}
+
+function normalizeOrderItemInventory(item, orderStatus, canonicalAllocation) {
+  const requestedQty = nonNegativeInteger(item.qty) || 0;
+  const persisted = canonicalAllocation || (item.inventory_allocation && typeof item.inventory_allocation === 'object'
+    ? item.inventory_allocation
+    : {});
+  const persistedAllocatedQty = nonNegativeInteger(
+    persisted.allocated_qty ?? item.allocated_stock_qty,
+  );
+  const persistedBackorderQty = nonNegativeInteger(
+    persisted.backorder_qty ?? item.backorder_qty,
+  );
+
+  if (persistedAllocatedQty != null || persistedBackorderQty != null) {
+    const allocatedQty = Math.min(
+      requestedQty,
+      persistedAllocatedQty ?? Math.max(0, requestedQty - persistedBackorderQty),
+    );
+    const backorderQty = Math.min(
+      requestedQty,
+      persistedBackorderQty ?? Math.max(0, requestedQty - allocatedQty),
+    );
+    return {
+      state: persisted.state || (backorderQty > 0 ? 'backordered' : 'allocated'),
+      requestedQty,
+      allocatedQty,
+      backorderQty,
+      source: 'allocation',
+    };
+  }
+
+  const stockAtOrder = nonNegativeInteger(item.stock_at_order);
+  if (INVENTORY_ACTIVE_ORDER_STATUSES.has(orderStatus) && stockAtOrder != null) {
+    const allocatedQty = Math.min(requestedQty, stockAtOrder);
+    const backorderQty = Math.max(0, requestedQty - allocatedQty);
+    return {
+      state: backorderQty > 0 ? 'backordered' : 'allocated',
+      requestedQty,
+      allocatedQty,
+      backorderQty,
+      source: 'order_snapshot',
+    };
+  }
+
+  return {
+    state: 'unallocated',
+    requestedQty,
+    allocatedQty: null,
+    backorderQty: null,
+    source: 'none',
+  };
+}
+
 export function normalizeOrder(row) {
-  const items = Array.isArray(row.items) ? row.items : [];
+  const allocationByIndex = new Map(
+    (Array.isArray(row.inventory_allocations) ? row.inventory_allocations : [])
+      .map(allocation => [Number(allocation.item_index), allocation]),
+  );
+  const items = Array.isArray(row.items)
+    ? row.items.map((item, index) => ({
+      ...item,
+      inventoryAllocation: normalizeOrderItemInventory(
+        item,
+        row.status,
+        allocationByIndex.get(index),
+      ),
+    }))
+    : [];
   const itemSubtotal = items.reduce(
     (sum, item) => sum + (Number(item.price ?? item.unit_price) || 0) * (Number(item.qty) || 0),
     0,

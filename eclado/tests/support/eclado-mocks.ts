@@ -223,6 +223,9 @@ export type MockEcladoApiOptions = {
   applications?: Record<string, unknown>[];
   auditLogs?: Record<string, unknown>[];
   procurementOrders?: Record<string, unknown>[];
+  inventoryAllocations?: Record<string, unknown>[];
+  backorders?: Record<string, unknown>[];
+  onBackorderAllocate?: (variantId: number) => void;
 };
 
 export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions = {}) {
@@ -240,6 +243,11 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   const profiles = [...(options.profiles || [])];
   const applications = (options.applications || []).map(application => ({ ...application }));
   const auditLogs = options.auditLogs || [];
+  const inventoryAllocations = options.inventoryAllocations || [];
+  const backorders = (options.backorders || []).map(item => ({
+    ...item,
+    orders: Array.isArray(item.orders) ? item.orders.map(order => ({ ...order })) : [],
+  }));
   const authUser = options.authUser;
   const procurement = {
     product_variants: procurementProductVariants.map(item => ({ ...item })) as Record<string, unknown>[],
@@ -391,6 +399,45 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         created_at: order.created_at, updated_at: order.created_at,
       }]),
   ));
+
+  await page.route('**/rest/v1/rpc/get_admin_inventory_allocations', async route => json(route, inventoryAllocations));
+
+  await page.route('**/rest/v1/rpc/get_backorder_management_data', async route => json(route,
+    backorders.filter(item => Number(item.total_backorder_qty) > 0),
+  ));
+
+  await page.route('**/rest/v1/rpc/allocate_backordered_inventory', async route => {
+    const variantId = Number(route.request().postDataJSON()?.p_variant_id);
+    options.onBackorderAllocate?.(variantId);
+    const item = backorders.find(candidate => Number(candidate.variant_id) === variantId);
+    if (!item) return json(route, { message: 'Product variant not found' }, 404);
+    let stock = Number(item.available_stock || 0);
+    let allocated = 0;
+    const affected = new Set<string>();
+    for (const order of item.orders as Record<string, unknown>[]) {
+      if (stock <= 0) break;
+      const assign = Math.min(stock, Number(order.backorder_qty || 0));
+      if (assign <= 0) continue;
+      order.allocated_qty = Number(order.allocated_qty || 0) + assign;
+      order.backorder_qty = Number(order.backorder_qty || 0) - assign;
+      stock -= assign;
+      allocated += assign;
+      affected.add(String(order.order_id));
+    }
+    item.available_stock = stock;
+    item.total_backorder_qty = (item.orders as Record<string, unknown>[])
+      .reduce((sum, order) => sum + Number(order.backorder_qty || 0), 0);
+    item.order_count = (item.orders as Record<string, unknown>[])
+      .filter(order => Number(order.backorder_qty || 0) > 0).length;
+    item.orders = (item.orders as Record<string, unknown>[])
+      .filter(order => Number(order.backorder_qty || 0) > 0);
+    return json(route, {
+      variant_id: variantId,
+      allocated_qty: allocated,
+      remaining_stock: stock,
+      affected_orders: [...affected],
+    });
+  });
 
   await page.route('**/rest/v1/rpc/get_procurement_management_data', async route => json(route, procurement));
 
@@ -613,10 +660,12 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         unit_price: unitPrice,
         line_total: unitPrice * qty,
         stock_at_order: Math.max(0, stock),
+        available_qty_at_order: Math.min(qty, Math.max(0, stock)),
+        backorder_qty_at_order: Math.max(0, qty - Math.max(0, stock)),
         is_custom_order: variant?.is_custom_order === true,
-        fulfillment_type: stock > 0 ? 'in_stock' : 'preorder',
-        fulfillment: stock > 0 ? '現貨商品' : '預購商品',
-        shipping_time: stock > 0 ? '出貨時間為 5 個工作天內，每週二出貨' : '出貨時間為 7-14 個工作天',
+        fulfillment_type: stock >= qty ? 'in_stock' : 'preorder',
+        fulfillment: stock >= qty ? '現貨商品' : '含預購商品',
+        shipping_time: stock >= qty ? '出貨時間為 5 個工作天內，每週二出貨' : '出貨時間為 7-14 個工作天',
       };
     });
     const subtotal = authoritativeItems.reduce((sum, item) => sum + item.line_total, 0);

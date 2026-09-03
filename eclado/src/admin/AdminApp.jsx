@@ -7,6 +7,7 @@ import AIReorder from './pages/AIReorderPage.jsx';
 import Analytics from './pages/AnalyticsPage.jsx';
 import AuditLogsPage from './pages/AuditLogsPage.jsx';
 import Catalog from './pages/CatalogPage.jsx';
+import BackordersPage from './pages/BackordersPage.jsx';
 import Dashboard from './pages/DashboardPage.jsx';
 import Members from './pages/MembersPage.jsx';
 import Orders from './pages/OrdersPage.jsx';
@@ -99,13 +100,14 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
     setApplicationsLoading(canReadMembers);
     try {
       const emptyResult = () => Promise.resolve({ data: [], error: null });
-      const [ordersRes, profilesRes, catalogRes, applicationsRes, paymentMethodsRes, paymentDetailsRes] = await Promise.all([
+      const [ordersRes, profilesRes, catalogRes, applicationsRes, paymentMethodsRes, paymentDetailsRes, inventoryAllocationsRes] = await Promise.all([
         canReadOrders ? supabase.from('orders').select('*').order('created_at', { ascending: false }) : emptyResult(),
         canReadMembers ? supabase.from('profiles').select('*').order('created_at', { ascending: false }) : emptyResult(),
         canReadCatalog ? supabase.rpc('get_admin_catalog') : Promise.resolve({ data: { products: [], variants: [], images: [] }, error: null }),
         canReadMembers ? supabase.from('professional_applications').select('*').order('created_at', { ascending: false }) : emptyResult(),
         canReadOrders ? supabase.rpc('get_admin_order_payment_methods') : emptyResult(),
         canReadOrders ? supabase.rpc('get_admin_order_payment_details') : emptyResult(),
+        canReadOrders ? supabase.rpc('get_admin_inventory_allocations') : emptyResult(),
       ]);
       if (ordersRes.error) throw ordersRes.error;
       if (profilesRes.error) throw profilesRes.error;
@@ -120,8 +122,16 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
           map.get(orderId).push(row);
           return map;
         }, new Map());
+      const inventoryAllocationsByOrder = (inventoryAllocationsRes.error ? [] : (inventoryAllocationsRes.data || []))
+        .reduce((map, allocation) => {
+          const orderId = String(allocation.order_id);
+          if (!map.has(orderId)) map.set(orderId, []);
+          map.get(orderId).push(allocation);
+          return map;
+        }, new Map());
       const realOrders = (ordersRes.data || []).map(row => normalizeOrder({
         ...row,
+        inventory_allocations: inventoryAllocationsByOrder.get(String(row.id)) || [],
         ...(() => {
           const attempts = (paymentDetailsByOrder.get(String(row.id)) || [])
             .sort((a, b) => Number(a.attempt_no || 0) - Number(b.attempt_no || 0));
@@ -463,6 +473,7 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
       case 'orders': return <Orders orders={orders} persistOrderPatch={persistOrderPatch} defaultFilter={ordersDefaultFilter} />;
       case 'audit': return <AuditLogsPage />;
       case 'catalog': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
+      case 'backorders': return <BackordersPage onInventoryChanged={fetchAll} />;
       // 舊路徑相容，避免有人記住 /admin#products 之類的
       case 'products':
       case 'inventory': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;

@@ -288,10 +288,12 @@ begin
       'unit_price', unit_price,
       'line_total', unit_price * quantity,
       'stock_at_order', item_stock,
+      'available_qty_at_order', least(quantity, item_stock),
+      'backorder_qty_at_order', greatest(quantity - item_stock, 0),
       'is_custom_order', variant_row.is_custom_order,
-      'fulfillment_type', case when item_stock > 0 then 'in_stock' else 'preorder' end,
-      'fulfillment', case when item_stock > 0 then '現貨商品' else '預購商品' end,
-      'shipping_time', case when item_stock > 0 then '出貨時間為 5 個工作天內，每週二出貨' else '出貨時間為 7-14 個工作天' end
+      'fulfillment_type', case when item_stock >= quantity then 'in_stock' else 'preorder' end,
+      'fulfillment', case when item_stock >= quantity then '現貨商品' else '含預購商品' end,
+      'shipping_time', case when item_stock >= quantity then '出貨時間為 5 個工作天內，每週二出貨' else '出貨時間為 7-14 個工作天' end
     ));
   end loop;
 

@@ -91,6 +91,30 @@ test('後台登入權限：管理員 session 可進入儀表板', async ({ page 
   await expect(page.getByText('baby90522@gmail.com')).toBeVisible();
   await expect(page.getByText('E2E-ORDER-001')).toBeVisible();
   await expect(page.getByText('ECL-20260504-0044')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '待補商品', exact: true })).toHaveCount(0);
+});
+
+test('只有最高管理員能看到待補商品管理', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: { ...adminUser(), email: 'k0919933386@gmail.com' },
+    backofficeAccess: {
+      role: 'super_admin',
+      permissions: [
+        'catalog.read', 'catalog.write', 'orders.read', 'orders.write',
+        'members.read', 'members.write', 'promotions.manage', 'procurement.manage',
+        'analytics.read', 'audit_logs.read', 'notifications.send', 'backorders.manage',
+      ],
+    },
+    products: adminProductRows,
+    orders: adminOrderRows,
+    profiles: adminProfileRows,
+    applications: adminApplicationRows,
+  });
+
+  await page.goto('/admin');
+  await expect(page.getByText('最高管理員')).toBeVisible();
+  await openAdminSection(page, /待補商品/);
+  await expect(page.getByRole('heading', { name: '待補商品' })).toBeVisible();
 });
 
 test('商品小編只載入商品且無法看到營運、會員、叫貨與進貨成本', async ({ page }) => {
@@ -575,14 +599,15 @@ test('訂單管理可查看明細並更新狀態', async ({ page }) => {
   await expect(page.getByText('已付款').first()).toBeVisible();
 });
 
-test('訂單管理可依狀態與預購庫存篩選', async ({ page }) => {
+test('訂單管理可依狀態與待補庫存篩選', async ({ page }) => {
   await mockAdminApis(page, {
     orders: [
       ...adminOrderRows,
       {
         ...adminOrderRows[0],
         id: 'E2E-PREORDER-003',
-        items: [{ name: '預購測試商品', qty: 1, price: 1280, fulfillment_type: 'preorder' }],
+        status: 'paid',
+        items: [{ name: '預購測試商品', qty: 1, price: 1280, stock_at_order: 0, fulfillment_type: 'preorder' }],
       },
     ],
   });
@@ -590,10 +615,102 @@ test('訂單管理可依狀態與預購庫存篩選', async ({ page }) => {
   await page.goto('/admin');
   await openAdminSection(page, /訂單管理/);
   await page.getByRole('button', { name: '全部' }).first().click();
-  await page.getByRole('button', { name: /含預購/ }).click();
+  await page.getByRole('button', { name: /含待補/ }).click();
 
   await expect(page.getByText('E2E-PREORDER-003')).toBeVisible();
   await expect(page.getByText('E2E-ORDER-002')).toHaveCount(0);
+});
+
+test('已付款與備貨中訂單詳情顯示逐項現貨與缺少數量', async ({ page }) => {
+  await mockAdminApis(page, {
+    inventoryAllocations: [
+      { order_id: 'E2E-PAID-ALLOCATION', item_index: 0, requested_qty: 2, allocated_qty: 2, backorder_qty: 0, state: 'allocated', source: 'payment_allocation' },
+      { order_id: 'E2E-PAID-ALLOCATION', item_index: 1, requested_qty: 5, allocated_qty: 2, backorder_qty: 3, state: 'partial', source: 'payment_allocation' },
+    ],
+    orders: [
+      {
+        ...adminOrderRows[1],
+        id: 'E2E-PAID-ALLOCATION',
+        status: 'paid',
+        items: [
+          { name: '現貨商品', qty: 2, price: 1000, stock_at_order: 8, fulfillment_type: 'in_stock' },
+          { name: '部分待補商品', qty: 5, price: 500, stock_at_order: 5, fulfillment_type: 'in_stock' },
+        ],
+      },
+      {
+        ...adminOrderRows[0],
+        id: 'E2E-UNPAID-NO-ALLOCATION',
+        status: 'unpaid',
+        items: [{ name: '未付款商品', qty: 3, price: 500, stock_at_order: 1 }],
+      },
+    ],
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByText('E2E-PAID-ALLOCATION').click();
+
+  const panel = page.locator('.detail-panel');
+  await expect(panel.getByText('現貨 2')).toHaveCount(2);
+  await expect(panel.getByText('缺少 0')).toBeVisible();
+  await expect(panel.getByText('缺少 3')).toBeVisible();
+
+  if ((page.viewportSize()?.width || 0) <= 900) {
+    await panel.getByRole('button', { name: '← 返回' }).click();
+  } else {
+    await panel.getByRole('button', { name: '關閉訂單詳情' }).click();
+  }
+  await page.getByRole('button', { name: '未付款' }).click();
+  await expect(page.getByText('庫存狀態', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('未配置', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('E2E-UNPAID-NO-ALLOCATION')).toBeVisible();
+  await page.getByText('E2E-UNPAID-NO-ALLOCATION').click();
+  await expect(page.locator('.detail-panel').getByTestId('order-item-inventory-allocation')).toHaveCount(0);
+});
+
+test('待補商品頁依付款順序執行 FIFO 並支援部分分配', async ({ page }) => {
+  const allocationRequests: number[] = [];
+  await mockAdminApis(page, {
+    backofficeAccess: {
+      role: 'super_admin',
+      permissions: [
+        'catalog.read', 'catalog.write', 'orders.read', 'orders.write',
+        'members.read', 'members.write', 'promotions.manage', 'procurement.manage',
+        'analytics.read', 'audit_logs.read', 'notifications.send', 'backorders.manage',
+      ],
+    },
+    backorders: [{
+      variant_id: 201,
+      product_id: 2,
+      sku: 'SERUM-30',
+      product_name: '胜肽修護精華液',
+      variant_name: '30ml',
+      available_stock: 3,
+      total_backorder_qty: 5,
+      order_count: 2,
+      orders: [
+        { allocation_id: 1, order_id: 'E2E-FIFO-FIRST', member: '第一位', order_status: 'paid', requested_qty: 2, allocated_qty: 0, backorder_qty: 2, priority_at: '2026-09-01T01:00:00Z' },
+        { allocation_id: 2, order_id: 'E2E-FIFO-SECOND', member: '第二位', order_status: 'preparing', requested_qty: 3, allocated_qty: 0, backorder_qty: 3, priority_at: '2026-09-01T02:00:00Z' },
+      ],
+    }],
+    onBackorderAllocate: id => allocationRequests.push(id),
+  });
+
+  page.on('dialog', dialog => dialog.accept());
+  await page.goto('/admin');
+  await openAdminSection(page, /待補商品/);
+
+  await expect(page.getByRole('heading', { name: '待補商品' })).toBeVisible();
+  await expect(page.getByText('待補總件數').locator('..').getByText('5')).toBeVisible();
+  await expect(page.getByText('E2E-FIFO-FIRST')).toBeVisible();
+  await expect(page.getByText('E2E-FIFO-SECOND')).toBeVisible();
+  await page.getByRole('button', { name: '依 FIFO 分配' }).click();
+
+  await expect.poll(() => allocationRequests).toEqual([201]);
+  await expect(page.getByText('已依 FIFO 分配 3 件，共更新 2 張訂單。')).toBeVisible();
+  await expect(page.getByText('E2E-FIFO-FIRST')).toHaveCount(0);
+  await expect(page.getByText('E2E-FIFO-SECOND')).toBeVisible();
+  await expect(page.getByRole('button', { name: '目前無庫存' })).toBeDisabled();
 });
 
 test('客訂自取訂單不顯示地址與托運欄位並可完成取貨流程', async ({ page }) => {

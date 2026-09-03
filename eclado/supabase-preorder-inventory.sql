@@ -1,3 +1,5 @@
+-- LEGACY: superseded by supabase-order-inventory-allocation.sql.
+-- Keep this file only for migration history; do not rerun it after inventory allocation v2.
 -- ECLADO preorder inventory update
 -- Run this once in Supabase SQL Editor if products/orders tables already exist.
 --

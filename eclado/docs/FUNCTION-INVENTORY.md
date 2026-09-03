@@ -15,19 +15,19 @@
 |---|----------|------------------|------------|
 | 1 | 商城瀏覽 | 列表、分類、商品詳情可開；一般會員見一般價 | `products` 有商品資料（讀取即可） |
 | 2 | 會員價格與院線商品 | 一般會員：一般價。美容師：專業價（`proPrice`）。師資：專業價 7 折（畫面標「師資價・專業價7折」）。經銷商：專業價 65 折（畫面標「經銷價・專業價65折」）。一般會員看得到院線品介紹但不能加入購物車，畫面引導私訊 LINE 官方詢問 | `profiles.role` 與價格一致：`pro`＝專業價；`instructor`＝`proPrice×0.7`；`distributor`＝`proPrice×0.65`（四捨五入） |
-| 3 | 現貨／預購 | 庫存 > 0 顯示現貨；≤ 0 顯示預購且仍可下單 | `products.stock` 與前台標示一致 |
+| 3 | 現貨／預購 | 規格庫存 > 0 顯示現貨；≤ 0 顯示預購且仍可下單 | `product_variants.stock` 與前台標示一致 |
 | 4 | 購物車 | 加購、改數量、刪除；金額正確 | 無（購物車僅瀏覽器記憶體，重整會清空） |
 | 5 | 活動折扣 | 位於活動上架／下架時間範圍內時，商城與購物車價格、折扣正確；尚未開始或已結束的活動不折扣 | 前台依 `start_at`／`end_at` 判斷生效期間；`active` 欄位目前不影響是否套用，請確認 `product_ids`、排程與折扣一致 |
 | 6 | 結帳全流程 | 填收件資料 → 選付款 → 送出；畫面有訂單編號 | `orders` 新增一筆：`id`、`items`、`total`、`address`、`phone`、`email`、`user_id`（登入時）正確 |
-| 7 | 付款方式（虛擬帳號／信用卡／行動支付） | 虛擬帳號：顯示完整虛擬帳號（永豐 807）供匯款。信用卡／Apple Pay／Google Pay：能完成或進入付款流程 | `orders` 有新單；訂單狀態為 `paid` 前 `products.stock` 不變 |
+| 7 | 付款方式（虛擬帳號／信用卡／行動支付） | 虛擬帳號：顯示完整虛擬帳號（永豐 807）供匯款。信用卡／Apple Pay／Google Pay：能完成或進入付款流程 | `orders` 有新單；訂單狀態為 `paid` 前 `product_variants.stock` 不變 |
 
 ### 庫存（與後台連動）
 
 | # | 測試場景 | 通過標準（畫面） | 資料庫驗證 |
 |---|----------|------------------|------------|
-| 8 | 付款才扣庫存 | 下單後庫存不變；後台改「已付款」後前台變化；後續履約狀態庫存不加回 | 下單後 `products.stock` 不變；改 `orders.status` 為 `paid` 後 `products.stock` 減少。`paid`、`preparing`、`ready_for_pickup`、`picked_up`、`shipped`、`delivered` 都視為占用庫存 |
-| 9 | 取消／退貨加回庫存 | 已占用庫存的訂單取消／退貨後庫存回升 | `orders.status` 從 `paid`／`preparing`／`shipped`／`delivered` 改成 `cancelled` 或 `returned` 後，`products.stock` 加回 |
-| 10 | 後台改庫存 | 後台改數字後，前台刷新可見現貨／預購變化 | `products.stock` 與後台輸入一致 |
+| 8 | 付款才配置庫存 | 下單後庫存不變；進入「已付款」後依當下規格庫存配置，現貨立即扣除、不足數量成為待補；後續履約狀態互轉不重複扣補 | `order_inventory_allocations` 保存每項需求、已配置與缺少數量；`product_variants.stock` 只扣實際配置量。`paid`、`preparing`、`ready_for_pickup`、`picked_up`、`shipped`、`delivered` 都視為占用庫存 |
+| 9 | 取消／退貨加回庫存 | 已占用庫存的訂單取消／退貨後，只加回該訂單實際扣除的規格庫存 | 狀態從占用庫存改成 `cancelled` 或 `returned` 後，依 `stock_deducted_qty` 回補 `product_variants.stock`，不會把未配置待補量誤加回 |
+| 10 | 後台改庫存與待補分配 | 後台補庫存後，最高管理員到「待補商品」依 FIFO 分配；支援庫存不足時部分分配 | 修改 `product_variants.stock` 不會自行改動舊訂單；只有具備 `backorders.manage` 權限的最高管理員能執行 `allocate_backordered_inventory`，並依付款順序扣庫存、更新配置紀錄 |
 | 11 | 48 小時未付款自動取消 | 訂單建立時寫入 `payment_due_at = created_at + 48 hours`；外部 Cron 可每小時觸發取消，Vercel Cron 作為每日補漏 | `orders.status` = `cancelled`（原為 `awaiting_confirm` 或 `unpaid`，且 `payment_due_at` 已到期） |
 
 ### 會員
@@ -49,9 +49,10 @@
 | # | 測試場景 | 通過標準（畫面） | 資料庫驗證 |
 |---|----------|------------------|------------|
 | 21 | 後台登入權限 | 管理員可進；非管理員擋下 | 無寫入（僅驗證權限） |
-| 22 | 訂單管理 | 列表、明細、改狀態 | `orders.status` 與後台一致；改為 `paid` 時 `products.stock` 減少 |
+| 22 | 訂單管理 | 列表、明細、改狀態；已付款／備貨中逐項顯示現貨與缺少數量 | `orders.status` 與後台一致；改為 `paid` 時原子建立 `order_inventory_allocations` 並扣除可配置的規格庫存；仍有待補時禁止完成履約 |
 | 23 | 出貨與 LINE 通知 | 填托運單號；會員專區看得到單號；曾 LINE 登入的會員在 LINE 收到出貨推播（訂單編號、托運單號） | `orders.tracking` 有值；`status` 通常為 `shipped` |
-| 24 | 商品管理與庫存 | 後台可新增商品、上傳圖片、改庫存、下架與重新上架；前台刷新後僅顯示上架商品，現貨／預購標示連動 | `products.image_url`、`products.stock`、`products.active` 與後台操作一致 |
+| 24 | 商品管理與庫存 | 後台可新增商品、上傳圖片、改各規格庫存、下架與重新上架；前台刷新後僅顯示上架商品，現貨／預購標示連動 | `products.image_url`、`product_variants.stock`、`products.active` 與後台操作一致；草稿／下架規格仍可在叫貨管理使用 |
+| 24A | 待補商品統整 | 僅最高管理員顯示此頁；依規格彙整所有已付款待補訂單，顯示目前可用庫存與 FIFO 佇列，可一次部分或完整分配 | `get_backorder_management_data` 與 `allocate_backordered_inventory` 都驗證 `backorders.manage`；分配時依付款配置時間、訂單建立時間、配置 ID 排序並寫入事件軌跡 |
 | 25 | 活動管理 | 新增／編輯／刪除／設定上下架時間；前台價格依排程連動 | `promotions` 與前台一致；前台依 `start_at`／`end_at` 判斷，目前不依 `active` 欄位停用 |
 
 ### 全站
@@ -69,9 +70,11 @@
 | 使用者操作 | 主要資料表 | 應出現的資料 |
 |------------|------------|--------------|
 | 下單（結帳送出） | `orders` | 新訂單一筆，含商品 `items`、金額、收件資訊、`user_id` |
-| 已付款（任何付款方式） | `orders` + `products` | `status` = `paid`；`products.stock` 減少 |
-| 出貨流程狀態更新 | `orders` | `status` 從 `paid` 改成 `preparing`／`shipped`／`delivered` 時，庫存維持已扣狀態 |
-| 取消／退貨（已占用庫存） | `orders` + `products` | `status` 從 `paid`／`preparing`／`shipped`／`delivered` 改成 `cancelled` 或 `returned` 時，庫存加回 |
+| 已付款（任何付款方式） | `orders` + `order_inventory_allocations` + `product_variants` | `status` = `paid`；鎖定相關規格後扣除實際現貨，缺少數量留在待補配置 |
+| 待補商品 FIFO 分配 | `order_inventory_allocations` + `inventory_allocation_events` + `product_variants` | 最高管理員補庫存後手動執行；可部分分配並留下事件紀錄；一般管理員沒有頁面入口且 RPC 會拒絕存取 |
+| 出貨流程狀態更新 | `orders` | 從 `paid` 改成 `preparing` 時庫存維持已扣狀態；仍有缺少數量時禁止改為可取貨／已取貨／已出貨／已到貨 |
+| 取消／退貨（已占用庫存） | `orders` + `order_inventory_allocations` + `product_variants` | 只回補該訂單實際扣除的配置量，未配置的待補量不增加庫存 |
+| 叫貨單改為已到貨 | `purchase_orders` | 只更新叫貨狀態與 `received_at`；目前不自動增加 `product_variants.stock`，需由管理員在商品庫存完成入庫 |
 | Email 註冊 | `auth.users` + `profiles` | 會員基本資料；寄認證信 |
 | Email 忘記密碼 | Supabase Auth | 寄重設密碼信 |
 | LINE 登入／首次註冊 | `auth.users` + `profiles` | `line_user_id`；新用戶自動建帳 |
@@ -126,10 +129,13 @@
 
 | 規則 | 系統行為 |
 |------|----------|
-| 預購可下單 | 庫存 ≤ 0 不擋結帳 |
-| 付款扣庫存 | 虛擬帳號、信用卡、行動支付皆相同：進入 `paid` 才扣庫存 |
+| 預購可下單 | 規格庫存不足不擋結帳；付款後不足數量進入待補 |
+| 付款配置庫存 | 虛擬帳號、信用卡、行動支付皆相同：進入 `paid` 才鎖定規格並原子配置；不允許庫存扣成負數 |
+| 待補分配 | 補庫存不會自動改訂單；由最高管理員在「待補商品」依 FIFO 分配，庫存不足可先部分分配；一般管理員不可查看或操作此頁 |
 | 出貨流程不加回 | `paid`、`preparing`、`ready_for_pickup`、`picked_up`、`shipped`、`delivered` 都視為占用庫存 |
-| 取消／退貨加回 | 已占用庫存的訂單改成 `cancelled` 或 `returned` 後，庫存加回 |
+| 履約完成門檻 | 任一品項仍有待補時，不允許改為可取貨、已取貨、已出貨或已到貨 |
+| 取消／退貨加回 | 已占用庫存的訂單改成 `cancelled` 或 `returned` 後，只加回實際配置且曾扣除的數量 |
+| 叫貨到貨邊界 | 叫貨單「已到貨」目前不自動入庫，避免狀態操作意外改動商城庫存 |
 
 ### 訂單狀態對照
 

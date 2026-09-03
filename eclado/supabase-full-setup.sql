@@ -500,7 +500,8 @@ begin
 exception when duplicate_object then null;
 end $$;
 
--- 庫存扣補：付款後到出貨完成都占用可用現貨庫存；預購數量不讓庫存扣成負數。
+-- 初始安裝用的舊版庫存扣補。完整 setup 後必須再執行
+-- supabase-order-inventory-allocation.sql，以 product_variants.stock 為正式庫存來源。
 create or replace function public.order_consumes_inventory(order_status text)
 returns boolean
 language sql

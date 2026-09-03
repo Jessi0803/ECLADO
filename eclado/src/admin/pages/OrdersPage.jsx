@@ -5,8 +5,16 @@ import { supabase } from '../../services/supabase.js';
 import { PaymentStateBadge, StatusSelect, TypeBadge } from '../components/StatusIndicators.jsx';
 import usePanelHistory from '../hooks/usePanelHistory.js';
 
-function hasPreorder(order) {
-  return Array.isArray(order.items) && order.items.some(i => i.fulfillment_type === 'preorder');
+const INVENTORY_ACTIVE_STATUSES = new Set([
+  'paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered',
+]);
+
+function getOrderInventoryState(order) {
+  if (!INVENTORY_ACTIVE_STATUSES.has(order?.status)) return null;
+  if (!Array.isArray(order.items) || order.items.length === 0) return null;
+  if (order.items.some(item => Number(item.inventoryAllocation?.backorderQty) > 0)) return 'backordered';
+  if (order.items.every(item => item.inventoryAllocation?.allocatedQty != null)) return 'in_stock';
+  return null;
 }
 
 function getPaymentMethodLabel(method) {
@@ -72,18 +80,19 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'all
 
   useEffect(() => {
     setFilter(getStatusFilter(defaultFilter));
+    setStockFilter('all');
     setSelected(null);
   }, [defaultFilter]);
 
   const byStatus = orders.filter(order => matchesStatusFilter(order, filter));
-  const filtered = stockFilter === 'all' ? byStatus
-    : stockFilter === 'preorder' ? byStatus.filter(hasPreorder)
-    : byStatus.filter(o => !hasPreorder(o));
+  const showInventoryFilters = byStatus.some(order => INVENTORY_ACTIVE_STATUSES.has(order.status));
+  const filtered = stockFilter === 'all' || !showInventoryFilters ? byStatus
+    : byStatus.filter(order => getOrderInventoryState(order) === stockFilter);
   const awaitingCount = orders.filter(o => o.status === 'awaiting_confirm').length;
   const unpaidCount = orders.filter(o => o.status === 'unpaid').length;
   const returnedCount = orders.filter(o => o.status === 'returned').length;
-  const preorderCount = byStatus.filter(hasPreorder).length;
-  const inStockCount = byStatus.filter(o => !hasPreorder(o)).length;
+  const preorderCount = byStatus.filter(order => getOrderInventoryState(order) === 'backordered').length;
+  const inStockCount = byStatus.filter(order => getOrderInventoryState(order) === 'in_stock').length;
 
   async function pushLineOrderNotice(order, type, extra = {}) {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -232,6 +241,7 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'all
     try {
       await persistOrderPatch(id, patch);
       if (selected?.id === id) setSelected(s => ({ ...s, ...patch }));
+      setStockFilter('all');
       setFilter(getStatusFilter(status));
     } catch (error) {
       setLineNotice('訂單狀態更新失敗：' + (error?.message || '請稍後再試'));
@@ -272,6 +282,7 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'all
         ...(isNewShipment ? { shippedAt: shipmentPatch.shipped_at } : {}),
       };
       setSelected(shipmentOrder);
+      setStockFilter('all');
       setFilter(getStatusFilter(newStatus));
       if (isNewShipment) {
         await sendShipmentNotice(shipmentOrder);
@@ -290,7 +301,7 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'all
           <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>訂單管理</h1>
           <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
             {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['unpaid','未付款'], ['paid','已付款'], ['preparing','備貨中'], ['shipped','已出貨'], ['delivered','已到貨'], ['returned','退貨'], ['cancelled','已取消']].map(([val, label]) => (
-              <button key={val} aria-pressed={filter === val} onClick={() => setFilter(val)} style={{
+              <button key={val} aria-pressed={filter === val} onClick={() => { setFilter(val); setStockFilter('all'); }} style={{
                 padding: '8px 16px', border: 'none', fontSize: 12, letterSpacing: '0.04em',
                 background: filter === val ? 'var(--dark)' : 'transparent',
                 color: filter === val ? '#fff' : 'var(--mid)',
@@ -320,23 +331,24 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'all
           </div>
         </div>
 
-        {/* 庫存狀態篩選 */}
-        <div style={{ display: 'flex', gap: 0, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* 只有已進入庫存配置流程的訂單才顯示庫存篩選。 */}
+        {showInventoryFilters && <div style={{ display: 'flex', gap: 0, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{ fontSize: 11, color: 'var(--mid)', letterSpacing: '0.08em', marginRight: 10, whiteSpace: 'nowrap' }}>庫存狀態</span>
-          {[['all', '全部'], ['in_stock', '現貨'], ['preorder', '含預購']].map(([val, label]) => {
-            const count = val === 'in_stock' ? inStockCount : val === 'preorder' ? preorderCount : null;
+          {[['all', '全部'], ['in_stock', '現貨'], ['backordered', '含待補']].map(([val, label]) => {
+            const count = val === 'in_stock' ? inStockCount
+              : val === 'backordered' ? preorderCount : null;
             return (
               <button key={val} onClick={() => setStockFilter(val)} style={{
                 padding: '6px 14px', border: '1px solid var(--border)', borderRight: 'none', fontSize: 11,
                 background: stockFilter === val ? 'var(--dark)' : 'var(--white)',
                 color: stockFilter === val ? '#fff' : 'var(--mid)',
                 cursor: 'pointer', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 5,
-                ...(val === 'preorder' ? { borderRight: '1px solid var(--border)' } : {}),
+                ...(val === 'backordered' ? { borderRight: '1px solid var(--border)' } : {}),
               }}>
                 {label}
                 {count != null && count > 0 && (
                   <span style={{
-                    background: val === 'preorder' ? 'var(--gold)' : 'var(--green)', color: '#fff',
+                    background: val === 'backordered' ? 'var(--gold)' : val === 'in_stock' ? 'var(--green)' : 'var(--mid)', color: '#fff',
                     fontSize: 10, fontWeight: 600, minWidth: 16, height: 16, borderRadius: 8,
                     padding: '0 4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   }}>{count}</span>
@@ -344,7 +356,7 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'all
               </button>
             );
           })}
-        </div>
+        </div>}
 
         {/* 轉帳待確認提示 */}
         {filter === 'awaiting_confirm' && awaitingCount > 0 && (
@@ -387,10 +399,8 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'all
                   </td>
                   <td data-label="付款狀態" style={{ padding: '13px 14px' }}><PaymentStateBadge state={o.paymentState} /></td>
                   <td data-label="庫存" style={{ padding: '13px 14px' }}>
-                    {hasPreorder(o)
-                      ? <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--gold)', background: 'oklch(0.82 0.12 80 / 0.12)', padding: '3px 8px', whiteSpace: 'nowrap' }}>預購</span>
-                      : <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--green)', background: 'oklch(0.65 0.18 145 / 0.10)', padding: '3px 8px', whiteSpace: 'nowrap' }}>現貨</span>
-                    }
+                    {getOrderInventoryState(o) === 'backordered' && <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--gold)', background: 'oklch(0.82 0.12 80 / 0.12)', padding: '3px 8px', whiteSpace: 'nowrap' }}>含待補</span>}
+                    {getOrderInventoryState(o) === 'in_stock' && <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--green)', background: 'oklch(0.65 0.18 145 / 0.10)', padding: '3px 8px', whiteSpace: 'nowrap' }}>現貨</span>}
                   </td>
                   <td data-label="訂單狀態" style={{ padding: '13px 14px' }}>
                     <StatusSelect status={o.status} fulfillmentMethod={o.fulfillmentMethod} onChange={ns => updateStatus(o.id, ns)} />
@@ -555,10 +565,27 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'all
             </div>
           )}
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginBottom: 16 }}>
-            <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 12 }}>商品明細</div>
+            <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'center', marginBottom:12 }}>
+              <div style={{ fontSize: 11, color: 'var(--mid)' }}>商品明細</div>
+              {INVENTORY_ACTIVE_STATUSES.has(selected.status) && (
+                <div style={{ fontSize:10, color:'var(--mid)' }}>庫存配置</div>
+              )}
+            </div>
             {selected.items.map((item, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 12 }}>
-                <span>{item.name} × {item.qty}</span>
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems:'flex-start', gap:12, marginBottom: 10, fontSize: 12 }}>
+                <div style={{ minWidth:0 }}>
+                  <span>{item.name} × {item.qty}</span>
+                  {INVENTORY_ACTIVE_STATUSES.has(selected.status) && (
+                    item.inventoryAllocation?.allocatedQty == null
+                      ? <div data-testid="order-item-inventory-unavailable" style={{ marginTop:4, fontSize:10, color:'var(--mid)' }}>尚無庫存配置紀錄</div>
+                      : (
+                        <div data-testid="order-item-inventory-allocation" style={{ display:'flex', gap:10, flexWrap:'wrap', marginTop:4, fontSize:10 }}>
+                          <span style={{ color:'var(--green)' }}>現貨 {item.inventoryAllocation.allocatedQty}</span>
+                          <span style={{ color:item.inventoryAllocation.backorderQty > 0 ? 'var(--red)' : 'var(--mid)' }}>缺少 {item.inventoryAllocation.backorderQty}</span>
+                        </div>
+                      )
+                  )}
+                </div>
                 <span style={{ fontWeight: 500 }}>NT$ {(item.price * item.qty).toLocaleString()}</span>
               </div>
             ))}

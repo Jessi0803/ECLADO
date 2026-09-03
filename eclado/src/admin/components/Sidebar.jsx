@@ -16,6 +16,7 @@ const MENU_GROUPS = [
     title: '商品',
     items: [
       { id: 'catalog', icon: 'catalog', label: '商品 & 庫存' },
+      { id: 'backorders', icon: 'backorders', label: '待補商品' },
       { id: 'procurement', icon: 'procurement', label: '叫貨管理' },
       { id: 'promotions', icon: 'promotions', label: '活動管理' },
       { id: 'ai', icon: 'ai', label: 'AI 補貨建議' },
@@ -57,6 +58,8 @@ function SidebarIcon({ name }) {
       return <svg {...common}><path d="M4 5h10l6 6-9 9-7-7V5z" /><circle cx="8.5" cy="9.5" r="1.2" /></svg>;
     case 'procurement':
       return <svg {...common}><path d="M4 7h16v13H4zM7 7V4h10v3M8 11h8M8 15h5" /><path d="M16 14l2 2 3-4" /></svg>;
+    case 'backorders':
+      return <svg {...common}><path d="M4 5h16v14H4zM8 9h8M8 13h5" /><path d="M17 12v6M14 15h6" /></svg>;
     case 'ai':
       return <svg {...common}><path d="M12 3l1.25 4.25L17.5 8.5l-4.25 1.25L12 14l-1.25-4.25L6.5 8.5l4.25-1.25L12 3zM18.5 14l.7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7.7-2.3zM6 15l.55 1.95L8.5 17.5l-1.95.55L6 20l-.55-1.95-1.95-.55 1.95-.55L6 15z" /></svg>;
     case 'members':

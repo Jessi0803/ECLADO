@@ -1,3 +1,5 @@
+-- LEGACY: superseded by supabase-order-inventory-allocation.sql.
+-- Keep this file only for migration history; do not rerun it after inventory allocation v2.
 -- ECLADO inventory reservation
 -- Run once in Supabase SQL Editor after supabase-full-setup.sql.
 --
