@@ -1482,6 +1482,75 @@ test('會員列表提供查看詳情按鈕並開啟既有會員詳情面板', as
   await expect(panel.getByText(firstMember.name, { exact: true })).toBeVisible();
 });
 
+test('訂單詳細可將單張訪客訂單歸戶至會員', async ({ page }) => {
+  const assignments: Array<{ orderId: string; memberId: string }> = [];
+  const guestOrder = {
+    ...adminOrderRows[0],
+    id: 'E2E-GUEST-ORDER-ASSIGN',
+    user_id: null,
+    member: '訪客測試',
+    email: adminProfileRows[0].email,
+    phone: adminProfileRows[0].phone,
+  };
+  await mockAdminApis(page, {
+    orders: [guestOrder],
+    onOrderMemberAssign: (orderId, memberId) => assignments.push({ orderId, memberId }),
+  });
+  page.on('dialog', dialog => dialog.accept());
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByText(guestOrder.id).click();
+  await page.getByRole('button', { name: '歸戶至會員' }).click();
+
+  const assignment = page.getByRole('dialog', { name: '歸戶至會員' });
+  await expect(assignment).toBeVisible();
+  await assignment.getByRole('button', { name: new RegExp(adminProfileRows[0].name) }).click();
+  await assignment.getByRole('button', { name: '確認歸戶' }).click();
+
+  await expect.poll(() => assignments).toEqual([{
+    orderId: guestOrder.id,
+    memberId: adminProfileRows[0].id,
+  }]);
+  await expect(page.getByText(`已將訂單歸戶至 ${adminProfileRows[0].name}。`)).toBeVisible();
+  await expect(page.getByRole('button', { name: '歸戶至會員' })).toHaveCount(0);
+});
+
+test('會員詳細可一次匯入一張訪客訂單並更新歷史訂單', async ({ page }) => {
+  const assignments: Array<{ orderId: string; memberId: string }> = [];
+  const guestOrder = {
+    ...adminOrderRows[1],
+    id: 'E2E-GUEST-MEMBER-IMPORT',
+    user_id: null,
+    member: '待歸戶訪客',
+    email: adminProfileRows[0].email,
+    phone: adminProfileRows[0].phone,
+  };
+  await mockAdminApis(page, {
+    orders: [guestOrder],
+    onOrderMemberAssign: (orderId, memberId) => assignments.push({ orderId, memberId }),
+  });
+  page.on('dialog', dialog => dialog.accept());
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+  await page.getByRole('button', { name: `查看${adminProfileRows[0].name}詳情` }).click();
+  await page.getByRole('button', { name: '匯入訪客訂單' }).click();
+
+  const assignment = page.getByRole('dialog', { name: '匯入訪客訂單' });
+  await assignment.getByRole('button', { name: new RegExp(guestOrder.id) }).click();
+  await assignment.getByRole('button', { name: '確認歸戶' }).click();
+
+  await expect.poll(() => assignments).toEqual([{
+    orderId: guestOrder.id,
+    memberId: adminProfileRows[0].id,
+  }]);
+  const memberDetails = page.getByRole('dialog', { name: '會員詳情' });
+  await expect(memberDetails.getByText(`已匯入訂單 ${guestOrder.id}。`)).toBeVisible();
+  await expect(memberDetails.getByText(guestOrder.id, { exact: true })).toBeVisible();
+  await expect(memberDetails.getByText('歷史訂單（1）')).toBeVisible();
+});
+
 test('手機會員小卡的查看詳情按鈕與會員類型選單並列且可開啟詳情', async ({ page }) => {
   await page.setViewportSize({ width: 430, height: 932 });
   await mockAdminApis(page);

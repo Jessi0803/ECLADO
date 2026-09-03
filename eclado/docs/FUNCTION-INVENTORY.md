@@ -39,7 +39,7 @@
 | 14 | 忘記密碼 | 畫面提示已寄出；收件匣收到重設信；點連結可設新密碼並登入 | 無（Supabase Auth 處理） |
 | 15 | 密碼錯誤、未驗證 Email | 有正確錯誤提示 | 無新增資料 |
 | 16 | LINE 登入／註冊 | 授權時出現加官方好友提示；登入成功。首次使用 LINE 自動建立會員（不需另填註冊表） | 新會員：`auth.users`、`profiles.line_user_id`。舊會員：`profiles.line_user_id` 正確 |
-| 17 | 會員專區訂單 | 看得到自己的訂單；已出貨有托運單號 | 前台會員專區目前只用 `orders.user_id = 會員 uid` 查詢；`tracking` 與畫面一致 |
+| 17 | 會員專區訂單 | 看得到自己的訂單；已出貨有托運單號；管理員手動歸戶的訪客訂單重新整理後也會出現 | 前後台會員訂單都只用 `orders.user_id = 會員 uid` 歸戶；單筆手動歸戶由 `assign_guest_order_to_member` 鎖定訂單、確認原本 `user_id is null`，並留下 `orders.member_assigned` 稽核事件 |
 | 18 | 美容師申請 | 填表送出；狀態變審核中 | `professional_applications` 新增；`profiles.role` = `pending` |
 | 19 | 審核中／已是美容師 | 不能再送申請；提示正確 | `profiles.role` 為 `pending` 或 `pro` |
 | 20 | 後台審核美容師 | 核准／拒絕後前台權限正確 | 核准：`status` = `approved`，`role` = `pro`。拒絕：`rejected`，`role` = `consumer` |

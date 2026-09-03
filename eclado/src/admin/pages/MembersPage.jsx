@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Badge, TypeBadge } from '../components/StatusIndicators.jsx';
+import OrderMemberAssignmentDialog from '../components/OrderMemberAssignmentDialog.jsx';
+import { orderBelongsToMember } from '../domain/mappers.js';
 import usePanelHistory from '../hooks/usePanelHistory.js';
 
 const APP_STATUS_LABEL = { pending: '待審核', approved: '已核准', rejected: '已拒絕' };
@@ -26,7 +28,7 @@ function memberHasPendingApp(applications, memberId) {
 export default function Members({
   members, setMembers, orders = [],
   applications = [], applicationsLoading = false, applicationsError = '',
-  onUpdateApplicationStatus, onSendApplicationNotice, onDeleteMember, defaultFilter = 'all',
+  onUpdateApplicationStatus, onSendApplicationNotice, onDeleteMember, onAssignGuestOrder, defaultFilter = 'all',
 }) {
   const [filter, setFilter] = useState(defaultFilter);
   const [selected, setSelected] = useState(null);
@@ -35,6 +37,8 @@ export default function Members({
   const [deletingId, setDeletingId] = useState('');
   const [reviewingId, setReviewingId] = useState('');
   const [applicationNotice, setApplicationNotice] = useState(null);
+  const [assignmentOpen, setAssignmentOpen] = useState(false);
+  const [assignmentNotice, setAssignmentNotice] = useState('');
   const closeDetails = usePanelHistory(!!selected, () => setSelected(null));
 
   useEffect(() => { setFilter(defaultFilter); }, [defaultFilter]);
@@ -54,7 +58,7 @@ export default function Members({
       : members.filter(m => m.type === filter);
 
   const memberOrders = selected
-    ? orders.filter(o => o.user_id === selected.id || o.email === selected.email)
+    ? orders.filter(order => orderBelongsToMember(order, selected.id))
     : [];
 
   const selectedApps = selected ? appsForMember(applications, selected.id) : [];
@@ -66,6 +70,8 @@ export default function Members({
     setTypeNotice('');
     setDeleteNotice('');
     setApplicationNotice(null);
+    setAssignmentOpen(false);
+    setAssignmentNotice('');
   }
 
   function changeType(id, type) {
@@ -254,6 +260,13 @@ export default function Members({
             </div>
           )}
 
+          {onAssignGuestOrder && !(typeof selected.id === 'string' && selected.id.startsWith('app:')) && (
+            <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+              <button type="button" onClick={() => setAssignmentOpen(true)} style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--dark)', background: 'var(--white)', color: 'var(--dark)', cursor: 'pointer', fontSize: 12 }}>匯入訪客訂單</button>
+              {assignmentNotice && <div style={{ marginTop: 10, padding: '9px 10px', background: 'var(--off)', color: 'var(--green)', fontSize: 11 }}>{assignmentNotice}</div>}
+            </div>
+          )}
+
           <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
             <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 12, letterSpacing: '0.08em' }}>美容師申請</div>
             {applicationsLoading ? (
@@ -358,6 +371,17 @@ export default function Members({
               </div>
             )}
           </div>
+          {assignmentOpen && (
+            <OrderMemberAssignmentDialog
+              orders={orders}
+              presetMember={selected}
+              onAssign={onAssignGuestOrder}
+              onClose={result => {
+                setAssignmentOpen(false);
+                if (result?.ok) setAssignmentNotice(`已匯入訂單 ${result.order_id}。`);
+              }}
+            />
+          )}
         </div>
         </>
       )}

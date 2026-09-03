@@ -221,8 +221,12 @@ export function normalizeProduct(row, variantRows = null, imageRows = []) {
   };
 }
 
+export function orderBelongsToMember(order, memberId) {
+  return Boolean(memberId) && order?.user_id === memberId;
+}
+
 export function normalizeMember(row, allOrders) {
-  const memberOrders = allOrders.filter(order => order.user_id === row.id || order.email === row.email);
+  const memberOrders = allOrders.filter(order => orderBelongsToMember(order, row.id));
   const completedSales = memberOrders.filter(order => SALES_COUNTED_STATUSES.has(order.status));
   return {
     id: row.id,

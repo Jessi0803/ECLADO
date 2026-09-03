@@ -151,6 +151,19 @@ test('待補商品權限只授予最高管理員並保留商品小編角色', ()
   expect(sql).not.toContain("admin_user.role = 'catalog_editor'");
 });
 
+test('訪客訂單歸戶採單筆原子鎖定、雙權限與獨立稽核事件', () => {
+  const sql = read('supabase-order-member-assignment.sql');
+  expect(sql).toContain("has_backoffice_permission('orders.write')");
+  expect(sql).toContain("has_backoffice_permission('members.write')");
+  expect(sql).toContain('for update');
+  expect(sql).toContain('and user_id is null');
+  expect(sql).toContain("'orders.member_assigned'");
+  expect(sql).toContain("'manual-order-member-assignment'");
+  expect(sql).toContain('grant execute on function public.assign_guest_order_to_member(text, uuid) to authenticated');
+  expect(sql).not.toContain('set email =');
+  expect(sql).not.toContain('set phone =');
+});
+
 test('建單快照會以購買數量判斷部分缺貨而非只判斷庫存大於零', () => {
   const sql = read('supabase-authoritative-pricing.sql');
   expect(sql).toContain("'available_qty_at_order', least(quantity, item_stock)");

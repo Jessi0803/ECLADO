@@ -226,6 +226,8 @@ export type MockEcladoApiOptions = {
   inventoryAllocations?: Record<string, unknown>[];
   backorders?: Record<string, unknown>[];
   onBackorderAllocate?: (variantId: number) => void;
+  onOrderMemberAssign?: (orderId: string, memberId: string) => void;
+  orderAssignmentError?: string;
 };
 
 export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions = {}) {
@@ -436,6 +438,25 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       allocated_qty: allocated,
       remaining_stock: stock,
       affected_orders: [...affected],
+    });
+  });
+
+  await page.route('**/rest/v1/rpc/assign_guest_order_to_member', async route => {
+    const request = route.request().postDataJSON();
+    const orderId = String(request?.p_order_id || '');
+    const memberId = String(request?.p_member_id || '');
+    if (options.orderAssignmentError) return json(route, { message: options.orderAssignmentError }, 409);
+    const order = orders.find(candidate => String(candidate.id) === orderId);
+    const member = profiles.find(candidate => String(candidate.id) === memberId);
+    if (!order || !member) return json(route, { message: 'Order or member not found' }, 404);
+    if (order.user_id) return json(route, { message: 'Order is already assigned to a member' }, 409);
+    order.user_id = memberId;
+    options.onOrderMemberAssign?.(orderId, memberId);
+    return json(route, {
+      order_id: orderId,
+      member_id: memberId,
+      member_name: member.name || '',
+      member_email: member.email || '',
     });
   });
 

@@ -3,6 +3,7 @@ import { getPaymentStateLabel, PAYMENT_METHODS } from '../../domain/payments.js'
 import { SF_EXPRESS_TRACKING_URL } from '../../domain/shipping.js';
 import { supabase } from '../../services/supabase.js';
 import { PaymentStateBadge, StatusSelect, TypeBadge } from '../components/StatusIndicators.jsx';
+import OrderMemberAssignmentDialog from '../components/OrderMemberAssignmentDialog.jsx';
 import usePanelHistory from '../hooks/usePanelHistory.js';
 
 const INVENTORY_ACTIVE_STATUSES = new Set([
@@ -65,17 +66,21 @@ function formatPaymentTime(value) {
   });
 }
 
-export default function Orders({ orders, persistOrderPatch, defaultFilter = 'all' }) {
+export default function Orders({ orders, members = [], persistOrderPatch, onAssignGuestOrder, defaultFilter = 'all' }) {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState(defaultFilter);
   const [stockFilter, setStockFilter] = useState('all');
   const [trackingInput, setTrackingInput] = useState('');
   const [pushing, setPushing] = useState(false);
   const [lineNotice, setLineNotice] = useState('');
+  const [assignmentOpen, setAssignmentOpen] = useState(false);
+  const [assignmentNotice, setAssignmentNotice] = useState('');
   const closeDetails = usePanelHistory(!!selected, () => setSelected(null));
 
   useEffect(() => {
     setTrackingInput(selected?.tracking || '');
+    setAssignmentOpen(false);
+    setAssignmentNotice('');
   }, [selected?.id]);
 
   useEffect(() => {
@@ -431,6 +436,14 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'all
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>付款方式</div><div style={{ fontSize: 13 }}>{getPaymentMethodLabel(selected.paymentMethod)}</div></div>
           </div>
 
+          {!selected.user_id && onAssignGuestOrder && (
+            <div style={{ marginBottom: 20, padding: '12px', border: '1px solid var(--border)', background: 'var(--off)' }}>
+              <div style={{ fontSize: 11, color: 'var(--mid)', lineHeight: 1.6, marginBottom: 9 }}>此訂單尚未綁定會員。確認訂購人身分後，可將訂單歸戶至既有會員。</div>
+              <button type="button" onClick={() => setAssignmentOpen(true)} style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--dark)', background: 'var(--white)', color: 'var(--dark)', cursor: 'pointer', fontSize: 12 }}>歸戶至會員</button>
+            </div>
+          )}
+          {assignmentNotice && <div style={{ marginBottom: 16, padding: '10px 12px', border: '1px solid var(--border)', background: 'var(--off)', color: 'var(--green)', fontSize: 12 }}>{assignmentNotice}</div>}
+
           {/* 狀態下拉 */}
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 6 }}>訂單狀態</div>
@@ -615,6 +628,19 @@ export default function Orders({ orders, persistOrderPatch, defaultFilter = 'all
                 style={{ flex: 1, padding: '10px', background: 'none', color: 'var(--mid)', border: '1px solid var(--border)', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}
               >取消訂單</button>
             </div>
+          )}
+          {assignmentOpen && (
+            <OrderMemberAssignmentDialog
+              members={members}
+              presetOrder={selected}
+              onAssign={onAssignGuestOrder}
+              onClose={result => {
+                setAssignmentOpen(false);
+                if (!result?.ok) return;
+                setSelected(current => current ? { ...current, user_id: result.member_id } : current);
+                setAssignmentNotice(`已將訂單歸戶至 ${result.member_name || result.member_email || '指定會員'}。`);
+              }}
+            />
           )}
         </div>
         </>

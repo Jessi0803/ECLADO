@@ -271,6 +271,25 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
     setOrders(prev => prev.map(order => order.id === id ? { ...order, ...localPatch } : order));
   }
 
+  async function assignGuestOrderToMember(orderId, memberId) {
+    const { data, error } = await supabase.rpc('assign_guest_order_to_member', {
+      p_order_id: orderId,
+      p_member_id: memberId,
+    });
+    if (error) {
+      const message = error.message || '請稍後再試';
+      if (/already assigned|another administrator|duplicate/i.test(message)) {
+        return { ok: false, message: '此訂單已由其他管理員完成歸戶，請重新整理後確認。' };
+      }
+      if (/permission|not allowed|42501/i.test(message)) {
+        return { ok: false, message: '目前帳號沒有訂單歸戶權限。' };
+      }
+      return { ok: false, message: `訂單歸戶失敗：${message}` };
+    }
+    await fetchAll();
+    return { ok: true, ...(data || {}), order_id: data?.order_id || orderId, member_id: data?.member_id || memberId };
+  }
+
   async function saveProductWithVariants(product) {
     const productPayload = {
       ...(product.id ? { id: product.id } : {}),
@@ -470,7 +489,7 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
     }
     switch (page) {
       case 'dashboard': return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;
-      case 'orders': return <Orders orders={orders} persistOrderPatch={persistOrderPatch} defaultFilter={ordersDefaultFilter} />;
+      case 'orders': return <Orders orders={orders} members={members} persistOrderPatch={persistOrderPatch} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={ordersDefaultFilter} />;
       case 'audit': return <AuditLogsPage />;
       case 'catalog': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'backorders': return <BackordersPage onInventoryChanged={fetchAll} />;
@@ -479,8 +498,8 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
       case 'inventory': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'promotions': return <Promotions products={activeProducts} />;
       case 'procurement': return <ProcurementPage />;
-      case 'members': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} defaultFilter={membersDefaultFilter} />;
-      case 'applications': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} defaultFilter="app_pending" />;
+      case 'members': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={membersDefaultFilter} />;
+      case 'applications': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter="app_pending" />;
       case 'analytics': return <Analytics orders={orders} />;
       case 'ai': return <AIReorder products={activeProducts} orders={orders} />;
       default: return null;
