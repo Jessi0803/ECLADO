@@ -103,7 +103,7 @@ export default function Nav({ setPage, onOpenCart, cartCount, user, setUser, pag
               <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h8.86a2 2 0 0 0 1.95-1.57L21 7H5.12" /></svg>
               {cartCount > 0 && <span style={{ position:'absolute', top:-4, right:-14, background:'var(--black)', color:'var(--white)', fontSize:9, width:16, height:16, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center' }}>{cartCount}</span>}
             </button>
-            <button onClick={() => setDrawerOpen(o => !o)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', flexDirection:'column', gap:5, padding:4 }}>
+            <button aria-label={drawerOpen ? '關閉選單' : '開啟選單'} aria-expanded={drawerOpen} onClick={() => setDrawerOpen(o => !o)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', flexDirection:'column', gap:5, padding:4 }}>
               {drawerOpen ? (
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 4l12 12M16 4L4 16" stroke={drawerOpen ? 'var(--dark)' : iconCol} strokeWidth="1.5" strokeLinecap="round"/></svg>
               ) : (

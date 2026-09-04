@@ -59,6 +59,11 @@ export default function App() {
   });
 
   function setPage(newPage) {
+    if (newPage === 'about') {
+      window.scrollTo({ top: 0, left: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+      // Clicking the current story navigation is a back-to-top action, not a new history entry.
+      if (page === 'about') return;
+    }
     const path = PAGE_PATHS[newPage] || '/';
     const state = newPage === 'order-lookup'
       ? { page: newPage, from: page }

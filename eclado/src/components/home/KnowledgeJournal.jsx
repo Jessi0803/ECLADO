@@ -20,7 +20,7 @@ export default function KnowledgeJournal({ isMobile, onOpenArticle, onOpenJourna
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
             {JOURNAL_ARTICLES.map(article => (
               <a key={article.title} href={`/journal/${article.slug}`} onClick={event => { event.preventDefault(); onOpenArticle(article); }} style={{ color:'inherit', textDecoration:'none', border:'1px solid var(--light)', background:'var(--off-white)', display:'flex', flexDirection:'column' }}>
-                <img src={article.img} alt="" style={{ width:'100%', aspectRatio:'4 / 3', objectFit:'cover', display:'block' }} />
+                <img src={article.img} alt="" style={{ width:'100%', aspectRatio:'4 / 3', background:article.imageBackground, objectFit:article.imageFit || 'cover', display:'block' }} />
                 <div style={{ padding:'12px 10px 14px', display:'flex', flexDirection:'column', gap:6 }}>
                   <span style={{ fontSize:10, letterSpacing:'0.14em', color:'var(--gold)', textTransform:'uppercase' }}>{article.category}</span>
                   <h3 style={{ fontFamily:'var(--font-display)', fontSize:14, lineHeight:1.4, fontWeight:300, color:'var(--black)' }}>{article.title}</h3>
@@ -33,7 +33,7 @@ export default function KnowledgeJournal({ isMobile, onOpenArticle, onOpenJourna
           <>
             <div style={{ display:'grid', gridTemplateColumns:'minmax(360px, 1.05fr) minmax(0, 1fr)', gap:24, alignItems:'stretch', marginBottom:24 }}>
               <a href={`/journal/${leadArticle.slug}`} onClick={event => { event.preventDefault(); onOpenArticle(leadArticle); }} style={{ color:'inherit', textDecoration:'none', border:'1px solid var(--light)', background:'var(--off-white)', display:'grid', gridTemplateRows:'auto 1fr' }}>
-                <img src={leadArticle.img} alt="" style={{ width:'100%', aspectRatio:'16 / 10', objectFit:'cover', display:'block' }} />
+                <img src={leadArticle.img} alt="" style={{ width:'100%', aspectRatio:'16 / 10', background:leadArticle.imageBackground, objectFit:leadArticle.imageFit || 'cover', display:'block' }} />
                 <div style={{ padding:'24px 24px 26px', display:'flex', flexDirection:'column', gap:14 }}>
                   <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', fontSize:11, color:'var(--mid)' }}>
                     <span style={{ letterSpacing:'0.16em', color:'var(--gold)', textTransform:'uppercase' }}>{leadArticle.category}</span>
@@ -46,7 +46,7 @@ export default function KnowledgeJournal({ isMobile, onOpenArticle, onOpenJourna
               <div style={{ display:'grid', gridTemplateRows:'repeat(2, minmax(0, 1fr))', gap:18 }}>
                 {supportingArticles.slice(0, 2).map(article => (
                   <a key={article.title} href={`/journal/${article.slug}`} onClick={event => { event.preventDefault(); onOpenArticle(article); }} style={{ color:'inherit', textDecoration:'none', border:'1px solid var(--light)', background:'var(--white)', display:'grid', gridTemplateColumns:'180px minmax(0, 1fr)' }}>
-                    <img src={article.img} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                    <img src={article.img} alt="" style={{ width:'100%', height:'100%', background:article.imageBackground, objectFit:article.imageFit || 'cover', display:'block' }} />
                     <div style={{ padding:'18px 18px 20px', display:'flex', flexDirection:'column', gap:10 }}>
                       <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', fontSize:11, color:'var(--mid)' }}>
                         <span style={{ letterSpacing:'0.16em', color:'var(--gold)', textTransform:'uppercase' }}>{article.category}</span>
@@ -62,7 +62,7 @@ export default function KnowledgeJournal({ isMobile, onOpenArticle, onOpenJourna
               <div style={{ display:'grid', gridAutoFlow:'column', gridAutoColumns:'minmax(280px, 1fr)', gap:18, minWidth: supportingArticles.length > 3 ? 1180 : 'auto' }}>
                 {supportingArticles.slice(2).map(article => (
                   <a key={article.title} href={`/journal/${article.slug}`} onClick={event => { event.preventDefault(); onOpenArticle(article); }} style={{ color:'inherit', textDecoration:'none', border:'1px solid var(--light)', background:'var(--off-white)', minHeight:300, display:'flex', flexDirection:'column' }}>
-                    <img src={article.img} alt="" style={{ width:'100%', aspectRatio:'16 / 9', objectFit:'cover', display:'block' }} />
+                    <img src={article.img} alt="" style={{ width:'100%', aspectRatio:'16 / 9', background:article.imageBackground, objectFit:article.imageFit || 'cover', display:'block' }} />
                     <div style={{ padding:'16px 16px 18px', display:'flex', flexDirection:'column', gap:10, flex:1 }}>
                       <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', fontSize:11, color:'var(--mid)' }}>
                         <span style={{ letterSpacing:'0.16em', color:'var(--gold)', textTransform:'uppercase' }}>{article.category}</span>

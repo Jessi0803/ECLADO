@@ -1,3 +1,5 @@
+import { CLINICAL_JOURNAL_ARTICLES } from './clinicalJournalArticles.js';
+
 export const JOURNAL_DISCLAIMER = '本文為一般保養知識分享，實際使用方式請依個人膚況及產品說明調整；如有持續性皮膚不適，建議尋求專業醫療評估。';
 
 export const JOURNAL_ARTICLES = [
@@ -213,6 +215,7 @@ export const JOURNAL_ARTICLES = [
       ]},
     ],
   },
+  ...CLINICAL_JOURNAL_ARTICLES,
 ];
 
 export function getJournalArticle(slug) {

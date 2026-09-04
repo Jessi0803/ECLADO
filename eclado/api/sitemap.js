@@ -12,6 +12,8 @@ const STATIC_PATHS = [
   { path: '/journal/double-cleansing-guide', changefreq: 'monthly', priority: '0.6' },
   { path: '/journal/ampoule-mask-routine', changefreq: 'monthly', priority: '0.6' },
   { path: '/journal/professional-skincare-precision', changefreq: 'monthly', priority: '0.6' },
+  { path: '/journal/azulene-ampoule-clinical-data', changefreq: 'monthly', priority: '0.6' },
+  { path: '/journal/exo-clinica-gel-clinical-data', changefreq: 'monthly', priority: '0.6' },
   { path: '/about', changefreq: 'monthly', priority: '0.6' },
   { path: '/info', changefreq: 'monthly', priority: '0.5' },
   { path: '/contact', changefreq: 'monthly', priority: '0.5' },

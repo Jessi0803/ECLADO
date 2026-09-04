@@ -7,6 +7,7 @@ import TrustBadges from '../components/common/TrustBadges.jsx';
 import PromoSection from '../components/product/PromoSection.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
 import { HERO_SLIDES } from '../data/homeContent.js';
+import { getJournalArticle } from '../data/journalArticles.js';
 import {
   getCartKey,
   isProfessionalMember,
@@ -83,7 +84,7 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
               </div>
               <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,46px)' : 'clamp(38px,8vw,112px)', fontWeight:300, color:'#fff', textShadow:'0 2px 16px rgba(0,0,0,0.22)', lineHeight:1.0, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
               <p style={{ fontSize:15, color:'rgba(255,255,255,0.6)', letterSpacing:'0.06em', marginBottom:40, fontWeight:300, maxWidth:520, lineHeight:1.8 }}>{HERO_SLIDES[slide].sub}</p>
-              <button onClick={() => setPage('shop')} style={{ background:'transparent', color:'var(--white)', border:'1px solid rgba(255,255,255,0.6)', padding:'14px 40px', fontSize:11, letterSpacing:'0.14em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', whiteSpace:'nowrap' }}
+              <button onClick={() => onOpenArticle(getJournalArticle('azulene-ampoule-clinical-data'))} style={{ background:'transparent', color:'var(--white)', border:'1px solid rgba(255,255,255,0.6)', padding:'14px 40px', fontSize:11, letterSpacing:'0.14em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', whiteSpace:'nowrap' }}
                 onMouseEnter={e=>{e.target.style.background='var(--white)';e.target.style.color='var(--black)';}}
                 onMouseLeave={e=>{e.target.style.background='transparent';e.target.style.color='var(--white)';}}
               >{HERO_SLIDES[slide].cta}</button>

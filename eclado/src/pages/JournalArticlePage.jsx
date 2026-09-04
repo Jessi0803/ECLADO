@@ -33,14 +33,37 @@ export default function JournalArticlePage({ articleSlug, onBack, onOpenArticle 
         </header>
 
         <div style={{ maxWidth:1120, margin:'0 auto', padding:'0 24px' }} className="px-page">
-          <img src={article.img} alt="" style={{ width:'100%', maxHeight:620, aspectRatio:'16 / 9', objectFit:'cover', display:'block' }} />
+          <picture className={article.mobileImg ? 'journal-responsive-cover' : undefined}>
+            {article.mobileImg && <source media="(max-width: 640px)" srcSet={article.mobileImg} />}
+            <img src={article.img} alt="" style={{ width:'100%', maxHeight:620, aspectRatio:'16 / 9', objectFit:article.imageFit || 'cover', background:article.imageBackground || 'var(--off-white)', display:'block' }} />
+          </picture>
         </div>
 
         <div className="journal-article-body">
           {article.sections.map(section => (
-            <section key={section.heading} className={section.callout ? 'journal-callout' : undefined}>
+            <section key={section.heading} className={section.supplement ? 'journal-supplement' : section.callout ? 'journal-callout' : undefined}>
               <h2>{section.heading}</h2>
-              {section.paragraphs.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+              {section.paragraphs.map(paragraph => <p key={paragraph}>{section.supplement ? '＊ ' : ''}{paragraph}</p>)}
+              {section.table && <div className="journal-data-table">
+                <table>
+                  <caption>{section.table.caption}</caption>
+                  <thead><tr>{section.table.columns.map(column => <th scope="col" key={column}>{column}</th>)}</tr></thead>
+                  <tbody>{section.table.rows.map(row => <tr key={row[0]}>
+                    {row.map((cell, index) => index === 0
+                      ? <th scope="row" key={index}>{cell}</th>
+                      : <td key={index}>{cell}</td>)}
+                  </tr>)}</tbody>
+                </table>
+                {section.table.note && <p className="journal-data-note">＊ {section.table.note}</p>}
+              </div>}
+              {section.figure && <figure className="journal-figure">
+                <img src={section.figure.src} alt={section.figure.alt} loading="lazy" />
+                <figcaption>
+                  <span>{section.figure.caption}</span>
+                  {section.figure.note && <p className="journal-section-note">＊ {section.figure.note}</p>}
+                </figcaption>
+              </figure>}
+              {section.notes?.map(note => <p className="journal-section-note" key={note}>＊ {note}</p>)}
             </section>
           ))}
 
@@ -67,7 +90,7 @@ export default function JournalArticlePage({ articleSlug, onBack, onOpenArticle 
           <div className="journal-related-grid">
             {related.map(item => (
               <a key={item.slug} href={`/journal/${item.slug}`} onClick={event => { event.preventDefault(); onOpenArticle(item); }} style={{ color:'inherit', textDecoration:'none' }}>
-                <img src={item.img} alt="" style={{ width:'100%', aspectRatio:'16 / 9', objectFit:'cover', display:'block', marginBottom:14 }} />
+                <img src={item.img} alt="" style={{ width:'100%', aspectRatio:'16 / 9', background:item.imageBackground, objectFit:item.imageFit || 'cover', display:'block', marginBottom:14 }} />
                 <span style={{ fontSize:10, color:'var(--gold)', letterSpacing:'0.12em' }}>{item.category}</span>
                 <h3 style={{ fontFamily:'var(--font-display)', fontSize:19, fontWeight:300, lineHeight:1.45, marginTop:8 }}>{item.title}</h3>
               </a>

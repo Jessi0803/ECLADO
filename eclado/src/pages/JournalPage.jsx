@@ -24,7 +24,7 @@ export default function JournalPage({ onOpenArticle }) {
               onClick={event => { event.preventDefault(); onOpenArticle(article); }}
               style={{ color:'inherit', textDecoration:'none', border:'1px solid var(--light)', background:'var(--off-white)', display:'flex', flexDirection:'column', minWidth:0 }}
             >
-              <img src={article.img} alt="" style={{ width:'100%', aspectRatio:'16 / 10', objectFit:'cover', display:'block' }} />
+              <img src={article.img} alt="" style={{ width:'100%', aspectRatio:'16 / 10', background:article.imageBackground, objectFit:article.imageFit || 'cover', display:'block' }} />
               <div style={{ padding:'20px 20px 24px', display:'flex', flexDirection:'column', gap:10, flex:1 }}>
                 <span style={{ fontSize:10, letterSpacing:'0.16em', color:'var(--gold)' }}>{article.category}</span>
                 <h2 style={{ fontFamily:'var(--font-display)', fontSize:22, lineHeight:1.45, fontWeight:300, color:'var(--black)' }}>{article.title}</h2>

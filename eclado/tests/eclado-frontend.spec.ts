@@ -187,7 +187,7 @@ test('首頁六篇專欄可進入完整文章、列表及上一篇下一篇且�
   await page.getByRole('button', { name:'← 返回保養專欄' }).click();
   await expect(page).toHaveURL(/\/journal$/);
   await expect(page.getByRole('heading', { level:1, name:'保養專欄' })).toBeVisible();
-  await expect(page.locator('.journal-list-grid > a')).toHaveCount(6);
+  await expect(page.locator('.journal-list-grid > a')).toHaveCount(8);
   await expect(page.getByText(/min read|分鐘閱讀/i)).toHaveCount(0);
 });
 

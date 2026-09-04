@@ -94,6 +94,27 @@
   .journal-article-body p { font-size:15px; line-height:2.05; color:#4f4f4b; margin-bottom:15px; letter-spacing:0.02em; }
   .journal-article-body .journal-callout { padding:30px 32px 16px; background:var(--off-white); border-left:2px solid var(--gold); }
   .journal-disclaimer { border-top:1px solid var(--light); padding-top:22px; margin-top:64px; }
+  .journal-data-table { margin:28px 0; }
+  .journal-figure { margin:28px 0; }
+  .journal-responsive-cover { display:block; }
+  @media (max-width:640px) {
+    .journal-responsive-cover img { aspect-ratio:auto !important; max-height:none !important; height:auto; }
+  }
+  .journal-figure img { display:block; width:100%; height:auto; object-fit:contain; }
+  .journal-figure figcaption { margin-top:12px; font-size:12px; line-height:1.8; color:#62625e; }
+  .journal-figure figcaption .journal-section-note { margin-top:6px; }
+  .journal-data-table table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:14px; line-height:1.7; color:var(--dark); }
+  .journal-data-table caption { text-align:left; color:var(--gold); font-size:12px; padding-bottom:12px; }
+  .journal-data-table th, .journal-data-table td { padding:16px 10px; border-bottom:1px solid var(--light); overflow-wrap:anywhere; }
+  .journal-data-table thead { background:var(--off-white); }
+  .journal-data-table th { font-weight:400; text-align:left; }
+  .journal-data-table td { font-size:clamp(19px,3vw,26px); font-variant-numeric:tabular-nums; color:var(--black); }
+  .journal-data-table .journal-data-note { font-size:12px; line-height:1.8; margin-top:12px; }
+  .journal-article-body .journal-section-note,
+  .journal-article-body .journal-supplement p { font-size:12px; line-height:1.8; color:#62625e; }
+  .journal-article-body .journal-section-note { margin-top:14px; }
+  .journal-article-body .journal-supplement { margin-top:36px; margin-bottom:24px; }
+  .journal-article-body .journal-supplement h2 { font-family:var(--font-body); font-size:12px; line-height:1.8; letter-spacing:0.06em; margin-bottom:10px; color:#62625e; }
   .journal-disclaimer span { display:block; font-size:10px; letter-spacing:0.16em; color:var(--gold); margin-bottom:10px; }
   .journal-disclaimer p { font-size:12px; line-height:1.8; color:var(--mid); margin:0; }
   .journal-prev-next { max-width:1120px; margin:0 auto 84px; padding:32px 24px 0; border-top:1px solid var(--light); display:grid; grid-template-columns:1fr 1fr; gap:44px; }
