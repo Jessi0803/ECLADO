@@ -8,6 +8,10 @@ test('品牌故事圖文、素材與導覽在不同寬度保持完整', async ({
   const story = page.getByRole('article', { name: 'ECLADO 品牌故事', exact: true });
   await expect(story.getByRole('heading', { level: 1 })).toHaveText('品牌故事');
   await expect(story.locator('img')).toHaveCount(8);
+  for (const img of await story.locator('img').all()) {
+    await expect(img).toHaveCSS('filter', 'none');
+  }
+  await expect(story.locator('.brand-story-signature')).toHaveCSS('color', 'rgb(4, 19, 132)');
   await expect(story.locator(':scope > section')).toHaveCount(7);
   await expect(story.locator('.brand-story-count-value')).toHaveText(['1998', '8,000', '150']);
   for (const width of [375, 640, 768, 1280, 1440]) {
