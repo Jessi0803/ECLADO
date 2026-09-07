@@ -202,7 +202,7 @@ begin
       into product_row
       from public.products
       where id = nullif(requested_item.value ->> 'product_id', '')::integer
-        and publication_status = 'active';
+        and publication_status in ('active', 'event_only');
 
     if not found then
       raise exception 'Product not found or inactive' using errcode = 'P0002';
@@ -251,6 +251,8 @@ begin
 
     if tier.professional_price_multiplier is null then
       unit_price := list_price;
+    elsif product_row.apply_tier_multiplier is false then
+      unit_price := professional_price;
     else
       unit_price := round(
         coalesce(nullif(professional_price, 0), list_price)
@@ -266,6 +268,7 @@ begin
     order_items := order_items || jsonb_build_array(jsonb_build_object(
       'id', product_row.id,
       'product_id', product_row.id,
+      'publication_status', product_row.publication_status,
       'variant_id', requested_variant,
       'name', product_row.name_zh,
       'nameZh', product_row.name_zh,
@@ -283,6 +286,7 @@ begin
       'qty', quantity,
       'list_price', list_price,
       'professional_price', professional_price,
+      'apply_tier_multiplier', product_row.apply_tier_multiplier,
       'member_role', member_role,
       'price', unit_price,
       'unit_price', unit_price,
@@ -339,6 +343,7 @@ begin
       select coalesce(sum((item ->> 'line_total')::numeric), 0) as subtotal
       from jsonb_array_elements(order_items) item
       where (item ->> 'product_id')::integer = any(promotion.product_ids)
+        and coalesce(item ->> 'publication_status', 'active') = 'active'
     ) eligible
     cross join lateral (
       select greatest(

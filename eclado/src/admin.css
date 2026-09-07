@@ -88,9 +88,9 @@ input, select, textarea { font-family: var(--font); }
     white-space: nowrap;
   }
 
-  .admin-members-table { table-layout: fixed; min-width: 840px !important; }
-  .admin-members-table .members-col-name { width: 8%; }
-  .admin-members-table .members-col-email { width: 15%; }
+  .admin-members-table { table-layout: fixed; min-width: 796px !important; }
+  .admin-members-table .members-col-name { width: 9%; }
+  .admin-members-table .members-col-email { width: 18%; }
   .admin-members-table .members-col-phone { width: 9%; }
   .admin-members-table .members-col-type { width: 84px; }
   .admin-members-table .members-col-application { width: 74px; }

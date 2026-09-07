@@ -29,7 +29,8 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
   const displayProduct = applyVariantToProduct(product, selectedVariant);
   const showPrice = getMemberPrice(displayProduct, user);
   const priceTier = getMemberTier(user);
-  const hasTierPrice = isProfessionalMember(user);
+  const hasTierPrice = isProfessionalMember(user) && showPrice !== displayProduct.price;
+  const priceLabel = displayProduct.applyTierMultiplier === false ? '固定專業價' : priceTier.priceLabel;
   const fulfillment = getFulfillmentInfo(displayProduct);
 
   const livePromosForProduct = (promotions || []).filter(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));
@@ -152,7 +153,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
                       <span style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, color:'var(--black)' }}>NT$ {showPrice.toLocaleString()}</span>
                       {hasTierPrice && <>
                       <span style={{ fontSize:13, color:'var(--dark)', textDecoration:'line-through' }}>NT$ {displayProduct.price.toLocaleString()}</span>
-                        <span style={{ fontSize:10, background:'var(--gold)', color:'var(--white)', padding:'3px 8px', letterSpacing:'0.1em', fontWeight:500 }}>{priceTier.priceLabel}</span>
+                        <span style={{ fontSize:10, background:'var(--gold)', color:'var(--white)', padding:'3px 8px', letterSpacing:'0.1em', fontWeight:500 }}>{priceLabel}</span>
                       </>}
                     </>
                   )}

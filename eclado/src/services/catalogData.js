@@ -14,9 +14,15 @@ export function withProductImagePublicUrl(row) {
   return { ...row, url: getProductImagePublicUrl(row.storage_path) };
 }
 
-export async function fetchProductRows() {
-  const result = await supabase.rpc('get_storefront_catalog');
+export async function fetchProductRows({ includeEventCatalog = false } = {}) {
+  const [result, eventResult] = await Promise.all([
+    supabase.rpc('get_storefront_catalog'),
+    includeEventCatalog
+      ? supabase.rpc('get_event_catalog')
+      : Promise.resolve({ data: { products: [], variants: [], images: [] }, error: null }),
+  ]);
   const payload = result.data || {};
+  const eventPayload = eventResult.data || {};
 
   return {
     data: payload.products || [],
@@ -27,5 +33,11 @@ export async function fetchProductRows() {
       ? []
       : (payload.images || []).map(withProductImagePublicUrl),
     imageError: result.error,
+    eventData: eventPayload.products || [],
+    eventError: eventResult.error,
+    eventVariantRows: eventPayload.variants || [],
+    eventImageRows: eventResult.error
+      ? []
+      : (eventPayload.images || []).map(withProductImagePublicUrl),
   };
 }

@@ -16,10 +16,12 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
   const [error, setError] = useState('');
   const initialDraftRef = useRef('');
   const activeProducts = products.filter(p => p.publicationStatus === 'active');
+  const eventProducts = products.filter(p => p.publicationStatus === 'event_only');
   const draftProducts = products.filter(p => p.publicationStatus === 'draft');
   const archivedProducts = products.filter(p => p.publicationStatus === 'archived');
   const productsByMode = {
     active: activeProducts,
+    event_only: eventProducts,
     draft: draftProducts,
     archived: archivedProducts,
   };
@@ -38,7 +40,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
     low: baseProducts.filter(p => getStockStatus(p) === 'low').length,
     out: baseProducts.filter(p => getStockStatus(p) === 'out').length,
   };
-  const lowStock = activeProducts.filter(p => p.stock <= p.minStock);
+  const lowStock = [...activeProducts, ...eventProducts].filter(p => p.stock <= p.minStock);
   const hasUnsavedChanges = !!editing && JSON.stringify(editing) !== initialDraftRef.current;
   const closeEditing = usePanelHistory(!!editing, () => setEditing(null), {
     shouldConfirm: hasUnsavedChanges,
@@ -73,6 +75,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
       series: '',
       minStock: 3,
       isProOnly: false,
+      applyTierMultiplier: true,
       productImages: [],
       desc: '',
       skinType: '',
@@ -386,6 +389,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
       <div style={{ display: 'flex', gap: 0, marginBottom: 20, border: '1px solid var(--border)', width: 'fit-content', background: 'var(--white)' }}>
         {[
           ['active', `上架中 (${activeProducts.length})`],
+          ['event_only', `活動限定 (${eventProducts.length})`],
           ['draft', `草稿 (${draftProducts.length})`],
           ['archived', `已下架 (${archivedProducts.length})`],
         ].map(([value, label]) => (
@@ -489,6 +493,8 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                       <td data-label="狀態" style={{ padding: '13px 14px' }}>
                         {p.publicationStatus === 'draft'
                           ? <span style={{ fontSize: 11, color: 'var(--yellow)', fontWeight: 500 }}>草稿</span>
+                          : p.publicationStatus === 'event_only'
+                            ? <span style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 500 }}>活動限定</span>
                           : p.publicationStatus === 'archived'
                             ? <span style={{ fontSize: 11, color: 'var(--mid)', fontWeight: 500 }}>已下架</span>
                           : p.stock === 0
@@ -501,7 +507,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <button onClick={() => openEdit(p)}
                             style={{ padding: '5px 12px', fontSize: 11, background: isEditing ? 'var(--dark)' : 'none', border: '1px solid var(--border)', color: isEditing ? '#fff' : 'var(--dark)', cursor: 'pointer' }}>編輯</button>
-                          {p.publicationStatus !== 'active' ? (
+                          {p.publicationStatus !== 'active' && p.publicationStatus !== 'event_only' ? (
                             <button onClick={() => restoreProduct(p)} disabled={saving}
                               style={{ padding: '5px 12px', fontSize: 11, background: 'var(--dark)', border: '1px solid var(--dark)', color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>重新上架</button>
                           ) : (
@@ -575,6 +581,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                 >
                   <option value="draft">草稿（前台不可見）</option>
                   <option value="active">正式上架</option>
+                  <option value="event_only">活動限定（僅活動網址可見）</option>
                   <option value="archived">已下架</option>
                 </select>
               </div>
@@ -609,6 +616,16 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                   onChange={e => setEditing(prev => ({ ...prev, isProOnly: e.target.checked }))}
                   style={{ width: 15, height: 15, cursor: 'pointer' }} />
                 <label htmlFor="isProOnly" style={{ fontSize: 13, color: 'var(--dark)', cursor: 'pointer' }}>院線限定（一般會員可看介紹，不顯示價格且不可購買）</label>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <input type="checkbox" id="applyTierMultiplier" checked={editing.applyTierMultiplier !== false}
+                  onChange={e => setEditing(prev => ({ ...prev, applyTierMultiplier: e.target.checked }))}
+                  style={{ width: 15, height: 15, marginTop: 2, cursor: 'pointer' }} />
+                <label htmlFor="applyTierMultiplier" style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--dark)', cursor: 'pointer' }}>
+                  師資／經銷商套用身分倍率
+                  <span style={{ display: 'block', fontSize: 11, color: 'var(--mid)' }}>取消後，美容師、師資與經銷商皆使用規格專業價，不再折上折。</span>
+                </label>
               </div>
 
               <div style={{ height: 1, background: 'var(--border)' }} />
@@ -662,7 +679,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 10 }}>
                   <div>
                     <div style={{ ...lbl, marginBottom: 4 }}>商品規格</div>
-                    <p style={{ fontSize: 11, color: 'var(--mid)', margin: 0 }}>價格與庫存以規格資料為準；師資與經銷價由專業價套用會員倍率。</p>
+                    <p style={{ fontSize: 11, color: 'var(--mid)', margin: 0 }}>價格與庫存以規格資料為準；若關閉身分倍率，所有專業身分皆使用專業價。</p>
                   </div>
                   <button type="button" onClick={addVariant}
                     style={{ padding: '7px 12px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap' }}>

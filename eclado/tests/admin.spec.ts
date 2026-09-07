@@ -1201,6 +1201,68 @@ test('商品管理可下架、於已下架清單查看並重新上架商品', as
   await expect(page.getByRole('table').getByText('胜肽修護精華液')).toBeVisible();
 });
 
+test('商品管理可將商品設定為活動限定並在獨立清單查看', async ({ page }) => {
+  let savedRequest: Record<string, any> | null = null;
+  await mockAdminApis(page, {
+    products: [
+      ...adminProductRows,
+      {
+        ...adminProductRows[0],
+        id: 99,
+        name: 'Private Event Cleanser',
+        name_zh: '活動限定潔顏品',
+        publication_status: 'event_only',
+        active: false,
+      },
+    ],
+    productVariants: [
+      ...adminProductVariants,
+      { ...adminProductVariants[0], id: 9901, product_id: 99, sku: 'EVENT-200' },
+    ],
+    onProductWithVariantsSave: request => { savedRequest = request; },
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /商品 & 庫存/);
+  await page.getByRole('button', { name: /活動限定 \(1\)/ }).click();
+  const row = page.getByText('活動限定潔顏品').locator('xpath=ancestor::tr');
+  await expect(row.getByText('活動限定', { exact: true })).toBeVisible();
+  await row.getByRole('button', { name: '編輯' }).click();
+  const panel = page.locator('.detail-panel');
+  await expect(panel.getByLabel('商品狀態')).toHaveValue('event_only');
+  await panel.getByRole('button', { name: '儲存', exact: true }).click();
+  await expect.poll(() => savedRequest).not.toBeNull();
+  expect(savedRequest?.p_product).toMatchObject({ publication_status: 'event_only' });
+});
+
+test('商品管理可設定固定專業價而不套用身分倍率', async ({ page }) => {
+  let savedRequest: Record<string, any> | null = null;
+  await mockAdminApis(page, {
+    products: [{
+      ...adminProductRows[0],
+      id: 88,
+      name: 'Gold Patch',
+      name_zh: '金箔片',
+      is_pro_only: true,
+      apply_tier_multiplier: false,
+    }],
+    productVariants: [
+      { ...adminProductVariants[0], id: 8801, product_id: 88, sku: 'F-58C', pro_price: 4000 },
+    ],
+    onProductWithVariantsSave: request => { savedRequest = request; },
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /商品 & 庫存/);
+  const row = page.getByText('金箔片').locator('xpath=ancestor::tr');
+  await row.getByRole('button', { name: '編輯' }).click();
+  const panel = page.locator('.detail-panel');
+  await expect(panel.getByLabel('師資／經銷商套用身分倍率')).not.toBeChecked();
+  await panel.getByRole('button', { name: '儲存', exact: true }).click();
+  await expect.poll(() => savedRequest).not.toBeNull();
+  expect(savedRequest?.p_product).toMatchObject({ apply_tier_multiplier: false });
+});
+
 test('商品下架與重新上架寫入失敗時維持原清單狀態', async ({ page }) => {
   await mockAdminApis(page, {
     productWriteError: '測試狀態更新失敗',
@@ -1382,11 +1444,11 @@ test('活動排程：排程中活動顯示「排程中」badge，已結束顯示
 });
 
 test('後台核准美容師申請會同步 application status 與 profiles.role', async ({ page }) => {
-  const profileUpdates: Record<string, unknown>[] = [];
+  const roleChanges: Array<{ memberId: string; role: string }> = [];
   const applicationUpdates: Record<string, unknown>[] = [];
   const applicationNotices: Record<string, unknown>[] = [];
   await mockAdminApis(page, {
-    onProfileUpdate: update => profileUpdates.push(update),
+    onMemberRoleChange: (memberId, role) => roleChanges.push({ memberId, role }),
     onApplicationUpdate: update => applicationUpdates.push(update),
     onApplicationNotice: request => applicationNotices.push(request),
   });
@@ -1399,17 +1461,17 @@ test('後台核准美容師申請會同步 application status 與 profiles.role'
   await page.getByRole('button', { name: '核准' }).click();
 
   await expect.poll(() => applicationUpdates.some(update => update.status === 'approved')).toBe(true);
-  await expect.poll(() => profileUpdates.some(update => update.role === 'pro')).toBe(true);
+  await expect.poll(() => roleChanges.some(change => change.role === 'pro')).toBe(true);
   await expect.poll(() => applicationNotices.length).toBe(1);
   expect(applicationNotices[0]).toEqual({ applicationId: 'app-pending-1' });
 });
 
 test('後台拒絕美容師申請會同步 rejected 與 consumer', async ({ page }) => {
-  const profileUpdates: Record<string, unknown>[] = [];
+  const roleChanges: Array<{ memberId: string; role: string }> = [];
   const applicationUpdates: Record<string, unknown>[] = [];
   const applicationNotices: Record<string, unknown>[] = [];
   await mockAdminApis(page, {
-    onProfileUpdate: update => profileUpdates.push(update),
+    onMemberRoleChange: (memberId, role) => roleChanges.push({ memberId, role }),
     onApplicationUpdate: update => applicationUpdates.push(update),
     onApplicationNotice: request => applicationNotices.push(request),
   });
@@ -1421,7 +1483,7 @@ test('後台拒絕美容師申請會同步 rejected 與 consumer', async ({ page
   await page.getByRole('button', { name: '拒絕' }).click();
 
   await expect.poll(() => applicationUpdates.some(update => update.status === 'rejected')).toBe(true);
-  await expect.poll(() => profileUpdates.some(update => update.role === 'consumer')).toBe(true);
+  await expect.poll(() => roleChanges.some(change => change.role === 'consumer')).toBe(true);
   await expect.poll(() => applicationNotices.length).toBe(1);
 });
 
@@ -1674,14 +1736,14 @@ test('會員管理待審核數量使用與訂單待確認相同的 badge 樣式'
 });
 
 test('會員管理可手動切換會員類型並同步 profile role', async ({ page }) => {
-  const profileUpdates: Record<string, unknown>[] = [];
+  const roleChanges: Array<{ memberId: string; role: string }> = [];
   await mockAdminApis(page, {
     profiles: [{
       ...adminProfileRows[0],
       id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     }],
     applications: [],
-    onProfileUpdate: update => profileUpdates.push(update),
+    onMemberRoleChange: (memberId, role) => roleChanges.push({ memberId, role }),
   });
 
   await page.goto('/admin');
@@ -1689,7 +1751,37 @@ test('會員管理可手動切換會員類型並同步 profile role', async ({ p
   await page.getByText('測試會員').click();
   await page.getByRole('button', { name: '經銷商' }).last().click();
 
-  await expect.poll(() => profileUpdates.some(update => update.role === 'distributor')).toBe(true);
+  await expect.poll(() => roleChanges.some(change => change.role === 'distributor')).toBe(true);
+});
+
+test('會員管理只在會員詳細顯示師資目前季度採購額與資格歷程', async ({ page }) => {
+  const memberId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  await mockAdminApis(page, {
+    profiles: [{
+      ...adminProfileRows[0], id: memberId, name: '季度師資', role: 'instructor',
+    }],
+    applications: [],
+    professionalSales: [{
+      member_id: memberId,
+      memberships: [{ id: 'membership-admin-1', role: 'instructor', started_on: '2026-09-07', ended_on: null }],
+      quarters: [{
+        membership_id: 'membership-admin-1', role: 'instructor', quarter_number: 1,
+        period_start: '2026-09-07', period_end_exclusive: '2026-12-07',
+        is_current: true, is_partial: false, sales_amount: 51200, order_count: 5,
+      }],
+    }],
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+  const row = page.getByText('季度師資').locator('xpath=ancestor::tr');
+  await expect(page.getByRole('columnheader', { name: '本季採購額' })).toHaveCount(0);
+  await expect(row.getByText('NT$ 51,200')).toHaveCount(0);
+  await row.getByRole('button', { name: '查看季度師資詳情' }).click();
+  const panel = page.getByRole('dialog', { name: '會員詳情' });
+  await expect(panel.getByText('專業資格季度')).toBeVisible();
+  await expect(panel.getByText('2026/09/07－2026/12/06').first()).toBeVisible();
+  await expect(panel.getByText(/師資 2026\/09\/07 起/)).toBeVisible();
 });
 
 test('會員管理可刪除會員並同步資料庫', async ({ page }) => {
@@ -1702,7 +1794,13 @@ test('會員管理可刪除會員並同步資料庫', async ({ page }) => {
   await page.goto('/admin');
   await openAdminSection(page, /會員管理/);
   await page.locator('.admin-members-table td[data-label="姓名"]').filter({ hasText: /^測試會員$/ }).click();
-  await page.getByRole('button', { name: '刪除會員' }).click();
+  const historyHeading = page.getByText(/^歷史訂單（/);
+  const deleteButton = page.getByRole('button', { name: '刪除會員' });
+  await expect(historyHeading).toBeVisible();
+  await expect(deleteButton).toBeVisible();
+  const [historyBox, deleteBox] = await Promise.all([historyHeading.boundingBox(), deleteButton.boundingBox()]);
+  expect(historyBox?.y).toBeLessThan(deleteBox?.y ?? 0);
+  await deleteButton.click();
 
   await expect.poll(() => deletedMemberIds).toContain('user-consumer-1');
   await expect(page.getByRole('cell', { name: '測試會員' })).toHaveCount(0);

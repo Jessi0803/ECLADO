@@ -9,6 +9,16 @@
       "schedule": "0 0 * * *"
     }
   ],
+  "headers": [
+    {
+      "source": "/events/limited",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }]
+    },
+    {
+      "source": "/events/limited/(.*)",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }]
+    }
+  ],
   "redirects": [
     { "source": "/products/平衡爽膚水", "destination": "/products/rebalancing-toner", "statusCode": 301 },
     { "source": "/products/完美潔面卸妝膏", "destination": "/products/perfect-cleansing-smoothie-balm", "statusCode": 301 },

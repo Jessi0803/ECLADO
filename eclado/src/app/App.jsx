@@ -9,6 +9,7 @@ import {
 } from './authSession.js';
 import {
   PAGE_PATHS,
+  eventProductSlugFromPath,
   getProductSlug,
   journalSlugFromPath,
   pageFromPath,
@@ -22,6 +23,7 @@ import AccountPage from '../pages/AccountPage.jsx';
 import CartPage from '../pages/CartPage.jsx';
 import CheckoutPage from '../pages/CheckoutPage.jsx';
 import ContactPage from '../pages/ContactPage.jsx';
+import EventProductsPage from '../pages/EventProductsPage.jsx';
 import HomePage from '../pages/HomePage.jsx';
 import GuestOrderLookupPage from '../pages/GuestOrderLookupPage.jsx';
 import InfoPage from '../pages/InfoPage.jsx';
@@ -83,6 +85,19 @@ export default function App() {
     }
     setPage('shop');
   }
+  function openEventProduct(product) {
+    const path = `/events/limited/${getProductSlug(product)}`;
+    window.history.pushState({ page: 'event-product', from: 'event-products' }, '', path);
+    setPageState('event-product');
+  }
+  function closeEventProduct() {
+    if (window.history.state?.from === 'event-products') {
+      window.history.back();
+      return;
+    }
+    window.history.pushState({ page: 'event-products' }, '', '/events/limited');
+    setPageState('event-products');
+  }
   function openJournalArticle(article, from = page) {
     window.history.pushState({ page:'journal-article', from }, '', `/journal/${article.slug}`);
     setJournalArticleSlug(article.slug);
@@ -98,11 +113,17 @@ export default function App() {
   } = useAuth(setPageState);
   const [cart, setCart] = useState(loadStoredCart);
   const [cartOpen, setCartOpen] = useState(false);
+  const includeEventCatalog = page === 'event-products'
+    || page === 'event-product'
+    || cart.some(item => item.publicationStatus === 'event_only');
   const {
     products,
+    eventProducts,
     status: productsStatus,
+    eventStatus,
     errorText: productsError,
-  } = useProducts(user, setCart, authReady);
+    eventErrorText,
+  } = useProducts(user, setCart, authReady, includeEventCatalog);
   const { promotions, status: promoFetchStatus, errorText: promoFetchError } = usePromotions();
   const salesStats = useSalesStats();
   const cartCount = cart.reduce((sum,i) => sum+i.qty, 0);
@@ -176,6 +197,8 @@ export default function App() {
       case 'home':     return <HomePage setPage={setPage} onSelectProduct={product => openProduct(product, 'home')} onOpenArticle={article => openJournalArticle(article, 'home')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
       case 'shop':     return <ShopPage onSelectProduct={product => openProduct(product, 'shop')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} productsStatus={productsStatus} productsError={productsError} salesStats={salesStats} />;
       case 'product':  return <ProductPage productSlug={productSlugFromPath(window.location.pathname)} products={products} productsStatus={productsStatus} productsError={productsError} user={user} setCart={setCart} promotions={promotions} onBack={closeProduct} onShop={() => setPage('shop')} />;
+      case 'event-products': return <EventProductsPage user={user} setCart={setCart} onSelectProduct={openEventProduct} products={eventProducts} productsStatus={eventStatus} productsError={eventErrorText} />;
+      case 'event-product': return <ProductPage productSlug={eventProductSlugFromPath(window.location.pathname)} products={eventProducts} productsStatus={eventStatus} productsError={eventErrorText} user={user} setCart={setCart} promotions={[]} onBack={closeEventProduct} onShop={closeEventProduct} routeBase="/events/limited" noIndex />;
       case 'cart':     return <CartPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
       case 'checkout': return <CheckoutPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
       case 'login':    return <LoginPage setPage={setPage} />;

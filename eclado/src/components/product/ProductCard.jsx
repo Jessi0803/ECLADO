@@ -17,7 +17,8 @@ export default function ProductCard({ product, user, onAdd, onSelect, promotions
   const canPurchase = !product.isProOnly || isProfessionalMember(user);
   const showPrice = getMemberPrice(product, user);
   const priceTier = getMemberTier(user);
-  const hasTierPrice = isProfessionalMember(user);
+  const hasTierPrice = isProfessionalMember(user) && showPrice !== product.price;
+  const priceLabel = product.applyTierMultiplier === false ? '固定專業價' : priceTier.priceLabel;
   const onPromo = promotions.some(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));
   const promoDisplay = getPromoDisplayPrice(product, user, promotions);
   return (
@@ -48,7 +49,7 @@ export default function ProductCard({ product, user, onAdd, onSelect, promotions
               <>
                 <span style={{ fontSize:15, fontWeight:500, color:'var(--black)' }}>NT$ {showPrice.toLocaleString()}</span>
                 {hasTierPrice && <span style={{ fontSize:11, color:'var(--dark)', textDecoration:'line-through' }}>NT$ {product.price.toLocaleString()}</span>}
-                {hasTierPrice && <span style={{ fontSize:10, background:'var(--off-white)', color:'var(--dark)', padding:'2px 6px' }}>{priceTier.priceLabel}</span>}
+                {hasTierPrice && <span style={{ fontSize:10, background:'var(--off-white)', color:'var(--dark)', padding:'2px 6px' }}>{priceLabel}</span>}
               </>
             )}
           </div>

@@ -52,7 +52,9 @@ export function calculateDiscount(cart, promotions, user) {
     .filter(p => isPromotionLive(p))
     .map(p => {
       const ids = new Set(normProductIds(p));
-      const promoItems = cart.filter(i => ids.has(Number(i.id)));
+      const promoItems = cart.filter(i => (
+        i.publicationStatus !== 'event_only' && ids.has(Number(i.id))
+      ));
       const promoSubtotal = promoItems.reduce((s, i) => s + unit(i) * i.qty, 0);
       const rate = Number(p.discount_rate);
       const amount = Number(p.discount_amount);
@@ -88,6 +90,7 @@ export function calculateDiscount(cart, promotions, user) {
 
 // 計算單一商品的活動顯示價（回傳 { price, label, promo } 或 null）
 export function getPromoDisplayPrice(product, user, promotions) {
+  if (product?.publicationStatus === 'event_only') return null;
   const basePrice = getMemberPrice(product, user);
   const candidates = (promotions || [])
     .filter(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)))

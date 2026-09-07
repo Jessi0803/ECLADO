@@ -47,6 +47,29 @@ create trigger trg_profiles_updated_at
   before update on public.profiles
   for each row execute function public.set_updated_at();
 
+-- 師資／經銷資格歷程，也是每人三個月銷售季度的起算依據。
+create table if not exists public.professional_memberships (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  role text not null check (role in ('instructor', 'distributor')),
+  started_on date not null,
+  ended_on date,
+  created_by uuid references auth.users(id) on delete set null,
+  change_reason text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (ended_on is null or ended_on >= started_on)
+);
+
+drop trigger if exists trg_professional_memberships_updated_at on public.professional_memberships;
+create trigger trg_professional_memberships_updated_at
+  before update on public.professional_memberships
+  for each row execute function public.set_updated_at();
+
+create unique index if not exists professional_memberships_one_active_per_user
+  on public.professional_memberships (user_id)
+  where ended_on is null;
+
 -- Auth 註冊後自動補 profiles。前端也會 upsert，一起保留以提高容錯。
 create or replace function public.handle_new_user()
 returns trigger
@@ -95,6 +118,7 @@ create table if not exists public.products (
   stock integer not null default 0 check (stock >= 0),
   min_stock integer not null default 3 check (min_stock >= 0),
   is_pro_only boolean not null default false,
+  apply_tier_multiplier boolean not null default true,
   image_url text,
   description text,
   skin_type text,
@@ -164,6 +188,7 @@ create table if not exists public.orders (
   payment_second_reminded_at timestamptz,
   payment_due_at timestamptz not null default (now() + interval '48 hours'),
   pricing_snapshot jsonb not null default '{}'::jsonb,
+  paid_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -172,6 +197,27 @@ drop trigger if exists trg_orders_updated_at on public.orders;
 create trigger trg_orders_updated_at
   before update on public.orders
   for each row execute function public.set_updated_at();
+
+create or replace function public.set_order_first_paid_at()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.paid_at is null
+    and new.status in ('paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered')
+    and (tg_op = 'INSERT' or old.status not in ('paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'))
+  then
+    new.paid_at := now();
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_orders_first_paid_at on public.orders;
+create trigger trg_orders_first_paid_at
+  before insert or update of status on public.orders
+  for each row execute function public.set_order_first_paid_at();
 
 create or replace function public.set_order_shipment_metadata()
 returns trigger
@@ -355,6 +401,9 @@ alter table public.products enable row level security;
 alter table public.orders enable row level security;
 alter table public.promotions enable row level security;
 alter table public.professional_applications enable row level security;
+alter table public.professional_memberships enable row level security;
+revoke all on table public.professional_memberships from anon, authenticated;
+grant select on table public.professional_memberships to authenticated;
 
 drop policy if exists "profiles_select_all" on public.profiles;
 drop policy if exists "profiles_insert_all" on public.profiles;
@@ -500,6 +549,12 @@ begin
 exception when duplicate_object then null;
 end $$;
 
+do $$
+begin
+  alter publication supabase_realtime add table public.professional_memberships;
+exception when duplicate_object then null;
+end $$;
+
 -- 初始安裝用的舊版庫存扣補。完整 setup 後必須再執行
 -- supabase-order-inventory-allocation.sql，以 product_variants.stock 為正式庫存來源。
 create or replace function public.order_consumes_inventory(order_status text)
@@ -589,4 +644,6 @@ create trigger trg_orders_inventory_sync
 
 -- ============================================================================
 -- 執行完成後，請到 Table Editor 確認 profiles / products / orders / promotions 已建立。
+-- 師資／經銷季度統計 RPC 與既有資料回填請接著執行：
+-- supabase-member-quarterly-sales.sql
 -- ============================================================================

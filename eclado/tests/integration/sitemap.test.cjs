@@ -40,11 +40,13 @@ test('sitemap includes storefront product URLs', () => {
   const sitemap = buildSitemap([
     { slug: 'fixed-respiration-url', name: 'Renamed Respiration Ampoule', name_zh: '呼吸安瓶' },
     { name: 'Rebalancing Toner', name_zh: '平衡爽膚水' },
+    { slug: 'private-event-product', name: 'Private Event Product', publication_status: 'event_only' },
   ]);
 
   assert.match(sitemap, /https:\/\/ecladotaiwan\.com\/products\/fixed-respiration-url/);
   assert.doesNotMatch(sitemap, /products\/renamed-respiration-ampoule/);
   assert.match(sitemap, /https:\/\/ecladotaiwan\.com\/products\/rebalancing-toner/);
+  assert.doesNotMatch(sitemap, /private-event-product/);
 });
 
 test('sitemap rejects malformed storefront responses', async () => {

@@ -41,6 +41,7 @@ as $$
       'series', row_data -> 'series',
       'min_stock', row_data -> 'min_stock',
       'is_pro_only', row_data -> 'is_pro_only',
+      'apply_tier_multiplier', row_data -> 'apply_tier_multiplier',
       'publication_status', row_data -> 'publication_status',
       'active', row_data -> 'active',
       'product_list_image_scale', row_data -> 'product_list_image_scale'

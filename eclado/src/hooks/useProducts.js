@@ -15,9 +15,11 @@ import {
   subscribeToTables,
 } from '../services/realtime.js';
 
-export default function useProducts(user, setCart, authReady = true) {
+export default function useProducts(user, setCart, authReady = true, includeEventCatalog = false) {
   const [products, setProducts] = useState([]);
+  const [eventProducts, setEventProducts] = useState([]);
   const [status, setStatus] = useState('loading');
+  const [eventStatus, setEventStatus] = useState('loading');
   const [errorText, setErrorText] = useState('');
   const hasLoadedProducts = useRef(false);
 
@@ -32,8 +34,19 @@ export default function useProducts(user, setCart, authReady = true) {
         variantError,
         imageRows,
         imageError,
-      } = await fetchProductRows();
+        eventData,
+        eventError,
+        eventVariantRows,
+        eventImageRows,
+      } = await fetchProductRows({ includeEventCatalog });
       if (!alive) return;
+      const eventVariantMap = groupProductVariants(eventVariantRows);
+      const eventImageMap = eventError ? null : groupProductImages(eventImageRows);
+      const loadedEventProducts = eventError
+        ? []
+        : mergeProductsWithStock(eventData || [], eventVariantMap, eventImageMap, { includeInactive: true });
+      setEventProducts(loadedEventProducts);
+      setEventStatus(eventError ? 'error' : 'ready');
       if (error) {
         console.error('[ECLADO] 無法載入 products：', error.message, error);
         if (!hasLoadedProducts.current) {
@@ -67,9 +80,10 @@ export default function useProducts(user, setCart, authReady = true) {
       setErrorText('');
       if (!authReady) return;
       setCart(previous => previous.map(item => {
-        const product = loadedProducts.find(current => (
+        const product = [...loadedProducts, ...loadedEventProducts].find(current => (
           Number(current.id) === Number(item.id)
         ));
+        if (!product && eventError && item.publicationStatus === 'event_only') return item;
         if (!product || (product.isProOnly && !isProfessionalMember(user))) {
           return null;
         }
@@ -100,7 +114,14 @@ export default function useProducts(user, setCart, authReady = true) {
       alive = false;
       removeRealtimeChannel(channel);
     };
-  }, [authReady, user?.role, setCart]);
+  }, [authReady, includeEventCatalog, user?.role, setCart]);
 
-  return { products, status, errorText };
+  return {
+    products,
+    eventProducts,
+    status,
+    eventStatus,
+    errorText,
+    eventErrorText: eventStatus === 'error' ? '活動商品資料暫時無法載入，請稍後重新整理。' : '',
+  };
 }

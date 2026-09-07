@@ -226,7 +226,7 @@ begin
   if not public.has_backoffice_permission('catalog.write') then
     raise exception 'Catalog write access required' using errcode = '42501';
   end if;
-  if p_publication_status not in ('draft', 'active', 'archived') then
+  if p_publication_status not in ('draft', 'active', 'event_only', 'archived') then
     raise exception 'Invalid publication status' using errcode = '22023';
   end if;
   update public.products

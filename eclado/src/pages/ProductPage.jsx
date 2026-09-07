@@ -5,6 +5,7 @@ import {
   isProfessionalMember,
 } from '../domain/catalog.jsx';
 import { getProductSlug } from '../app/routes.js';
+import useNoIndex from '../hooks/useNoIndex.js';
 
 export default function ProductPage({
   productSlug,
@@ -16,17 +17,20 @@ export default function ProductPage({
   promotions,
   onBack,
   onShop,
+  routeBase = '/products',
+  noIndex = false,
 }) {
   const product = products.find(item => (
     getProductSlug(item) === productSlug
     || getProductSlug(item.name) === productSlug
     || getProductSlug(item.nameZh) === productSlug
   ));
+  useNoIndex(noIndex || (productsStatus === 'ready' && !product));
 
   useEffect(() => {
     if (!product) return undefined;
     const canonicalSlug = getProductSlug(product);
-    const canonicalPath = `/products/${canonicalSlug}`;
+    const canonicalPath = `${routeBase}/${canonicalSlug}`;
     if (window.location.pathname !== canonicalPath) {
       window.history.replaceState(window.history.state, '', canonicalPath);
     }
@@ -37,11 +41,14 @@ export default function ProductPage({
       canonical.rel = 'canonical';
       document.head.appendChild(canonical);
     }
+    const previousHref = canonical.getAttribute('href');
     canonical.href = `https://ecladotaiwan.com${canonicalPath}`;
     return () => {
       if (created) canonical.remove();
+      else if (previousHref == null) canonical.removeAttribute('href');
+      else canonical.setAttribute('href', previousHref);
     };
-  }, [product]);
+  }, [product, routeBase]);
 
   function addToCart(selectedProduct) {
     if (selectedProduct.isProOnly && !isProfessionalMember(user)) return;

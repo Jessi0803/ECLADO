@@ -21,7 +21,8 @@ export function getMemberTier(user) {
 export function getMemberPrice(product, user) {
   const tier = getMemberTier(user);
   if (!tier.multiplier) return product.price;
-  return Math.round(product.proPrice * tier.multiplier);
+  const multiplier = product.applyTierMultiplier === false ? 1 : tier.multiplier;
+  return Math.round(product.proPrice * multiplier);
 }
 
 export function normalizeJsonArray(value) {
@@ -270,8 +271,9 @@ export function getFulfillmentInfo(product) {
   };
 }
 
-export function mergeProductsWithStock(stockRows, variantMap, imageMap = null) {
-  return (stockRows || []).filter(row => row.active !== false).map(row => {
+export function mergeProductsWithStock(stockRows, variantMap, imageMap = null, options = {}) {
+  const includeInactive = options.includeInactive === true;
+  return (stockRows || []).filter(row => includeInactive || row.active !== false).map(row => {
     const rowImages = normalizeJsonArray(row.image_urls).filter(Boolean);
     const storageImages = imageMap?.get(Number(row.id)) || [];
     const imageUrls = storageImages.length
@@ -286,6 +288,7 @@ export function mergeProductsWithStock(stockRows, variantMap, imageMap = null) {
     return {
       id: Number(row.id),
       slug: row.slug || '',
+      publicationStatus: row.publication_status || (row.active === false ? 'archived' : 'active'),
       name: row.name || '',
       nameZh: row.name_zh || '',
       subtitle: row.subtitle || '',
@@ -294,6 +297,7 @@ export function mergeProductsWithStock(stockRows, variantMap, imageMap = null) {
       size: primaryVariant?.size || row.size || '',
       stock: primaryVariant?.stock != null ? primaryVariant.stock : Number(row.stock ?? 0),
       isProOnly: !!row.is_pro_only,
+      applyTierMultiplier: row.apply_tier_multiplier !== false,
       price: primaryVariant?.price || Number(row.price ?? 0),
       proPrice: primaryVariant?.proPrice || Number(row.pro_price ?? 0),
       img: primaryStorageImage?.url || row.image_url || imageUrls[0] || '',

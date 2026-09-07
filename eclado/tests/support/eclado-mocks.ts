@@ -181,6 +181,7 @@ export type MockEcladoApiOptions = {
   onProductImagesSave?: (request: Record<string, unknown>) => void;
   onProductImageUpload?: (path: string) => void;
   onProfileUpdate?: (update: Record<string, unknown>, url: string) => void;
+  onMemberRoleChange?: (memberId: string, role: string) => void;
   onMemberDelete?: (memberId: string) => void;
   onPromotionInsert?: (promotion: Record<string, unknown>) => void;
   onPromotionUpdate?: (update: Record<string, unknown>, url: string) => void;
@@ -220,6 +221,7 @@ export type MockEcladoApiOptions = {
   promotions?: Record<string, unknown>[];
   orders?: Record<string, unknown>[];
   profiles?: Record<string, unknown>[];
+  professionalSales?: Record<string, unknown>[];
   applications?: Record<string, unknown>[];
   auditLogs?: Record<string, unknown>[];
   procurementOrders?: Record<string, unknown>[];
@@ -361,6 +363,38 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     });
   });
 
+  await page.route('**/rest/v1/rpc/get_event_catalog', async route => {
+    if (options.productResponseDelayMs) {
+      await new Promise(resolve => setTimeout(resolve, options.productResponseDelayMs));
+    }
+    const role = String(
+      profiles.find(profile => String(profile.id) === String(authUser?.id))?.role || 'consumer',
+    );
+    const canViewProfessionalPrice = ['pro', 'instructor', 'distributor'].includes(role);
+    const eventRows = products().filter(product => product.publication_status === 'event_only');
+    const eventProductIds = new Set(eventRows.map(product => Number(product.id)));
+    return json(route, {
+      products: eventRows.map(product => ({
+        ...product,
+        min_stock: undefined,
+        variants: undefined,
+        pro_price: canViewProfessionalPrice ? product.pro_price : null,
+        stock: Number(product.stock) > 0 ? 1 : 0,
+      })),
+      variants: productVariants()
+        .filter(variant => variant.active !== false && eventProductIds.has(Number(variant.product_id)))
+        .map(variant => ({
+          ...variant,
+          sku: undefined,
+          pro_price: canViewProfessionalPrice ? variant.pro_price : null,
+          stock: Number(variant.stock) > 0 ? 1 : 0,
+        })),
+      images: productImages().filter(image => (
+        image.active !== false && eventProductIds.has(Number(image.product_id))
+      )),
+    });
+  });
+
   await page.route('**/rest/v1/rpc/get_admin_catalog', async route => {
     const canManageProcurement = !options.backofficeAccess
       || options.backofficeAccess.permissions.includes('procurement.manage');
@@ -403,6 +437,34 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   ));
 
   await page.route('**/rest/v1/rpc/get_admin_inventory_allocations', async route => json(route, inventoryAllocations));
+
+  await page.route('**/rest/v1/rpc/get_admin_professional_sales', async route => {
+    return json(route, options.professionalSales || []);
+  });
+
+  await page.route('**/rest/v1/rpc/get_my_professional_sales', async route => {
+    const payload = (options.professionalSales || [])
+      .find(item => String(item.member_id) === String(authUser?.id));
+    return json(route, payload || { member_id: authUser?.id || '', memberships: [], quarters: [] });
+  });
+
+  await page.route('**/rest/v1/rpc/set_member_role_with_membership', async route => {
+    const request = route.request().postDataJSON() || {};
+    const memberId = String(request.p_member_id || '');
+    const role = String(request.p_role || '');
+    const profile = profiles.find(item => String(item.id) === memberId);
+    if (!profile) return json(route, { message: 'Member not found' }, 404);
+    const previousRole = String(profile.role || 'consumer');
+    profile.role = role;
+    options.onMemberRoleChange?.(memberId, role);
+    return json(route, {
+      member_id: memberId,
+      previous_role: previousRole,
+      role,
+      effective_on: '2026-09-07',
+      changed: previousRole !== role,
+    });
+  });
 
   await page.route('**/rest/v1/rpc/get_backorder_management_data', async route => json(route,
     backorders.filter(item => Number(item.total_backorder_qty) > 0),
@@ -645,7 +707,8 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     const requestedItems = Array.isArray(request.p_items) ? request.p_items : [];
     const authoritativeItems = requestedItems.map((requested: Record<string, unknown>, index: number) => {
       const product = products().find(row => Number(row.id) === Number(requested.product_id));
-      if (!product || product.active === false) throw new Error('mock product not found');
+      const publicationStatus = String(product?.publication_status || (product?.active === false ? 'archived' : 'active'));
+      if (!product || !['active', 'event_only'].includes(publicationStatus)) throw new Error('mock product not found');
       if (product.is_pro_only && !canBuyPro) throw new Error('mock professional membership required');
 
       const requestedVariant = requested.variant_id == null ? '' : String(requested.variant_id);
@@ -656,7 +719,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         : null;
       const listPrice = Number(variant?.price ?? product.price ?? 0);
       const professionalPrice = Number(variant?.pro_price ?? product.pro_price ?? 0);
-      const calculatedUnitPrice = multiplier == null ? listPrice : Math.round(professionalPrice * multiplier);
+      const calculatedUnitPrice = multiplier == null
+        ? listPrice
+        : Math.round(professionalPrice * (product.apply_tier_multiplier === false ? 1 : multiplier));
       const unitPrice = calculatedUnitPrice + (index === 0 ? Number(options.authoritativePriceDelta || 0) : 0);
       const qty = Number(requested.qty);
       const stock = Number(variant?.stock ?? product.stock ?? 0);
@@ -667,6 +732,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       return {
         id: Number(product.id),
         product_id: Number(product.id),
+        publication_status: publicationStatus,
         variant_id: requested.variant_id || null,
         name: Number(product.id) === 2 ? '胜肽修護精華液' : `商品 ${product.id}`,
         nameZh: Number(product.id) === 2 ? '胜肽修護精華液' : `商品 ${product.id}`,
@@ -676,6 +742,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         qty,
         list_price: listPrice,
         professional_price: professionalPrice,
+        apply_tier_multiplier: product.apply_tier_multiplier !== false,
         member_role: role,
         price: unitPrice,
         unit_price: unitPrice,
@@ -700,7 +767,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       .map(promotion => {
         const productIds = new Set(((promotion.product_ids as number[]) || []).map(Number));
         const eligibleSubtotal = authoritativeItems
-          .filter(item => productIds.has(Number(item.product_id)))
+          .filter(item => item.publication_status === 'active' && productIds.has(Number(item.product_id)))
           .reduce((sum, item) => sum + item.line_total, 0);
         const rate = Number(promotion.discount_rate);
         const amount = Number(promotion.discount_amount);

@@ -99,21 +99,21 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="brand-story-commitment brand-story-container" aria-label="品牌肯定與社會關懷">
+      <section className="brand-story-commitment brand-story-container" aria-label="品牌肯定與研發實踐">
         <div className="brand-story-section-heading">
-          <Heading english="TRUST & RESPONSIBILITY">讓信任，成為持續前行的力量。</Heading>
-          <p>專業的累積，也體現在品牌所獲得的肯定，以及對人的關懷。</p>
+          <Heading english="TRUST & RESPONSIBILITY">讓專業，成為值得信任的依據。</Heading>
+          <p>市場給予的肯定，與對研究、測試及實際應用的持續投入，共同累積品牌的信任。</p>
         </div>
         <div className="brand-story-commitment-grid">
           <ScrollReveal>
             <Photo name="brand-award" width="778" height="389" alt="2024、2025 KCAB 品牌獎項海報，保留 ECLADO 標誌" />
             <p className="brand-story-eyebrow">RECOGNITION</p><h3>來自品牌評選的肯定</h3>
-            <p className="brand-story-body">ECLADO 韓國官網列載 2024、2025 年 KCAB 韓國消費者評價最佳品牌獎項，在 Medical Cosmetic 類別獲得肯定。</p>
+            <p className="brand-story-body">ECLADO 韓國官網列載 2024、2025、2026 年 KCAB 韓國消費者評價最佳品牌獎項，在 Medical Cosmetic 類別獲得肯定。</p>
           </ScrollReveal>
           <ScrollReveal delay={100}>
-            <Photo name="social-care" width="355" height="239" alt="ECLADO 參與產品捐贈活動的合影" />
-            <p className="brand-story-eyebrow">SOCIAL CONNECTION</p><h3>將關懷延伸到肌膚之外</h3>
-            <p className="brand-story-body">透過產品捐贈與社會關懷，ECLADO 將與人的連結帶入品牌行動，讓日常保養之外，多一份溫暖的陪伴。</p>
+            <Photo name="product-research" width="348" height="234" alt="ECLADO 產品研發人員進行配方與應用評估" />
+            <p className="brand-story-eyebrow">RESEARCH &amp; VALIDATION</p><h3>從研究走向實際應用</h3>
+            <p className="brand-story-body">以專業美容現場累積的經驗為基礎，ECLADO 持續進行產品研究、應用評估與測試，讓配方開發回應實際的保養需求。</p>
           </ScrollReveal>
         </div>
       </section>

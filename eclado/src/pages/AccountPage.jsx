@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
+  getMemberRole,
   getMemberTier,
   isProfessionalMember,
 } from '../domain/catalog.jsx';
+import QuarterlySalesPanel from '../components/account/QuarterlySalesPanel.jsx';
 import { getOrderStatusLabel, getPaymentStateColor, getPaymentStateLabel } from '../domain/payments.js';
+import { isQuarterlySalesRole, normalizeProfessionalSales } from '../domain/professionalSales.js';
 import { SF_EXPRESS_TRACKING_URL } from '../domain/shipping.js';
 import useIsMobile from '../hooks/useIsMobile.js';
 import useAdminAccess from '../hooks/useAdminAccess.js';
@@ -16,6 +19,7 @@ import { fetchAccountOrders } from '../services/accountOrders.js';
 import { fetchProfessionalApplicationStatus } from '../services/professionalApplications.js';
 import { getMemberPaymentInstructions, getMemberPaymentSummaries, retrySinopacPayment } from '../services/paymentApi.js';
 import { getPendingPayment, savePendingPayment } from '../services/pendingPayment.js';
+import { fetchMyProfessionalSales } from '../services/professionalSales.js';
 
 export default function AccountPage({ user, setPage, onSignOut }) {
   const isMobile = useIsMobile();
@@ -28,6 +32,9 @@ export default function AccountPage({ user, setPage, onSignOut }) {
   const [openingPaymentOrder, setOpeningPaymentOrder] = useState('');
   const [paymentErrors, setPaymentErrors] = useState({});
   const [paymentSummaries, setPaymentSummaries] = useState({});
+  const [professionalSales, setProfessionalSales] = useState(null);
+  const [professionalSalesLoading, setProfessionalSalesLoading] = useState(false);
+  const [professionalSalesError, setProfessionalSalesError] = useState('');
 
   useEffect(() => {
     // SPA navigation keeps the previous page's scroll position. A long order
@@ -207,6 +214,29 @@ export default function AccountPage({ user, setPage, onSignOut }) {
     return () => { alive = false; };
   }, [user?.uid]);
 
+  useEffect(() => {
+    if (!user?.uid || !isQuarterlySalesRole(getMemberRole(user))) {
+      setProfessionalSales(null);
+      setProfessionalSalesError('');
+      return;
+    }
+    let alive = true;
+    setProfessionalSalesLoading(true);
+    setProfessionalSalesError('');
+    fetchMyProfessionalSales().then(({ data, error: salesError }) => {
+      if (!alive) return;
+      if (salesError) {
+        console.error('quarterly sales fetch failed', salesError);
+        setProfessionalSales(null);
+        setProfessionalSalesError('季度採購資料無法載入，請稍後再試。');
+      } else {
+        setProfessionalSales(normalizeProfessionalSales(data));
+      }
+      setProfessionalSalesLoading(false);
+    });
+    return () => { alive = false; };
+  }, [user?.uid, user?.role]);
+
   if (!user) {
     return (
       <div style={{ minHeight:'100vh', padding:'120px 24px 80px', background:'var(--white)' }}>
@@ -281,6 +311,14 @@ export default function AccountPage({ user, setPage, onSignOut }) {
           </aside>
 
           <section>
+            {isQuarterlySalesRole(getMemberRole(user)) && (
+              <QuarterlySalesPanel
+                sales={professionalSales}
+                loading={professionalSalesLoading}
+                error={professionalSalesError}
+                isMobile={isMobile}
+              />
+            )}
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:16, marginBottom:22 }}>
               <h2 style={{ fontFamily:'var(--font-display)', fontSize:isMobile ? 24 : 32, fontWeight:300, color:'var(--black)' }}>我的訂單</h2>
               <span style={{ fontSize:12, color:'var(--dark)' }}>{orders.length} 筆</span>

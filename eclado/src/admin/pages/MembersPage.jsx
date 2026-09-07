@@ -3,6 +3,13 @@ import { Badge, TypeBadge } from '../components/StatusIndicators.jsx';
 import OrderMemberAssignmentDialog from '../components/OrderMemberAssignmentDialog.jsx';
 import { orderBelongsToMember } from '../domain/mappers.js';
 import usePanelHistory from '../hooks/usePanelHistory.js';
+import {
+  formatMoney,
+  formatQuarterPeriod,
+  formatTaiwanDate,
+  PROFESSIONAL_ROLE_LABELS,
+  quarterTitle,
+} from '../../domain/professionalSales.js';
 
 const APP_STATUS_LABEL = { pending: '待審核', approved: '已核准', rejected: '已拒絕' };
 const APP_SOURCE_LABEL = { registration: '註冊申請', upgrade: '事後申請', standalone: '表單申請' };
@@ -26,9 +33,9 @@ function memberHasPendingApp(applications, memberId) {
 }
 
 export default function Members({
-  members, setMembers, orders = [],
+  members, orders = [],
   applications = [], applicationsLoading = false, applicationsError = '',
-  onUpdateApplicationStatus, onSendApplicationNotice, onDeleteMember, onAssignGuestOrder, defaultFilter = 'all',
+  onChangeMemberRole, onUpdateApplicationStatus, onSendApplicationNotice, onDeleteMember, onAssignGuestOrder, defaultFilter = 'all',
 }) {
   const [filter, setFilter] = useState(defaultFilter);
   const [selected, setSelected] = useState(null);
@@ -39,6 +46,7 @@ export default function Members({
   const [applicationNotice, setApplicationNotice] = useState(null);
   const [assignmentOpen, setAssignmentOpen] = useState(false);
   const [assignmentNotice, setAssignmentNotice] = useState('');
+  const [savingTypeId, setSavingTypeId] = useState('');
   const closeDetails = usePanelHistory(!!selected, () => setSelected(null));
 
   useEffect(() => { setFilter(defaultFilter); }, [defaultFilter]);
@@ -74,7 +82,7 @@ export default function Members({
     setAssignmentNotice('');
   }
 
-  function changeType(id, type) {
+  async function changeType(id, type) {
     if (typeof id === 'string' && id.startsWith('app:')) {
       setTypeNotice('此申請尚未綁定會員帳號，請在下方「美容師申請」區塊按「核准」或「拒絕」。');
       return;
@@ -83,9 +91,12 @@ export default function Members({
       setTypeNotice('此會員有審核中的美容師申請，請在下方「美容師申請」區塊按「核准」。');
       return;
     }
+    if (!onChangeMemberRole) return;
     setTypeNotice('');
-    setMembers(prev => prev.map(m => m.id === id ? { ...m, type } : m));
-    if (selected?.id === id) setSelected(s => ({ ...s, type }));
+    setSavingTypeId(id);
+    const result = await onChangeMemberRole(id, type);
+    setSavingTypeId('');
+    if (!result?.ok) setTypeNotice(result?.message || '會員類型更新失敗，請稍後再試。');
   }
 
   async function reviewApplication(appId, status) {
@@ -205,7 +216,7 @@ export default function Members({
                   <td data-label="加入日期" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)', whiteSpace: 'nowrap' }}>{m.joined}</td>
                   <td data-label="操作" style={{ padding: '13px 14px' }}>
                     <div className="member-row-actions">
-                      <select className="member-type-select" aria-label={`${m.name}會員類型`} value={m.type} onChange={e => { e.stopPropagation(); changeType(m.id, e.target.value); }} onClick={e => e.stopPropagation()} style={{ padding: '7px 8px', fontSize: 11, border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--dark)', cursor: 'pointer', outline: 'none' }}>
+                      <select className="member-type-select" aria-label={`${m.name}會員類型`} value={m.type} disabled={savingTypeId === m.id} onChange={e => { e.stopPropagation(); changeType(m.id, e.target.value); }} onClick={e => e.stopPropagation()} style={{ padding: '7px 8px', fontSize: 11, border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--dark)', cursor: savingTypeId === m.id ? 'wait' : 'pointer', outline: 'none' }}>
                         <option value="consumer">一般會員</option>
                         <option value="pro" disabled={memberHasPendingApp(applications, m.id)}>美容師{memberHasPendingApp(applications, m.id) ? '（請先審核）' : ''}</option>
                         <option value="instructor">師資</option>
@@ -253,6 +264,46 @@ export default function Members({
               <span style={{ fontWeight: 400 }}>{val}</span>
             </div>
           ))}
+          {selected.professionalSales?.memberships?.length > 0 && (
+            <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 12, letterSpacing: '0.08em' }}>專業資格季度</div>
+              {selected.professionalSales.currentQuarter && (
+                <div style={{ padding: '14px', background: 'var(--off)', borderLeft: '3px solid var(--gold)', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 7 }}>
+                    <strong style={{ fontSize: 12, fontWeight: 500 }}>{quarterTitle(selected.professionalSales.currentQuarter)}</strong>
+                    <span style={{ fontSize: 11, color: 'var(--mid)' }}>{PROFESSIONAL_ROLE_LABELS[selected.professionalSales.currentQuarter.role] || selected.professionalSales.currentQuarter.role}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 10 }}>{formatQuarterPeriod(selected.professionalSales.currentQuarter)}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <span style={{ fontSize: 11, color: 'var(--mid)' }}>{selected.professionalSales.currentQuarter.order_count} 筆有效訂單</span>
+                    <span style={{ fontSize: 18, fontWeight: 500 }}>{formatMoney(selected.professionalSales.currentQuarter.sales_amount)}</span>
+                  </div>
+                </div>
+              )}
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 430 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                      {['季度', '期間', '訂單', '採購額'].map(label => <th key={label} style={{ padding: '8px 6px', textAlign: label === '採購額' ? 'right' : 'left', fontSize: 10, color: 'var(--mid)', fontWeight: 400 }}>{label}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selected.professionalSales.quarters.slice(0, 4).map(quarter => (
+                      <tr key={`${quarter.membership_id}-${quarter.quarter_number}`} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '9px 6px', fontSize: 11 }}>{quarterTitle(quarter)}{quarter.is_partial ? ' *' : ''}</td>
+                        <td style={{ padding: '9px 6px', fontSize: 10, color: 'var(--mid)' }}>{formatQuarterPeriod(quarter)}</td>
+                        <td style={{ padding: '9px 6px', fontSize: 11 }}>{quarter.order_count}</td>
+                        <td style={{ padding: '9px 6px', fontSize: 11, textAlign: 'right', whiteSpace: 'nowrap' }}>{formatMoney(quarter.sales_amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ marginTop: 14, fontSize: 10, color: 'var(--mid)', lineHeight: 1.7 }}>
+                資格歷程：{selected.professionalSales.memberships.map(membership => `${PROFESSIONAL_ROLE_LABELS[membership.role] || membership.role} ${formatTaiwanDate(membership.started_on)} 起${membership.ended_on ? `，${formatTaiwanDate(membership.ended_on)} 結束` : ''}`).join('；')}
+              </div>
+            </div>
+          )}
           {selected.cert && (
             <div style={{ marginTop: 16, padding: '12px', background: 'var(--off)', border: '1px solid var(--border)' }}>
               <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4, letterSpacing: '0.08em' }}>證書資料</div>
@@ -319,33 +370,15 @@ export default function Members({
           {typeNotice && (
             <p style={{ marginTop: 12, fontSize: 12, color: 'var(--red)', lineHeight: 1.6 }}>{typeNotice}</p>
           )}
-          {deleteNotice && (
-            <p style={{ marginTop: 12, fontSize: 12, color: 'var(--red)', lineHeight: 1.6 }}>{deleteNotice}</p>
-          )}
-
           <div style={{ marginTop: 20 }}>
             <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 10, letterSpacing: '0.08em' }}>變更會員類型（內部調整）</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button onClick={() => changeType(selected.id, 'consumer')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'consumer' ? 'var(--dark)' : 'none', color: selected.type === 'consumer' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: 'pointer' }}>一般會員</button>
-              <button onClick={() => changeType(selected.id, 'pro')} disabled={selectedPending} title={selectedPending ? '請在上方申請區塊核准' : ''} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'pro' ? 'var(--dark)' : 'none', color: selected.type === 'pro' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: selectedPending ? 'not-allowed' : 'pointer', opacity: selectedPending ? 0.45 : 1 }}>美容師</button>
-              <button onClick={() => changeType(selected.id, 'instructor')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'instructor' ? 'var(--dark)' : 'none', color: selected.type === 'instructor' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: 'pointer' }}>師資</button>
-              <button onClick={() => changeType(selected.id, 'distributor')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'distributor' ? 'var(--dark)' : 'none', color: selected.type === 'distributor' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: 'pointer' }}>經銷商</button>
+              <button disabled={savingTypeId === selected.id} onClick={() => changeType(selected.id, 'consumer')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'consumer' ? 'var(--dark)' : 'none', color: selected.type === 'consumer' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: savingTypeId === selected.id ? 'wait' : 'pointer' }}>一般會員</button>
+              <button onClick={() => changeType(selected.id, 'pro')} disabled={selectedPending || savingTypeId === selected.id} title={selectedPending ? '請在上方申請區塊核准' : ''} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'pro' ? 'var(--dark)' : 'none', color: selected.type === 'pro' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: selectedPending ? 'not-allowed' : savingTypeId === selected.id ? 'wait' : 'pointer', opacity: selectedPending ? 0.45 : 1 }}>美容師</button>
+              <button disabled={savingTypeId === selected.id} onClick={() => changeType(selected.id, 'instructor')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'instructor' ? 'var(--dark)' : 'none', color: selected.type === 'instructor' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: savingTypeId === selected.id ? 'wait' : 'pointer' }}>師資</button>
+              <button disabled={savingTypeId === selected.id} onClick={() => changeType(selected.id, 'distributor')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'distributor' ? 'var(--dark)' : 'none', color: selected.type === 'distributor' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: savingTypeId === selected.id ? 'wait' : 'pointer' }}>經銷商</button>
             </div>
           </div>
-
-          {onDeleteMember && !(typeof selected.id === 'string' && selected.id.startsWith('app:')) && (
-            <div style={{ marginTop: 24, padding: '16px', border: '1px solid oklch(0.60 0.18 25 / 0.28)', background: 'oklch(0.60 0.18 25 / 0.06)' }}>
-              <div style={{ fontSize: 11, color: 'var(--red)', marginBottom: 8, letterSpacing: '0.08em' }}>刪除會員</div>
-              <button
-                type="button"
-                onClick={() => deleteMember(selected)}
-                disabled={deletingId === selected.id}
-                style={{ width: '100%', padding: '10px 0', fontSize: 12, background: 'var(--white)', color: 'var(--red)', border: '1px solid oklch(0.60 0.18 25 / 0.45)', cursor: deletingId === selected.id ? 'wait' : 'pointer' }}
-              >
-                {deletingId === selected.id ? '刪除中…' : '刪除會員'}
-              </button>
-            </div>
-          )}
 
           {/* 歷史訂單 */}
           <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
@@ -371,6 +404,23 @@ export default function Members({
               </div>
             )}
           </div>
+
+          {onDeleteMember && !(typeof selected.id === 'string' && selected.id.startsWith('app:')) && (
+            <div style={{ marginTop: 24, padding: '16px', border: '1px solid oklch(0.60 0.18 25 / 0.28)', background: 'oklch(0.60 0.18 25 / 0.06)' }}>
+              <div style={{ fontSize: 11, color: 'var(--red)', marginBottom: 8, letterSpacing: '0.08em' }}>刪除會員</div>
+              {deleteNotice && (
+                <p style={{ marginBottom: 10, fontSize: 12, color: 'var(--red)', lineHeight: 1.6 }}>{deleteNotice}</p>
+              )}
+              <button
+                type="button"
+                onClick={() => deleteMember(selected)}
+                disabled={deletingId === selected.id}
+                style={{ width: '100%', padding: '10px 0', fontSize: 12, background: 'var(--white)', color: 'var(--red)', border: '1px solid oklch(0.60 0.18 25 / 0.45)', cursor: deletingId === selected.id ? 'wait' : 'pointer' }}
+              >
+                {deletingId === selected.id ? '刪除中…' : '刪除會員'}
+              </button>
+            </div>
+          )}
           {assignmentOpen && (
             <OrderMemberAssignmentDialog
               orders={orders}

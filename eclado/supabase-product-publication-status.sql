@@ -4,7 +4,8 @@
 -- publication_status is authoritative:
 --   draft    = admin-only work in progress
 --   active   = visible and purchasable
---   archived = previously published, now hidden
+--   event_only = visible only through the unlisted event storefront
+--   archived   = previously published, now hidden
 --
 -- The legacy active boolean is retained temporarily for compatibility.
 
@@ -27,7 +28,7 @@ alter table public.products
 
 alter table public.products
   add constraint products_publication_status_check
-  check (publication_status in ('draft', 'active', 'archived'));
+  check (publication_status in ('draft', 'active', 'event_only', 'archived'));
 
 create index if not exists products_publication_status_idx
   on public.products(publication_status, id);
@@ -88,7 +89,7 @@ create policy "product_images_select_active"
   );
 
 comment on column public.products.publication_status is
-  'Product lifecycle: draft (admin only), active (public), archived (hidden).';
+  'Product lifecycle: draft (admin only), active (storefront), event_only (unlisted event storefront), archived (hidden).';
 
 select publication_status, count(*)
 from public.products

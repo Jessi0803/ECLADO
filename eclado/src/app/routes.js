@@ -10,9 +10,21 @@ const PATH_PAGES = Object.fromEntries(Object.entries(PAGE_PATHS).map(([k, v]) =>
 export function pageFromPath(path) {
   const p = path.replace(/\/$/, '') || '/';
   if (p === '/pro-login') return 'login';
+  if (p === '/events/limited') return 'event-products';
+  if (/^\/events\/limited\/[^/]+$/.test(p)) return 'event-product';
   if (/^\/products\/[^/]+$/.test(p)) return 'product';
   if (/^\/journal\/[^/]+$/.test(p)) return 'journal-article';
   return PATH_PAGES[p] || 'home';
+}
+
+export function eventProductSlugFromPath(path) {
+  const match = String(path || '').replace(/\/$/, '').match(/^\/events\/limited\/([^/]+)$/);
+  if (!match) return '';
+  try {
+    return decodeURIComponent(match[1]).toLowerCase();
+  } catch {
+    return '';
+  }
 }
 
 export function journalSlugFromPath(path) {

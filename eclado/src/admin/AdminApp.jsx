@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '../services/supabase.js';
 import { withProductImagePublicUrl } from '../services/catalogData.js';
 import { normalizeMember, normalizeOrder, normalizeProduct } from './domain/mappers.js';
+import { normalizeProfessionalSales } from '../domain/professionalSales.js';
+import { updateMemberRoleWithMembership } from '../services/professionalSales.js';
 import Sidebar from './components/Sidebar.jsx';
 import AIReorder from './pages/AIReorderPage.jsx';
 import Analytics from './pages/AnalyticsPage.jsx';
@@ -77,11 +79,11 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
     if (app?.user_id) {
       let profileResult;
       if (status === 'approved') {
-        profileResult = await supabase.from('profiles').update({ role: 'pro' }).eq('id', app.user_id);
+        profileResult = await updateMemberRoleWithMembership(app.user_id, 'pro');
       } else if (status === 'rejected') {
-        profileResult = await supabase.from('profiles').update({ role: 'consumer' }).eq('id', app.user_id);
+        profileResult = await updateMemberRoleWithMembership(app.user_id, 'consumer');
       } else if (status === 'pending') {
-        profileResult = await supabase.from('profiles').update({ role: 'pending' }).eq('id', app.user_id);
+        profileResult = await updateMemberRoleWithMembership(app.user_id, 'pending');
       }
       if (profileResult?.error) {
         console.error('update profile role failed', profileResult.error);
@@ -100,7 +102,7 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
     setApplicationsLoading(canReadMembers);
     try {
       const emptyResult = () => Promise.resolve({ data: [], error: null });
-      const [ordersRes, profilesRes, catalogRes, applicationsRes, paymentMethodsRes, paymentDetailsRes, inventoryAllocationsRes] = await Promise.all([
+      const [ordersRes, profilesRes, catalogRes, applicationsRes, paymentMethodsRes, paymentDetailsRes, inventoryAllocationsRes, professionalSalesRes] = await Promise.all([
         canReadOrders ? supabase.from('orders').select('*').order('created_at', { ascending: false }) : emptyResult(),
         canReadMembers ? supabase.from('profiles').select('*').order('created_at', { ascending: false }) : emptyResult(),
         canReadCatalog ? supabase.rpc('get_admin_catalog') : Promise.resolve({ data: { products: [], variants: [], images: [] }, error: null }),
@@ -108,6 +110,7 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
         canReadOrders ? supabase.rpc('get_admin_order_payment_methods') : emptyResult(),
         canReadOrders ? supabase.rpc('get_admin_order_payment_details') : emptyResult(),
         canReadOrders ? supabase.rpc('get_admin_inventory_allocations') : emptyResult(),
+        canReadMembers ? supabase.rpc('get_admin_professional_sales') : emptyResult(),
       ]);
       if (ordersRes.error) throw ordersRes.error;
       if (profilesRes.error) throw profilesRes.error;
@@ -149,7 +152,16 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
       }));
       setOrders(realOrders);
 
-      const realMembers = (profilesRes.data || []).map(p => normalizeMember(p, realOrders));
+      const professionalSalesByMember = new Map(
+        (professionalSalesRes.error ? [] : (professionalSalesRes.data || []))
+          .map(payload => [String(payload.member_id), normalizeProfessionalSales(payload)]),
+      );
+      if (professionalSalesRes.error) console.error('professional sales fetch failed', professionalSalesRes.error);
+      const realMembers = (profilesRes.data || []).map(p => normalizeMember(
+        p,
+        realOrders,
+        professionalSalesByMember.get(String(p.id)) || null,
+      ));
       const apps = applicationsRes.error ? [] : (applicationsRes.data || []);
 
       // 沒對到 profile 的 pending 申請（user_id null 或 user_id 對不到任何 profile）
@@ -233,7 +245,8 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
     if (canReadMembers) {
       channel = channel
         .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchAll())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'professional_applications' }, () => fetchAll());
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'professional_applications' }, () => fetchAll())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'professional_memberships' }, () => fetchAll());
     }
     if (canReadCatalog) {
       channel = channel
@@ -301,6 +314,7 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
       series: product.series || null,
       min_stock: Math.max(0, Number(product.minStock) || 0),
       is_pro_only: !!product.isProOnly,
+      apply_tier_multiplier: product.applyTierMultiplier !== false,
       description: product.desc || '',
       skin_type: product.skinType || '',
       ingredients: product.ingredients || '',
@@ -432,23 +446,15 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
     return '';
   }
 
-  // 會員角色變動時同步到 Supabase
-  async function setMembersWithSync(updater) {
-    setMembers(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      next.forEach(m => {
-        const old = prev.find(p => p.id === m.id);
-        if (old && old.type !== m.type) {
-          // 只有真實 Supabase 會員（id 是 uuid）才更新
-          if (typeof m.id === 'string' && m.id.length > 20) {
-            supabase.from('profiles').update({ role: m.type }).eq('id', m.id).then(({ error }) => {
-              if (error) console.error('update role failed', error);
-            });
-          }
-        }
-      });
-      return next;
-    });
+  // 角色與師資／經銷資格歷程由同一 RPC 原子化更新。
+  async function changeMemberRole(memberId, role) {
+    const { error } = await updateMemberRoleWithMembership(memberId, role);
+    if (error) {
+      console.error('update role with membership failed', error);
+      return { ok: false, message: `會員類型更新失敗：${error.message || '請稍後再試'}` };
+    }
+    await fetchAll();
+    return { ok: true, message: '會員類型與季度起算日已更新。' };
   }
 
   async function deleteMemberWithSync(member) {
@@ -498,8 +504,8 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
       case 'inventory': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'promotions': return <Promotions products={activeProducts} />;
       case 'procurement': return <ProcurementPage />;
-      case 'members': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={membersDefaultFilter} />;
-      case 'applications': return <Members members={members} setMembers={setMembersWithSync} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter="app_pending" />;
+      case 'members': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={membersDefaultFilter} />;
+      case 'applications': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter="app_pending" />;
       case 'analytics': return <Analytics orders={orders} />;
       case 'ai': return <AIReorder products={activeProducts} orders={orders} />;
       default: return null;

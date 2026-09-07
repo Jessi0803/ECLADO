@@ -80,6 +80,7 @@ function renderUrl({ path, lastmod, changefreq, priority }) {
 
 function buildSitemap(products = []) {
   const productEntries = products
+    .filter(product => product.publication_status !== 'event_only')
     .map(product => {
       const slug = String(product.slug || '').trim()
         || getProductSlug(product.name || product.name_zh);

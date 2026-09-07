@@ -100,6 +100,7 @@ export function normalizeOrder(row) {
     items,
     total: row.total,
     status: row.status,
+    paidAt: row.paid_at || null,
     date: row.date,
     createdAt: row.created_at || null,
     address: row.address,
@@ -202,6 +203,7 @@ export function normalizeProduct(row, variantRows = null, imageRows = []) {
     stock: Number(row.stock) || 0,
     minStock: Number(row.min_stock) || 3,
     isProOnly: !!row.is_pro_only,
+    applyTierMultiplier: row.apply_tier_multiplier !== false,
     img: row.image_url || '',
     imageUrls: Array.isArray(row.image_urls) ? row.image_urls : [],
     desc: row.description || '',
@@ -225,7 +227,7 @@ export function orderBelongsToMember(order, memberId) {
   return Boolean(memberId) && order?.user_id === memberId;
 }
 
-export function normalizeMember(row, allOrders) {
+export function normalizeMember(row, allOrders, professionalSales = null) {
   const memberOrders = allOrders.filter(order => orderBelongsToMember(order, row.id));
   const completedSales = memberOrders.filter(order => SALES_COUNTED_STATUSES.has(order.status));
   return {
@@ -238,5 +240,6 @@ export function normalizeMember(row, allOrders) {
     joined: row.created_at ? row.created_at.slice(0, 10) : '',
     orders: memberOrders.length,
     total: completedSales.reduce((sum, order) => sum + (Number(order.total) || 0), 0),
+    professionalSales,
   };
 }

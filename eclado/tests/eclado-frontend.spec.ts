@@ -46,6 +46,35 @@ async function openCart(page: import('@playwright/test').Page) {
   return drawer;
 }
 
+test('活動限定商品只出現在未列出的活動路徑並標示 noindex', async ({ page }) => {
+  const eventProduct = {
+    ...mockProducts[0],
+    id: 99,
+    slug: 'private-event-cleanser',
+    name: 'Private Event Cleanser',
+    name_zh: '活動限定潔顏品',
+    publication_status: 'event_only',
+    active: false,
+  };
+  await mockEcladoApis(page, { products: [...mockProducts, eventProduct] });
+
+  await page.goto('/shop');
+  await expect(page.getByText('活動限定潔顏品')).toHaveCount(0);
+
+  await page.goto('/products/private-event-cleanser');
+  await expect(page.getByRole('heading', { name: '找不到此商品' })).toBeVisible();
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+
+  await page.goto('/events/limited');
+  await expect(page.getByRole('heading', { name: '活動限定商品' })).toBeVisible();
+  await expect(page.getByText('活動限定潔顏品')).toBeVisible();
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+
+  await page.getByText('活動限定潔顏品').click();
+  await expect(page).toHaveURL(/\/events\/limited\/private-event-cleanser$/);
+  await expect(page.getByRole('heading', { name: '活動限定潔顏品' })).toBeVisible();
+});
+
 async function proceedToCheckout(page: import('@playwright/test').Page) {
   const drawer = page.getByRole('dialog', { name: '購物車' });
   const scope = await drawer.isVisible().catch(() => false) ? drawer : page;
@@ -449,7 +478,7 @@ test('後台以規格表格與交易式 RPC 儲存商品', async ({ page }) => {
   expect(savedRequest?.p_variants?.[0]?.procurement_unit_cost_usd).toBeNull();
 });
 
-test('後台新商品預設為草稿並提供三種發布狀態', async ({ page }) => {
+test('後台新商品預設為草稿並提供四種發布狀態', async ({ page }) => {
   const admin = authUser('ecladotaiwan@gmail.com');
   await mockEcladoApis(page, {
     authUser: admin,
@@ -470,6 +499,7 @@ test('後台新商品預設為草稿並提供三種發布狀態', async ({ page 
   await expect(status.locator('option')).toHaveText([
     '草稿（前台不可見）',
     '正式上架',
+    '活動限定（僅活動網址可見）',
     '已下架',
   ]);
   await expect(page.getByRole('button', { name: '建立草稿' })).toBeVisible();
@@ -550,6 +580,37 @@ for (const scenario of [
     await page.getByRole('button', { name: '會員購物須知', exact: true }).click();
     await expect(page.getByRole('heading', { name: `${scenario.noticeLabel}－購物規範` })).toBeVisible();
     await expect(page.getByText('單筆訂單折扣後商品小計滿 NT$15,000 享免運優惠。')).toBeVisible();
+  });
+}
+
+for (const role of ['instructor', 'distributor']) {
+  test(`固定專業價商品不套用 ${role} 身分倍率`, async ({ page }) => {
+    const goldPatch = {
+      id: 88,
+      slug: 'gold-patch',
+      name: 'Gold Patch',
+      name_zh: '金箔片',
+      category: '院線課程儀器（含試用包）',
+      size: '50片／盒',
+      stock: 10,
+      is_pro_only: true,
+      price: 5200,
+      pro_price: 4000,
+      apply_tier_multiplier: false,
+      active: true,
+    };
+    await mockEcladoApis(page, {
+      authUser: authUser(`${role}-fixed@example.com`),
+      profiles: [profile(role, `${role}-fixed@example.com`)],
+      products: [...mockProducts, goldPatch],
+    });
+
+    await page.goto('/shop');
+    await page.getByRole('button', { name: '依功效分類' }).click();
+    await page.getByRole('button', { name: '院線課程儀器（含試用包）' }).click();
+    const card = page.getByText('金箔片 · 50片／盒').locator('xpath=ancestor::div[2]');
+    await expect(card.getByText('NT$ 4,000')).toBeVisible();
+    await expect(card.getByText('固定專業價')).toBeVisible();
   });
 }
 
@@ -1767,6 +1828,31 @@ test('會員專區顯示自己的訂單與托運單號', async ({ page }) => {
     'href',
     'https://htm.sf-express.com/tw/tc/',
   );
+});
+
+test('師資會員專區顯示依資格起算日計算的季度採購統計', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: authUser('instructor@example.com'),
+    profiles: [profile('instructor', 'instructor@example.com')],
+    professionalSales: [{
+      member_id: TEST_USER_ID,
+      memberships: [{
+        id: 'membership-1', role: 'instructor', started_on: '2026-09-07', ended_on: null,
+      }],
+      quarters: [{
+        membership_id: 'membership-1', role: 'instructor', quarter_number: 1,
+        period_start: '2026-09-07', period_end_exclusive: '2026-12-07',
+        is_current: true, is_partial: false, sales_amount: 28600, order_count: 3,
+      }],
+    }],
+  });
+
+  await page.goto('/account');
+  const panel = page.getByRole('region', { name: '季度採購統計' });
+  await expect(panel.getByText('資格第 1 季')).toBeVisible();
+  await expect(panel.getByText('2026/09/07－2026/12/06')).toBeVisible();
+  await expect(panel.getByText('NT$ 28,600')).toBeVisible();
+  await expect(panel.getByText('3 筆有效訂單')).toBeVisible();
 });
 
 test('從首頁捲動位置進入長訂單會員專區時回到頁首', async ({ page }) => {

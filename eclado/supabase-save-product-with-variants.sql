@@ -100,14 +100,14 @@ begin
     else null
   end;
   if normalized_publication_status is not null
-    and normalized_publication_status not in ('draft', 'active', 'archived')
+    and normalized_publication_status not in ('draft', 'active', 'event_only', 'archived')
   then
     raise exception 'Invalid product publication status' using errcode = '22023';
   end if;
 
   if requested_product_id is null then
     insert into public.products (
-      asset_key, name, name_zh, subtitle, category, series, min_stock, is_pro_only,
+      asset_key, name, name_zh, subtitle, category, series, min_stock, is_pro_only, apply_tier_multiplier,
       image_url, image_urls, description, skin_type, ingredients, features,
       source_folder_name, imported_from_drive, product_list_image_scale, publication_status, active,
       size, price, pro_price, stock, variants
@@ -121,6 +121,7 @@ begin
       nullif(trim(p_product ->> 'series'), ''),
       greatest(coalesce((p_product ->> 'min_stock')::integer, 3), 0),
       coalesce((p_product ->> 'is_pro_only')::boolean, false),
+      coalesce((p_product ->> 'apply_tier_multiplier')::boolean, true),
       nullif(trim(p_product ->> 'image_url'), ''),
       case
         when jsonb_typeof(p_product -> 'image_urls') = 'array' then p_product -> 'image_urls'
@@ -173,6 +174,7 @@ begin
       end,
       min_stock = greatest(coalesce((p_product ->> 'min_stock')::integer, min_stock, 3), 0),
       is_pro_only = coalesce((p_product ->> 'is_pro_only')::boolean, is_pro_only),
+      apply_tier_multiplier = coalesce((p_product ->> 'apply_tier_multiplier')::boolean, apply_tier_multiplier),
       image_url = case
         when p_product ? 'image_url' then nullif(trim(p_product ->> 'image_url'), '')
         else image_url
