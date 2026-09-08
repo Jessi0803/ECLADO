@@ -118,8 +118,8 @@
   .journal-disclaimer span { display:block; font-size:10px; letter-spacing:0.16em; color:var(--gold); margin-bottom:10px; }
   .journal-disclaimer p { font-size:12px; line-height:1.8; color:var(--mid); margin:0; }
   .journal-prev-next { max-width:1120px; margin:0 auto 84px; padding:32px 24px 0; border-top:1px solid var(--light); display:grid; grid-template-columns:1fr 1fr; gap:44px; }
-  .journal-prev-next button { max-width:420px; background:none; border:none; padding:0; text-align:inherit; cursor:pointer; color:var(--black); font-family:var(--font-display); font-size:18px; font-weight:300; line-height:1.5; }
-  .journal-prev-next button span { display:block; font-family:var(--font-body); font-size:10px; letter-spacing:0.15em; color:var(--gold); margin-bottom:7px; }
+  .journal-prev-next a { max-width:420px; display:inline-block; text-align:inherit; color:var(--black); text-decoration:none; font-family:var(--font-display); font-size:18px; font-weight:300; line-height:1.5; }
+  .journal-prev-next a span { display:block; font-family:var(--font-body); font-size:10px; letter-spacing:0.15em; color:var(--gold); margin-bottom:7px; }
   .g2   { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
   .g3   { display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; }
   .gfooter { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
@@ -221,7 +221,7 @@
     .journal-prev-next { margin-bottom:64px; padding:26px 20px 0; gap:20px; }
     .journal-prev-next { grid-template-columns:1fr; }
     .journal-prev-next > div { text-align:left !important; }
-    .journal-prev-next button { font-size:14px; }
+    .journal-prev-next a { font-size:14px; }
     .g2     { grid-template-columns: 1fr !important; }
     .g3     { grid-template-columns: 1fr !important; }
     .gfooter{ grid-template-columns: 1fr !important; gap: 20px !important; margin-bottom: 20px !important; }

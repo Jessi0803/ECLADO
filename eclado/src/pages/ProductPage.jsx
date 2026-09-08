@@ -6,6 +6,7 @@ import {
 } from '../domain/catalog.jsx';
 import { getProductSlug } from '../app/routes.js';
 import useNoIndex from '../hooks/useNoIndex.js';
+import useDocumentMeta from '../hooks/useDocumentMeta.js';
 
 export default function ProductPage({
   productSlug,
@@ -26,28 +27,54 @@ export default function ProductPage({
     || getProductSlug(item.nameZh) === productSlug
   ));
   useNoIndex(noIndex || (productsStatus === 'ready' && !product));
+  const canonicalPath = product ? `${routeBase}/${getProductSlug(product)}` : undefined;
+  const seoDescription = product?.desc || product?.subtitle || (product ? `選購 ${product.nameZh}，查看產品特色、成分與適合膚質。` : '找不到此商品');
+  const publicPrice = Number(product?.price || 0);
+  useDocumentMeta({
+    title: product ? `${product.nameZh}｜ECLADO` : '找不到商品｜ECLADO',
+    description: seoDescription,
+    canonicalPath,
+    image: product?.img,
+    type: 'product',
+    robots: noIndex || (productsStatus === 'ready' && !product) ? 'noindex,nofollow' : 'index,follow',
+    jsonLd: product && !noIndex ? [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: product.nameZh,
+        alternateName: product.name,
+        description: seoDescription,
+        image: product.imageUrls?.length ? product.imageUrls : [product.img].filter(Boolean),
+        sku: product.variants?.[0]?.sku || undefined,
+        brand: { '@type': 'Brand', name: 'ECLADO' },
+        ...(publicPrice > 0 ? {
+          offers: {
+            '@type': 'Offer',
+            url: `https://ecladotaiwan.com${canonicalPath}`,
+            priceCurrency: 'TWD',
+            price: publicPrice,
+            availability: Number(product.stock) > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder',
+          },
+        } : {}),
+      },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://ecladotaiwan.com/' },
+          { '@type': 'ListItem', position: 2, name: '全部商品', item: 'https://ecladotaiwan.com/shop' },
+          { '@type': 'ListItem', position: 3, name: product.nameZh, item: `https://ecladotaiwan.com${canonicalPath}` },
+        ],
+      },
+    ] : [],
+  });
 
   useEffect(() => {
     if (!product) return undefined;
-    const canonicalSlug = getProductSlug(product);
-    const canonicalPath = `${routeBase}/${canonicalSlug}`;
     if (window.location.pathname !== canonicalPath) {
       window.history.replaceState(window.history.state, '', canonicalPath);
     }
-    let canonical = document.querySelector('link[rel="canonical"]');
-    const created = !canonical;
-    if (!canonical) {
-      canonical = document.createElement('link');
-      canonical.rel = 'canonical';
-      document.head.appendChild(canonical);
-    }
-    const previousHref = canonical.getAttribute('href');
-    canonical.href = `https://ecladotaiwan.com${canonicalPath}`;
-    return () => {
-      if (created) canonical.remove();
-      else if (previousHref == null) canonical.removeAttribute('href');
-      else canonical.setAttribute('href', previousHref);
-    };
+    return undefined;
   }, [product, routeBase]);
 
   function addToCart(selectedProduct) {

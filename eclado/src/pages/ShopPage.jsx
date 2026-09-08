@@ -16,6 +16,8 @@ import {
 import {
   isPromotionLive,
 } from '../domain/promotions.js';
+import useDocumentMeta from '../hooks/useDocumentMeta.js';
+import { getProductSlug } from '../app/routes.js';
 
 const PROFESSIONAL_CATEGORY = '院線課程儀器（含試用包）';
 
@@ -126,6 +128,27 @@ export default function ShopPage({
     : isProductInCategory(product, activeFilter.value));
 
   const livePromosShop = promotions.filter(isPromotionLive);
+  const filterTitle = activeFilter.view === 'series'
+    ? (activeFilter.value === '所有系列' ? '所有系列' : `${activeFilter.value} 系列`)
+    : (activeFilter.value === '所有產品' ? '全部商品' : activeFilter.value);
+  const canonicalPath = shopPath(activeFilter.view, activeFilter.value);
+  useDocumentMeta({
+    title: `${filterTitle}｜ECLADO 韓國院線保養`,
+    description: `瀏覽 ECLADO ${filterTitle}，查看產品特色、規格與專業保養資訊。`,
+    canonicalPath,
+    image: '/assets/images/shop-hero-cleansing-wide.png',
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      name: filterTitle,
+      itemListElement: filtered.map((product, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: product.nameZh,
+        url: `https://ecladotaiwan.com/products/${getProductSlug(product)}`,
+      })),
+    },
+  });
 
   return (
     <div style={{ paddingTop:68 }}>
@@ -149,7 +172,7 @@ export default function ShopPage({
               <div style={{ width:28, height:1, background:'var(--gold)' }} />
               <p style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase', margin:0 }}>Shop</p>
             </div>
-            <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 28 : 42, fontWeight:500, color:'var(--white)', lineHeight:1.1, margin:0 }}>全部商品</h1>
+            <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 28 : 42, fontWeight:500, color:'var(--white)', lineHeight:1.1, margin:0 }}>{filterTitle}</h1>
           </div>
           {isProfessionalMember(user) && (
             <div style={{ display:'flex', alignItems:'center', gap:8, paddingBottom:4 }}>
@@ -164,28 +187,29 @@ export default function ShopPage({
         <div style={{ width:'100%', maxWidth:1280, margin:'0 auto', padding: isMobile ? '0 24px' : '0 32px' }}>
           <div style={{ display:'flex', gap:8, padding:'14px 0 0' }}>
             {[['category', '依功效分類'], ['series', '依系列分類']].map(([view, label]) => (
-              <button key={view} type="button" aria-pressed={activeFilter.view === view} onClick={() => selectView(view)} style={{ border:'1px solid var(--light)', background:activeFilter.view === view ? 'var(--black)' : 'var(--white)', color:activeFilter.view === view ? 'var(--white)' : 'var(--dark)', padding:'9px 16px', fontSize:12, cursor:'pointer', letterSpacing:'0.06em' }}>{label}</button>
+              <a key={view} href={shopPath(view)} aria-current={activeFilter.view === view ? 'page' : undefined} onClick={event => { event.preventDefault(); selectView(view); }} style={{ border:'1px solid var(--light)', background:activeFilter.view === view ? 'var(--black)' : 'var(--white)', color:activeFilter.view === view ? 'var(--white)' : 'var(--dark)', padding:'9px 16px', fontSize:12, cursor:'pointer', letterSpacing:'0.06em', textDecoration:'none' }}>{label}</a>
             ))}
           </div>
           <div ref={categoryTabsRef} className="filter-tabs">
           {filterItems.map(item => (
-            <button
+            <a
               key={`${activeFilter.view}:${item}`}
+              href={shopPath(activeFilter.view, item)}
               ref={node => {
                 const key = `${activeFilter.view}:${item}`;
                 if (node) categoryButtonRefs.current.set(key, node);
                 else categoryButtonRefs.current.delete(key);
               }}
-              aria-pressed={activeFilter.value === item}
-              onClick={() => selectFilter(item)}
+              aria-current={activeFilter.value === item ? 'page' : undefined}
+              onClick={event => { event.preventDefault(); selectFilter(item); }}
               style={{
                 background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12,
                 color: activeFilter.value===item ? 'var(--black)' : 'var(--dark)',
                 padding:'16px 20px', letterSpacing:'0.08em', textTransform:'uppercase',
                 borderBottom: activeFilter.value===item ? '2px solid var(--black)' : '2px solid transparent',
-                fontWeight: activeFilter.value===item ? 500 : 300, transition:'all 0.2s',
+                fontWeight: activeFilter.value===item ? 500 : 300, transition:'all 0.2s', textDecoration:'none', whiteSpace:'nowrap',
               }}
-            >{item}</button>
+            >{item}</a>
           ))}
           </div>
         </div>

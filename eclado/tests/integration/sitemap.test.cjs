@@ -46,6 +46,8 @@ test('sitemap includes storefront product URLs', () => {
   assert.match(sitemap, /https:\/\/ecladotaiwan\.com\/products\/fixed-respiration-url/);
   assert.doesNotMatch(sitemap, /products\/renamed-respiration-ampoule/);
   assert.match(sitemap, /https:\/\/ecladotaiwan\.com\/products\/rebalancing-toner/);
+  assert.match(sitemap, /https:\/\/ecladotaiwan\.com\/shop\/category\/toner/);
+  assert.match(sitemap, /https:\/\/ecladotaiwan\.com\/shop\/series\/cell/);
   assert.doesNotMatch(sitemap, /private-event-product/);
 });
 

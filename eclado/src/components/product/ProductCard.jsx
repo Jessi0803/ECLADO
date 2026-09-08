@@ -11,8 +11,9 @@ import {
   normProductIds,
 } from '../../domain/promotions.js';
 import ProductAutoImage from './ProductAutoImage.jsx';
+import { getProductSlug } from '../../app/routes.js';
 
-export default function ProductCard({ product, user, onAdd, onSelect, promotions = [] }) {
+export default function ProductCard({ product, user, onAdd, onSelect, promotions = [], routeBase = '/products' }) {
   const [hovered, setHovered] = useState(false);
   const canPurchase = !product.isProOnly || isProfessionalMember(user);
   const showPrice = getMemberPrice(product, user);
@@ -21,23 +22,26 @@ export default function ProductCard({ product, user, onAdd, onSelect, promotions
   const priceLabel = product.applyTierMultiplier === false ? '固定專業價' : priceTier.priceLabel;
   const onPromo = promotions.some(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));
   const promoDisplay = getPromoDisplayPrice(product, user, promotions);
+  const productHref = `${routeBase}/${getProductSlug(product)}`;
   return (
-    <div onClick={onSelect} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ cursor:'pointer', position:'relative' }}>
+    <article onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ position:'relative' }}>
       {onPromo && (
         <div style={{ position:'absolute', top:10, right:10, zIndex:3, background:'var(--gold)', color:'var(--white)', fontSize:10, padding:'3px 9px', letterSpacing:'0.1em', fontWeight:500 }}>活動中</div>
       )}
       <div style={{ position:'relative', overflow:'hidden', width:'min(100%, 540px)', aspectRatio:'1', margin:'0 auto 14px', background:'var(--off-white)' }}>
-        <ProductAutoImage src={getProductImage(product)} alt={product.nameZh} product={product} mode="list" style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+        <a href={productHref} onClick={event => { event.preventDefault(); onSelect(); }} aria-label={`查看${product.nameZh}`} style={{ position:'absolute', inset:0, display:'block', color:'inherit', textDecoration:'none' }}>
+          <ProductAutoImage src={getProductImage(product)} alt={product.nameZh} product={product} mode="list" style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+        </a>
         <div style={{ position:'absolute', bottom:0, left:0, right:0, background:'var(--black)', padding:'10px', transform: hovered?'translateY(0)':'translateY(100%)', transition:'transform 0.25s' }}>
           {canPurchase ? (
-            <button onClick={e => { e.stopPropagation(); onAdd(); }} style={{ width:'100%', background:'none', border:'none', cursor:'pointer', color:'var(--white)', fontSize:11, letterSpacing:'0.15em', textTransform:'uppercase', fontFamily:'var(--font-body)', padding:'3px 0' }}>加入購物車</button>
+            <button onClick={onAdd} style={{ width:'100%', background:'none', border:'none', cursor:'pointer', color:'var(--white)', fontSize:11, letterSpacing:'0.15em', textTransform:'uppercase', fontFamily:'var(--font-body)', padding:'3px 0' }}>加入購物車</button>
           ) : (
-            <span style={{ display:'block', textAlign:'center', color:'var(--white)', fontSize:11, letterSpacing:'0.12em', fontFamily:'var(--font-body)', padding:'3px 0' }}>查看商品介紹 →</span>
+            <a href={productHref} onClick={event => { event.preventDefault(); onSelect(); }} style={{ display:'block', textAlign:'center', color:'var(--white)', fontSize:11, letterSpacing:'0.12em', fontFamily:'var(--font-body)', padding:'3px 0', textDecoration:'none' }}>查看商品介紹 →</a>
           )}
         </div>
       </div>
       <div>
-        <p style={{ fontSize:12, color:'var(--dark)', marginBottom:8 }}>{product.nameZh} · {product.size}</p>
+        <a href={productHref} onClick={event => { event.preventDefault(); onSelect(); }} style={{ display:'inline-block', fontSize:12, color:'var(--dark)', marginBottom:8, textDecoration:'none' }}>{product.nameZh} · {product.size}</a>
         {canPurchase ? (
           <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
             {promoDisplay ? (
@@ -60,7 +64,7 @@ export default function ProductCard({ product, user, onAdd, onSelect, promotions
           </div>
         )}
       </div>
-    </div>
+    </article>
   );
 }
 

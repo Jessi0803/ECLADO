@@ -2,6 +2,7 @@ import React from 'react';
 import ScrollReveal from '../components/common/ScrollReveal.jsx';
 import CountUp from '../components/common/CountUp.jsx';
 import './AboutPage.css';
+import useDocumentMeta from '../hooks/useDocumentMeta.js';
 
 const imageRoot = '/assets/images/brand-story/';
 function Photo({ name, alt, width, height, priority = false, className = '' }) {
@@ -12,6 +13,12 @@ function Heading({ english, children }) {
 }
 
 export default function AboutPage() {
+  useDocumentMeta({
+    title: '品牌故事｜ECLADO Taiwan',
+    description: '認識 ECLADO 自 1998 年從韓國專業皮膚管理領域出發，以產品研發、專業教育與全球實務經驗建立的品牌故事。',
+    canonicalPath: '/about',
+    image: '/assets/images/brand-story/brand-portrait.jpg',
+  });
   return (
     <article className="brand-story" aria-label="ECLADO 品牌故事">
       <header className="brand-story-hero">
@@ -126,7 +133,7 @@ export default function AboutPage() {
             <h2>保養不止於肌膚，<br />自信不設限。</h2>
             <p>從一次細心的照顧，走向每一天的自在。<br />找到適合自己的保養方式，讓光采成為生活的一部分。</p>
             <div className="brand-story-links">
-              <a href="/shop?view=series">探索保養系列 <span aria-hidden="true">↗</span></a>
+              <a href="/shop/series">探索保養系列 <span aria-hidden="true">↗</span></a>
               <a href="/contact">與我們聯繫 <span aria-hidden="true">↗</span></a>
             </div>
           </div>

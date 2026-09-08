@@ -47,6 +47,7 @@ import {
   saveStoredCart,
 } from '../services/cartStorage.js';
 import { goProfessionalApply } from '../services/membership.js';
+import useNoIndex from '../hooks/useNoIndex.js';
 
 export default function App() {
   const [journalArticleSlug, setJournalArticleSlug] = useState(() => journalSlugFromPath(window.location.pathname));
@@ -59,6 +60,7 @@ export default function App() {
     }
     return pageFromPath(window.location.pathname);
   });
+  useNoIndex(['cart', 'checkout', 'login', 'pro-login', 'reset-password', 'professional-apply', 'account', 'line-callback', 'payment-result', 'order-lookup'].includes(page));
 
   function setPage(newPage) {
     if (newPage === 'about') {

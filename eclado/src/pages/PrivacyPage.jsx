@@ -1,8 +1,14 @@
 import React from 'react';
 import useIsMobile from '../hooks/useIsMobile.js';
+import useDocumentMeta from '../hooks/useDocumentMeta.js';
 
 // ─── PRIVACY PAGE ────────────────────────────────────────────────────────────
 export default function PrivacyPage() {
+  useDocumentMeta({
+    title: '隱私權政策｜ECLADO Taiwan',
+    description: 'ECLADO Taiwan 隱私權政策，說明個人資料蒐集、使用、保存及使用者權利。',
+    canonicalPath: '/privacy',
+  });
   const isMobile = useIsMobile();
   const sections = [
     {

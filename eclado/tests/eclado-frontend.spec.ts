@@ -194,7 +194,7 @@ test('首頁依指定順序呈現熱門商品、品牌理念、三大系列與�
   await expect(page.getByRole('button', { name: '上一組記憶系列商品' })).toHaveCount(0);
 
   await page.getByRole('button', { name: '瀏覽記憶系列商品' }).click();
-  await expect(page).toHaveURL(/\/shop\?view=series&series=Cell$/);
+  await expect(page).toHaveURL(/\/shop\/series\/cell$/);
 });
 
 test('首頁六篇專欄可進入完整文章、列表及上一篇下一篇且不顯示閱讀時間', async ({ page }) => {
@@ -209,11 +209,11 @@ test('首頁六篇專欄可進入完整文章、列表及上一篇下一篇且�
   await expect(page.getByText('ECLADO 專業保養觀點')).toBeVisible();
   await expect(page.getByText(/min read|分鐘閱讀/i)).toHaveCount(0);
 
-  await page.getByRole('button', { name:/下一篇/ }).click();
+  await page.getByRole('link', { name:/下一篇/ }).click();
   await expect(page).toHaveURL(/\/journal\/sensitive-skin-routine$/);
   await expect(page.getByRole('heading', { level:1, name:/敏弱肌日常流程/ })).toBeVisible();
 
-  await page.getByRole('button', { name:'← 返回保養專欄' }).click();
+  await page.getByRole('link', { name:'保養專欄', exact:true }).click();
   await expect(page).toHaveURL(/\/journal$/);
   await expect(page.getByRole('heading', { level:1, name:'保養專欄' })).toBeVisible();
   await expect(page.locator('.journal-list-grid > a')).toHaveCount(8);
@@ -337,16 +337,16 @@ test('商品具有可分享唯一路徑，重新整理與返回列表皆正常',
 test('商品新分類正確，院線商品不重複出現在一般分類', async ({ page }) => {
   await page.goto('/shop');
 
-  await page.getByRole('button', { name: '安瓶精華', exact: true }).click();
+  await page.getByRole('link', { name: '安瓶精華', exact: true }).click();
   await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();
   await expect(page.getByText('急救修護安瓶組').first()).toBeVisible();
   await expect(page.getByText('NK細胞活化安瓶').first()).toHaveCount(0);
 
-  await page.getByRole('button', { name: '院線課程儀器（含試用包）', exact: true }).click();
+  await page.getByRole('link', { name: '院線課程儀器（含試用包）', exact: true }).click();
   await expect(page.getByText('NK細胞活化安瓶').first()).toBeVisible();
   await expect(page.getByText('急救修護安瓶組').first()).toHaveCount(0);
 
-  await page.getByRole('button', { name: '其他', exact: true }).click();
+  await page.getByRole('link', { name: '其他', exact: true }).click();
   await expect(page.getByText('此分類目前無商品')).toBeVisible();
 });
 
@@ -356,12 +356,12 @@ test('手機分類橫向選單會自動捲入目前選取項目', async ({ page,
   await page.goto(`/shop?category=${encodeURIComponent('院線課程儀器（含試用包）')}`);
 
   const tabs = page.locator('.filter-tabs');
-  const selectedCategory = page.getByRole('button', {
+  const selectedCategory = page.getByRole('link', {
     name: '院線課程儀器（含試用包）',
     exact: true,
   });
 
-  await expect(selectedCategory).toHaveAttribute('aria-pressed', 'true');
+  await expect(selectedCategory).toHaveAttribute('aria-current', 'page');
   await expect.poll(async () => {
     const [tabsBox, selectedBox] = await Promise.all([
       tabs.boundingBox(),
@@ -378,14 +378,14 @@ test('導覽列所有產品下拉分類會帶入商城分類並保留可分享�
 
   if (isMobile) {
     await page.locator('.nav-hamburger').getByRole('button').last().click();
-    await page.getByRole('button', { name: '所有產品', exact: true }).click();
+    await page.getByRole('link', { name: '所有產品', exact: true }).click();
   } else {
-    await page.getByRole('button', { name: '所有產品', exact: true }).hover();
+    await page.getByRole('link', { name: '所有產品', exact: true }).hover();
   }
 
-  await page.getByRole('button', { name: '安瓶精華', exact: true }).click();
-  await expect(page).toHaveURL(/\/shop\?view=category&category=%E5%AE%89%E7%93%B6%E7%B2%BE%E8%8F%AF$/);
-  await expect(page.getByRole('button', { name: '安瓶精華', exact: true }).last()).toHaveCSS('font-weight', '500');
+  await page.locator(isMobile ? '.mobile-drawer' : '.nav-desktop').getByRole('link', { name: '安瓶精華', exact: true }).click();
+  await expect(page).toHaveURL(/\/shop\/category\/ampoule-serum$/);
+  await expect(page.getByRole('link', { name: '安瓶精華', exact: true }).last()).toHaveCSS('font-weight', '500');
   await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();
   await expect(page.getByText('NK細胞活化安瓶').first()).toHaveCount(0);
 
@@ -397,15 +397,15 @@ test('導覽列所有產品下拉分類會帶入商城分類並保留可分享�
 test('商城可在功效分類與系列分類間切換並保留系列網址', async ({ page }) => {
   await page.goto('/shop?view=series&series=Cell');
 
-  await expect(page.getByRole('button', { name: '依系列分類', exact: true }).last()).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('button', { name: 'Cell', exact: true }).last()).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('link', { name: '依系列分類', exact: true }).last()).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('link', { name: 'Cell', exact: true }).last()).toHaveAttribute('aria-current', 'page');
   await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();
   await expect(page.getByText('深層清潔泡沫洗面乳').first()).toHaveCount(0);
 
   await page.reload();
   await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();
 
-  await page.getByRole('button', { name: '依功效分類', exact: true }).last().click();
+  await page.getByRole('link', { name: '依功效分類', exact: true }).last().click();
   await expect(page).toHaveURL('/shop');
   await expect(page.getByText('深層清潔泡沫洗面乳').first()).toBeVisible();
 });
@@ -606,8 +606,8 @@ for (const role of ['instructor', 'distributor']) {
     });
 
     await page.goto('/shop');
-    await page.getByRole('button', { name: '依功效分類' }).click();
-    await page.getByRole('button', { name: '院線課程儀器（含試用包）' }).click();
+    await page.getByRole('link', { name: '依功效分類' }).click();
+    await page.getByRole('link', { name: '院線課程儀器（含試用包）' }).click();
     const card = page.getByText('金箔片 · 50片／盒').locator('xpath=ancestor::div[2]');
     await expect(card.getByText('NT$ 4,000')).toBeVisible();
     await expect(card.getByText('固定專業價')).toBeVisible();
@@ -1988,8 +1988,8 @@ test('手機版主要購物流程可使用', async ({ page, isMobile }) => {
 
   await page.goto('/');
   await page.locator('.nav-hamburger').getByRole('button').last().click();
-  await expect(page.getByRole('button', { name: '所有產品' })).toBeVisible();
-  await page.getByRole('button', { name: '所有產品' }).click();
+  await expect(page.getByRole('link', { name: '所有產品' })).toBeVisible();
+  await page.getByRole('link', { name: '所有產品' }).click();
   await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();
 });
 

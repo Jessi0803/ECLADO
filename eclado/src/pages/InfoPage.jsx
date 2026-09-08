@@ -5,9 +5,15 @@ import {
   getPendingInfoSection,
 } from '../app/infoNavigation.js';
 import { getProfessionalShoppingNotice } from '../domain/memberShopping.js';
+import useDocumentMeta from '../hooks/useDocumentMeta.js';
 
 // ─── INFO PAGE ────────────────────────────────────────────────────────────────
 export default function InfoPage({ user }) {
+  useDocumentMeta({
+    title: '購物說明｜ECLADO Taiwan',
+    description: '查看 ECLADO Taiwan 付款、運送、退換貨與常見問題等購物說明。',
+    canonicalPath: '/info',
+  });
   const memberNotice = getProfessionalShoppingNotice(user);
   const requestedSection = getPendingInfoSection();
   const [active, setActive] = useState(

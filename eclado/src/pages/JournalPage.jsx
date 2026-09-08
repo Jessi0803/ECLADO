@@ -3,7 +3,12 @@ import { JOURNAL_ARTICLES } from '../data/journalArticles.js';
 import useDocumentMeta from '../hooks/useDocumentMeta.js';
 
 export default function JournalPage({ onOpenArticle }) {
-  useDocumentMeta('保養專欄｜ECLADO', 'ECLADO 保養專欄，從成分、清潔、安瓶應用到院線級保養觀念，提供清楚而實用的專業保養知識。');
+  useDocumentMeta({
+    title: '保養專欄｜ECLADO',
+    description: 'ECLADO 保養專欄，從成分、清潔、安瓶應用到院線級保養觀念，提供清楚而實用的專業保養知識。',
+    canonicalPath: '/journal',
+    image: JOURNAL_ARTICLES[0]?.img,
+  });
 
   useEffect(() => { window.scrollTo({ top:0, left:0, behavior:'auto' }); }, []);
 

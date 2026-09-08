@@ -20,6 +20,16 @@ const STATIC_PATHS = [
   { path: '/privacy', changefreq: 'yearly', priority: '0.3' },
 ];
 
+const SHOP_FILTER_PATHS = [
+  '/shop/category/cleansing', '/shop/category/toner', '/shop/category/ampoule-serum',
+  '/shop/category/cream', '/shop/category/mask', '/shop/category/sun-makeup',
+  '/shop/category/other', '/shop/category/professional', '/shop/series',
+  '/shop/series/cleansing', '/shop/series/micro-essence', '/shop/series/professional-kits',
+  '/shop/series/air-jet', '/shop/series/rescuer', '/shop/series/mask', '/shop/series/deep',
+  '/shop/series/extra', '/shop/series/cell', '/shop/series/ac', '/shop/series/respiration',
+  '/shop/series/trial', '/shop/series/special',
+].map(path => ({ path, changefreq: 'weekly', priority: '0.7' }));
+
 function escapeXml(value = '') {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -93,7 +103,7 @@ function buildSitemap(products = []) {
       };
     })
     .filter(Boolean);
-  const entries = [...STATIC_PATHS, ...productEntries];
+  const entries = [...STATIC_PATHS, ...SHOP_FILTER_PATHS, ...productEntries];
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',

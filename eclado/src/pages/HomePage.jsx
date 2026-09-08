@@ -15,8 +15,20 @@ import {
 import { emptySalesStats, getPopularProducts } from '../domain/sales.js';
 import { isPromotionLive } from '../domain/promotions.js';
 import { goProfessionalApply } from '../services/membership.js';
+import useDocumentMeta from '../hooks/useDocumentMeta.js';
+import { shopPath } from '../app/shopNavigation.js';
 
 export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user, cart, setCart, promotions = [], products = [], salesStats = emptySalesStats() }) {
+  useDocumentMeta({
+    title: 'ECLADO Taiwan｜韓國專業院線保養',
+    description: 'ECLADO 源自韓國專業皮膚管理領域，提供院線與居家保養產品、專業美容知識及完整肌膚照護選擇。',
+    canonicalPath: '/',
+    image: '/assets/images/hero-cover.jpg',
+    jsonLd: [
+      { '@context': 'https://schema.org', '@type': 'Organization', name: 'ECLADO Taiwan', url: 'https://ecladotaiwan.com/', logo: 'https://ecladotaiwan.com/assets/images/ECLADO%20LOGO%20with%20CI_BLUE.png' },
+      { '@context': 'https://schema.org', '@type': 'WebSite', name: 'ECLADO Taiwan', url: 'https://ecladotaiwan.com/' },
+    ],
+  });
   const [slide, setSlide] = useState(0);
   const [animating, setAnimating] = useState(false);
   const isMobile = useIsMobile();
@@ -249,13 +261,13 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
                   <div style={{ fontSize: isMobile ? 10 : 11, letterSpacing:'0.18em', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom: isMobile ? 10 : 16 }}>{col.title}</div>
                   <div style={{ display:'flex', flexDirection:'column', gap: isMobile ? 8 : 10 }}>
                     {col.links.map(link => {
-                      const href = link === '訪客訂單查詢'
-                        ? '/order-lookup'
-                        : link === '隱私政策'
-                          ? '/privacy'
-                          : link === '退換貨政策'
-                            ? '/info'
-                            : '#';
+                      const href = NAV_LINKS.includes(link)
+                        ? shopPath('category', link)
+                        : link === '關於我們' ? '/about'
+                          : link === '美容師專區' ? '/professional-apply'
+                            : link === '訪客訂單查詢' ? '/order-lookup'
+                              : link === '隱私政策' ? '/privacy'
+                                : '/info';
                       return <a key={link} href={href} style={{ fontSize: isMobile ? 12 : 13, color:'rgba(255,255,255,0.4)', textDecoration:'none', letterSpacing:'0.04em', transition:'color 0.2s', cursor:'pointer' }}
                         onMouseEnter={e=>e.target.style.color='var(--white)'}
                         onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.4)'}

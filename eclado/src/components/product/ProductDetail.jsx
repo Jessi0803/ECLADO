@@ -66,12 +66,14 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
     <div style={{ paddingTop:68, minHeight:'100vh', background:'var(--white)' }}>
       {/* 返回列 */}
       <div style={{ borderBottom:'1px solid var(--light)', padding: isMobile ? '14px 20px' : '14px 32px' }}>
-        <div style={{ maxWidth:1200, margin:'0 auto' }}>
-          <button onClick={onBack} style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12, letterSpacing:'0.1em', color:'var(--dark)', display:'flex', alignItems:'center', gap:8, padding:0 }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            返回商品列表
-          </button>
-        </div>
+        <nav aria-label="麵包屑" style={{ maxWidth:1200, margin:'0 auto', display:'flex', alignItems:'center', gap:8, fontSize:12, color:'var(--dark)' }}>
+          <a href="/" style={{ color:'inherit', textDecoration:'none' }}>首頁</a>
+          <span aria-hidden="true">›</span>
+          <a href="/shop" onClick={event => { event.preventDefault(); onBack(); }} style={{ color:'inherit', textDecoration:'none' }}>全部商品</a>
+          <span aria-hidden="true">›</span>
+          <span aria-current="page">{product.nameZh}</span>
+          <button onClick={onBack} style={{ marginLeft:'auto', background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12, letterSpacing:'0.08em', color:'var(--dark)', padding:0 }}>返回商品列表</button>
+        </nav>
       </div>
 
       {/* 主體內容 */}

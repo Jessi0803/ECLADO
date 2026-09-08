@@ -11,6 +11,7 @@ export function pageFromPath(path) {
   const p = path.replace(/\/$/, '') || '/';
   if (p === '/pro-login') return 'login';
   if (p === '/events/limited') return 'event-products';
+  if (/^\/shop\/(?:category|series)(?:\/[^/]+)?$/.test(p)) return 'shop';
   if (/^\/events\/limited\/[^/]+$/.test(p)) return 'event-product';
   if (/^\/products\/[^/]+$/.test(p)) return 'product';
   if (/^\/journal\/[^/]+$/.test(p)) return 'journal-article';

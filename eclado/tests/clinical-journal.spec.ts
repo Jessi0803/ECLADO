@@ -55,7 +55,7 @@ for (const [slug, title, image, fit] of [
       }
       await page.screenshot({ path: testInfo.outputPath(`${slug}-${width}.png`) });
     }
-    await page.getByRole('button', { name: '← 返回保養專欄' }).click();
+    await page.getByRole('link', { name: '保養專欄', exact: true }).click();
     await expect(page).toHaveURL(/\/journal$/);
   });
 }

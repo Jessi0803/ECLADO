@@ -54,7 +54,7 @@ export default function Nav({ setPage, onOpenCart, cartCount, user, setUser, pag
       }}>
         <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px', height:68, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           {/* Logo */}
-          <div onClick={() => { setPage('home'); setDrawerOpen(false); }} style={{ cursor:'pointer', display:'flex', flexDirection:'column', flexShrink:0 }}>
+          <a href="/" onClick={event => { event.preventDefault(); setPage('home'); setDrawerOpen(false); }} style={{ cursor:'pointer', display:'flex', flexDirection:'column', flexShrink:0 }}>
             <img
               src="/assets/images/ONLY ECLADO LOGO_WHITE.png"
               alt="ECLADO Laboratory"
@@ -66,7 +66,7 @@ export default function Nav({ setPage, onOpenCart, cartCount, user, setUser, pag
                 transition:'filter 0.4s',
               }}
             />
-          </div>
+          </a>
 
           {/* Desktop nav */}
           <div className="nav-desktop">

@@ -1,8 +1,14 @@
 import React from 'react';
 import useIsMobile from '../hooks/useIsMobile.js';
+import useDocumentMeta from '../hooks/useDocumentMeta.js';
 
 // ─── CONTACT PAGE ────────────────────────────────────────────────────────────
 export default function ContactPage() {
+  useDocumentMeta({
+    title: '聯絡我們｜ECLADO Taiwan',
+    description: '聯絡 ECLADO Taiwan，洽詢產品、訂單、售後服務與合作需求。',
+    canonicalPath: '/contact',
+  });
   const isMobile = useIsMobile();
   const channels = [
     {

@@ -6,7 +6,6 @@ import {
 } from '../domain/catalog.jsx';
 import useDocumentMeta from '../hooks/useDocumentMeta.js';
 import useIsMobile from '../hooks/useIsMobile.js';
-import useNoIndex from '../hooks/useNoIndex.js';
 
 export default function EventProductsPage({
   user,
@@ -17,8 +16,12 @@ export default function EventProductsPage({
   productsError = '',
 }) {
   const isMobile = useIsMobile();
-  useDocumentMeta('活動限定商品｜ECLADO', '僅透過活動邀請連結開放的 ECLADO 限定商品。');
-  useNoIndex();
+  useDocumentMeta({
+    title: '活動限定商品｜ECLADO',
+    description: '僅透過活動邀請連結開放的 ECLADO 限定商品。',
+    canonicalPath: '/events/limited',
+    robots: 'noindex,nofollow',
+  });
 
   function addToCart(product) {
     if (product.isProOnly && !isProfessionalMember(user)) return;
@@ -68,6 +71,7 @@ export default function EventProductsPage({
                 onAdd={() => addToCart(product)}
                 onSelect={() => onSelectProduct(product)}
                 promotions={[]}
+                routeBase="/events/limited"
               />
             ))}
           </div>

@@ -4,7 +4,35 @@ import useDocumentMeta from '../hooks/useDocumentMeta.js';
 
 export default function JournalArticlePage({ articleSlug, onBack, onOpenArticle }) {
   const article = getJournalArticle(articleSlug);
-  useDocumentMeta(article ? `${article.title}｜ECLADO 保養專欄` : '找不到文章｜ECLADO', article?.seoDescription || 'ECLADO 保養專欄');
+  useDocumentMeta({
+    title: article ? `${article.title}｜ECLADO 保養專欄` : '找不到文章｜ECLADO',
+    description: article?.seoDescription || 'ECLADO 保養專欄',
+    canonicalPath: article ? `/journal/${article.slug}` : undefined,
+    image: article?.img,
+    type: 'article',
+    robots: article ? 'index,follow' : 'noindex,nofollow',
+    jsonLd: article ? [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        headline: article.title,
+        description: article.seoDescription || article.excerpt,
+        image: new URL(article.img, 'https://ecladotaiwan.com').href,
+        mainEntityOfPage: `https://ecladotaiwan.com/journal/${article.slug}`,
+        author: { '@type': 'Organization', name: 'ECLADO Taiwan' },
+        publisher: { '@type': 'Organization', name: 'ECLADO Taiwan' },
+      },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://ecladotaiwan.com/' },
+          { '@type': 'ListItem', position: 2, name: '保養專欄', item: 'https://ecladotaiwan.com/journal' },
+          { '@type': 'ListItem', position: 3, name: article.title, item: `https://ecladotaiwan.com/journal/${article.slug}` },
+        ],
+      },
+    ] : [],
+  });
 
   useEffect(() => { window.scrollTo({ top:0, left:0, behavior:'auto' }); }, [articleSlug]);
 
@@ -26,7 +54,11 @@ export default function JournalArticlePage({ articleSlug, onBack, onOpenArticle 
     <main style={{ background:'var(--white)', minHeight:'100vh', paddingTop:68 }}>
       <article>
         <header style={{ maxWidth:900, margin:'0 auto', padding:'70px 24px 48px', textAlign:'center' }}>
-          <button onClick={onBack} style={{ background:'none', border:'none', borderBottom:'1px solid var(--mid)', color:'var(--dark)', padding:'0 0 4px', cursor:'pointer', fontSize:11, letterSpacing:'0.08em', marginBottom:34 }}>← 返回保養專欄</button>
+          <nav aria-label="麵包屑" style={{ marginBottom:34 }}>
+            <a href="/" style={{ color:'var(--dark)', fontSize:11, textDecoration:'none' }}>首頁</a>
+            <span aria-hidden="true" style={{ margin:'0 8px', color:'var(--mid)' }}>›</span>
+            <a href="/journal" onClick={event => { event.preventDefault(); onBack(); }} style={{ color:'var(--dark)', fontSize:11, textDecoration:'none', borderBottom:'1px solid var(--mid)', paddingBottom:4 }}>保養專欄</a>
+          </nav>
           <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--gold)', marginBottom:18 }}>{article.category}</p>
           <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(34px,5.4vw,68px)', fontWeight:300, lineHeight:1.18, color:'var(--black)', marginBottom:24 }}>{article.title}</h1>
           <p style={{ maxWidth:650, margin:'0 auto', fontSize:15, lineHeight:1.9, color:'var(--dark)' }}>{article.excerpt}</p>
@@ -76,10 +108,10 @@ export default function JournalArticlePage({ articleSlug, onBack, onOpenArticle 
 
       <nav aria-label="文章導覽" className="journal-prev-next">
         <div>
-          {previous && <button onClick={() => onOpenArticle(previous)}><span>上一篇</span>{previous.title}</button>}
+          {previous && <a href={`/journal/${previous.slug}`} onClick={event => { event.preventDefault(); onOpenArticle(previous); }}><span>上一篇</span>{previous.title}</a>}
         </div>
         <div style={{ textAlign:'right' }}>
-          {next && <button onClick={() => onOpenArticle(next)}><span>下一篇</span>{next.title}</button>}
+          {next && <a href={`/journal/${next.slug}`} onClick={event => { event.preventDefault(); onOpenArticle(next); }}><span>下一篇</span>{next.title}</a>}
         </div>
       </nav>
 

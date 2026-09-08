@@ -37,10 +37,10 @@ test('品牌故事圖文、素材與導覽在不同寬度保持完整', async ({
       await page.screenshot({ path: testInfo.outputPath('brand-story-' + width + '.png'), fullPage: true });
     }
   }
-  await expect(story.getByRole('link', { name: '探索保養系列' })).toHaveAttribute('href', '/shop?view=series');
+  await expect(story.getByRole('link', { name: '探索保養系列' })).toHaveAttribute('href', '/shop/series');
   await expect(story.getByRole('link', { name: '與我們聯繫' })).toHaveAttribute('href', '/contact');
   await story.getByRole('link', { name: '探索保養系列' }).click();
-  await expect(page).toHaveURL(new RegExp('/shop[?]view=series$'));
+  await expect(page).toHaveURL(new RegExp('/shop/series$'));
   await page.goto('/about');
   await story.getByRole('link', { name: '與我們聯繫' }).click();
   await expect(page).toHaveURL(/\/contact$/);
@@ -62,7 +62,7 @@ test('品牌故事數字進入畫面上數一次，導覽可回頂且不增加�
   if ((page.viewportSize()?.width || 0) <= 900) {
     await page.getByRole('button', { name: '開啟選單' }).click();
   }
-  await page.getByRole('button', { name: '品牌故事', exact: true }).click();
+  await page.getByRole('link', { name: '品牌故事', exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   expect(await page.evaluate(() => history.length)).toBe(historyLength);
   await page.locator('.brand-story-facts').scrollIntoViewIfNeeded();
