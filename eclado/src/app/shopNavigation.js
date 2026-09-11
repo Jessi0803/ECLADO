@@ -24,7 +24,7 @@ export const SHOP_SERIES_SLUGS = {
   'Extra': 'extra',
   'Cell': 'cell',
   'AC': 'ac',
-  '呼吸': 'respiration',
+  'SOS': 'respiration',
   '試用包': 'trial',
   'Special': 'special',
 };
@@ -46,7 +46,7 @@ export function shopFilterFromLocation() {
   const view = params.get('view') === 'series' ? 'series' : 'category';
   if (view === 'series') {
     const rawSeries = params.get('series');
-    const requested = rawSeries === '呼吸系列' ? '呼吸' : rawSeries;
+    const requested = rawSeries === '呼吸系列' || rawSeries === '呼吸' ? 'SOS' : rawSeries;
     return { view, value: PRODUCT_SERIES_LINKS.includes(requested) ? requested : '所有系列' };
   }
   const requested = params.get('category');

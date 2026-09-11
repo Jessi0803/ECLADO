@@ -502,7 +502,7 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
       // 舊路徑相容，避免有人記住 /admin#products 之類的
       case 'products':
       case 'inventory': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
-      case 'promotions': return <Promotions products={activeProducts} />;
+      case 'promotions': return <Promotions products={products} />;
       case 'procurement': return <ProcurementPage />;
       case 'members': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={membersDefaultFilter} />;
       case 'applications': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter="app_pending" />;

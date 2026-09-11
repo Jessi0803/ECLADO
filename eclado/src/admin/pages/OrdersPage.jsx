@@ -587,7 +587,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onAssi
             {selected.items.map((item, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems:'flex-start', gap:12, marginBottom: 10, fontSize: 12 }}>
                 <div style={{ minWidth:0 }}>
-                  <span>{item.name} × {item.qty}</span>
+                  <span>{(item.is_gift || item.line_type === 'gift') && <strong style={{ color:'var(--gold)', marginRight:6, fontSize:10 }}>贈品</strong>}{item.name} × {item.qty}</span>
                   {INVENTORY_ACTIVE_STATUSES.has(selected.status) && (
                     item.inventoryAllocation?.allocatedQty == null
                       ? <div data-testid="order-item-inventory-unavailable" style={{ marginTop:4, fontSize:10, color:'var(--mid)' }}>尚無庫存配置紀錄</div>
@@ -599,7 +599,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onAssi
                       )
                   )}
                 </div>
-                <span style={{ fontWeight: 500 }}>NT$ {(item.price * item.qty).toLocaleString()}</span>
+                <span style={{ fontWeight: 500, color:(item.is_gift || item.line_type === 'gift') ? 'var(--gold)' : undefined }}>{(item.is_gift || item.line_type === 'gift') ? '免費' : `NT$ ${(item.price * item.qty).toLocaleString()}`}</span>
               </div>
             ))}
             {selected.subtotal != null && (
@@ -609,7 +609,10 @@ export default function Orders({ orders, members = [], persistOrderPatch, onAssi
             )}
             {selected.discount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 6, color: 'var(--red)' }}>
-                <span>活動折抵{selected.promotionName ? `（${selected.promotionName}）` : ''}</span>
+                <span>
+                  {selected.couponName ? '優惠券折抵' : '活動折抵'}
+                  {(selected.couponName || selected.promotionName) ? `（${selected.couponName || selected.promotionName}${selected.couponCodeMask ? ` · ${selected.couponCodeMask}` : ''}）` : ''}
+                </span>
                 <span style={{ fontWeight: 500 }}>−NT$ {Number(selected.discount).toLocaleString()}</span>
               </div>
             )}

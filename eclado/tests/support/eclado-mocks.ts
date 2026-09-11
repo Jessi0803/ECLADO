@@ -174,6 +174,8 @@ export type MockAuthUser = {
 export type MockEcladoApiOptions = {
   paymentMode?: 'mock' | 'live';
   onOrderInsert?: (order: Record<string, unknown>) => void;
+  onOrderPricingRequest?: (request: Record<string, unknown>) => void;
+  onCouponQuote?: (request: Record<string, unknown>) => void;
   onOrderUpdate?: (update: Record<string, unknown>, url: string) => void;
   onProductInsert?: (product: Record<string, unknown>) => void;
   onProductUpdate?: (update: Record<string, unknown>, url: string) => void;
@@ -186,6 +188,8 @@ export type MockEcladoApiOptions = {
   onPromotionInsert?: (promotion: Record<string, unknown>) => void;
   onPromotionUpdate?: (update: Record<string, unknown>, url: string) => void;
   onPromotionDelete?: (url: string) => void;
+  onDiscountPromotionSave?: (payload: Record<string, unknown>) => void;
+  onCouponCampaignSave?: (payload: Record<string, unknown>) => void;
   onApplicationUpdate?: (update: Record<string, unknown>, url: string) => void;
   onApplicationInsert?: (application: Record<string, unknown>) => void;
   onApplicationNotice?: (request: Record<string, unknown>) => void;
@@ -202,6 +206,7 @@ export type MockEcladoApiOptions = {
   paymentQueryStatus?: 'paid' | 'pending' | 'failed' | 'expired' | 'cancelled';
   productWriteError?: string;
   orderWriteError?: string;
+  couponQuoteError?: string;
   promotionWriteError?: string;
   linePushError?: string;
   paymentError?: string;
@@ -219,6 +224,9 @@ export type MockEcladoApiOptions = {
   productVariants?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
   productImages?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
   promotions?: Record<string, unknown>[];
+  promotionScopes?: Record<string, unknown>[];
+  couponCampaigns?: Record<string, unknown>[];
+  couponPromotions?: Record<string, unknown>[];
   orders?: Record<string, unknown>[];
   profiles?: Record<string, unknown>[];
   professionalSales?: Record<string, unknown>[];
@@ -243,6 +251,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     ? options.productImages()
     : (options.productImages || []);
   const promotions = options.promotions || [activePromotion];
+  const promotionScopes = options.promotionScopes || [];
+  const couponCampaigns = options.couponCampaigns || [];
+  const couponPromotions = options.couponPromotions || [];
   const orders = options.orders || [];
   const profiles = [...(options.profiles || [])];
   const applications = (options.applications || []).map(application => ({ ...application }));
@@ -672,6 +683,25 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     return json(route, []);
   });
 
+  await page.route('**/rest/v1/promotion_scopes**', async route => json(route, promotionScopes));
+  await page.route('**/rest/v1/coupon_campaigns**', async route => {
+    if (route.request().method() === 'PATCH') return json(route, [route.request().postDataJSON()]);
+    return json(route, couponCampaigns);
+  });
+  await page.route('**/rest/v1/coupon_promotions**', async route => json(route, couponPromotions));
+  await page.route('**/rest/v1/rpc/save_discount_promotion', async route => {
+    const request = route.request().postDataJSON();
+    options.onDiscountPromotionSave?.(request?.p_payload || {});
+    if (options.promotionWriteError) return json(route, { message: options.promotionWriteError }, 400);
+    return json(route, 'promo-new-1');
+  });
+  await page.route('**/rest/v1/rpc/save_coupon_campaign', async route => {
+    const request = route.request().postDataJSON();
+    options.onCouponCampaignSave?.(request?.p_payload || {});
+    if (options.promotionWriteError) return json(route, { message: options.promotionWriteError }, 400);
+    return json(route, 'coupon-new-1');
+  });
+
   await page.route('**/rest/v1/rpc/save_product_with_variants', async route => {
     const request = route.request().postDataJSON();
     options.onProductWithVariantsSave?.(request);
@@ -695,6 +725,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
 
   await page.route('**/rest/v1/rpc/create_order_with_pricing', async route => {
     const request = route.request().postDataJSON();
+    options.onOrderPricingRequest?.(request);
     if (options.orderWriteError) {
       return json(route, { message: options.orderWriteError }, 400);
     }
@@ -785,7 +816,8 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         !!candidate && candidate.discount > 0)
       .sort((a, b) => b.discount - a.discount);
     const selectedPromotion = promotionCandidates[0] || null;
-    const discount = selectedPromotion?.discount || 0;
+    const couponApplied = Boolean(String(request.p_coupon_code || '').trim());
+    const discount = (selectedPromotion?.discount || 0) + (couponApplied ? 100 : 0);
     const discountedSubtotal = Math.max(0, subtotal - discount);
     const fulfillmentMethod = String(request.p_fulfillment_method || 'delivery');
     if (!['delivery', 'onsite_pickup'].includes(fulfillmentMethod)) {
@@ -814,6 +846,10 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       fulfillment_method: fulfillmentMethod,
       promotion_id: selectedPromotion?.promotion.id || null,
       promotion_name: selectedPromotion?.promotion.name || null,
+      coupon_campaign_id: couponApplied ? 'coupon-e2e-1' : null,
+      coupon_name: couponApplied ? 'E2E 優惠券' : null,
+      coupon_code_mask: couponApplied ? 'E2***' : null,
+      adjustments: couponApplied ? [{ promotion_id:'coupon-benefit-1', coupon_campaign_id:'coupon-e2e-1', adjustment_type:'fixed_discount', name:'E2E 折抵', amount:100, sort_order:1 }] : [],
       payment_token: `payment-token-${orderId}`,
     };
     options.onOrderInsert?.({
@@ -835,6 +871,20 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       promotion_name: selectedPromotion?.promotion.name || null,
     });
     return json(route, result);
+  });
+
+  await page.route('**/rest/v1/rpc/quote_order_pricing', async route => {
+    const request = route.request().postDataJSON();
+    options.onCouponQuote?.(request);
+    if (options.couponQuoteError) return json(route, { message: options.couponQuoteError }, 400);
+    const requestedItems = Array.isArray(request.p_items) ? request.p_items : [];
+    const items = requestedItems.map((requested: Record<string, unknown>) => {
+      const product = products().find(row => Number(row.id) === Number(requested.product_id)) || {};
+      const price = Number(product.price || 0);
+      return { id:Number(requested.product_id), product_id:Number(requested.product_id), variant_id:requested.variant_id || null, nameZh:product.name_zh || product.name || '商品', size:product.size || '', qty:Number(requested.qty), unit_price:price, line_total:price * Number(requested.qty), stock_at_order:Number(product.stock || 0), fulfillment_type:'in_stock', shipping_time:'出貨時間為 5 個工作天內，每週二出貨' };
+    });
+    const subtotal = items.reduce((sum, item) => sum + item.line_total, 0);
+    return json(route, { member_role:'consumer', items, subtotal, discount:100, shipping:120, total:subtotal + 20, fulfillment_method:request.p_fulfillment_method || 'delivery', promotion_id:null, promotion_name:null, coupon_campaign_id:'coupon-e2e-1', coupon_name:'E2E 優惠券', coupon_code_mask:'E2***', adjustments:[{ promotion_id:'coupon-benefit-1', coupon_campaign_id:'coupon-e2e-1', adjustment_type:'fixed_discount', name:'E2E 折抵', amount:100, sort_order:1 }] });
   });
 
   await page.route('**/rest/v1/rpc/get_public_sales_stats', async route => {

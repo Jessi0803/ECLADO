@@ -23,7 +23,7 @@ const CATEGORY_SLUGS = {
 const SERIES_SLUGS = {
   '清潔': 'cleansing', '微囊精萃': 'micro-essence', '院線組合': 'professional-kits', 'Air jet': 'air-jet',
   '急救安瓶': 'rescuer', '面膜': 'mask', Deep: 'deep', Extra: 'extra', Cell: 'cell', AC: 'ac',
-  '呼吸': 'respiration', '試用包': 'trial', Special: 'special',
+  SOS: 'respiration', '試用包': 'trial', Special: 'special',
 };
 
 function outputFile(route) {

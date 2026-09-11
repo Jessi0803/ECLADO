@@ -17,11 +17,13 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
   const initialDraftRef = useRef('');
   const activeProducts = products.filter(p => p.publicationStatus === 'active');
   const eventProducts = products.filter(p => p.publicationStatus === 'event_only');
+  const giftProducts = products.filter(p => p.publicationStatus === 'gift_only');
   const draftProducts = products.filter(p => p.publicationStatus === 'draft');
   const archivedProducts = products.filter(p => p.publicationStatus === 'archived');
   const productsByMode = {
     active: activeProducts,
     event_only: eventProducts,
+    gift_only: giftProducts,
     draft: draftProducts,
     archived: archivedProducts,
   };
@@ -40,7 +42,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
     low: baseProducts.filter(p => getStockStatus(p) === 'low').length,
     out: baseProducts.filter(p => getStockStatus(p) === 'out').length,
   };
-  const lowStock = [...activeProducts, ...eventProducts].filter(p => p.stock <= p.minStock);
+  const lowStock = [...activeProducts, ...eventProducts, ...giftProducts].filter(p => p.stock <= p.minStock);
   const hasUnsavedChanges = !!editing && JSON.stringify(editing) !== initialDraftRef.current;
   const closeEditing = usePanelHistory(!!editing, () => setEditing(null), {
     shouldConfirm: hasUnsavedChanges,
@@ -390,6 +392,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
         {[
           ['active', `上架中 (${activeProducts.length})`],
           ['event_only', `活動限定 (${eventProducts.length})`],
+          ['gift_only', `贈品專用 (${giftProducts.length})`],
           ['draft', `草稿 (${draftProducts.length})`],
           ['archived', `已下架 (${archivedProducts.length})`],
         ].map(([value, label]) => (
@@ -463,7 +466,8 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                         : stockFilter === 'all'
                         ? (listMode === 'archived'
                           ? '目前沒有已下架商品'
-                          : listMode === 'draft' ? '目前沒有草稿商品' : '目前沒有上架商品')
+                          : listMode === 'draft' ? '目前沒有草稿商品'
+                          : listMode === 'gift_only' ? '目前沒有贈品專用商品' : '目前沒有上架商品')
                         : '目前沒有符合此庫存狀態的商品'}
                     </td>
                   </tr>
@@ -495,6 +499,8 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                           ? <span style={{ fontSize: 11, color: 'var(--yellow)', fontWeight: 500 }}>草稿</span>
                           : p.publicationStatus === 'event_only'
                             ? <span style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 500 }}>活動限定</span>
+                          : p.publicationStatus === 'gift_only'
+                            ? <span style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 500 }}>贈品專用</span>
                           : p.publicationStatus === 'archived'
                             ? <span style={{ fontSize: 11, color: 'var(--mid)', fontWeight: 500 }}>已下架</span>
                           : p.stock === 0
@@ -507,7 +513,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <button onClick={() => openEdit(p)}
                             style={{ padding: '5px 12px', fontSize: 11, background: isEditing ? 'var(--dark)' : 'none', border: '1px solid var(--border)', color: isEditing ? '#fff' : 'var(--dark)', cursor: 'pointer' }}>編輯</button>
-                          {p.publicationStatus !== 'active' && p.publicationStatus !== 'event_only' ? (
+                          {p.publicationStatus !== 'active' && p.publicationStatus !== 'event_only' && p.publicationStatus !== 'gift_only' ? (
                             <button onClick={() => restoreProduct(p)} disabled={saving}
                               style={{ padding: '5px 12px', fontSize: 11, background: 'var(--dark)', border: '1px solid var(--dark)', color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>重新上架</button>
                           ) : (
@@ -582,6 +588,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                   <option value="draft">草稿（前台不可見）</option>
                   <option value="active">正式上架</option>
                   <option value="event_only">活動限定（僅活動網址可見）</option>
+                  <option value="gift_only">贈品專用（僅由優惠活動加入訂單）</option>
                   <option value="archived">已下架</option>
                 </select>
               </div>

@@ -1344,6 +1344,40 @@ test('一般商品與混合購物車都只能宅配', async ({ page }) => {
   await expect(page.getByText('（宅配到府）')).toBeVisible();
 });
 
+test('結帳可試算一組優惠碼並以同一代碼建立權威訂單', async ({ page }) => {
+  const quoteRequests: Record<string, unknown>[] = [];
+  const orderRequests: Record<string, unknown>[] = [];
+  await mockEcladoApis(page, {
+    onCouponQuote: request => quoteRequests.push(request),
+    onOrderPricingRequest: request => orderRequests.push(request),
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+  await proceedToCheckout(page);
+  const inputs = page.locator('form input');
+  await inputs.nth(0).fill('優惠券測試');
+  await inputs.nth(1).fill('0912345678');
+  await inputs.nth(2).fill('coupon@example.com');
+  await page.getByPlaceholder('縣市').fill('台北市');
+  await page.getByPlaceholder('區域').fill('中正區');
+  await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('測試路 1 號');
+  await page.getByRole('button', { name: /繼續確認付款/ }).click();
+
+  await page.getByPlaceholder('輸入優惠碼').fill('e2etest');
+  await page.getByRole('button', { name: '套用' }).click();
+  await expect(page.getByText(/已套用「E2E 優惠券」/)).toBeVisible();
+  await expect(page.getByText('E2E 折抵')).toBeVisible();
+  await expect.poll(() => quoteRequests.length).toBe(1);
+  expect(quoteRequests[0]).toMatchObject({ p_coupon_code:'E2ETEST', p_guest_email:'coupon@example.com' });
+
+  await page.getByRole('button', { name:'建立付款單' }).click();
+  await expect.poll(() => orderRequests.length).toBe(1);
+  expect(orderRequests[0]).toMatchObject({ p_coupon_code:'E2ETEST' });
+});
+
 test('竄改混合購物車為現場自取會被後端拒絕', async ({ page }) => {
   await mockEcladoApis(page, {
     productVariants: [{

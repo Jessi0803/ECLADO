@@ -14,6 +14,27 @@ const FIELD_HEADINGS = [
   '產品規格：',
 ];
 
+const PRODUCT_NAME_ALIASES = new Map([
+  ['水合複合安瓶', '急救安瓶-水合複合'],
+  ['胜肽再生安瓶', '急救安瓶-胜肽再生'],
+  ['維他命美白安瓶', '急救安瓶-維他命美白'],
+  ['積雪草毛孔安瓶', '急救安瓶-積雪草毛孔'],
+  ['乳酸菌亮白面膜', '乳酸菌亮白面膜'],
+  ['金箔貼片', '金箔片'],
+  ['棉花水光管理', '棉花水光套組'],
+  ['黃金天鵝絨面膜', '黃金天鵝絨面膜'],
+  ['精萃防曬乳', '精萃防曬霜'],
+  ['AC痘痘安瓶', 'AC痘痘安瓶'],
+  ['C.P50安瓶組', 'C.P50安瓶組'],
+  ['L-輪廓安瓶', 'L-輪廓安瓶'],
+  ['VONO煥膚組', 'VONO煥膚組'],
+  ['溫和增效潔面乳試用包', '溫和增效潔面乳試用包'],
+  ['精萃防曬試用包', '精萃防曬乳試用包'],
+  ['控油修護安瓶試用包', 'AC控油安瓶試用包'],
+  ['記憶修護霜試用包', '細胞記憶霜試用包'],
+  ['記憶多肽精華試用包', '記憶多肽精華試用包'],
+]);
+
 function parseArgs(argv) {
   const args = { apply: false, verify: false, parseOnly: false, envFile: 'payment-api/.env', outputDir: 'tmp/product-txt-sync' };
   const positional = [];
@@ -52,6 +73,26 @@ function normalizeSize(value) {
     .replace(/pcs?/g, '支')
     .replace(/一盒/g, '／盒')
     .replace(/\s+/g, '');
+}
+
+function normalizeProductName(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .replace(/[（）()]/g, '')
+    .replace(/[\s._－—–-]+/g, '')
+    .toLowerCase();
+}
+
+function acceptedProductNames(parsed) {
+  const normalized = new Set([parsed.name, parsed.sourceFolderName]
+    .filter(Boolean)
+    .map(normalizeProductName));
+  for (const [newName, previousName] of PRODUCT_NAME_ALIASES) {
+    if (normalized.has(normalizeProductName(newName))) {
+      normalized.add(normalizeProductName(previousName));
+    }
+  }
+  return normalized;
 }
 
 function parseMoney(value, { allowNone = false } = {}) {
@@ -175,19 +216,24 @@ async function readEnv(file) {
 }
 
 function chooseProductRow(parsed, rows) {
-  const acceptedNames = new Set([parsed.name, parsed.sourceFolderName].filter(Boolean));
-  const matches = rows.filter(row => acceptedNames.has(row.name) || acceptedNames.has(row.name_zh));
+  const acceptedNames = acceptedProductNames(parsed);
+  const matches = rows.filter(row => [row.name, row.name_zh, row.source_folder_name]
+    .filter(Boolean)
+    .some(value => acceptedNames.has(normalizeProductName(value))));
   if (matches.length > 1) throw new Error(`${parsed.name}: matched more than one database product`);
   return matches[0] || null;
 }
 
 function inferCategory(name) {
   if (/試用包/.test(name)) return '院線課程儀器（含試用包）';
-  if (/刮痧板|爆水按摩霜/.test(name)) return '其他';
-  if (/潔顏|清潔|卸妝/.test(name)) return '清潔卸妝';
+  if (/多功能護理儀/.test(name)) return '院線課程儀器（含試用包）';
+  if (/刮痧板|爆水按摩霜|矽膠刷|空瓶/.test(name)) return '其他';
+  if (/防曬|BB霜/.test(name)) return '防曬底妝';
+  if (/AHA|PHA|潔顏|清潔|卸妝/.test(name)) return '清潔卸妝';
   if (/化妝水|爽膚水/.test(name)) return '化妝水';
   if (/安瓶|精華液|精華/.test(name)) return '安瓶精華';
-  if (/雪霜|乳霜|面霜|眼霜/.test(name)) return '乳霜';
+  if (/面膜|泥膜/.test(name)) return '面膜';
+  if (/雪霜|乳霜|面霜|眼霜|活膚乳/.test(name)) return '乳霜';
   throw new Error(`${name}: cannot infer category for a new product`);
 }
 
@@ -242,6 +288,8 @@ function summarizeChange(parsed, row, variants) {
     action: row.isNew ? 'insert-draft' : 'update',
     category: row.category,
     productChanges: {
+      name_zh: { from: row.name_zh || '', to: parsed.name },
+      source_folder_name: { from: row.source_folder_name || '', to: parsed.sourceFolderName },
       subtitle: { from: row.subtitle ?? null, to: parsed.subtitle },
       size: { from: row.size || '', to: defaultVariant.size },
       price: { from: Number(row.price) || 0, to: defaultVariant.price },
@@ -326,6 +374,8 @@ async function applyPlan(supabase, plans) {
       isDefault: variant.is_default, sortOrder: variant.sort_order, active: variant.active,
     }));
     const productPayload = {
+      name_zh: plan.parsed.name,
+      source_folder_name: plan.parsed.sourceFolderName,
       subtitle: plan.parsed.subtitle,
       size: defaultVariant.size,
       price: Number(defaultVariant.price),
@@ -358,6 +408,9 @@ async function verifyAppliedPlans(supabase, plans) {
     const rows = variantsResult.data.filter(variant => Number(variant.product_id) === Number(plan.row.id) && variant.active !== false);
     const expectedProOnly = plan.variants.every(variant => variant.price === 0);
     const expectedProduct = {
+      name: plan.row.isNew ? plan.parsed.name : plan.row.name,
+      name_zh: plan.parsed.name,
+      source_folder_name: plan.parsed.sourceFolderName,
       subtitle: plan.parsed.subtitle,
       description: plan.parsed.description,
       skin_type: plan.parsed.skinType,

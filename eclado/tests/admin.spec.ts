@@ -599,6 +599,26 @@ test('訂單管理可查看明細並更新狀態', async ({ page }) => {
   await expect(page.getByText('已付款').first()).toBeVisible();
 });
 
+test('訂單詳情顯示優惠券名稱與遮罩代碼', async ({ page }) => {
+  await mockAdminApis(page, {
+    orders: [{
+      ...adminOrderRows[0],
+      id:'E2E-COUPON-ORDER',
+      subtotal:3980,
+      discount:500,
+      total:3600,
+      coupon_campaign_id:'coupon-1',
+      coupon_name:'新客複合券',
+      coupon_code_mask:'WEL****',
+      promotion_name:null,
+    }],
+  });
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByText('E2E-COUPON-ORDER').click();
+  await expect(page.getByText('優惠券折抵（新客複合券 · WEL****）')).toBeVisible();
+});
+
 test('訂單管理可依狀態與待補庫存篩選', async ({ page }) => {
   await mockAdminApis(page, {
     orders: [
@@ -1287,142 +1307,84 @@ test('商品下架與重新上架寫入失敗時維持原清單狀態', async ({
   await expect(page.getByRole('table').getByText('已下架測試商品')).toBeVisible();
 });
 
-test('活動管理可建立活動並送出正確 payload', async ({ page }) => {
-  const promotionInserts: Record<string, unknown>[] = [];
-  await mockAdminApis(page, {
-    onPromotionInsert: promo => promotionInserts.push(promo),
-  });
-
+test('活動管理可建立原子百分比折扣並指定全館一般商品', async ({ page }) => {
+  const saves: Record<string, unknown>[] = [];
+  await mockAdminApis(page, { onDiscountPromotionSave: payload => saves.push(payload) });
   await page.goto('/admin');
   await openAdminSection(page, /活動管理/);
-  await expect(page.getByText('E2E 測試活動')).toBeVisible();
-  await expect(page.getByLabel('啟用')).toHaveCount(0);
-  await expect(page.getByText('啟用此活動')).toHaveCount(0);
-
-  await page.getByRole('button', { name: '+ 新增活動' }).click();
-  await expect(page.getByText('啟用此活動')).toHaveCount(0);
-  await page.locator('input[placeholder="例：五月慶 95折再折千"]').fill('E2E 新活動');
-  await page.locator('textarea[placeholder="顯示給顧客看的說明文字"]').fill('活動測試');
-  await page.locator('input[type="number"]').nth(0).fill('0.8');
-  await page.locator('input[type="number"]').nth(1).fill('50');
-  await page.getByLabel('折扣計算順序').selectOption('amount_then_rate');
-  await expect(page.getByText(/活動商品小計 −/)).toBeVisible();
-  await page.getByRole('button', { name: '清除' }).click();
-  await page.getByText('胜肽修護精華液').click();
+  await page.getByRole('button', { name: '+ 新增優惠活動' }).click();
+  await page.getByPlaceholder('例：秋季保養 9 折').fill('E2E 九折活動');
+  await page.getByLabel('折扣百分比（% OFF）').fill('10');
   await page.getByRole('button', { name: '建立活動' }).click();
-
-  await expect.poll(() => promotionInserts.length).toBe(1);
-  expect(promotionInserts[0]).toMatchObject({
-    name: 'E2E 新活動',
-    description: '活動測試',
-    discount_rate: 0.8,
-    discount_amount: 50,
-    discount_order: 'amount_then_rate',
-    active: true,
-  });
-  expect(promotionInserts[0].product_ids).toEqual([2]);
+  await expect.poll(() => saves.length).toBe(1);
+  expect(saves[0]).toMatchObject({ name:'E2E 九折活動', benefit_type:'percentage_discount', activation_type:'automatic', discount_rate:0.9, threshold_type:'amount', scope_type:'all_regular' });
 });
 
-test('活動管理可編輯既有活動並更新折扣公式', async ({ page }) => {
-  const promotionUpdates: Record<string, unknown>[] = [];
-  await mockAdminApis(page, {
-    onPromotionUpdate: update => promotionUpdates.push(update),
-  });
-
+test('百分比與固定金額折抵可改用滿件門檻', async ({ page }) => {
+  const saves: Record<string, unknown>[] = [];
+  await mockAdminApis(page, { onDiscountPromotionSave: payload => saves.push(payload) });
   await page.goto('/admin');
   await openAdminSection(page, /活動管理/);
-  await page.getByRole('button', { name: '編輯' }).click();
-  await page.locator('textarea[placeholder="顯示給顧客看的說明文字"]').fill('更新後活動說明');
-  await page.locator('input[type="number"]').nth(0).fill('0.75');
-  await page.locator('input[type="number"]').nth(1).fill('200');
-  await page.getByLabel('折扣計算順序').selectOption('amount_then_rate');
-  await page.getByRole('button', { name: '儲存變更' }).click();
-
-  await expect.poll(() => promotionUpdates.length).toBe(1);
-  expect(promotionUpdates[0]).toMatchObject({
-    description: '更新後活動說明',
-    discount_rate: 0.75,
-    discount_amount: 200,
-    discount_order: 'amount_then_rate',
-  });
-});
-
-test('活動管理可刪除活動', async ({ page }) => {
-  const promotionDeletes: string[] = [];
-  await mockAdminApis(page, {
-    onPromotionDelete: url => promotionDeletes.push(url),
-  });
-
-  await page.goto('/admin');
-  await openAdminSection(page, /活動管理/);
-  page.once('dialog', dialog => dialog.accept());
-  await page.getByRole('button', { name: '刪除' }).click();
-
-  await expect.poll(() => promotionDeletes.length).toBe(1);
-  expect(promotionDeletes[0]).toContain('id=eq.');
-  expect(promotionDeletes[0]).toContain(activePromotion.id);
-});
-
-test('活動管理遇到 discount_order 欄位未建立時顯示 migration 提示', async ({ page }) => {
-  await mockAdminApis(page, {
-    promotionWriteError: "Could not find the 'discount_order' column of 'promotions' in the schema cache",
-  });
-
-  await page.goto('/admin');
-  await openAdminSection(page, /活動管理/);
-  await page.getByRole('button', { name: '+ 新增活動' }).click();
-  await page.locator('input[placeholder="例：五月慶 95折再折千"]').fill('欄位錯誤活動');
-  await page.getByRole('button', { name: '清除' }).click();
-  await page.getByText('胜肽修護精華液').click();
+  await page.getByRole('button', { name: '+ 新增優惠活動' }).click();
+  await page.getByPlaceholder('例：秋季保養 9 折').fill('任選三件折三百');
+  await page.getByLabel('優惠類型').selectOption('fixed_discount');
+  await page.getByLabel('折抵金額（NT$）').fill('300');
+  await page.getByLabel('門檻類型').selectOption('quantity');
+  await page.getByText('最低適用件數（選填）').locator('..').getByRole('spinbutton').fill('3');
   await page.getByRole('button', { name: '建立活動' }).click();
-
-  await expect(page.getByText(/supabase-promotions-discount-order\.sql/)).toBeVisible();
+  await expect.poll(() => saves.length).toBe(1);
+  expect(saves[0]).toMatchObject({ benefit_type:'fixed_discount', discount_amount:300, threshold_type:'quantity', threshold_value:3, threshold_basis:null });
 });
 
-test('活動排程：建立活動時可設上架 / 下架時間並送出正確 payload', async ({ page }) => {
-  const promotionInserts: Record<string, unknown>[] = [];
+test('活動限定商品可以被指定到優惠券專用活動', async ({ page }) => {
+  const saves: Record<string, unknown>[] = [];
   await mockAdminApis(page, {
-    onPromotionInsert: promo => promotionInserts.push(promo),
+    products: [...adminProductRows, { ...adminProductRows[0], id:88, name_zh:'活動限定測試商品', publication_status:'event_only' }],
+    onDiscountPromotionSave: payload => saves.push(payload),
   });
-
-  await page.goto('/admin');
-  await openAdminSection(page, /活動管理/);
-  await page.getByRole('button', { name: '+ 新增活動' }).click();
-  await page.locator('input[placeholder="例：五月慶 95折再折千"]').fill('排程測試活動');
-  await page.locator('input[type="number"]').nth(0).fill('0.9');
-  await page.locator('input[type="number"]').nth(1).fill('0');
-  await page.getByRole('button', { name: '清除' }).click();
-  await page.getByText('胜肽修護精華液').click();
-
-  await page.locator('input[type="datetime-local"]').nth(0).fill('2030-01-01T10:00');
-  await page.locator('input[type="datetime-local"]').nth(1).fill('2030-12-31T23:59');
-
+  await page.goto('/admin'); await openAdminSection(page, /活動管理/);
+  await page.getByRole('button', { name: '+ 新增優惠活動' }).click();
+  await page.getByPlaceholder('例：秋季保養 9 折').fill('限定商品折抵');
+  await page.getByLabel('啟用方式').selectOption('coupon_only');
+  await page.getByText('指定商品', { exact:true }).click();
+  await page.getByText('活動限定測試商品').click();
   await page.getByRole('button', { name: '建立活動' }).click();
-
-  await expect.poll(() => promotionInserts.length).toBe(1);
-  expect(promotionInserts[0].name).toBe('排程測試活動');
-  expect(promotionInserts[0].start_at).toBe(new Date('2030-01-01T10:00').toISOString());
-  expect(promotionInserts[0].end_at).toBe(new Date('2030-12-31T23:59').toISOString());
+  await expect.poll(() => saves.length).toBe(1);
+  expect(saves[0]).toMatchObject({ activation_type:'coupon_only', scope_type:'products', product_ids:[88] });
 });
 
-test('活動排程：下架時間不晚於上架時間時阻止儲存', async ({ page }) => {
-  const promotionInserts: Record<string, unknown>[] = [];
-  await mockAdminApis(page, {
-    onPromotionInsert: promo => promotionInserts.push(promo),
-  });
+test('優惠券方案可打包多個優惠券專用活動', async ({ page }) => {
+  const couponSaves: Record<string, unknown>[] = [];
+  const couponPromotions = [
+    { ...activePromotion, id:'coupon-pct', name:'九折', benefit_type:'percentage_discount', activation_type:'coupon_only', discount_rate:0.9, archived_at:null },
+    { ...activePromotion, id:'coupon-fixed', name:'再折百元', benefit_type:'fixed_discount', activation_type:'coupon_only', discount_rate:1, discount_amount:100, archived_at:null },
+  ];
+  await mockAdminApis(page, { promotions:couponPromotions, onCouponCampaignSave: payload => couponSaves.push(payload) });
+  await page.goto('/admin'); await openAdminSection(page, /活動管理/);
+  await page.getByRole('button', { name:'優惠券方案' }).click();
+  await page.getByRole('button', { name:'+ 新增優惠券' }).click();
+  await page.getByLabel('優惠券名稱 *').fill('新客複合券');
+  await page.getByLabel('優惠碼 *').fill('welcome');
+  await page.getByText(/九折 · 10% OFF/).click();
+  await page.getByText(/再折百元 · 折抵 NT\$ 100/).click();
+  await page.getByRole('button', { name:'建立優惠券' }).click();
+  await expect.poll(() => couponSaves.length).toBe(1);
+  expect(couponSaves[0]).toMatchObject({ name:'新客複合券', code:'WELCOME', promotion_ids:['coupon-pct','coupon-fixed'], allow_guest:true });
+});
 
-  await page.goto('/admin');
-  await openAdminSection(page, /活動管理/);
-  await page.getByRole('button', { name: '+ 新增活動' }).click();
-  await page.locator('input[placeholder="例：五月慶 95折再折千"]').fill('錯誤排程活動');
-  await page.getByRole('button', { name: '清除' }).click();
-  await page.getByText('胜肽修護精華液').click();
-  await page.locator('input[type="datetime-local"]').nth(0).fill('2030-12-31T23:59');
-  await page.locator('input[type="datetime-local"]').nth(1).fill('2030-01-01T10:00');
-  await page.getByRole('button', { name: '建立活動' }).click();
-
-  await expect(page.getByText('下架時間必須晚於上架時間')).toBeVisible();
-  expect(promotionInserts).toHaveLength(0);
+test('活動管理可建立滿件贈並只能選擇贈品專用規格', async ({ page }) => {
+  const saves: Record<string, unknown>[] = [];
+  const giftProduct = { ...adminProductRows[0], id:88, name:'Travel Gift', name_zh:'旅行組贈品', publication_status:'gift_only' };
+  await mockAdminApis(page, { products:[...adminProductRows, giftProduct], productVariants:[{ id:8801, product_id:88, sku:'GIFT-TRAVEL', size:'1組', price:0, pro_price:0, stock:20, active:true, is_default:true }], onDiscountPromotionSave:payload => saves.push(payload) });
+  await page.goto('/admin'); await openAdminSection(page, /活動管理/);
+  await page.getByRole('button', { name:'+ 新增優惠活動' }).click();
+  await page.getByPlaceholder('例：秋季保養 9 折').fill('任選三件贈旅行組');
+  await page.getByLabel('優惠類型').selectOption('quantity_gift');
+  await page.getByLabel('贈品規格').selectOption('8801');
+  await page.getByText('滿幾件贈送 *').locator('..').getByRole('spinbutton').fill('3');
+  await page.getByRole('button', { name:'建立活動' }).click();
+  await expect.poll(() => saves.length).toBe(1);
+  expect(saves[0]).toMatchObject({ benefit_type:'quantity_gift', threshold_value:3, gift_variant_id:8801, gift_quantity:1, repeat_mode:'once' });
 });
 
 test('活動排程：排程中活動顯示「排程中」badge，已結束顯示「已結束」', async ({ page }) => {

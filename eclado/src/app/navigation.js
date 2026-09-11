@@ -1,6 +1,6 @@
 export const NAV_LINKS = ['清潔卸妝', '化妝水', '安瓶精華', '乳霜', '面膜', '防曬底妝', '其他', '院線課程儀器（含試用包）'];
 export const PRODUCT_NAV_LINKS = ['所有產品', ...NAV_LINKS];
-export const SERIES_LINKS = ['清潔', '微囊精萃', '院線組合', 'Air jet', '急救安瓶', '面膜', 'Deep', 'Extra', 'Cell', 'AC', '呼吸', '試用包', 'Special'];
+export const SERIES_LINKS = ['清潔', '微囊精萃', '院線組合', 'Air jet', '急救安瓶', '面膜', 'Deep', 'SOS', 'Cell', 'AC', 'Extra', 'Special', '試用包'];
 export const PRODUCT_SERIES_LINKS = ['所有系列', ...SERIES_LINKS];
 export const NAV_ITEMS = [
   {

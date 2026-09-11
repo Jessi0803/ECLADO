@@ -20,7 +20,7 @@ import {
   getSinopacPaymentError,
   safeTrim,
 } from '../domain/payments.js';
-import { createAuthoritativeOrder } from '../services/orders.js';
+import { createAuthoritativeOrder, quoteAuthoritativeOrder } from '../services/orders.js';
 import { createSinopacPayment, querySinopacPayment } from '../services/paymentApi.js';
 import {
   clearPendingPayment,
@@ -53,6 +53,10 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   const [storedPayment] = useState(() => getPendingPayment());
   const [restoringPayment, setRestoringPayment] = useState(!!storedPayment);
   const [submitting, setSubmitting] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCouponCode, setAppliedCouponCode] = useState('');
+  const [couponQuote, setCouponQuote] = useState(null);
+  const [couponState, setCouponState] = useState({ loading: false, error: '' });
   const submittingRef = useRef(false);
   const [copiedAtmNo, setCopiedAtmNo] = useState(false);
   const isMobile = useIsMobile();
@@ -65,6 +69,9 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   const deliveryShipping = calculateShipping(cart, user, finalSubtotal);
   const shipping = calculateShipping(cart, user, finalSubtotal, fulfillmentMethod);
   const total = finalSubtotal + shipping;
+  const checkoutSummary = couponQuote || {
+    subtotal, discount, finalSubtotal, promotion, coupon: null, shipping, total,
+  };
 
   const STEPS = ['收件資訊', '確認付款', '完成'];
 
@@ -137,6 +144,19 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     }
   }, [canPickup, fulfillmentMethod]);
 
+  const cartPricingKey = cart
+    .map(item => `${item.id}:${item.variantId || item.variantSize || ''}:${item.qty}`)
+    .join('|');
+
+  useEffect(() => {
+    if (!appliedCouponCode) return;
+    setAppliedCouponCode('');
+    setCouponQuote(null);
+    setCouponState({ loading: false, error: '購物內容或收件資料已變更，請重新套用優惠碼。' });
+    // A coupon quote is a preview tied to these exact pricing inputs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartPricingKey, fulfillmentMethod, form.email]);
+
   function setField(name) {
     return e => setForm(f => ({ ...f, [name]: e.target.value }));
   }
@@ -154,11 +174,39 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       discount: authoritativeOrder.discount,
       finalSubtotal: authoritativeOrder.subtotal - authoritativeOrder.discount,
       promotion: authoritativeOrder.promotion,
+      coupon: authoritativeOrder.coupon,
+      adjustments: authoritativeOrder.adjustments,
       shipping: authoritativeOrder.shipping,
       total: authoritativeOrder.total,
       items,
       fulfillmentMethod: authoritativeOrder.fulfillment_method || fulfillmentMethod,
     };
+  }
+
+  async function applyCoupon() {
+    const code = couponInput.trim();
+    if (!code) {
+      setAppliedCouponCode('');
+      setCouponQuote(null);
+      setCouponState({ loading: false, error: '' });
+      return;
+    }
+    setCouponState({ loading: true, error: '' });
+    try {
+      const quote = await quoteAuthoritativeOrder({
+        items: cart,
+        fulfillmentMethod,
+        couponCode: code,
+        email: form.email,
+      });
+      setCouponQuote(toPaymentSummary(quote));
+      setAppliedCouponCode(code);
+      setCouponState({ loading: false, error: '' });
+    } catch (error) {
+      setAppliedCouponCode('');
+      setCouponQuote(null);
+      setCouponState({ loading: false, error: error?.message || '優惠碼無法使用，請稍後再試。' });
+    }
   }
 
   async function handleNext(e) {
@@ -190,6 +238,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
           note: safeTrim(form.note),
           paymentMethod,
           fulfillmentMethod,
+          couponCode: appliedCouponCode,
         });
       const authoritativeOrderNo = authoritativeOrder.order_id;
       setOrderNo(authoritativeOrderNo);
@@ -358,8 +407,8 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
           </div>
 
           <CheckoutOrderSummary
-            items={paymentSnapshot || cart}
-            summary={paymentSummary || { subtotal, discount, finalSubtotal, promotion, shipping, total }}
+            items={paymentSnapshot || couponQuote?.items || cart}
+            summary={paymentSummary || checkoutSummary}
             user={user}
             fulfillmentMethod={paymentSummary?.fulfillmentMethod || fulfillmentMethod}
           />
@@ -460,6 +509,37 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                     </div>
                   </div>
 
+                  <div style={{ border:'1px solid var(--light)', padding:'18px 20px' }}>
+                    <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase', marginBottom:12 }}>優惠碼</p>
+                    <div style={{ display:'flex', gap:8 }}>
+                      <input
+                        type="text"
+                        value={couponInput}
+                        onChange={event => {
+                          setCouponInput(event.target.value.toUpperCase());
+                          if (appliedCouponCode) {
+                            setAppliedCouponCode('');
+                            setCouponQuote(null);
+                          }
+                          setCouponState(state => ({ ...state, error: '' }));
+                        }}
+                        placeholder="輸入優惠碼"
+                        autoComplete="off"
+                        style={{ flex:1, minWidth:0, border:'1px solid var(--light)', padding:'11px 12px', fontSize:13, fontFamily:'var(--font-body)', letterSpacing:'0.08em', outline:'none', background:'var(--white)', color:'var(--black)' }}
+                      />
+                      <button type="button" onClick={applyCoupon} disabled={couponState.loading}
+                        style={{ border:'1px solid var(--black)', background:'var(--black)', color:'var(--white)', padding:'0 18px', fontSize:11, letterSpacing:'0.1em', cursor:couponState.loading ? 'wait' : 'pointer', fontFamily:'var(--font-body)', opacity:couponState.loading ? 0.65 : 1 }}>
+                        {couponState.loading ? '驗證中' : appliedCouponCode ? '重新套用' : '套用'}
+                      </button>
+                    </div>
+                    {couponQuote?.coupon && (
+                      <p style={{ marginTop:9, fontSize:12, color:'var(--gold)', lineHeight:1.6 }}>
+                        已套用「{couponQuote.coupon.name}」，本次共折抵 NT$ {couponQuote.discount.toLocaleString()}。
+                      </p>
+                    )}
+                    {couponState.error && <p role="alert" style={{ marginTop:9, fontSize:12, color:'#c0392b', lineHeight:1.6 }}>{couponState.error}</p>}
+                  </div>
+
                   <div>
                     <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase', marginBottom:14 }}>付款方式</p>
                     <div style={{ display:'grid', gap:12 }}>
@@ -511,8 +591,8 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
             </div>
 
             <CheckoutOrderSummary
-              items={paymentSnapshot?.items || cart}
-              summary={paymentSummary || { subtotal, discount, finalSubtotal, promotion, shipping, total }}
+              items={paymentSnapshot || couponQuote?.items || cart}
+              summary={paymentSummary || checkoutSummary}
               user={user}
               fulfillmentMethod={paymentSummary?.fulfillmentMethod || fulfillmentMethod}
             />
