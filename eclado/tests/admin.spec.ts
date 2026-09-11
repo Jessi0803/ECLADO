@@ -1383,6 +1383,25 @@ test('活動管理可建立原子百分比折扣並指定全館一般商品', as
   expect(saves[0]).toMatchObject({ name:'E2E 九折活動', benefit_type:'percentage_discount', activation_type:'automatic', discount_rate:0.9, threshold_type:'amount', scope_type:'all_regular' });
 });
 
+test('活動管理不顯示已停用活動', async ({ page }) => {
+  await mockAdminApis(page, {
+    promotions: [
+      activePromotion,
+      {
+        ...activePromotion,
+        id: 'archived-promo',
+        name: '已停用測試活動',
+        active: false,
+        archived_at: '2026-09-11T15:26:36.807Z',
+      },
+    ],
+  });
+  await page.goto('/admin');
+  await openAdminSection(page, /活動管理/);
+  await expect(page.getByText(activePromotion.name)).toBeVisible();
+  await expect(page.getByText('已停用測試活動')).toHaveCount(0);
+});
+
 test('百分比與固定金額折抵可改用滿件門檻', async ({ page }) => {
   const saves: Record<string, unknown>[] = [];
   await mockAdminApis(page, { onDiscountPromotionSave: payload => saves.push(payload) });

@@ -23,7 +23,7 @@ export default function Promotions({ products }) {
   async function load() {
     setLoading(true); setLoadError('');
     const [promotionResult, scopeResult, couponResult, linkResult] = await Promise.all([
-      supabase.from('promotions').select('*').order('created_at', { ascending:false }),
+      supabase.from('promotions').select('*').is('archived_at', null).order('created_at', { ascending:false }),
       supabase.from('promotion_scopes').select('*'),
       supabase.from('coupon_campaigns').select('*').is('archived_at', null).order('created_at', { ascending:false }),
       supabase.from('coupon_promotions').select('*').order('sort_order'),

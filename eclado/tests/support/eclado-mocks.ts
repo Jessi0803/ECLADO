@@ -147,6 +147,11 @@ function filterRows<T extends Record<string, unknown>>(rows: T[], url: string) {
     return rows.filter(row => row.active !== false);
   }
 
+  const archivedAt = queryValue(url, 'archived_at');
+  if (archivedAt === 'is.null') {
+    return rows.filter(row => row.archived_at == null);
+  }
+
   return rows;
 }
 
