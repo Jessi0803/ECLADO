@@ -100,7 +100,7 @@ begin
     else null
   end;
   if normalized_publication_status is not null
-    and normalized_publication_status not in ('draft', 'active', 'event_only', 'archived')
+    and normalized_publication_status not in ('draft', 'active', 'event_only', 'gift_only', 'archived')
   then
     raise exception 'Invalid product publication status' using errcode = '22023';
   end if;

@@ -1257,7 +1257,7 @@ test('商品管理可下架、於已下架清單查看並重新上架商品', as
   await expect(page.getByRole('table').getByText('胜肽修護精華液')).toBeVisible();
 });
 
-test('商品管理可將商品設定為活動限定並在獨立清單查看', async ({ page }) => {
+test('商品管理可將草稿商品設定為活動限定', async ({ page }) => {
   let savedRequest: Record<string, any> | null = null;
   await mockAdminApis(page, {
     products: [
@@ -1267,7 +1267,7 @@ test('商品管理可將商品設定為活動限定並在獨立清單查看', as
         id: 99,
         name: 'Private Event Cleanser',
         name_zh: '活動限定潔顏品',
-        publication_status: 'event_only',
+        publication_status: 'draft',
         active: false,
       },
     ],
@@ -1280,12 +1280,13 @@ test('商品管理可將商品設定為活動限定並在獨立清單查看', as
 
   await page.goto('/admin');
   await openAdminSection(page, /商品 & 庫存/);
-  await page.getByRole('button', { name: /活動限定 \(1\)/ }).click();
+  await page.getByRole('button', { name: /草稿 \(1\)/ }).click();
   const row = page.getByText('活動限定潔顏品').locator('xpath=ancestor::tr');
-  await expect(row.getByText('活動限定', { exact: true })).toBeVisible();
+  await expect(row.getByText('草稿', { exact: true })).toBeVisible();
   await row.getByRole('button', { name: '編輯' }).click();
   const panel = page.locator('.detail-panel');
-  await expect(panel.getByLabel('商品狀態')).toHaveValue('event_only');
+  await expect(panel.getByLabel('商品狀態')).toHaveValue('draft');
+  await panel.getByLabel('商品狀態').selectOption('event_only');
   await panel.getByRole('button', { name: '儲存', exact: true }).click();
   await expect.poll(() => savedRequest).not.toBeNull();
   expect(savedRequest?.p_product).toMatchObject({ publication_status: 'event_only' });

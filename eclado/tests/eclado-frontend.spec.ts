@@ -56,7 +56,10 @@ test('活動限定商品只出現在未列出的活動路徑並標示 noindex', 
     publication_status: 'event_only',
     active: false,
   };
-  await mockEcladoApis(page, { products: [...mockProducts, eventProduct] });
+  await mockEcladoApis(page, {
+    products: [...mockProducts, eventProduct],
+    promotions: [{ ...activePromotion, product_ids: [eventProduct.id] }],
+  });
 
   await page.goto('/shop');
   await expect(page.getByText('活動限定潔顏品')).toHaveCount(0);
@@ -73,6 +76,13 @@ test('活動限定商品只出現在未列出的活動路徑並標示 noindex', 
   await page.getByText('活動限定潔顏品').click();
   await expect(page).toHaveURL(/\/events\/limited\/private-event-cleanser$/);
   await expect(page.getByRole('heading', { name: '活動限定潔顏品' })).toBeVisible();
+  await expect(page.getByText('E2E 測試活動')).toBeVisible();
+  await expect(page.getByText('NT$ 1,152')).toBeVisible();
+
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  const cartDrawer = await openCart(page);
+  await expect(cartDrawer.getByText('E2E 測試活動')).toBeVisible();
+  await expect(cartDrawer.getByText('−NT$ 128')).toBeVisible();
 });
 
 async function proceedToCheckout(page: import('@playwright/test').Page) {
@@ -637,7 +647,11 @@ test('專業會員購物車即時提示最低訂購與免運門檻', async ({ pa
   const cartDrawer = await openCart(page);
 
   const professionalStatus = cartDrawer.getByRole('status');
+  const summaryHeader = cartDrawer.getByTestId('cart-summary-header');
   await expect(professionalStatus).toHaveText('尚差 NT$2,020 可達最低訂購門檻。');
+  await expect(summaryHeader.getByRole('heading', { name: '訂單摘要' })).toBeVisible();
+  await expect(summaryHeader.getByRole('status')).toBeVisible();
+  await expect(summaryHeader).toHaveCSS('display', 'flex');
   await expect(professionalStatus).toHaveCSS('border-left-width', '1px');
   await expect(professionalStatus).toHaveCSS('border-left-style', 'solid');
   await expect(cartDrawer.getByRole('button', { name: '前往結帳' })).toBeDisabled();
@@ -896,6 +910,9 @@ test('現貨、預購、活動折扣與購物車操作', async ({ page }) => {
 
   await openCart(page);
   const cartDrawer = page.getByRole('dialog', { name: '購物車' });
+  await expect(cartDrawer.getByTestId('cart-item-name')).toHaveText('胜肽修護精華液');
+  await expect(cartDrawer.getByTestId('cart-item-specification')).toHaveText('30ml');
+  await expect(cartDrawer.getByText('Peptide Repair Serum', { exact: true })).toHaveCount(0);
   await expect(cartDrawer.getByText('E2E 測試活動')).toBeVisible();
   await expect(cartDrawer.getByText('NT$ 3,702')).toBeVisible();
 

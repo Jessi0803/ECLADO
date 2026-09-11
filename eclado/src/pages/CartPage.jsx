@@ -55,6 +55,30 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
   const professionalProgress = getProfessionalOrderProgress(finalSubtotal, user);
   const shipping = calculateShipping(pricedCart, user, finalSubtotal);
   const grandTotal = finalSubtotal + shipping;
+  const professionalProgressNotice = professionalProgress ? (
+    <div
+      role="status"
+      aria-live="polite"
+      data-testid="cart-shipping-progress"
+      style={{
+        border:`1px solid ${professionalProgress.eligible ? 'var(--gold)' : '#b87855'}`,
+        borderLeft: professionalProgress.eligible && !professionalProgress.freeShipping
+          ? '4px solid var(--gold)'
+          : `1px solid ${professionalProgress.eligible ? 'var(--gold)' : '#b87855'}`,
+        background: professionalProgress.eligible && !professionalProgress.freeShipping ? '#fff8e8' : 'var(--white)',
+        padding: drawer ? '6px 9px' : (professionalProgress.eligible && !professionalProgress.freeShipping ? '14px 16px' : '12px 14px'),
+        marginBottom: drawer ? 0 : 18,
+        fontSize: drawer ? 10 : (professionalProgress.eligible && !professionalProgress.freeShipping ? 14 : 12),
+        fontWeight: professionalProgress.eligible && !professionalProgress.freeShipping ? 600 : 400,
+        lineHeight: drawer ? 1.35 : 1.65,
+        color: professionalProgress.eligible && !professionalProgress.freeShipping ? '#76500a' : (professionalProgress.eligible ? 'var(--dark)' : '#8a4c2d'),
+        textAlign: drawer ? 'right' : 'left',
+        maxWidth: drawer ? '68%' : undefined,
+      }}
+    >
+      {professionalProgress.message}
+    </div>
+  ) : null;
 
   return (
     <div className={drawer ? 'cart-drawer-page' : ''} style={{ paddingTop: drawer ? 0 : 68, minHeight: drawer ? '100%' : '80vh' }}>
@@ -89,8 +113,8 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
                   <div key={getCartKey(item)} style={{ display:'grid', gridTemplateColumns:'72px 1fr auto', gap:16, alignItems:'center', padding:'20px 0', borderBottom:'1px solid var(--light)' }}>
                     <img src={item.img} alt={item.nameZh} style={{ width:72, height:72, objectFit:'contain', background:'var(--off-white)', display:'block' }} />
                     <div>
-                      <p style={{ fontFamily:'var(--font-display)', fontSize:14, fontWeight:400, marginBottom:3 }}>{item.name}</p>
-                      <p style={{ fontSize:12, color:'var(--dark)', marginBottom:6 }}>{item.nameZh} · {item.size}</p>
+                      <p data-testid="cart-item-name" style={{ fontFamily:'var(--font-display)', fontSize:14, fontWeight:400, marginBottom:3 }}>{item.nameZh}</p>
+                      <p data-testid="cart-item-specification" style={{ fontSize:12, color:'var(--dark)', marginBottom:6 }}>{item.size}</p>
                       <p style={{ fontSize:11, color: fulfillment.type === 'preorder' ? 'var(--gold)' : 'var(--dark)', marginBottom:10, lineHeight:1.5 }}>{fulfillment.type === 'loading' ? '庫存資料載入中' : `${fulfillment.label} · ${fulfillment.shipping}`}</p>
                       <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                         <button onClick={() => updateQty(getCartKey(item),-1)} style={{ width:26, height:26, border:'1px solid var(--light)', background:'none', cursor:'pointer', fontSize:15, lineHeight:1 }}>−</button>
@@ -106,50 +130,33 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
                 );
               })}
             </div>
-            <div className={drawer ? 'cart-drawer-summary' : ''} style={{ background:'var(--off-white)', padding: drawer ? '18px 22px' : '28px', height:'fit-content', marginTop: drawer ? 0 : 0 }}>
-              <h3 style={{ fontFamily:'var(--font-display)', fontSize:18, fontWeight:400, marginBottom:20 }}>訂單摘要</h3>
-              {professionalProgress && (
-                <div
-                  role="status"
-                  aria-live="polite"
-                  style={{
-                    border:`1px solid ${professionalProgress.eligible ? 'var(--gold)' : '#b87855'}`,
-                    borderLeft: professionalProgress.eligible && !professionalProgress.freeShipping
-                      ? '4px solid var(--gold)'
-                      : `1px solid ${professionalProgress.eligible ? 'var(--gold)' : '#b87855'}`,
-                    background: professionalProgress.eligible && !professionalProgress.freeShipping ? '#fff8e8' : 'var(--white)',
-                    padding: professionalProgress.eligible && !professionalProgress.freeShipping ? '14px 16px' : '12px 14px',
-                    marginBottom:18,
-                    fontSize: professionalProgress.eligible && !professionalProgress.freeShipping ? 14 : 12,
-                    fontWeight: professionalProgress.eligible && !professionalProgress.freeShipping ? 600 : 400,
-                    lineHeight:1.65,
-                    color: professionalProgress.eligible && !professionalProgress.freeShipping ? '#76500a' : (professionalProgress.eligible ? 'var(--dark)' : '#8a4c2d'),
-                  }}
-                >
-                  {professionalProgress.message}
-                </div>
-              )}
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13 }}><span>小計</span><span style={{ fontFamily:'var(--font-display)' }}>NT$ {subtotal.toLocaleString()}</span></div>
+            <div className={drawer ? 'cart-drawer-summary' : ''} style={{ background:'var(--off-white)', padding: drawer ? '12px 22px 11px' : '28px', height:'fit-content', marginTop:0 }}>
+              <div data-testid="cart-summary-header" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom: drawer ? 9 : 20 }}>
+                <h3 style={{ fontFamily:'var(--font-display)', fontSize:drawer ? 16 : 18, fontWeight:400, margin:0, flexShrink:0 }}>訂單摘要</h3>
+                {drawer && professionalProgressNotice}
+              </div>
+              {!drawer && professionalProgressNotice}
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13 }}><span>小計</span><span style={{ fontFamily:'var(--font-display)' }}>NT$ {subtotal.toLocaleString()}</span></div>
               {discount > 0 && promotion && (
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13, color:'var(--gold)' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13, color:'var(--gold)' }}>
                   <span>{promotion.name}</span>
                   <span style={{ fontFamily:'var(--font-display)' }}>−NT$ {discount.toLocaleString()}</span>
                 </div>
               )}
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13 }}>
                 <span>運費</span>
                 <span style={{ fontFamily:'var(--font-display)' }}>{shipping === 0 ? <span style={{ color:'var(--gold)', fontFamily:'var(--font-body)' }}>免運</span> : `NT$ ${shipping}`}</span>
               </div>
-              <div style={{ height:1, background:'var(--light)', margin:'16px 0' }} />
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:24, fontWeight:500 }}>
+              <div style={{ height:1, background:'var(--light)', margin:drawer ? '8px 0' : '16px 0' }} />
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 10 : 24, fontWeight:500 }}>
                 <span style={{ fontSize:14 }}>合計</span>
                 <span style={{ fontFamily:'var(--font-display)', fontSize:18 }}>NT$ {grandTotal.toLocaleString()}</span>
               </div>
-              <button disabled={professionalProgress?.eligible === false} onClick={handleCheckoutClick} style={{ width:'100%', background: professionalProgress?.eligible === false ? 'var(--mid)' : 'var(--black)', color:'var(--white)', border:'none', padding:'15px', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: professionalProgress?.eligible === false ? 'not-allowed' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500 }}
+              <button disabled={professionalProgress?.eligible === false} onClick={handleCheckoutClick} style={{ width:'100%', background: professionalProgress?.eligible === false ? 'var(--mid)' : 'var(--black)', color:'var(--white)', border:'none', padding:drawer ? '11px' : '15px', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: professionalProgress?.eligible === false ? 'not-allowed' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500 }}
                 onMouseEnter={e=>e.target.style.background=professionalProgress?.eligible === false ? 'var(--mid)' : '#333'}
                 onMouseLeave={e=>e.target.style.background=professionalProgress?.eligible === false ? 'var(--mid)' : 'var(--black)'}
               >前往結帳</button>
-              <p style={{ textAlign:'center', fontSize:11, color:'var(--dark)', marginTop:14 }}>支援：虛擬帳號匯款 / 信用卡 / Apple Pay / Google Pay</p>
+              <p style={{ textAlign:'center', fontSize:drawer ? 10 : 11, color:'var(--dark)', marginTop:drawer ? 7 : 14 }}>支援：虛擬帳號匯款 / 信用卡 / Apple Pay / Google Pay</p>
             </div>
           </div>
         )}

@@ -8,7 +8,7 @@ alter table public.products
 
 alter table public.products
   add constraint products_publication_status_check
-  check (publication_status in ('draft', 'active', 'event_only', 'archived'));
+  check (publication_status in ('draft', 'active', 'event_only', 'gift_only', 'archived'));
 
 create or replace function public.set_product_publication_status(
   p_product_id integer,
@@ -23,7 +23,7 @@ begin
   if not public.has_backoffice_permission('catalog.write') then
     raise exception 'Catalog write access required' using errcode = '42501';
   end if;
-  if p_publication_status not in ('draft', 'active', 'event_only', 'archived') then
+  if p_publication_status not in ('draft', 'active', 'event_only', 'gift_only', 'archived') then
     raise exception 'Invalid publication status' using errcode = '22023';
   end if;
   update public.products
@@ -117,3 +117,5 @@ grant execute on function public.get_event_catalog() to anon, authenticated;
 
 comment on function public.get_event_catalog() is
   'Returns a minimized event-only catalog for the unlisted event storefront.';
+
+notify pgrst, 'reload schema';

@@ -14,6 +14,7 @@ export default function EventProductsPage({
   products = [],
   productsStatus = 'ready',
   productsError = '',
+  promotions = [],
 }) {
   const isMobile = useIsMobile();
   useDocumentMeta({
@@ -70,7 +71,7 @@ export default function EventProductsPage({
                 user={user}
                 onAdd={() => addToCart(product)}
                 onSelect={() => onSelectProduct(product)}
-                promotions={[]}
+                promotions={promotions}
                 routeBase="/events/limited"
               />
             ))}

@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const sql = fs.readFileSync(path.resolve('supabase-promotion-gifts-engine.sql'), 'utf8');
+const productSaveSql = fs.readFileSync(path.resolve('supabase-save-product-with-variants.sql'), 'utf8');
+const eventCatalogSql = fs.readFileSync(path.resolve('supabase-event-only-products.sql'), 'utf8');
 
 test('batch 4 adds amount and quantity gifts to the authoritative quote', () => {
   expect(sql).toContain("promotion.benefit_type in ('amount_gift', 'quantity_gift')");
@@ -31,6 +33,17 @@ test('admin save requires an active gift-only variant', () => {
   expect(sql).toContain("benefit not in ('percentage_discount','fixed_discount','amount_gift','quantity_gift')");
   expect(sql).toContain('Gift must use an active gift-only variant');
   expect(sql).toContain("has_backoffice_permission('promotions.manage')");
+});
+
+test('catalog product save accepts the gift-only publication status', () => {
+  expect(productSaveSql).toContain("('draft', 'active', 'event_only', 'gift_only', 'archived')");
+});
+
+test('event catalog migration preserves gift-only products and exposes its RPC', () => {
+  expect(eventCatalogSql.match(/'draft', 'active', 'event_only', 'gift_only', 'archived'/g)?.length).toBe(2);
+  expect(eventCatalogSql).toContain('create or replace function public.get_event_catalog()');
+  expect(eventCatalogSql).toContain('grant execute on function public.get_event_catalog() to anon, authenticated');
+  expect(eventCatalogSql).toContain("notify pgrst, 'reload schema'");
 });
 
 test('final admin save preserves discount threshold type', () => {
