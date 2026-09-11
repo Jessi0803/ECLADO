@@ -344,6 +344,9 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
       sort_order: index,
       active: variant.active !== false,
       is_custom_order: !!variant.isCustomOrder,
+      gift_enabled: !!variant.giftEnabled,
+      gift_stock: variant.giftEnabled ? Math.max(0, Number(variant.giftStock) || 0) : 0,
+      gift_min_stock: variant.giftEnabled ? Math.max(0, Number(variant.giftMinStock) || 0) : 0,
       ...(canManageProcurementCost ? {
         procurement_unit_cost_usd: variant.procurementUnitCostUsd === '' || variant.procurementUnitCostUsd == null
           ? null

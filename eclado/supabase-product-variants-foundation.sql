@@ -29,6 +29,9 @@ alter table public.product_variants add column if not exists sort_order integer 
 alter table public.product_variants add column if not exists active boolean not null default true;
 alter table public.product_variants add column if not exists is_custom_order boolean not null default false;
 alter table public.product_variants add column if not exists procurement_unit_cost_usd numeric(14, 4);
+alter table public.product_variants add column if not exists gift_enabled boolean not null default false;
+alter table public.product_variants add column if not exists gift_stock integer not null default 0;
+alter table public.product_variants add column if not exists gift_min_stock integer not null default 0;
 alter table public.product_variants add column if not exists created_at timestamptz not null default now();
 alter table public.product_variants add column if not exists updated_at timestamptz not null default now();
 
@@ -153,6 +156,27 @@ begin
 
   if not exists (
     select 1 from pg_constraint
+    where conname = 'product_variants_gift_inventory_check'
+      and conrelid = 'public.product_variants'::regclass
+  ) then
+    alter table public.product_variants
+      add constraint product_variants_gift_inventory_check check (
+        (
+          gift_enabled = true
+          and active = true
+          and gift_stock >= 0
+          and gift_min_stock >= 0
+        )
+        or (
+          gift_enabled = false
+          and gift_stock = 0
+          and gift_min_stock = 0
+        )
+      );
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
     where conname = 'product_variants_sort_order_nonnegative'
       and conrelid = 'public.product_variants'::regclass
   ) then
@@ -181,6 +205,10 @@ as $$
 begin
   new.sku := btrim(new.sku);
   new.size := btrim(new.size);
+  if new.gift_enabled is not true then
+    new.gift_stock := 0;
+    new.gift_min_stock := 0;
+  end if;
   new.updated_at := now();
 
   if new.is_default is true then

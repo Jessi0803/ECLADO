@@ -18,12 +18,24 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
   const activeProducts = products.filter(p => p.publicationStatus === 'active');
   const eventProducts = products.filter(p => p.publicationStatus === 'event_only');
   const giftProducts = products.filter(p => p.publicationStatus === 'gift_only');
+  const giftInventoryProducts = products.flatMap(product => (product.variants || [])
+    .filter(variant => variant.active && variant.giftEnabled)
+    .map(variant => ({
+      ...product,
+      sourceProduct: product,
+      rowKey: `${product.id}-${variant.id}`,
+      giftVariant: variant,
+      size: variant.size,
+      stock: variant.giftStock,
+      minStock: variant.giftMinStock,
+    })));
   const draftProducts = products.filter(p => p.publicationStatus === 'draft');
   const archivedProducts = products.filter(p => p.publicationStatus === 'archived');
   const productsByMode = {
     active: activeProducts,
     event_only: eventProducts,
     gift_only: giftProducts,
+    gift_inventory: giftInventoryProducts,
     draft: draftProducts,
     archived: archivedProducts,
   };
@@ -42,7 +54,10 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
     low: baseProducts.filter(p => getStockStatus(p) === 'low').length,
     out: baseProducts.filter(p => getStockStatus(p) === 'out').length,
   };
-  const lowStock = [...activeProducts, ...eventProducts, ...giftProducts].filter(p => p.stock <= p.minStock);
+  const lowStock = [...activeProducts, ...eventProducts].filter(p => p.stock <= p.minStock);
+  const lowGiftInventory = products.flatMap(product => (product.variants || [])
+    .filter(variant => variant.active && variant.giftEnabled && variant.giftStock <= variant.giftMinStock)
+    .map(variant => ({ product, variant })));
   const hasUnsavedChanges = !!editing && JSON.stringify(editing) !== initialDraftRef.current;
   const closeEditing = usePanelHistory(!!editing, () => setEditing(null), {
     shouldConfirm: hasUnsavedChanges,
@@ -95,6 +110,9 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
         active: true,
         isCustomOrder: false,
         procurementUnitCostUsd: '',
+        giftEnabled: false,
+        giftStock: 0,
+        giftMinStock: 3,
       }],
       sourceFolderName: '',
       importedFromDrive: false,
@@ -137,6 +155,9 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
           active: true,
           isCustomOrder: false,
           procurementUnitCostUsd: '',
+          giftEnabled: false,
+          giftStock: 0,
+          giftMinStock: 3,
         },
       ],
     }));
@@ -308,6 +329,9 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
       price: Number(variant.price) || 0,
       proPrice: Number(variant.proPrice) || 0,
       stock: Math.max(0, Number(variant.stock) || 0),
+      giftEnabled: !!variant.giftEnabled,
+      giftStock: variant.giftEnabled ? Math.max(0, Number(variant.giftStock) || 0) : 0,
+      giftMinStock: variant.giftEnabled ? Math.max(0, Number(variant.giftMinStock) || 0) : 0,
       procurementUnitCostUsd: String(variant.procurementUnitCostUsd ?? '').trim() === ''
         ? ''
         : Number(variant.procurementUnitCostUsd),
@@ -331,6 +355,15 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
     const normalizedSkus = normalizedVariants.map(variant => variant.sku.toLowerCase());
     if (new Set(normalizedSkus).size !== normalizedSkus.length) {
       setError('同一商品的 SKU 不可重複');
+      return;
+    }
+    const giftVariants = normalizedVariants.filter(variant => variant.giftEnabled);
+    if (giftVariants.some(variant => !variant.active)) {
+      setError('啟用贈品庫存的規格必須保持啟用');
+      return;
+    }
+    if (editing.publicationStatus === 'gift_only' && giftVariants.length === 0) {
+      setError('贈品專用商品至少需要啟用一個贈品庫存規格');
       return;
     }
 
@@ -378,6 +411,9 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
           {lowStock.length > 0 && (
             <span style={{ fontSize: 12, color: 'var(--red)', fontWeight: 500 }}>⚠ {lowStock.length} 件庫存不足</span>
           )}
+          {lowGiftInventory.length > 0 && (
+            <span style={{ fontSize: 12, color: 'var(--yellow)', fontWeight: 500 }}>⚠ {lowGiftInventory.length} 個贈品庫存不足</span>
+          )}
         </div>
         <button onClick={openNew} style={{ padding: '10px 24px', background: 'var(--dark)', color: '#fff', border: 'none', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}>+ 新增商品</button>
       </div>
@@ -388,16 +424,17 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 0, marginBottom: 20, border: '1px solid var(--border)', width: 'fit-content', background: 'var(--white)' }}>
+      <div style={{ display: 'flex', gap: 0, marginBottom: 20, border: '1px solid var(--border)', width: 'fit-content', maxWidth: '100%', overflowX: 'auto', background: 'var(--white)', WebkitOverflowScrolling: 'touch' }}>
         {[
           ['active', `上架中 (${activeProducts.length})`],
           ['event_only', `活動限定 (${eventProducts.length})`],
           ['gift_only', `贈品專用 (${giftProducts.length})`],
+          ['gift_inventory', `贈品庫存 (${giftInventoryProducts.length})`],
           ['draft', `草稿 (${draftProducts.length})`],
           ['archived', `已下架 (${archivedProducts.length})`],
         ].map(([value, label]) => (
           <button key={value} onClick={() => { setListMode(value); setEditing(null); }} style={{
-            padding: '9px 18px', border: 'none', background: listMode === value ? 'var(--dark)' : 'transparent',
+            padding: '9px 18px', border: 'none', background: listMode === value ? 'var(--dark)' : 'transparent', flex: '0 0 auto',
             color: listMode === value ? '#fff' : 'var(--mid)', fontSize: 12, cursor: 'pointer',
           }}>{label}</button>
         ))}
@@ -413,6 +450,20 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                 <span style={{ color: 'var(--dark)' }}>{p.nameZh}</span>
                 <span style={{ fontWeight: 700, color: p.stock === 0 ? 'var(--red)' : 'var(--yellow)' }}>{p.stock} 件</span>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {lowGiftInventory.length > 0 && (
+        <div style={{ background: 'oklch(0.72 0.13 75 / 0.08)', border: '1px solid oklch(0.72 0.13 75 / 0.3)', padding: '14px 20px', marginBottom: 20 }}>
+          <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--yellow)', marginBottom: 8 }}>⚠ 贈品庫存不足 — 可點選項目直接調整</div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'nowrap', overflowX: 'auto', paddingBottom: 4, WebkitOverflowScrolling: 'touch' }}>
+            {lowGiftInventory.map(({ product, variant }) => (
+              <button key={`${product.id}-${variant.id}`} type="button" onClick={() => openEdit(product)} style={{ flex: '0 0 auto', whiteSpace: 'nowrap', fontSize: 12, background: 'var(--white)', border: '1px solid var(--border)', padding: '5px 12px', display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+                <span style={{ color: 'var(--dark)' }}>{product.nameZh} · {variant.size}</span>
+                <span style={{ fontWeight: 700, color: variant.giftStock === 0 ? 'var(--red)' : 'var(--yellow)' }}>{variant.giftStock} 件</span>
+              </button>
             ))}
           </div>
         </div>
@@ -450,7 +501,10 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
             <table className="responsive-admin-table admin-products-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--off)' }}>
-                  {['商品名稱', '功效分類', '系列分類', '規格', '售價', '專業價', '院線', '庫存'].map(h => (
+                  {(listMode === 'gift_inventory'
+                    ? ['商品名稱', '功效分類', '系列分類', '規格', 'SKU', '警示值', '來源', '贈品庫存']
+                    : ['商品名稱', '功效分類', '系列分類', '規格', '售價', '專業價', '院線', '庫存']
+                  ).map(h => (
                     <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                   <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: 'var(--mid)', fontWeight: 400, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>狀態</th>
@@ -467,7 +521,9 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                         ? (listMode === 'archived'
                           ? '目前沒有已下架商品'
                           : listMode === 'draft' ? '目前沒有草稿商品'
-                          : listMode === 'gift_only' ? '目前沒有贈品專用商品' : '目前沒有上架商品')
+                          : listMode === 'gift_only' ? '目前沒有贈品專用商品'
+                          : listMode === 'gift_inventory' ? '目前沒有啟用中的贈品庫存'
+                          : '目前沒有上架商品')
                         : '目前沒有符合此庫存狀態的商品'}
                     </td>
                   </tr>
@@ -476,7 +532,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                   const isLow = p.stock <= p.minStock;
                   const isEditing = editing?.id === p.id;
                   return (
-                    <tr key={p.id} style={{ borderBottom: '1px solid var(--border)', background: isEditing ? 'var(--off)' : p.stock === 0 ? 'oklch(0.60 0.18 25 / 0.03)' : 'transparent' }}>
+                    <tr key={p.rowKey || p.id} style={{ borderBottom: '1px solid var(--border)', background: isEditing ? 'var(--off)' : p.stock === 0 ? 'oklch(0.60 0.18 25 / 0.03)' : 'transparent' }}>
                       <td data-label="商品名稱" style={{ padding: '13px 14px' }}>
                         <div style={{ fontSize: 13, fontWeight: 500 }}>{p.nameZh}</div>
                         <div style={{ fontSize: 11, color: 'var(--mid)' }}>{p.name}</div>
@@ -484,18 +540,22 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                       <td data-label="功效分類" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{p.category}</td>
                       <td data-label="系列分類" style={{ padding: '13px 14px', fontSize: 12, color: p.series ? 'var(--mid)' : 'var(--light)' }}>{p.series || '未設定'}</td>
                       <td data-label="規格" style={{ padding: '13px 14px', fontSize: 12 }}>{p.size}</td>
-                      <td data-label="售價" style={{ padding: '13px 14px', fontSize: 12, fontWeight: 500 }}>NT$ {p.price.toLocaleString()}</td>
-                      <td data-label="專業價" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--gold)' }}>NT$ {p.proPrice.toLocaleString()}</td>
-                      <td data-label="商品類型" style={{ padding: '13px 14px' }}>
+                      <td data-label={listMode === 'gift_inventory' ? 'SKU' : '售價'} style={{ padding: '13px 14px', fontSize: 12, fontWeight: 500 }}>{listMode === 'gift_inventory' ? p.giftVariant.sku : `NT$ ${p.price.toLocaleString()}`}</td>
+                      <td data-label={listMode === 'gift_inventory' ? '警示值' : '專業價'} style={{ padding: '13px 14px', fontSize: 12, color: 'var(--gold)' }}>{listMode === 'gift_inventory' ? p.giftVariant.giftMinStock : `NT$ ${p.proPrice.toLocaleString()}`}</td>
+                      <td data-label={listMode === 'gift_inventory' ? '來源' : '商品類型'} style={{ padding: '13px 14px' }}>
                         <span style={{ fontSize: 11, color: p.isProOnly ? 'var(--dark)' : 'var(--mid)', fontWeight: p.isProOnly ? 600 : 400 }}>
-                          {p.isProOnly ? '● 院線' : '○ 一般'}
+                          {listMode === 'gift_inventory'
+                            ? (p.publicationStatus === 'gift_only' ? '贈品專用商品' : p.publicationStatus === 'event_only' ? '活動限定商品' : '一般商品')
+                            : (p.isProOnly ? '● 院線' : '○ 一般')}
                         </span>
                       </td>
-                      <td data-label="庫存" style={{ padding: '13px 14px' }}>
+                      <td data-label={listMode === 'gift_inventory' ? '贈品庫存' : '庫存'} style={{ padding: '13px 14px' }}>
                         <span style={{ fontSize: 15, fontWeight: 600, color: p.stock === 0 ? 'var(--red)' : isLow ? 'var(--yellow)' : 'var(--dark)' }}>{p.stock}</span>
                       </td>
                       <td data-label="狀態" style={{ padding: '13px 14px' }}>
-                        {p.publicationStatus === 'draft'
+                        {listMode === 'gift_inventory'
+                          ? <span style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 500 }}>贈品庫存</span>
+                          : p.publicationStatus === 'draft'
                           ? <span style={{ fontSize: 11, color: 'var(--yellow)', fontWeight: 500 }}>草稿</span>
                           : p.publicationStatus === 'event_only'
                             ? <span style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 500 }}>活動限定</span>
@@ -511,9 +571,9 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                       </td>
                       <td data-label="操作" style={{ padding: '13px 14px' }}>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          <button onClick={() => openEdit(p)}
+                          <button onClick={() => openEdit(p.sourceProduct || p)}
                             style={{ padding: '5px 12px', fontSize: 11, background: isEditing ? 'var(--dark)' : 'none', border: '1px solid var(--border)', color: isEditing ? '#fff' : 'var(--dark)', cursor: 'pointer' }}>編輯</button>
-                          {p.publicationStatus !== 'active' && p.publicationStatus !== 'event_only' && p.publicationStatus !== 'gift_only' ? (
+                          {listMode === 'gift_inventory' ? null : p.publicationStatus !== 'active' && p.publicationStatus !== 'event_only' && p.publicationStatus !== 'gift_only' ? (
                             <button onClick={() => restoreProduct(p)} disabled={saving}
                               style={{ padding: '5px 12px', fontSize: 11, background: 'var(--dark)', border: '1px solid var(--dark)', color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>重新上架</button>
                           ) : (
@@ -731,8 +791,9 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                               style={{ ...inp, width: 82 }} />
                           </td>
                           <td style={{ padding: '8px' }}>
-                            <input aria-label={`規格 ${index + 1} 庫存`} type="number" min="0" value={variant.stock} onChange={e => updateVariant(index, 'stock', e.target.value)}
-                              style={{ ...inp, width: 70 }} />
+                            <input aria-label={`規格 ${index + 1} 庫存`} type="number" min="0" value={editing.publicationStatus === 'gift_only' ? 0 : variant.stock} disabled={editing.publicationStatus === 'gift_only'} onChange={e => updateVariant(index, 'stock', e.target.value)}
+                              title={editing.publicationStatus === 'gift_only' ? '贈品專用商品請在下方管理贈品庫存' : undefined}
+                              style={{ ...inp, width: 70, opacity: editing.publicationStatus === 'gift_only' ? 0.45 : 1 }} />
                           </td>
                           {canManageProcurementCost && (
                             <td style={{ padding: '8px' }}>
@@ -765,6 +826,50 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                   </table>
                 </div>
                 <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 7 }}>移除既有規格後，資料庫會將它停用並保留歷史紀錄；預設規格不可停用。</p>
+              </div>
+
+              <div>
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ ...lbl, marginBottom: 4 }}>贈品庫存設定</div>
+                  <p style={{ fontSize: 11, color: 'var(--mid)', margin: 0, lineHeight: 1.7 }}>
+                    共用原商品的名稱、圖片與規格，贈品庫存與正常販售庫存分開計算。贈品專用商品也在此設定可用庫存。
+                  </p>
+                </div>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {editing.variants.map((variant, index) => (
+                    <div key={`gift-${variant.id || index}`} style={{ border: '1px solid var(--border)', background: variant.giftEnabled ? 'var(--off)' : '#fff', padding: '13px 14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+                        <div>
+                          <strong style={{ display: 'block', fontSize: 13, fontWeight: 500 }}>{variant.size || `規格 ${index + 1}`}</strong>
+                          <span style={{ fontSize: 11, color: 'var(--mid)' }}>販售 SKU：{variant.sku || '尚未填寫'}</span>
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: 'pointer' }}>
+                          <input
+                            aria-label={`規格 ${index + 1} 啟用贈品庫存`}
+                            type="checkbox"
+                            checked={!!variant.giftEnabled}
+                            disabled={variant.active === false}
+                            onChange={event => updateVariant(index, 'giftEnabled', event.target.checked)}
+                          />
+                          啟用贈品庫存
+                        </label>
+                      </div>
+                      {variant.giftEnabled && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14, marginTop: 12 }}>
+                          <div>
+                            <label htmlFor={`giftStock-${index}`} style={lbl}>贈品庫存</label>
+                            <input id={`giftStock-${index}`} type="number" min="0" value={variant.giftStock ?? 0} onChange={event => updateVariant(index, 'giftStock', event.target.value)} style={inp} />
+                          </div>
+                          <div>
+                            <label htmlFor={`giftMinStock-${index}`} style={lbl}>贈品低庫存警示</label>
+                            <input id={`giftMinStock-${index}`} type="number" min="0" value={variant.giftMinStock ?? 0} onChange={event => updateVariant(index, 'giftMinStock', event.target.value)} style={inp} />
+                          </div>
+                        </div>
+                      )}
+                      {variant.active === false && <p style={{ fontSize: 11, color: 'var(--red)', margin: '8px 0 0' }}>規格已停用，無法作為新活動贈品。</p>}
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div>

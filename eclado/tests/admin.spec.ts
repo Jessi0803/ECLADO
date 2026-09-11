@@ -1005,10 +1005,36 @@ test('商品庫存可在規格表格修改並透過交易式 RPC 儲存', async 
   await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();
   await page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr').getByRole('button', { name: '編輯' }).click();
   await page.getByLabel('規格 1 庫存').fill('12');
+  await page.getByLabel('規格 1 啟用贈品庫存').check();
+  await page.getByLabel('贈品庫存', { exact: true }).fill('8');
+  await page.getByLabel('贈品低庫存警示').fill('2');
   await page.getByRole('button', { name: '儲存', exact: true }).click();
 
   await expect.poll(() => savedRequest).not.toBeNull();
-  expect(savedRequest?.p_variants?.[0]).toMatchObject({ id: '201', stock: 12 });
+  expect(savedRequest?.p_variants?.[0]).toMatchObject({
+    id: '201', stock: 12, gift_enabled: true,
+    gift_stock: 8, gift_min_stock: 2,
+  });
+});
+
+test('贈品庫存分頁同時顯示一般商品與贈品專用商品的獨立庫存', async ({ page }) => {
+  const giftProduct = { ...adminProductRows[0], id:88, name:'Travel Gift', name_zh:'旅行組贈品', publication_status:'gift_only' };
+  await mockAdminApis(page, {
+    products:[...adminProductRows, giftProduct],
+    productVariants:[
+      { ...adminProductVariants[0], gift_enabled:true, gift_stock:8, gift_min_stock:2 },
+      { id:8801, product_id:88, sku:'GIFT-TRAVEL', size:'1組', price:0, pro_price:0, stock:0, active:true, is_default:true, gift_enabled:true, gift_stock:20, gift_min_stock:3 },
+    ],
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /商品 & 庫存/);
+  await page.getByRole('button', { name:'贈品庫存 (2)' }).click();
+  const table = page.getByRole('table');
+  await expect(table.getByText(adminProductVariants[0].sku)).toBeVisible();
+  await expect(table.getByText('GIFT-TRAVEL')).toBeVisible();
+  await expect(table.getByText('一般商品')).toBeVisible();
+  await expect(table.getByText('贈品專用商品')).toBeVisible();
 });
 
 test('商品庫存可依庫存狀態篩選', async ({ page }) => {
@@ -1409,19 +1435,28 @@ test('優惠券方案可打包多個優惠券專用活動', async ({ page }) => 
   expect(couponSaves[0]).toMatchObject({ name:'新客複合券', code:'WELCOME', promotion_ids:['coupon-pct','coupon-fixed'], allow_guest:true });
 });
 
-test('活動管理可建立滿件贈並只能選擇贈品專用規格', async ({ page }) => {
+test('活動管理可從一般商品贈品庫存與贈品專用商品選擇贈品', async ({ page }) => {
   const saves: Record<string, unknown>[] = [];
   const giftProduct = { ...adminProductRows[0], id:88, name:'Travel Gift', name_zh:'旅行組贈品', publication_status:'gift_only' };
-  await mockAdminApis(page, { products:[...adminProductRows, giftProduct], productVariants:[{ id:8801, product_id:88, sku:'GIFT-TRAVEL', size:'1組', price:0, pro_price:0, stock:20, active:true, is_default:true }], onDiscountPromotionSave:payload => saves.push(payload) });
+  await mockAdminApis(page, {
+    products:[...adminProductRows, giftProduct],
+    productVariants:[
+      { ...adminProductVariants[0], gift_enabled:true, gift_stock:8, gift_min_stock:2 },
+      { id:8801, product_id:88, sku:'GIFT-TRAVEL', size:'1組', price:0, pro_price:0, stock:0, active:true, is_default:true, gift_enabled:true, gift_stock:20, gift_min_stock:3 },
+    ],
+    onDiscountPromotionSave:payload => saves.push(payload),
+  });
   await page.goto('/admin'); await openAdminSection(page, /活動管理/);
   await page.getByRole('button', { name:'+ 新增優惠活動' }).click();
   await page.getByPlaceholder('例：秋季保養 9 折').fill('任選三件贈旅行組');
   await page.getByLabel('優惠類型').selectOption('quantity_gift');
-  await page.getByLabel('贈品規格').selectOption('8801');
+  await expect(page.getByLabel('贈品庫存').getByText(/商品贈品庫存.*深層清潔泡沫洗面乳/)).toHaveCount(1);
+  await expect(page.getByLabel('贈品庫存').getByText(/贈品專用商品.*旅行組贈品/)).toHaveCount(1);
+  await page.getByLabel('贈品庫存').selectOption('101');
   await page.getByText('滿幾件贈送 *').locator('..').getByRole('spinbutton').fill('3');
   await page.getByRole('button', { name:'建立活動' }).click();
   await expect.poll(() => saves.length).toBe(1);
-  expect(saves[0]).toMatchObject({ benefit_type:'quantity_gift', threshold_value:3, gift_variant_id:8801, gift_quantity:1, repeat_mode:'once' });
+  expect(saves[0]).toMatchObject({ benefit_type:'quantity_gift', threshold_value:3, gift_variant_id:101, gift_quantity:1, repeat_mode:'once' });
 });
 
 test('活動排程：排程中活動顯示「排程中」badge，已結束顯示「已結束」', async ({ page }) => {

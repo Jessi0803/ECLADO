@@ -76,7 +76,8 @@ begin
     'variants', coalesce((
       select jsonb_agg(
         (to_jsonb(variant) - array[
-          'sku', 'pro_price', 'stock', 'created_at', 'updated_at'
+          'sku', 'pro_price', 'stock', 'gift_enabled',
+          'gift_stock', 'gift_min_stock', 'created_at', 'updated_at'
         ]) || jsonb_build_object(
           'pro_price', case when can_view_professional_price then variant.pro_price else null end,
           'stock', case when variant.stock > 0 then 1 else 0 end

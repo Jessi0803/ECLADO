@@ -4,6 +4,191 @@
 
 begin;
 
+-- A product variant may keep a gift-only inventory pool in addition to its
+-- normal sale inventory. Both ordinary products and gift_only products use
+-- this same path; the product row remains the single source for content.
+alter table public.product_variants
+  add column if not exists gift_enabled boolean not null default false,
+  add column if not exists gift_stock integer not null default 0,
+  add column if not exists gift_min_stock integer not null default 0;
+
+create or replace function public.prepare_product_variant()
+returns trigger language plpgsql security definer set search_path=public as $$
+begin
+  new.sku := btrim(new.sku);
+  new.size := btrim(new.size);
+  if new.gift_enabled is not true then
+    new.gift_stock := 0;
+    new.gift_min_stock := 0;
+  end if;
+  new.updated_at := now();
+  if new.is_default is true then
+    update public.product_variants
+    set is_default=false
+    where product_id=new.product_id and id is distinct from new.id and is_default=true;
+  end if;
+  return new;
+end;
+$$;
+
+-- Move existing gift-only variants onto the single gift-inventory model.
+update public.product_variants variant
+set gift_enabled = variant.active,
+    gift_stock = case when not variant.active then 0 when variant.gift_enabled then variant.gift_stock else variant.stock end,
+    gift_min_stock = case when not variant.active then 0 when variant.gift_enabled then variant.gift_min_stock else coalesce(product.min_stock, 0) end,
+    stock = 0,
+    updated_at = now()
+from public.products product
+where product.id = variant.product_id
+  and product.publication_status = 'gift_only';
+
+alter table public.product_variants
+  drop constraint if exists product_variants_gift_inventory_check;
+alter table public.product_variants
+  add constraint product_variants_gift_inventory_check check (
+    (
+      gift_enabled = true
+      and active = true
+      and gift_stock >= 0
+      and gift_min_stock >= 0
+    )
+    or (
+      gift_enabled = false
+      and gift_stock = 0
+      and gift_min_stock = 0
+    )
+  );
+
+create or replace function public.protect_reserved_gift_inventory()
+returns trigger language plpgsql security definer set search_path=public as $$
+declare
+  reserved_quantity integer;
+begin
+  select coalesce(sum(reservation.quantity), 0)::integer
+  into reserved_quantity
+  from public.promotion_gift_reservations reservation
+  where reservation.product_variant_id = new.id
+    and reservation.status = 'reserved'
+    and reservation.expires_at > now();
+
+  if reserved_quantity > 0 and (
+    new.gift_enabled is false or new.active is false or new.gift_stock < reserved_quantity
+  ) then
+    raise exception 'Gift inventory has % reserved units and cannot be reduced or disabled', reserved_quantity
+      using errcode='55000';
+  end if;
+  return new;
+end;
+$$;
+revoke all on function public.protect_reserved_gift_inventory() from public;
+drop trigger if exists trg_protect_reserved_gift_inventory on public.product_variants;
+create trigger trg_protect_reserved_gift_inventory
+  before update of gift_enabled, gift_stock, active on public.product_variants
+  for each row execute function public.protect_reserved_gift_inventory();
+
+-- Gift inventory is operational data. Public catalog RPCs must never expose
+-- its enable flag, exact stock, or alert threshold.
+create or replace function public.get_storefront_catalog()
+returns jsonb language plpgsql stable security definer set search_path = '' as $$
+declare
+  viewer_role text := 'consumer';
+  can_view_professional_price boolean := false;
+  payload jsonb;
+begin
+  if auth.uid() is not null then
+    select coalesce(profile.role, 'consumer') into viewer_role
+    from public.profiles profile where profile.id = auth.uid();
+  end if;
+  can_view_professional_price := viewer_role in ('pro', 'instructor', 'distributor');
+  select jsonb_build_object(
+    'products', coalesce((
+      select jsonb_agg(
+        (to_jsonb(product) - array['min_stock','pro_price','stock','variants','created_at','updated_at'])
+        || jsonb_build_object(
+          'pro_price', case when can_view_professional_price then product.pro_price else null end,
+          'stock', case when product.stock > 0 then 1 else 0 end
+        ) order by product.id
+      ) from public.products product
+      where product.publication_status='active' and product.active=true
+    ), '[]'::jsonb),
+    'variants', coalesce((
+      select jsonb_agg(
+        (to_jsonb(variant) - array[
+          'sku','pro_price','stock','gift_enabled','gift_stock','gift_min_stock','created_at','updated_at'
+        ]) || jsonb_build_object(
+          'pro_price', case when can_view_professional_price then variant.pro_price else null end,
+          'stock', case when variant.stock > 0 then 1 else 0 end
+        ) order by variant.product_id,variant.sort_order,variant.id
+      ) from public.product_variants variant
+      join public.products product on product.id=variant.product_id
+      where variant.active=true and product.publication_status='active' and product.active=true
+    ), '[]'::jsonb),
+    'images', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id',image.id,'product_id',image.product_id,'storage_path',image.storage_path,
+        'alt_text',image.alt_text,'sort_order',image.sort_order,'is_primary',image.is_primary,'active',image.active
+      ) order by image.product_id,image.sort_order,image.id)
+      from public.product_images image
+      join public.products product on product.id=image.product_id
+      where image.active=true and product.publication_status='active' and product.active=true
+    ), '[]'::jsonb)
+  ) into payload;
+  return payload;
+end;
+$$;
+revoke all on function public.get_storefront_catalog() from public;
+grant execute on function public.get_storefront_catalog() to anon, authenticated;
+
+create or replace function public.get_event_catalog()
+returns jsonb language plpgsql stable security definer set search_path = '' as $$
+declare
+  viewer_role text := 'consumer';
+  can_view_professional_price boolean := false;
+  payload jsonb;
+begin
+  if auth.uid() is not null then
+    select coalesce(profile.role, 'consumer') into viewer_role
+    from public.profiles profile where profile.id = auth.uid();
+  end if;
+  can_view_professional_price := viewer_role in ('pro', 'instructor', 'distributor');
+  select jsonb_build_object(
+    'products', coalesce((
+      select jsonb_agg(
+        (to_jsonb(product) - array['min_stock','pro_price','stock','variants','created_at','updated_at'])
+        || jsonb_build_object(
+          'pro_price', case when can_view_professional_price then product.pro_price else null end,
+          'stock', case when product.stock > 0 then 1 else 0 end
+        ) order by product.id
+      ) from public.products product where product.publication_status='event_only'
+    ), '[]'::jsonb),
+    'variants', coalesce((
+      select jsonb_agg(
+        (to_jsonb(variant) - array[
+          'sku','pro_price','stock','gift_enabled','gift_stock','gift_min_stock','created_at','updated_at'
+        ]) || jsonb_build_object(
+          'pro_price', case when can_view_professional_price then variant.pro_price else null end,
+          'stock', case when variant.stock > 0 then 1 else 0 end
+        ) order by variant.product_id,variant.sort_order,variant.id
+      ) from public.product_variants variant
+      join public.products product on product.id=variant.product_id
+      where variant.active=true and product.publication_status='event_only'
+    ), '[]'::jsonb),
+    'images', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id',image.id,'product_id',image.product_id,'storage_path',image.storage_path,
+        'alt_text',image.alt_text,'sort_order',image.sort_order,'is_primary',image.is_primary,'active',image.active
+      ) order by image.product_id,image.sort_order,image.id)
+      from public.product_images image
+      join public.products product on product.id=image.product_id
+      where image.active=true and product.publication_status='event_only'
+    ), '[]'::jsonb)
+  ) into payload;
+  return payload;
+end;
+$$;
+revoke all on function public.get_event_catalog() from public;
+grant execute on function public.get_event_catalog() to anon, authenticated;
+
 -- Preserve the batch-3 engines as implementation helpers. The public
 -- signatures below remain stable for deployed browsers.
 do $$
@@ -44,7 +229,7 @@ declare
   reserved_quantity integer;
   available_quantity integer;
   gift_product_id integer;
-  gift_sku text;
+  gift_item_sku text;
   gift_size text;
   gift_name_zh text;
   gift_name_en text;
@@ -98,10 +283,10 @@ begin
       then floor(qualification_value / candidate.threshold_value)::integer else 1 end;
     awarded_quantity := candidate.gift_quantity * greatest(repeat_count, 1);
 
-    select variant.product_id, variant.sku, variant.size, variant.stock,
+    select variant.product_id, variant.sku, variant.size, variant.gift_stock,
       product.name_zh, product.name_en,
       coalesce(image.storage_path, product.image_storage_path)
-    into gift_product_id, gift_sku, gift_size, available_quantity,
+    into gift_product_id, gift_item_sku, gift_size, available_quantity,
       gift_name_zh, gift_name_en, gift_image_path
     from public.product_variants variant
     join public.products product on product.id = variant.product_id
@@ -114,10 +299,14 @@ begin
     ) image on true
     where variant.id = candidate.gift_variant_id
       and variant.active = true
-      and product.publication_status = 'gift_only';
+      and variant.gift_enabled = true
+      and product.publication_status in ('active', 'event_only', 'gift_only');
 
     if not found then
-      raise exception '贈品規格未啟用或商品不是贈品專用狀態' using errcode = '22023';
+      if candidate.activation_type = 'coupon_only' then
+        raise exception '優惠券指定的贈品庫存目前不可使用' using errcode = '22023';
+      end if;
+      continue;
     end if;
 
     select coalesce(sum(reservation.quantity), 0)::integer
@@ -142,7 +331,7 @@ begin
     gift_items := gift_items || jsonb_build_array(jsonb_build_object(
       'product_id', gift_product_id,
       'variant_id', candidate.gift_variant_id,
-      'sku', gift_sku,
+      'sku', gift_item_sku,
       'name', gift_name_zh,
       'nameZh', gift_name_zh,
       'name_en', gift_name_en,
@@ -243,11 +432,13 @@ begin
 
   for gift in select value from jsonb_array_elements(coalesce(result -> 'gifts', '[]'::jsonb))
   loop
-    select variant.stock into stock_quantity
+    select variant.gift_stock into stock_quantity
     from public.product_variants variant
     join public.products product on product.id = variant.product_id
     where variant.id = (gift ->> 'variant_id')::bigint
-      and variant.active = true and product.publication_status = 'gift_only'
+      and variant.active = true
+      and variant.gift_enabled = true
+      and product.publication_status in ('active', 'event_only', 'gift_only')
     for update of variant;
     if not found then raise exception '贈品規格已停用' using errcode = '22023'; end if;
 
@@ -332,7 +523,7 @@ begin
     is_gift := coalesce(item.value ->> 'line_type', '') = 'gift' or coalesce((item.value ->> 'is_gift')::boolean, false);
 
     -- Keep the pre-variant compatibility path for legacy merchandise orders.
-    -- Promotion gifts are always bound to an explicit gift-only variant.
+    -- Promotion gifts always carry an explicit gift-enabled variant.
     if variant_id is null and not is_gift then
       select variant.id into variant_id
       from public.product_variants variant
@@ -342,7 +533,11 @@ begin
       limit 1;
     end if;
 
-    select variant.product_id, variant.sku, variant.size, variant.stock, product.name_zh
+    select variant.product_id,
+      variant.sku,
+      variant.size,
+      case when is_gift then variant.gift_stock else variant.stock end,
+      product.name_zh
     into product_id, sku, variant_name, available_qty, product_name
     from public.product_variants variant join public.products product on product.id = variant.product_id
     where variant.id = variant_id for update of variant;
@@ -361,9 +556,9 @@ begin
         raise exception '贈品庫存保留資料不完整，無法完成付款' using errcode='55000';
       end if;
       allocated := item_qty; missing := 0;
-      update public.product_variants set stock = stock - item_qty where id = variant_id;
       update public.promotion_gift_reservations set status='consumed', consumed_at=now()
       where id = gift_reservation.id;
+      update public.product_variants set gift_stock = gift_stock - item_qty where id = variant_id;
     else
       allocated := least(item_qty, greatest(coalesce(available_qty,0),0));
       missing := item_qty - allocated;
@@ -395,7 +590,73 @@ begin
       insert into public.inventory_allocation_events(allocation_id,order_id,product_variant_id,event_type,quantity,actor_user_id)
       values(allocation_id,target_order_id,variant_id,'payment_allocate',allocated,auth.uid());
     end if;
-    perform public.sync_product_stock_mirror(product_id);
+    if not is_gift then
+      perform public.sync_product_stock_mirror(product_id);
+    end if;
+  end loop;
+end;
+$$;
+
+-- Cancellation/return restores each item to the same inventory pool that was
+-- consumed at payment time.
+create or replace function public.release_inventory_for_order(target_order_id text)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  allocation record;
+begin
+  perform 1
+  from public.product_variants variant
+  where variant.id in (
+    select item.product_variant_id
+    from public.order_inventory_allocations item
+    where item.order_id = target_order_id and item.state <> 'released'
+  )
+  order by variant.id
+  for update;
+
+  for allocation in
+    select *
+    from public.order_inventory_allocations
+    where order_id = target_order_id and state <> 'released'
+    order by product_variant_id, item_index
+    for update
+  loop
+    if allocation.stock_deducted_qty > 0 then
+      if allocation.line_type = 'gift' then
+        update public.product_variants
+        set gift_stock = gift_stock + allocation.stock_deducted_qty
+        where id = allocation.product_variant_id;
+      else
+        update public.product_variants
+        set stock = stock + allocation.stock_deducted_qty
+        where id = allocation.product_variant_id;
+      end if;
+
+      insert into public.inventory_allocation_events (
+        allocation_id, order_id, product_variant_id, event_type, quantity, actor_user_id
+      ) values (
+        allocation.id, target_order_id, allocation.product_variant_id,
+        'release', allocation.stock_deducted_qty, auth.uid()
+      );
+    end if;
+
+    update public.order_inventory_allocations
+    set released_qty = released_qty + allocated_qty,
+        allocated_qty = 0,
+        backorder_qty = 0,
+        stock_deducted_qty = 0,
+        state = 'released',
+        released_at = now(),
+        updated_at = now()
+    where id = allocation.id;
+
+    if allocation.line_type <> 'gift' then
+      perform public.sync_product_stock_mirror(allocation.product_id);
+    end if;
   end loop;
 end;
 $$;
@@ -444,7 +705,7 @@ begin
     then raise exception 'Quantity threshold must be a whole number' using errcode='22023'; end if;
   if benefit in ('amount_gift','quantity_gift') then
     if coalesce((p_payload->>'threshold_value')::numeric,0)<=0 or coalesce((p_payload->>'gift_quantity')::integer,0)<=0 then raise exception 'Gift threshold and quantity are required' using errcode='22023'; end if;
-    if not exists(select 1 from public.product_variants variant join public.products product on product.id=variant.product_id where variant.id=gift_variant and variant.active=true and product.publication_status='gift_only') then raise exception 'Gift must use an active gift-only variant' using errcode='22023'; end if;
+    if not exists(select 1 from public.product_variants variant join public.products product on product.id=variant.product_id where variant.id=gift_variant and variant.active=true and variant.gift_enabled=true and product.publication_status in ('active','event_only','gift_only')) then raise exception 'Gift must use enabled gift inventory' using errcode='22023'; end if;
   end if;
   if benefit='percentage_discount' and coalesce((p_payload->>'discount_rate')::numeric,1) not between 0 and 1 then raise exception 'Discount rate must be between 0 and 1' using errcode='22023'; end if;
   if benefit='fixed_discount' and coalesce((p_payload->>'discount_amount')::numeric,0)<=0 then raise exception 'Discount amount must be greater than zero' using errcode='22023'; end if;

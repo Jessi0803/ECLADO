@@ -167,6 +167,9 @@ export function normalizeProductVariant(row, index = 0) {
     procurementUnitCostUsd: row.procurement_unit_cost_usd == null
       ? ''
       : Number(row.procurement_unit_cost_usd),
+    giftEnabled: !!(row.gift_enabled ?? row.giftEnabled),
+    giftStock: Math.max(0, Number(row.gift_stock ?? row.giftStock) || 0),
+    giftMinStock: Math.max(0, Number(row.gift_min_stock ?? row.giftMinStock) || 0),
   };
 }
 
@@ -191,6 +194,12 @@ export function normalizeProduct(row, variantRows = null, imageRows = []) {
   const variants = Array.isArray(variantRows)
     ? variantRows.map(normalizeProductVariant)
     : (Array.isArray(row.variants) ? row.variants.map(normalizeProductVariant) : []);
+  const publicationStatus = row.publication_status
+    || (row.active === false ? 'archived' : 'active');
+  const canonicalStock = publicationStatus === 'gift_only'
+    ? variants.filter(variant => variant.active && variant.giftEnabled)
+      .reduce((sum, variant) => sum + variant.giftStock, 0)
+    : Number(row.stock) || 0;
   return {
     id: row.id,
     slug: row.slug || '',
@@ -203,7 +212,7 @@ export function normalizeProduct(row, variantRows = null, imageRows = []) {
     size: row.size || '',
     price: Number(row.price) || 0,
     proPrice: Number(row.pro_price) || 0,
-    stock: Number(row.stock) || 0,
+    stock: canonicalStock,
     minStock: Number(row.min_stock) || 3,
     isProOnly: !!row.is_pro_only,
     applyTierMultiplier: row.apply_tier_multiplier !== false,
@@ -218,8 +227,7 @@ export function normalizeProduct(row, variantRows = null, imageRows = []) {
     sourceFolderName: row.source_folder_name || '',
     importedFromDrive: !!row.imported_from_drive,
     listImageScale: normalizeProductImageScale(row.product_list_image_scale),
-    publicationStatus: row.publication_status
-      || (row.active === false ? 'archived' : 'active'),
+    publicationStatus,
     active: row.publication_status
       ? row.publication_status === 'active'
       : row.active !== false,

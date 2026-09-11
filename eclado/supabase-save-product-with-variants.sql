@@ -32,9 +32,13 @@ declare
   normalized_default boolean;
   normalized_custom_order boolean;
   normalized_procurement_unit_cost numeric;
+  normalized_gift_enabled boolean;
+  normalized_gift_stock integer;
+  normalized_gift_min_stock integer;
   can_manage_procurement_cost boolean;
   normalized_publication_status text;
   default_count integer := 0;
+  gift_enabled_count integer := 0;
   default_variant public.product_variants%rowtype;
   response_variants jsonb;
 begin
@@ -227,12 +231,24 @@ begin
       normalized_price := (variant_input ->> 'price')::numeric;
       normalized_pro_price := (variant_input ->> 'pro_price')::numeric;
       normalized_stock := (variant_input ->> 'stock')::integer;
+      normalized_gift_stock := coalesce((variant_input ->> 'gift_stock')::integer, 0);
+      normalized_gift_min_stock := coalesce((variant_input ->> 'gift_min_stock')::integer, 0);
     exception when invalid_text_representation or numeric_value_out_of_range then
       raise exception 'Variant % has invalid price or stock', variant_position using errcode = '22023';
     end;
 
-    if normalized_price < 0 or normalized_pro_price < 0 or normalized_stock < 0 then
+    if normalized_price < 0 or normalized_pro_price < 0 or normalized_stock < 0
+      or normalized_gift_stock < 0 or normalized_gift_min_stock < 0
+    then
       raise exception 'Variant % price and stock cannot be negative', variant_position using errcode = '22023';
+    end if;
+
+    normalized_gift_enabled := coalesce((variant_input ->> 'gift_enabled')::boolean, false);
+    if normalized_gift_enabled and not coalesce((variant_input ->> 'active')::boolean, true) then
+      raise exception 'Enabled gift inventory requires an active variant' using errcode = '22023';
+    end if;
+    if normalized_gift_enabled then
+      gift_enabled_count := gift_enabled_count + 1;
     end if;
 
     if lower(normalized_sku) = any(seen_skus) then
@@ -264,6 +280,9 @@ begin
   if default_count <> 1 then
     raise exception 'Exactly one default variant is required' using errcode = '23514';
   end if;
+  if normalized_publication_status = 'gift_only' and gift_enabled_count = 0 then
+    raise exception 'Gift-only products require at least one enabled gift inventory' using errcode = '23514';
+  end if;
 
   -- Allow existing variants to exchange SKU values without transient conflicts.
   update public.product_variants
@@ -280,9 +299,15 @@ begin
     normalized_price := (variant_input ->> 'price')::numeric;
     normalized_pro_price := (variant_input ->> 'pro_price')::numeric;
     normalized_stock := (variant_input ->> 'stock')::integer;
+    if normalized_publication_status = 'gift_only' then
+      normalized_stock := 0;
+    end if;
     normalized_default := coalesce((variant_input ->> 'is_default')::boolean, false);
     normalized_active := coalesce((variant_input ->> 'active')::boolean, true);
     normalized_custom_order := coalesce((variant_input ->> 'is_custom_order')::boolean, false);
+    normalized_gift_enabled := coalesce((variant_input ->> 'gift_enabled')::boolean, false);
+    normalized_gift_stock := case when normalized_gift_enabled then coalesce((variant_input ->> 'gift_stock')::integer, 0) else 0 end;
+    normalized_gift_min_stock := case when normalized_gift_enabled then coalesce((variant_input ->> 'gift_min_stock')::integer, 0) else 0 end;
     variant_id := case
       when coalesce(variant_input ->> 'id', '') ~ '^[0-9]+$'
         then (variant_input ->> 'id')::bigint
@@ -315,6 +340,9 @@ begin
         is_default = normalized_default,
         is_custom_order = normalized_custom_order,
         procurement_unit_cost_usd = normalized_procurement_unit_cost,
+        gift_enabled = normalized_gift_enabled,
+        gift_stock = normalized_gift_stock,
+        gift_min_stock = normalized_gift_min_stock,
         sort_order = greatest(coalesce((variant_input ->> 'sort_order')::integer, variant_position::integer - 1), 0),
         active = normalized_active,
         updated_at = now()
@@ -323,12 +351,14 @@ begin
     else
       insert into public.product_variants (
         product_id, sku, size, price, pro_price, stock,
-        is_default, is_custom_order, procurement_unit_cost_usd, sort_order, active
+        is_default, is_custom_order, procurement_unit_cost_usd,
+        gift_enabled, gift_stock, gift_min_stock, sort_order, active
       )
       values (
         target_product_id, normalized_sku, normalized_size,
         normalized_price, normalized_pro_price, normalized_stock,
         normalized_default, normalized_custom_order, normalized_procurement_unit_cost,
+        normalized_gift_enabled, normalized_gift_stock, normalized_gift_min_stock,
         greatest(coalesce((variant_input ->> 'sort_order')::integer, variant_position::integer - 1), 0),
         normalized_active
       )
@@ -340,7 +370,9 @@ begin
 
   -- Missing rows are retained for historical references, but are no longer sellable.
   update public.product_variants
-  set active = false, is_default = false, updated_at = now()
+  set active = false, is_default = false,
+      gift_enabled = false, gift_stock = 0, gift_min_stock = 0,
+      updated_at = now()
   where product_id = target_product_id
     and not (id = any(saved_variant_ids));
 
@@ -369,6 +401,9 @@ begin
           when can_manage_procurement_cost then variant.procurement_unit_cost_usd
           else null
         end,
+        'giftEnabled', variant.gift_enabled,
+        'giftStock', variant.gift_stock,
+        'giftMinStock', variant.gift_min_stock,
         'sortOrder', variant.sort_order,
         'active', variant.active
       )
