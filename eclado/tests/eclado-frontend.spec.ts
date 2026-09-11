@@ -1245,6 +1245,29 @@ test('逾期付款單重新整理後停用付款入口且不建立第二張付�
   expect(paymentRequests).toHaveLength(1);
 });
 
+test('後台取消訂單後清除本機付款恢復紀錄', async ({ page }) => {
+  await mockEcladoApis(page, { paymentQueryStatus:'cancelled' });
+  await createCheckoutPayment(page, /信用卡/);
+
+  await page.reload();
+  await expect(page.getByText('此筆訂單已取消，無法重新付款。')).toBeVisible();
+  expect(await page.evaluate(() => sessionStorage.getItem('eclado_pending_payment'))).toBeNull();
+
+  await page.reload();
+  await expect(page.getByRole('heading', { name:'付款單已建立' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name:/繼續確認付款/ })).toBeVisible();
+});
+
+test('付款查詢暫時失敗時可手動清除舊紀錄', async ({ page }) => {
+  await mockEcladoApis(page, { paymentQueryError:'付款服務暫時無法連線' });
+  await createCheckoutPayment(page, /信用卡/);
+
+  await page.reload();
+  await page.getByRole('button', { name:'清除舊付款紀錄並返回商城' }).click();
+  await expect(page).toHaveURL(/\/shop$/);
+  expect(await page.evaluate(() => sessionStorage.getItem('eclado_pending_payment'))).toBeNull();
+});
+
 test('後端成交價與預覽不同時直接採用權威金額建立付款單', async ({ page }) => {
   const paymentRequests: Record<string, unknown>[] = [];
   await mockEcladoApis(page, {

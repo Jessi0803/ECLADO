@@ -62,7 +62,10 @@ export async function querySinopacPayment({ orderNo, paymentToken, guestAccessTo
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || data.ok === false) {
-      throw new Error(data.error || `付款查詢失敗（HTTP ${response.status}）`);
+      const error = new Error(data.error || `付款查詢失敗（HTTP ${response.status}）`);
+      error.code = data.code || '';
+      error.status = response.status;
+      throw error;
     }
     return {
       response: data.response || {},

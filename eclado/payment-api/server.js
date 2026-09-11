@@ -863,17 +863,24 @@ async function enforceSharedRateLimit(req, res, scope, limit, windowSeconds = 90
   }
 }
 
+function resolveStoredTerminalPaymentState(order) {
+  const orderStatus = String(order?.status || '');
+  if (['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(orderStatus)) return 'paid';
+
+  const dueTime = new Date(order?.payment_due_at || '').getTime();
+  if (Number.isFinite(dueTime) && dueTime <= Date.now()) return 'expired';
+  if (orderStatus === 'cancelled') return 'cancelled';
+  if (orderStatus && !['awaiting_confirm', 'unpaid'].includes(orderStatus)) return 'failed';
+  return '';
+}
+
 function resolvePaymentQueryState(order, gatewayResponse) {
   const gatewayOrder = Array.isArray(gatewayResponse?.OrderList)
     ? gatewayResponse.OrderList[0]
     : gatewayResponse;
   if (isPaidLike(gatewayOrder?.PayStatus) || isPaidLike(gatewayOrder?.PayFlag)) return 'paid';
-  if (['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(String(order?.status || ''))) return 'paid';
-
-  const dueTime = new Date(order?.payment_due_at || '').getTime();
-  if (Number.isFinite(dueTime) && dueTime <= Date.now()) return 'expired';
-  if (order?.status === 'cancelled') return 'cancelled';
-  if (!['awaiting_confirm', 'unpaid'].includes(String(order?.status || ''))) return 'failed';
+  const storedState = resolveStoredTerminalPaymentState(order);
+  if (storedState) return storedState;
 
   const payStatus = String(gatewayOrder?.PayStatus || '').trim().toUpperCase();
   const payFlag = String(gatewayOrder?.PayFlag || '').trim().toUpperCase();
@@ -1348,6 +1355,16 @@ app.post('/api/sinopac/query-payment', async (req, res) => {
     const paymentToken = String(req.body?.paymentToken || '').trim();
     if (!orderNo) throw new Error('orderNo is required');
     const order = await authorizePaymentRequest(req, orderNo, paymentToken);
+    const storedState = resolveStoredTerminalPaymentState(order);
+    if (storedState) {
+      return res.json({
+        ok: true,
+        request: null,
+        response: {},
+        order: toPublicOrderPaymentState(order),
+        paymentState: storedState,
+      });
+    }
     const instruction = await getOptionalOrderPaymentInstruction(orderNo);
     const providerOrderNo = instruction?.provider_order_no || orderNo;
     const inner = buildQueryBody({ ...(req.body || {}), orderNo: providerOrderNo });
@@ -1366,7 +1383,14 @@ app.post('/api/sinopac/query-payment', async (req, res) => {
     }
     res.json({ ok: true, request: inner, response: result.data, order: toPublicOrderPaymentState(order), paymentState });
   } catch (error) {
-    res.status(400).json({ ok: false, error: error.message });
+    const message = String(error?.message || '付款查詢失敗');
+    const orderNotFound = message.startsWith('Order not found:');
+    const invalidPaymentAccess = message === 'Invalid payment authorization';
+    res.status(orderNotFound ? 404 : invalidPaymentAccess ? 403 : 400).json({
+      ok: false,
+      code: orderNotFound ? 'ORDER_NOT_FOUND' : invalidPaymentAccess ? 'PAYMENT_ACCESS_INVALID' : 'PAYMENT_QUERY_FAILED',
+      error: message,
+    });
   }
 });
 
@@ -1578,6 +1602,7 @@ module.exports = {
   formatSinopacDeadline,
   buildQueryBody,
   buildPaymentResultUrl,
+  resolveStoredTerminalPaymentState,
   resolvePaymentQueryState,
   extractServerPaymentLink,
   paymentMethodFromRequest,

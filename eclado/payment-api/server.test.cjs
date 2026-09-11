@@ -415,6 +415,21 @@ test('resolvePaymentQueryState: 付款成功優先，逾期與取消不可再付
   }, {}), 'paid');
 });
 
+test('resolveStoredTerminalPaymentState: 後台終態可不查銀行直接關閉本機付款單', () => {
+  assert.equal(server.resolveStoredTerminalPaymentState({
+    status: 'cancelled',
+    payment_due_at: '2099-01-01T00:00:00.000Z',
+  }), 'cancelled');
+  assert.equal(server.resolveStoredTerminalPaymentState({
+    status: 'paid',
+    payment_due_at: '2099-01-01T00:00:00.000Z',
+  }), 'paid');
+  assert.equal(server.resolveStoredTerminalPaymentState({
+    status: 'unpaid',
+    payment_due_at: '2099-01-01T00:00:00.000Z',
+  }), '');
+});
+
 test('未完成付款依付款方式保留正確訂單狀態', () => {
   assert.equal(server.getPendingOrderStatus('A'), 'awaiting_confirm');
   assert.equal(server.getPendingOrderStatus('C'), 'unpaid');

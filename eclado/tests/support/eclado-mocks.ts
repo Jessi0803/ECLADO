@@ -205,6 +205,7 @@ export type MockEcladoApiOptions = {
   onGuestLookupRequest?: (request: { lookupCode: string; phone: string }) => void;
   onGuestDetailsRequest?: (request: { orderNo: string; guestAccessToken: string }) => void;
   paymentQueryStatus?: 'paid' | 'pending' | 'failed' | 'expired' | 'cancelled';
+  paymentQueryError?: string;
   productWriteError?: string;
   orderWriteError?: string;
   couponQuoteError?: string;
@@ -1055,6 +1056,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       });
     });
     await page.route('https://pay.ecladotaiwan.com/api/sinopac/query-payment', async route => {
+      if (options.paymentQueryError) {
+        return json(route, { ok:false, code:'PAYMENT_QUERY_FAILED', error:options.paymentQueryError }, 503);
+      }
       const status = options.paymentQueryStatus || 'paid';
       const payStatus = status === 'paid' ? '1C400' : status === 'pending' || status === 'expired' || status === 'cancelled' ? '1C200' : '1C250';
       const orderStatus = status === 'paid' ? 'paid' : status === 'cancelled' || status === 'expired' ? 'cancelled' : 'unpaid';

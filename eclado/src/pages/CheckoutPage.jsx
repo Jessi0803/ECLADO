@@ -125,7 +125,12 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
         if (cart.length > 0) return;
       }
       hydrateStoredPayment(storedPayment, state, result.response);
-    } catch {
+    } catch (error) {
+      if (['ORDER_NOT_FOUND', 'PAYMENT_ACCESS_INVALID'].includes(error?.code)) {
+        clearPendingPayment();
+        setPage('shop');
+        return;
+      }
       hydrateStoredPayment(storedPayment, 'error');
     } finally {
       setRestoringPayment(false);
@@ -363,9 +368,14 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
             />
 
             {paymentState === 'error' && (
-              <button type="button" onClick={restorePayment} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 18px', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12, letterSpacing:'0.12em' }}>
-                重新查詢付款狀態
-              </button>
+              <div style={{ display:'grid', gap:10 }}>
+                <button type="button" onClick={restorePayment} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 18px', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12, letterSpacing:'0.12em' }}>
+                  重新查詢付款狀態
+                </button>
+                <button type="button" onClick={startNewOrder} style={{ background:'transparent', color:'var(--dark)', border:'none', padding:'8px 0', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12, textDecoration:'underline', textUnderlineOffset:3 }}>
+                  清除舊付款紀錄並返回商城
+                </button>
+              </div>
             )}
 
             {paymentResult?.recoveryWarning && (
