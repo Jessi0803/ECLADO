@@ -346,8 +346,8 @@ begin
     awarded_quantity := candidate.gift_quantity * greatest(repeat_count, 1);
 
     select variant.product_id, variant.sku, variant.size, variant.gift_stock,
-      product.name_zh, product.name_en,
-      coalesce(image.storage_path, product.image_storage_path)
+      product.name_zh, product.name,
+      image.storage_path
     into gift_product_id, gift_item_sku, gift_size, available_quantity,
       gift_name_zh, gift_name_en, gift_image_path
     from public.product_variants variant

@@ -10,6 +10,10 @@ test('batch 4 adds amount and quantity gifts to the authoritative quote', () => 
   expect(sql).toContain("promotion.benefit_type in ('amount_gift', 'quantity_gift')");
   expect(sql).toContain('variant.gift_enabled = true');
   expect(sql).toContain("product.publication_status in ('active', 'event_only', 'gift_only')");
+  expect(sql).toContain('product.name_zh, product.name,');
+  expect(sql).not.toContain('product.name_en');
+  expect(sql).toContain('image.storage_path\n    into gift_product_id');
+  expect(sql).not.toContain('product.image_storage_path');
   expect(sql).toContain("'repeat_count', repeat_count");
   expect(sql).toContain('authoritative_quote_v3_gifts');
 });
