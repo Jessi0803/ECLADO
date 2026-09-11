@@ -284,6 +284,15 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
     setOrders(prev => prev.map(order => order.id === id ? { ...order, ...localPatch } : order));
   }
 
+  async function deleteCancelledOrder(id) {
+    const { data, error } = await supabase.rpc('delete_cancelled_order', {
+      p_order_id: id,
+    });
+    if (error) throw error;
+    setOrders(prev => prev.filter(order => order.id !== id));
+    return data;
+  }
+
   async function assignGuestOrderToMember(orderId, memberId) {
     const { data, error } = await supabase.rpc('assign_guest_order_to_member', {
       p_order_id: orderId,
@@ -495,7 +504,7 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
     }
     switch (page) {
       case 'dashboard': return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;
-      case 'orders': return <Orders orders={orders} members={members} persistOrderPatch={persistOrderPatch} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={ordersDefaultFilter} />;
+      case 'orders': return <Orders orders={orders} members={members} persistOrderPatch={persistOrderPatch} onDeleteCancelledOrder={deleteCancelledOrder} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={ordersDefaultFilter} />;
       case 'audit': return <AuditLogsPage />;
       case 'catalog': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'backorders': return <BackordersPage onInventoryChanged={fetchAll} />;

@@ -177,6 +177,7 @@ export type MockEcladoApiOptions = {
   onOrderPricingRequest?: (request: Record<string, unknown>) => void;
   onCouponQuote?: (request: Record<string, unknown>) => void;
   onOrderUpdate?: (update: Record<string, unknown>, url: string) => void;
+  onCancelledOrderDelete?: (orderId: string) => void;
   onProductInsert?: (product: Record<string, unknown>) => void;
   onProductUpdate?: (update: Record<string, unknown>, url: string) => void;
   onProductWithVariantsSave?: (request: Record<string, unknown>) => void;
@@ -531,6 +532,21 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       member_name: member.name || '',
       member_email: member.email || '',
     });
+  });
+
+  await page.route('**/rest/v1/rpc/delete_cancelled_order', async route => {
+    const orderId = String(route.request().postDataJSON()?.p_order_id || '');
+    const index = orders.findIndex(order => String(order.id) === orderId);
+    if (index < 0) return json(route, { message: 'Order not found' }, 404);
+    if (String(orders[index].status) !== 'cancelled') {
+      return json(route, { message: 'Only cancelled orders can be permanently deleted' }, 400);
+    }
+    if (orders[index].paid_at) {
+      return json(route, { message: 'Paid order records cannot be permanently deleted' }, 400);
+    }
+    orders.splice(index, 1);
+    options.onCancelledOrderDelete?.(orderId);
+    return json(route, { deleted: true, order_id: orderId });
   });
 
   await page.route('**/rest/v1/rpc/get_procurement_management_data', async route => json(route, procurement));

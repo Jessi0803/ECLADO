@@ -817,6 +817,42 @@ test('訂單管理可取消訂單並同步 cancelled 狀態', async ({ page }) =
   await expect(page.getByRole('button', { name: '取消訂單' })).toHaveCount(0);
 });
 
+test('已取消且未付款的訂單可經二次確認後永久刪除', async ({ page }) => {
+  const deletedOrderIds: string[] = [];
+  await mockAdminApis(page, {
+    orders: [{ ...adminOrderRows[0], status: 'cancelled', paid_at: null }],
+    onCancelledOrderDelete: orderId => deletedOrderIds.push(orderId),
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByRole('button', { name: '已取消' }).click();
+  await page.getByText('E2E-ORDER-001').click();
+  page.once('dialog', dialog => {
+    expect(dialog.message()).toContain('無法復原');
+    dialog.accept();
+  });
+  await page.getByRole('button', { name: '永久刪除訂單' }).click();
+
+  await expect.poll(() => deletedOrderIds).toEqual(['E2E-ORDER-001']);
+  await expect(page.getByText('E2E-ORDER-001')).toHaveCount(0);
+  await expect(page.locator('.detail-panel')).toHaveCount(0);
+});
+
+test('曾付款後取消的訂單保留帳務紀錄且不可永久刪除', async ({ page }) => {
+  await mockAdminApis(page, {
+    orders: [{ ...adminOrderRows[1], status: 'cancelled', paid_at: null }],
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByRole('button', { name: '已取消' }).click();
+  await page.getByText('E2E-ORDER-002').click();
+
+  await expect(page.getByText('此訂單曾付款，為保留帳務與稽核紀錄不可永久刪除。')).toBeVisible();
+  await expect(page.getByRole('button', { name: '永久刪除訂單' })).toHaveCount(0);
+});
+
 test('訂單改為已付款會送出 LINE 付款通知，LINE 失敗時改寄 Email', async ({ page }) => {
   const linePushes: Record<string, unknown>[] = [];
   const orderEmails: Record<string, unknown>[] = [];
