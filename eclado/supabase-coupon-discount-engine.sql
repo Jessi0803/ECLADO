@@ -59,6 +59,7 @@ as $$
     cross join product_data product
     where case scope.target_type
       when 'all_regular' then product.publication_status = 'active'
+      when 'all_sellable' then product.publication_status in ('active', 'event_only')
       when 'product' then scope.product_id = item.product_id
       when 'variant' then scope.product_variant_id = item.variant_id
       when 'category' then lower(btrim(scope.target_value)) = lower(btrim(coalesce(product.category, '')))
@@ -723,7 +724,7 @@ declare
 begin
   if not public.has_backoffice_permission('promotions.manage') then raise exception 'Promotion management access required' using errcode = '42501'; end if;
   if nullif(btrim(p_payload ->> 'name'), '') is null then raise exception 'Promotion name is required' using errcode = '22023'; end if;
-  if benefit not in ('percentage_discount', 'fixed_discount') or activation not in ('automatic', 'coupon_only') or scope_type not in ('all_regular', 'products') then raise exception 'Invalid discount promotion configuration' using errcode = '22023'; end if;
+  if benefit not in ('percentage_discount', 'fixed_discount') or activation not in ('automatic', 'coupon_only') or scope_type not in ('all_regular', 'all_sellable', 'products') then raise exception 'Invalid discount promotion configuration' using errcode = '22023'; end if;
   if threshold_type not in ('amount', 'quantity') then raise exception 'Invalid discount threshold type' using errcode = '22023'; end if;
   if threshold_type = 'quantity' and nullif(p_payload ->> 'threshold_value', '') is not null
     and (p_payload ->> 'threshold_value')::numeric <> trunc((p_payload ->> 'threshold_value')::numeric)
@@ -742,8 +743,8 @@ begin
     if not found then raise exception 'Promotion not found' using errcode = 'P0002'; end if;
     delete from public.promotion_scopes scope where scope.promotion_id = target_id;
   end if;
-  if scope_type = 'all_regular' then
-    insert into public.promotion_scopes (promotion_id, scope_role, target_type) values (target_id, 'qualification', 'all_regular'), (target_id, 'benefit', 'all_regular');
+  if scope_type in ('all_regular', 'all_sellable') then
+    insert into public.promotion_scopes (promotion_id, scope_role, target_type) values (target_id, 'qualification', scope_type), (target_id, 'benefit', scope_type);
   else
     for target_product_id in select jsonb_array_elements_text(p_payload -> 'product_ids')::integer loop
       insert into public.promotion_scopes (promotion_id, scope_role, target_type, product_id) values (target_id, 'qualification', 'product', target_product_id), (target_id, 'benefit', 'product', target_product_id);

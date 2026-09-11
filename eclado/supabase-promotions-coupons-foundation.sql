@@ -155,7 +155,7 @@ create table if not exists public.promotion_scopes (
   promotion_id uuid not null references public.promotions(id) on delete cascade,
   scope_role text not null check (scope_role in ('qualification', 'benefit')),
   target_type text not null check (
-    target_type in ('all_regular', 'product', 'variant', 'category', 'series')
+    target_type in ('all_regular', 'all_sellable', 'product', 'variant', 'category', 'series')
   ),
   product_id integer references public.products(id) on delete restrict,
   product_variant_id bigint references public.product_variants(id) on delete restrict,
@@ -163,7 +163,7 @@ create table if not exists public.promotion_scopes (
   mode text not null default 'include' check (mode in ('include', 'exclude')),
   created_at timestamptz not null default now(),
   constraint promotion_scopes_target_check check (
-    (target_type = 'all_regular' and product_id is null and product_variant_id is null and target_value is null)
+    (target_type in ('all_regular', 'all_sellable') and product_id is null and product_variant_id is null and target_value is null)
     or (target_type = 'product' and product_id is not null and product_variant_id is null and target_value is null)
     or (target_type = 'variant' and product_id is null and product_variant_id is not null and target_value is null)
     or (target_type in ('category', 'series') and product_id is null and product_variant_id is null and nullif(btrim(target_value), '') is not null)
@@ -184,7 +184,7 @@ create unique index if not exists promotion_scopes_unique_target_idx
   );
 
 comment on table public.promotion_scopes is
-  'Included and excluded qualification/benefit targets. all_regular excludes event_only and gift_only products.';
+  'Included and excluded qualification/benefit targets. all_regular means active products; all_sellable also includes event_only products. Neither includes gift_only products.';
 
 -- --------------------------------------------------------------------------
 -- One coupon campaign owns one normalized code in version 1.

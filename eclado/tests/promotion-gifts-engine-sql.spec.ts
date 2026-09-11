@@ -39,6 +39,13 @@ test('admin save requires enabled gift inventory', () => {
   expect(sql).toContain("has_backoffice_permission('promotions.manage')");
 });
 
+test('all-sellable scope includes active and event-only products through the authoritative matcher', () => {
+  expect(sql).toContain("target_type in ('all_regular', 'all_sellable', 'product', 'variant', 'category', 'series')");
+  expect(sql).toContain("when 'all_sellable' then product.publication_status in ('active', 'event_only')");
+  expect(sql).toContain("scope_type not in ('all_regular','all_sellable','products')");
+  expect(sql).toContain("scope_type in ('all_regular','all_sellable')");
+});
+
 test('public catalog RPCs hide gift inventory operational fields', () => {
   for (const field of ['gift_enabled', 'gift_stock', 'gift_min_stock']) {
     expect(sql).toContain(`'${field}'`);

@@ -25,7 +25,7 @@ test('優惠券第一批 migration 建立完整加法資料結構', () => {
   expect(sql).toContain("activation_type in ('automatic', 'coupon_only')");
   expect(sql).toContain("threshold_type in ('amount', 'quantity')");
   expect(sql).toContain("when benefit_type = 'quantity_gift' then 'quantity'");
-  expect(sql).toContain("target_type in ('all_regular', 'product', 'variant', 'category', 'series')");
+  expect(sql).toContain("target_type in ('all_regular', 'all_sellable', 'product', 'variant', 'category', 'series')");
 });
 
 test('優惠券與贈品交易表不允許前端直接寫入', () => {

@@ -12,6 +12,68 @@ alter table public.product_variants
   add column if not exists gift_stock integer not null default 0,
   add column if not exists gift_min_stock integer not null default 0;
 
+-- A dynamic storefront-wide scope includes ordinary and event-only products,
+-- while still excluding gift-only, draft, and archived products.
+alter table public.promotion_scopes
+  drop constraint if exists promotion_scopes_target_type_check;
+alter table public.promotion_scopes
+  drop constraint if exists promotion_scopes_target_check;
+alter table public.promotion_scopes
+  add constraint promotion_scopes_target_type_check check (
+    target_type in ('all_regular', 'all_sellable', 'product', 'variant', 'category', 'series')
+  );
+alter table public.promotion_scopes
+  add constraint promotion_scopes_target_check check (
+    (target_type in ('all_regular', 'all_sellable') and product_id is null and product_variant_id is null and target_value is null)
+    or (target_type = 'product' and product_id is not null and product_variant_id is null and target_value is null)
+    or (target_type = 'variant' and product_id is null and product_variant_id is not null and target_value is null)
+    or (target_type in ('category', 'series') and product_id is null and product_variant_id is null and nullif(btrim(target_value), '') is not null)
+  );
+
+create or replace function public.promotion_item_matches_scope(
+  p_promotion_id uuid,
+  p_item jsonb,
+  p_scope_role text
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with item_data as (
+    select
+      nullif(p_item ->> 'product_id', '')::integer as product_id,
+      nullif(p_item ->> 'variant_id', '')::bigint as variant_id
+  ), product_data as (
+    select product.*
+    from public.products product
+    join item_data item on item.product_id = product.id
+  ), scopes as (
+    select scope.*
+    from public.promotion_scopes scope
+    where scope.promotion_id = p_promotion_id
+      and scope.scope_role = p_scope_role
+  ), matched as (
+    select scope.mode
+    from scopes scope
+    cross join item_data item
+    cross join product_data product
+    where case scope.target_type
+      when 'all_regular' then product.publication_status = 'active'
+      when 'all_sellable' then product.publication_status in ('active', 'event_only')
+      when 'product' then scope.product_id = item.product_id
+      when 'variant' then scope.product_variant_id = item.variant_id
+      when 'category' then lower(btrim(scope.target_value)) = lower(btrim(coalesce(product.category, '')))
+      when 'series' then lower(btrim(scope.target_value)) = lower(btrim(coalesce(product.series, '')))
+      else false
+    end
+  )
+  select exists (select 1 from matched where mode = 'include')
+    and not exists (select 1 from matched where mode = 'exclude');
+$$;
+revoke all on function public.promotion_item_matches_scope(uuid, jsonb, text) from public;
+
 create or replace function public.prepare_product_variant()
 returns trigger language plpgsql security definer set search_path=public as $$
 begin
@@ -697,7 +759,7 @@ begin
   if not public.has_backoffice_permission('promotions.manage') then raise exception 'Promotion management access required' using errcode='42501'; end if;
   if nullif(btrim(p_payload->>'name'),'') is null then raise exception 'Promotion name is required' using errcode='22023'; end if;
   if benefit not in ('percentage_discount','fixed_discount','amount_gift','quantity_gift')
-    or activation not in ('automatic','coupon_only') or scope_type not in ('all_regular','products')
+    or activation not in ('automatic','coupon_only') or scope_type not in ('all_regular','all_sellable','products')
     then raise exception 'Invalid promotion configuration' using errcode='22023'; end if;
   if threshold_kind not in ('amount','quantity') then raise exception 'Invalid promotion threshold type' using errcode='22023'; end if;
   if threshold_kind = 'quantity' and nullif(p_payload->>'threshold_value','') is not null
@@ -720,8 +782,8 @@ begin
     if not found then raise exception 'Promotion not found' using errcode='P0002'; end if;
     delete from public.promotion_scopes where promotion_id=target_id;
   end if;
-  if scope_type='all_regular' then
-    insert into public.promotion_scopes(promotion_id,scope_role,target_type) values(target_id,'qualification','all_regular'),(target_id,'benefit','all_regular');
+  if scope_type in ('all_regular','all_sellable') then
+    insert into public.promotion_scopes(promotion_id,scope_role,target_type) values(target_id,'qualification',scope_type),(target_id,'benefit',scope_type);
   else
     for target_product_id in select jsonb_array_elements_text(p_payload->'product_ids')::integer loop
       insert into public.promotion_scopes(promotion_id,scope_role,target_type,product_id) values(target_id,'qualification','product',target_product_id),(target_id,'benefit','product',target_product_id);

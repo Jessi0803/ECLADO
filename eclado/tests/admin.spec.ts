@@ -1383,6 +1383,19 @@ test('活動管理可建立原子百分比折扣並指定全館一般商品', as
   expect(saves[0]).toMatchObject({ name:'E2E 九折活動', benefit_type:'percentage_discount', activation_type:'automatic', discount_rate:0.9, threshold_type:'amount', scope_type:'all_regular' });
 });
 
+test('活動可套用全館商品並包含活動限定商品', async ({ page }) => {
+  const saves: Record<string, unknown>[] = [];
+  await mockAdminApis(page, { onDiscountPromotionSave: payload => saves.push(payload) });
+  await page.goto('/admin');
+  await openAdminSection(page, /活動管理/);
+  await page.getByRole('button', { name:'+ 新增優惠活動' }).click();
+  await page.getByPlaceholder('例：秋季保養 9 折').fill('全館含活動限定九折');
+  await page.getByText('全館商品（含活動限定）', { exact:true }).click();
+  await page.getByRole('button', { name:'建立活動' }).click();
+  await expect.poll(() => saves.length).toBe(1);
+  expect(saves[0]).toMatchObject({ scope_type:'all_sellable', product_ids:[] });
+});
+
 test('活動管理不顯示已停用活動', async ({ page }) => {
   await mockAdminApis(page, {
     promotions: [
@@ -1468,6 +1481,26 @@ test('優惠券方案可打包多個優惠券專用活動', async ({ page }) => 
   await page.getByRole('button', { name:'建立優惠券' }).click();
   await expect.poll(() => couponSaves.length).toBe(1);
   expect(couponSaves[0]).toMatchObject({ name:'新客複合券', code:'WELCOME', promotion_ids:['coupon-pct','coupon-fixed'], allow_guest:true });
+});
+
+test('重複優惠碼顯示可理解的中文提示', async ({ page }) => {
+  const couponPromotions = [
+    { ...activePromotion, id:'coupon-pct', name:'九折', benefit_type:'percentage_discount', activation_type:'coupon_only', discount_rate:0.9, archived_at:null },
+  ];
+  await mockAdminApis(page, {
+    promotions:couponPromotions,
+    promotionWriteError:'duplicate key value violates unique constraint "coupon_campaigns_code_unique_idx"',
+  });
+  await page.goto('/admin'); await openAdminSection(page, /活動管理/);
+  await page.getByRole('button', { name:'優惠券方案' }).click();
+  await page.getByRole('button', { name:'+ 新增優惠券' }).click();
+  await page.getByLabel('優惠券名稱 *').fill('講座限定優惠券');
+  await page.getByLabel('優惠碼 *').fill('eclado0913');
+  await page.getByText(/九折 · 10% OFF/).click();
+  await page.getByRole('button', { name:'建立優惠券' }).click();
+
+  await expect(page.getByText('儲存失敗：優惠碼「ECLADO0913」已存在（可能已停用），請使用其他優惠碼。')).toBeVisible();
+  await expect(page.getByText(/coupon_campaigns_code_unique_idx/)).toHaveCount(0);
 });
 
 test('活動管理可從一般商品贈品庫存與贈品專用商品選擇贈品', async ({ page }) => {

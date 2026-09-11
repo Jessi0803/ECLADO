@@ -44,5 +44,6 @@ test('coupon configuration stays private and admin writes are transactional RPCs
 
 test('all-regular scope excludes event and gift-only products', () => {
   expect(sql).toContain("when 'all_regular' then product.publication_status = 'active'");
+  expect(sql).toContain("when 'all_sellable' then product.publication_status in ('active', 'event_only')");
   expect(sql).toContain('promotion_item_matches_scope');
 });
