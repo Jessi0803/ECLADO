@@ -1435,6 +1435,22 @@ test('活動限定商品可以被指定到優惠券專用活動', async ({ page 
   expect(saves[0]).toMatchObject({ activation_type:'coupon_only', scope_type:'products', product_ids:[88] });
 });
 
+test('活動指定商品可全選及全取消', async ({ page }) => {
+  await mockAdminApis(page);
+  await page.goto('/admin');
+  await openAdminSection(page, /活動管理/);
+  await page.getByRole('button', { name:'+ 新增優惠活動' }).click();
+  await page.getByText('指定商品', { exact:true }).click();
+
+  await page.getByRole('button', { name:'全選', exact:true }).click();
+  await expect(page.getByText(`指定商品（已選 ${adminProductRows.length}）`)).toBeVisible();
+  await expect(page.locator('input[type="checkbox"]:checked')).toHaveCount(adminProductRows.length);
+
+  await page.getByRole('button', { name:'全取消', exact:true }).click();
+  await expect(page.getByText('指定商品（已選 0）')).toBeVisible();
+  await expect(page.locator('input[type="checkbox"]:checked')).toHaveCount(0);
+});
+
 test('優惠券方案可打包多個優惠券專用活動', async ({ page }) => {
   const couponSaves: Record<string, unknown>[] = [];
   const couponPromotions = [

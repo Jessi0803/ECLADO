@@ -125,7 +125,13 @@ function DiscountPromotionForm({ promo, products, scopes, onClose }) {
     <div style={gridStyle}>{!isGift && <Field label="門檻類型"><select aria-label="門檻類型" style={inputStyle} value={form.threshold_type} onChange={e => set('threshold_type',e.target.value)}><option value="amount">滿額</option><option value="quantity">滿件</option></select></Field>}<Field label={form.benefit_type === 'quantity_gift' ? '滿幾件贈送 *' : isGift ? '滿額門檻（NT$）*' : form.threshold_type === 'quantity' ? '最低適用件數（選填）' : '最低適用金額（選填）'}><input type="number" min="1" step={form.threshold_type === 'quantity' ? '1' : undefined} style={inputStyle} value={form.threshold_value} onChange={e => set('threshold_value',e.target.value)} /></Field>{isGift && <><Field label="贈品庫存 *"><select aria-label="贈品庫存" style={inputStyle} value={form.gift_variant_id} onChange={e => set('gift_variant_id',e.target.value)}><option value="">請選擇贈品</option>{giftVariants.map(variant => <option key={variant.id} value={variant.id}>[{variant.sourceLabel}] {variant.productName} · {variant.size} · {variant.sku}（庫存 {variant.giftStock}）</option>)}</select></Field><Field label="每次贈送數量 *"><input type="number" min="1" style={inputStyle} value={form.gift_quantity} onChange={e => set('gift_quantity',e.target.value)} /></Field><Field label="達標方式"><select style={inputStyle} value={form.repeat_mode} onChange={e => set('repeat_mode',e.target.value)}><option value="once">每筆訂單只贈一次</option><option value="repeat">每達門檻重複贈送</option></select></Field></>}<Field label="開始時間（選填）"><input type="datetime-local" style={inputStyle} value={form.start_at} onChange={e => set('start_at',e.target.value)} /></Field><Field label="結束時間（選填）"><input type="datetime-local" style={inputStyle} value={form.end_at} onChange={e => set('end_at',e.target.value)} /></Field></div>
     {isGift && !giftVariants.length && <p role="alert" style={{ fontSize:12, color:'var(--red)' }}>目前沒有啟用中的贈品庫存，請先到商品與庫存的商品編輯頁設定。</p>}
     <Field label="適用範圍"><div style={{ display:'flex', gap:18, fontSize:13 }}><label><input type="radio" checked={form.scope_type === 'all_regular'} onChange={() => set('scope_type','all_regular')} /> 全館一般商品</label><label><input type="radio" checked={form.scope_type === 'products'} onChange={() => set('scope_type','products')} /> 指定商品</label></div><p style={{ fontSize:11, color:'var(--mid)', marginTop:7 }}>「全館一般商品」不包含活動限定與贈品；活動限定商品可在指定商品中單獨選取。</p></Field>
-    {form.scope_type === 'products' && <ProductPicker products={selectableProducts} selected={form.product_ids} onToggle={toggle} />}
+    {form.scope_type === 'products' && <ProductPicker
+      products={selectableProducts}
+      selected={form.product_ids}
+      onToggle={toggle}
+      onSelectAll={() => set('product_ids', new Set(selectableProducts.map(product => product.id)))}
+      onClear={() => set('product_ids', new Set())}
+    />}
     <SaveButtons saving={saving} onClose={onClose} label={promo ? '儲存變更' : '建立活動'} />
   </form></Editor>;
 }
@@ -157,7 +163,19 @@ function CouponForm({ coupon, promotions, linkedIds, onClose }) {
   </form></Editor>;
 }
 
-function ProductPicker({ products, selected, onToggle }) { return <Field label={`指定商品（已選 ${selected.size}）`}><div style={{ maxHeight:360, overflow:'auto', display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(230px,1fr))', gap:7, border:'1px solid var(--border)', padding:10 }}>{products.map(product => <label key={product.id} style={{ padding:'8px 9px', fontSize:12, border:`1px solid ${selected.has(product.id) ? 'var(--gold)' : 'transparent'}`, background:selected.has(product.id) ? '#fff' : 'var(--off)' }}><input type="checkbox" checked={selected.has(product.id)} onChange={() => onToggle(product.id)} /> {product.nameZh}<small style={{ display:'block', color:'var(--mid)', marginLeft:18 }}>{product.publicationStatus === 'event_only' ? '活動限定' : '一般商品'}</small></label>)}</div></Field>; }
+function ProductPicker({ products, selected, onToggle, onSelectAll, onClear }) {
+  const allSelected = products.length > 0 && products.every(product => selected.has(product.id));
+  return <div>
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:8, flexWrap:'wrap' }}>
+      <span style={{ ...labelStyle, marginBottom:0 }}>指定商品（已選 {selected.size}）</span>
+      <div style={{ display:'flex', gap:6 }}>
+        <button type="button" onClick={onSelectAll} disabled={allSelected || !products.length} style={{ ...secondaryButton, flex:'none', padding:'6px 12px', opacity:allSelected || !products.length ? 0.45 : 1 }}>全選</button>
+        <button type="button" onClick={onClear} disabled={!selected.size} style={{ ...secondaryButton, flex:'none', padding:'6px 12px', opacity:selected.size ? 1 : 0.45 }}>全取消</button>
+      </div>
+    </div>
+    <div style={{ maxHeight:360, overflow:'auto', display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(230px,1fr))', gap:7, border:'1px solid var(--border)', padding:10 }}>{products.map(product => <label key={product.id} style={{ padding:'8px 9px', fontSize:12, border:`1px solid ${selected.has(product.id) ? 'var(--gold)' : 'transparent'}`, background:selected.has(product.id) ? '#fff' : 'var(--off)' }}><input type="checkbox" checked={selected.has(product.id)} onChange={() => onToggle(product.id)} /> {product.nameZh}<small style={{ display:'block', color:'var(--mid)', marginLeft:18 }}>{product.publicationStatus === 'event_only' ? '活動限定' : '一般商品'}</small></label>)}</div>
+  </div>;
+}
 function getBenefitLabel(promotion, products) {
   if (!promotion?.benefit_type || promotion.benefit_type === 'legacy_discount') return `舊版複合折扣 · × ${promotion?.discount_rate} − NT$ ${Number(promotion?.discount_amount || 0).toLocaleString()}`;
   if (promotion.benefit_type === 'percentage_discount') return `${Math.round((1 - Number(promotion.discount_rate)) * 100)}% OFF`;
