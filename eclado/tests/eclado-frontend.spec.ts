@@ -923,6 +923,22 @@ test('現貨、預購、活動折扣與購物車操作', async ({ page }) => {
   await expect(cartDrawer.getByText('購物車是空的')).toBeVisible();
 });
 
+test('優惠券專用活動不會在輸入優惠碼前當成自動折扣', async ({ page }) => {
+  await mockEcladoApis(page, {
+    promotions: [{ ...activePromotion, activation_type: 'coupon_only' }],
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await expect(page.getByText('限時優惠')).toHaveCount(0);
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+
+  const cartDrawer = await openCart(page);
+  await expect(cartDrawer.getByText('E2E 測試活動')).toHaveCount(0);
+  await expect(cartDrawer.getByText(/活動指定商品/)).toHaveCount(0);
+  await expect(cartDrawer.getByText('NT$ 3,980').last()).toBeVisible();
+});
+
 test('活動折扣可先減金額再打折', async ({ page }) => {
   await mockEcladoApis(page, {
     promotions: [{

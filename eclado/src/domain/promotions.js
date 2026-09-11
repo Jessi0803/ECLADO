@@ -18,6 +18,7 @@ export function isPromotionLive(p) {
   const rate = Number(p?.discount_rate);
   const amount = Number(p?.discount_amount);
   if (p?.active === false) return false;
+  if (String(p?.activation_type || 'automatic') !== 'automatic') return false;
   if (!Number.isFinite(rate) || rate < 0 || rate > 1) return false;
   if (!Number.isFinite(amount) || amount < 0) return false;
   if (normProductIds(p).length === 0) return false;
