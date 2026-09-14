@@ -1478,9 +1478,37 @@ test('優惠券方案可打包多個優惠券專用活動', async ({ page }) => 
   await page.getByLabel('優惠碼 *').fill('welcome');
   await page.getByText(/九折 · 10% OFF/).click();
   await page.getByText(/再折百元 · 折抵 NT\$ 100/).click();
+  const orderedActivities = page.getByLabel('已選優惠活動執行順序');
+  await expect(orderedActivities.locator(':scope > div').nth(0)).toContainText('九折');
+  await expect(orderedActivities.locator(':scope > div').nth(1)).toContainText('再折百元');
+  await page.getByRole('button', { name:'將「再折百元」上移' }).click();
+  await expect(orderedActivities.locator(':scope > div').nth(0)).toContainText('再折百元');
+  await expect(orderedActivities.locator(':scope > div').nth(1)).toContainText('九折');
   await page.getByRole('button', { name:'建立優惠券' }).click();
   await expect.poll(() => couponSaves.length).toBe(1);
-  expect(couponSaves[0]).toMatchObject({ name:'新客複合券', code:'WELCOME', promotion_ids:['coupon-pct','coupon-fixed'], allow_guest:true });
+  expect(couponSaves[0]).toMatchObject({ name:'新客複合券', code:'WELCOME', promotion_ids:['coupon-fixed','coupon-pct'], allow_guest:true });
+});
+
+test('編輯優惠券會依後端排序還原活動執行順序', async ({ page }) => {
+  const couponPromotions = [
+    { ...activePromotion, id:'coupon-pct', name:'九折', benefit_type:'percentage_discount', activation_type:'coupon_only', discount_rate:0.9, archived_at:null },
+    { ...activePromotion, id:'coupon-fixed', name:'再折百元', benefit_type:'fixed_discount', activation_type:'coupon_only', discount_rate:1, discount_amount:100, archived_at:null },
+  ];
+  await mockAdminApis(page, {
+    promotions:couponPromotions,
+    couponCampaigns:[{ id:'coupon-1', name:'排序測試券', code:'ORDERED', active:true, audience_roles:['consumer'], allow_guest:true, stacking_policy:'coupon_only', archived_at:null }],
+    couponPromotions:[
+      { id:10, coupon_campaign_id:'coupon-1', promotion_id:'coupon-fixed', sort_order:0 },
+      { id:11, coupon_campaign_id:'coupon-1', promotion_id:'coupon-pct', sort_order:1 },
+    ],
+  });
+  await page.goto('/admin'); await openAdminSection(page, /活動管理/);
+  await page.getByRole('button', { name:'優惠券方案' }).click();
+  await page.getByRole('button', { name:'編輯' }).click();
+
+  const orderedActivities = page.getByLabel('已選優惠活動執行順序');
+  await expect(orderedActivities.locator(':scope > div').nth(0)).toContainText('再折百元');
+  await expect(orderedActivities.locator(':scope > div').nth(1)).toContainText('九折');
 });
 
 test('重複優惠碼顯示可理解的中文提示', async ({ page }) => {

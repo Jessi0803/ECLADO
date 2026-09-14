@@ -139,18 +139,36 @@ function DiscountPromotionForm({ promo, products, scopes, onClose }) {
 }
 
 function CouponForm({ coupon, promotions, linkedIds, onClose }) {
-  const [form,setForm] = useState({ name:coupon?.name || '', code:coupon?.code || '', description:coupon?.description || '', promotion_ids:new Set(linkedIds), start_at:toLocalInput(coupon?.start_at), end_at:toLocalInput(coupon?.end_at), total_usage_limit:coupon?.total_usage_limit || '', per_member_limit:coupon?.per_member_limit || '', audience_roles:new Set(coupon?.audience_roles || ROLES.map(([role]) => role)), allow_guest:coupon?.allow_guest ?? true, stacking_policy:coupon?.stacking_policy || 'allow_auto_gifts', active:coupon?.active ?? true });
+  const [form,setForm] = useState({ name:coupon?.name || '', code:coupon?.code || '', description:coupon?.description || '', promotion_ids:[...new Set(linkedIds)], start_at:toLocalInput(coupon?.start_at), end_at:toLocalInput(coupon?.end_at), total_usage_limit:coupon?.total_usage_limit || '', per_member_limit:coupon?.per_member_limit || '', audience_roles:new Set(coupon?.audience_roles || ROLES.map(([role]) => role)), allow_guest:coupon?.allow_guest ?? true, stacking_policy:coupon?.stacking_policy || 'allow_auto_gifts', active:coupon?.active ?? true });
   const [saving,setSaving] = useState(false); const [error,setError] = useState('');
   const set = (key,value) => setForm(current => ({ ...current, [key]:value }));
   function toggleSet(key,value) { const next = new Set(form[key]); next.has(value) ? next.delete(value) : next.add(value); set(key,next); }
+  function togglePromotion(id) {
+    setForm(current => ({
+      ...current,
+      promotion_ids:current.promotion_ids.includes(id)
+        ? current.promotion_ids.filter(promotionId => promotionId !== id)
+        : [...current.promotion_ids, id],
+    }));
+  }
+  function movePromotion(id, offset) {
+    setForm(current => {
+      const index = current.promotion_ids.indexOf(id);
+      const target = index + offset;
+      if (index < 0 || target < 0 || target >= current.promotion_ids.length) return current;
+      const promotionIds = [...current.promotion_ids];
+      [promotionIds[index], promotionIds[target]] = [promotionIds[target], promotionIds[index]];
+      return { ...current, promotion_ids:promotionIds };
+    });
+  }
   async function save(event) {
     event.preventDefault(); setError('');
     if (!form.name.trim() || !form.code.trim()) return setError('請輸入優惠券名稱與代碼');
-    if (!form.promotion_ids.size) return setError('請至少打包一個優惠券專用活動');
+    if (!form.promotion_ids.length) return setError('請至少打包一個優惠券專用活動');
     if (!form.audience_roles.size) return setError('請至少選擇一種適用會員');
     if (form.start_at && form.end_at && new Date(form.start_at) >= new Date(form.end_at)) return setError('結束時間必須晚於開始時間');
     setSaving(true);
-    const payload = { id:coupon?.id || null, ...form, code:form.code.trim().toUpperCase(), promotion_ids:[...form.promotion_ids], audience_roles:[...form.audience_roles], total_usage_limit:form.total_usage_limit === '' ? null : Number(form.total_usage_limit), per_member_limit:form.per_member_limit === '' ? null : Number(form.per_member_limit), start_at:form.start_at ? new Date(form.start_at).toISOString() : null, end_at:form.end_at ? new Date(form.end_at).toISOString() : null };
+    const payload = { id:coupon?.id || null, ...form, code:form.code.trim().toUpperCase(), promotion_ids:form.promotion_ids, audience_roles:[...form.audience_roles], total_usage_limit:form.total_usage_limit === '' ? null : Number(form.total_usage_limit), per_member_limit:form.per_member_limit === '' ? null : Number(form.per_member_limit), start_at:form.start_at ? new Date(form.start_at).toISOString() : null, end_at:form.end_at ? new Date(form.end_at).toISOString() : null };
     const { error:saveError } = await supabase.rpc('save_coupon_campaign', { p_payload:payload }); setSaving(false);
     if (saveError) {
       const message = String(saveError.message || '請稍後再試');
@@ -164,12 +182,35 @@ function CouponForm({ coupon, promotions, linkedIds, onClose }) {
   return <Editor title={coupon ? '編輯優惠券' : '新增優惠券'} back="返回優惠券列表" onClose={onClose} error={error}><form onSubmit={save} style={{ ...panelStyle, display:'flex', flexDirection:'column', gap:22 }}>
     <div style={gridStyle}><Field label="優惠券名稱 *"><input aria-label="優惠券名稱 *" style={inputStyle} value={form.name} onChange={e => set('name',e.target.value)} /></Field><Field label="優惠碼 *"><input aria-label="優惠碼 *" style={{ ...inputStyle, textTransform:'uppercase', letterSpacing:'0.12em' }} value={form.code} onChange={e => set('code',e.target.value.toUpperCase())} /></Field></div>
     <Field label="顧客說明（選填）"><textarea style={{ ...inputStyle, border:'1px solid var(--border)', padding:10 }} rows={2} value={form.description} onChange={e => set('description',e.target.value)} /></Field>
-    <Field label={`打包優惠活動 *（已選 ${form.promotion_ids.size}）`}>{!promotions.length ? <p style={{ fontSize:12, color:'var(--red)' }}>請先到「優惠活動」建立啟用方式為「優惠券專用」的活動。</p> : <div style={{ display:'grid', gap:8 }}>{promotions.map(promotion => <label key={promotion.id} style={{ border:'1px solid var(--border)', padding:'10px 12px', fontSize:12, background:form.promotion_ids.has(promotion.id) ? 'var(--off)' : '#fff' }}><input type="checkbox" checked={form.promotion_ids.has(promotion.id)} onChange={() => toggleSet('promotion_ids',promotion.id)} /> {promotion.name} · {getBenefitLabel(promotion, [])}</label>)}</div>}</Field>
+    <Field label={`打包優惠活動 *（已選 ${form.promotion_ids.length}）`}><CouponPromotionPicker promotions={promotions} selectedIds={form.promotion_ids} onToggle={togglePromotion} onMove={movePromotion} /></Field>
     <div style={gridStyle}><Field label="總使用上限（選填）"><input type="number" min="1" style={inputStyle} value={form.total_usage_limit} onChange={e => set('total_usage_limit',e.target.value)} /></Field><Field label="每位會員／訪客上限（選填）"><input type="number" min="1" style={inputStyle} value={form.per_member_limit} onChange={e => set('per_member_limit',e.target.value)} /></Field><Field label="與自動活動疊加"><select style={inputStyle} value={form.stacking_policy} onChange={e => set('stacking_policy',e.target.value)}><option value="coupon_only">只套用優惠券</option><option value="allow_auto_gifts">優惠券＋自動贈品</option><option value="allow_all">優惠券＋自動折扣＋自動贈品</option></select></Field></div>
     <Field label="適用會員"><div style={{ display:'flex', flexWrap:'wrap', gap:16 }}>{ROLES.map(([role,label]) => <label key={role} style={{ fontSize:13 }}><input type="checkbox" checked={form.audience_roles.has(role)} onChange={() => toggleSet('audience_roles',role)} /> {label}</label>)}<label style={{ fontSize:13 }}><input type="checkbox" checked={form.allow_guest} onChange={e => set('allow_guest',e.target.checked)} /> 允許訪客</label></div></Field>
     <div style={gridStyle}><Field label="開始時間（選填）"><input type="datetime-local" style={inputStyle} value={form.start_at} onChange={e => set('start_at',e.target.value)} /></Field><Field label="結束時間（選填）"><input type="datetime-local" style={inputStyle} value={form.end_at} onChange={e => set('end_at',e.target.value)} /></Field></div>
     <SaveButtons saving={saving} onClose={onClose} label={coupon ? '儲存變更' : '建立優惠券'} />
   </form></Editor>;
+}
+
+function CouponPromotionPicker({ promotions, selectedIds, onToggle, onMove }) {
+  if (!promotions.length) return <p style={{ fontSize:12, color:'var(--red)' }}>請先到「優惠活動」建立啟用方式為「優惠券專用」的活動。</p>;
+  const selected = selectedIds.map(id => promotions.find(promotion => promotion.id === id)).filter(Boolean);
+  const available = promotions.filter(promotion => !selectedIds.includes(promotion.id));
+  return <div style={{ display:'grid', gap:12 }}>
+    <p style={{ fontSize:11, color:'var(--mid)', lineHeight:1.6 }}>系統會由上往下依序計算；折扣基準與共用贈品庫存可能受順序影響。</p>
+    {selected.length > 0 && <div aria-label="已選優惠活動執行順序" style={{ display:'grid', gap:7 }}>
+      {selected.map((promotion, index) => <div key={promotion.id} style={{ display:'grid', gridTemplateColumns:'28px minmax(0,1fr) auto', alignItems:'center', gap:9, border:'1px solid var(--gold)', padding:'9px 10px', background:'var(--off)', fontSize:12 }}>
+        <strong aria-label={`執行順序 ${index + 1}`} style={{ textAlign:'center', fontSize:11 }}>{index + 1}</strong>
+        <label style={{ minWidth:0 }}><input type="checkbox" checked onChange={() => onToggle(promotion.id)} /> <span>{promotion.name} · {getBenefitLabel(promotion, [])}</span></label>
+        <div style={{ display:'flex', gap:5 }}>
+          <button type="button" aria-label={`將「${promotion.name}」上移`} disabled={index === 0} onClick={() => onMove(promotion.id, -1)} style={{ ...secondaryButton, flex:'none', padding:'5px 9px', opacity:index === 0 ? 0.4 : 1 }}>↑</button>
+          <button type="button" aria-label={`將「${promotion.name}」下移`} disabled={index === selected.length - 1} onClick={() => onMove(promotion.id, 1)} style={{ ...secondaryButton, flex:'none', padding:'5px 9px', opacity:index === selected.length - 1 ? 0.4 : 1 }}>↓</button>
+        </div>
+      </div>)}
+    </div>}
+    {available.length > 0 && <div>
+      <span style={{ ...labelStyle, marginBottom:6 }}>可加入活動</span>
+      <div style={{ display:'grid', gap:7 }}>{available.map(promotion => <label key={promotion.id} style={{ border:'1px solid var(--border)', padding:'9px 12px', fontSize:12, background:'#fff' }}><input type="checkbox" checked={false} onChange={() => onToggle(promotion.id)} /> {promotion.name} · {getBenefitLabel(promotion, [])}</label>)}</div>
+    </div>}
+  </div>;
 }
 
 function ProductPicker({ products, selected, onToggle, onSelectAll, onClear }) {
