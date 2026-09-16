@@ -13,13 +13,22 @@ with function_checks as (
     pg_get_functiondef('public.create_order_with_pricing(jsonb,text,text,text,text,text,text,text)'::regprocedure)
       ilike '%quote_result := public.quote_order_pricing(p_items, normalized_fulfillment_method)%'
       as order_uses_quote,
-    pg_get_functiondef('public.quote_order_pricing(jsonb,text)'::regprocedure)
+    pg_get_functiondef(coalesce(
+      to_regprocedure('public.quote_order_pricing_internal_20260916(jsonb,text)'),
+      to_regprocedure('public.quote_order_pricing(jsonb,text)')
+    ))
       ilike '%promotion.benefit_type = ''legacy_discount''%'
       as legacy_only,
-    pg_get_functiondef('public.quote_order_pricing(jsonb,text)'::regprocedure)
+    pg_get_functiondef(coalesce(
+      to_regprocedure('public.quote_order_pricing_internal_20260916(jsonb,text)'),
+      to_regprocedure('public.quote_order_pricing(jsonb,text)')
+    ))
       ilike '%promotion.activation_type = ''automatic''%'
       as automatic_only,
-    pg_get_functiondef('public.quote_order_pricing(jsonb,text)'::regprocedure)
+    pg_get_functiondef(coalesce(
+      to_regprocedure('public.quote_order_pricing_internal_20260916(jsonb,text)'),
+      to_regprocedure('public.quote_order_pricing(jsonb,text)')
+    ))
       ilike '%publication_status in (''active'', ''event_only'')%'
       as gift_only_rejected,
     not exists (
@@ -71,7 +80,15 @@ with function_checks as (
         + (value ->> 'shipping')::numeric
     ) as total_equation_valid,
     bool_and(value -> 'pricing_snapshot' ->> 'engine' = 'authoritative_quote_v1')
-      as snapshot_engine_valid
+      as snapshot_engine_valid,
+    bool_and(not ((value -> 'items' -> 0) ? 'professional_price'))
+      as public_items_hide_professional_price,
+    bool_and(not ((value -> 'items' -> 0) ? 'apply_tier_multiplier'))
+      as public_items_hide_tier_control,
+    bool_and(not ((value #> '{pricing_snapshot,items,0}') ? 'professional_price'))
+      as snapshot_items_hide_professional_price,
+    bool_and(not ((value #> '{pricing_snapshot,items,0}') ? 'apply_tier_multiplier'))
+      as snapshot_items_hide_tier_control
   from quote
 )
 select
@@ -91,6 +108,10 @@ select
   and quote_checks.discount_valid
   and quote_checks.total_equation_valid
   and quote_checks.snapshot_engine_valid
+  and quote_checks.public_items_hide_professional_price
+  and quote_checks.public_items_hide_tier_control
+  and quote_checks.snapshot_items_hide_professional_price
+  and quote_checks.snapshot_items_hide_tier_control
     as batch_2_all_checks_passed
 from function_checks
 cross join quote_checks;

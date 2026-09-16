@@ -266,6 +266,14 @@ begin
 end;
 $$;
 
+-- Renaming preserves PostgreSQL ACLs. These helpers are implementation details
+-- and must not remain directly callable through grants inherited from batch 3.
+revoke all on function public.quote_order_pricing_discount_v2(jsonb, text, text, text)
+  from public, anon, authenticated;
+revoke all on function public.create_order_with_pricing_discount_v2(
+  jsonb, text, text, text, text, text, text, text, text
+) from public, anon, authenticated;
+
 create or replace function public.quote_order_pricing(
   p_items jsonb,
   p_fulfillment_method text,

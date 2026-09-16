@@ -18,6 +18,16 @@ test('batch 4 adds amount and quantity gifts to the authoritative quote', () => 
   expect(sql).toContain('authoritative_quote_v3_gifts');
 });
 
+test('renamed pricing helpers cannot retain public-facing execute grants', () => {
+  expect(sql).toContain(
+    'revoke all on function public.quote_order_pricing_discount_v2(jsonb, text, text, text)',
+  );
+  expect(sql).toContain(
+    'revoke all on function public.create_order_with_pricing_discount_v2(',
+  );
+  expect(sql).toContain('from public, anon, authenticated');
+});
+
 test('gift stock is reserved atomically and cannot become a backorder', () => {
   expect(sql).toContain('promotion_gift_reservations');
   expect(sql).toContain('order by variant.id for update');

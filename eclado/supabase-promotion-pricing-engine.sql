@@ -190,8 +190,6 @@ begin
       'img', product_row.image_url,
       'qty', quantity,
       'list_price', list_price,
-      'professional_price', professional_price,
-      'apply_tier_multiplier', product_row.apply_tier_multiplier,
       'member_role', member_role,
       'price', unit_price,
       'unit_price', unit_price,

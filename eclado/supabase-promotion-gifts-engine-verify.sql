@@ -3,6 +3,16 @@ select jsonb_build_object(
   'order_rpc', to_regprocedure('public.create_order_with_pricing(jsonb,text,text,text,text,text,text,text,text)') is not null,
   'discount_quote_helper', to_regprocedure('public.quote_order_pricing_discount_v2(jsonb,text,text,text)') is not null,
   'discount_order_helper', to_regprocedure('public.create_order_with_pricing_discount_v2(jsonb,text,text,text,text,text,text,text,text)') is not null,
+  'discount_quote_helper_not_public', not has_function_privilege(
+    'anon', 'public.quote_order_pricing_discount_v2(jsonb,text,text,text)', 'EXECUTE'
+  ) and not has_function_privilege(
+    'authenticated', 'public.quote_order_pricing_discount_v2(jsonb,text,text,text)', 'EXECUTE'
+  ),
+  'discount_order_helper_not_public', not has_function_privilege(
+    'anon', 'public.create_order_with_pricing_discount_v2(jsonb,text,text,text,text,text,text,text,text)', 'EXECUTE'
+  ) and not has_function_privilege(
+    'authenticated', 'public.create_order_with_pricing_discount_v2(jsonb,text,text,text,text,text,text,text,text)', 'EXECUTE'
+  ),
   'gift_status', exists (
     select 1 from pg_constraint
     where conname='products_publication_status_check'

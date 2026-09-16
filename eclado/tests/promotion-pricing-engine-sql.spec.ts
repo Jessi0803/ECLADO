@@ -6,6 +6,10 @@ const sql = readFileSync(
   join(process.cwd(), 'supabase-promotion-pricing-engine.sql'),
   'utf8',
 );
+const legacySql = readFileSync(
+  join(process.cwd(), 'supabase-authoritative-pricing.sql'),
+  'utf8',
+);
 
 function bodyOf(signature: string, nextMarker: string) {
   return sql.match(new RegExp(
@@ -58,4 +62,13 @@ test('會員價、專業門檻、運費與活動擇優規則仍存在權威核�
   expect(sql).toContain('order by candidate.discount desc, candidate.created_at asc, candidate.id asc');
   expect(sql).toContain("'version', 3");
   expect(sql).toContain("'engine', 'authoritative_quote_v1'");
+});
+
+test('公開報價與新訂單快照不序列化專業價計算輸入', () => {
+  for (const source of [sql, legacySql]) {
+    expect(source).toContain('professional_price := variant_row.pro_price');
+    expect(source).toContain('tier.professional_price_multiplier');
+    expect(source).not.toContain("'professional_price', professional_price");
+    expect(source).not.toContain("'apply_tier_multiplier', product_row.apply_tier_multiplier");
+  }
 });

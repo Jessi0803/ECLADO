@@ -310,8 +310,9 @@ orders
 1. `supabase-coupon-member-targeting.sql`
 2. `supabase-coupon-discount-engine.sql`
 3. `supabase-promotion-gifts-engine.sql`
+4. `supabase-professional-price-quote-hardening.sql`
 
-最後一步會重新掛回含贈品判斷的公開計價與建單函式；順序不可顛倒。
+第三步會重新掛回含贈品判斷的公開計價與建單函式；第四步會封裝兩參數計價核心、移除公開回應中的專業價計算輸入，並撤銷內部 helper 的前端執行權。順序不可顛倒。
 
 ## 第一版不建立的資料表
 

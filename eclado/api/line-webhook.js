@@ -1,5 +1,26 @@
 const crypto = require('crypto');
 
+async function readRawBody(req) {
+  const chunks = [];
+  let total = 0;
+
+  for await (const chunk of req) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    total += buffer.length;
+    chunks.push(buffer);
+  }
+
+  return Buffer.concat(chunks, total);
+}
+
+function hasValidSignature(rawBody, suppliedSignature, secret) {
+  if (typeof suppliedSignature !== 'string' || !suppliedSignature.trim()) return false;
+
+  const expected = crypto.createHmac('sha256', secret).update(rawBody).digest();
+  const supplied = Buffer.from(suppliedSignature, 'base64');
+  return supplied.length === expected.length && crypto.timingSafeEqual(supplied, expected);
+}
+
 module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     return res.status(200).send('OK');
@@ -8,18 +29,31 @@ module.exports = async function handler(req, res) {
     return res.status(405).end();
   }
 
-  // Verify LINE signature
-  const secret = process.env.LINE_CHANNEL_SECRET;
-  if (secret) {
-    const signature = req.headers['x-line-signature'];
-    const body = JSON.stringify(req.body);
-    const hash = crypto.createHmac('SHA256', secret).update(body).digest('base64');
-    if (hash !== signature) {
-      return res.status(403).send('Invalid signature');
-    }
+  const secret = String(process.env.LINE_CHANNEL_SECRET || '').trim();
+  if (!secret) {
+    console.error('[LINE webhook] verification secret is not configured');
+    return res.status(503).send('Webhook verification unavailable');
   }
 
-  const events = req.body?.events || [];
+  let rawBody;
+  try {
+    rawBody = await readRawBody(req);
+  } catch {
+    return res.status(400).send('Invalid request body');
+  }
+
+  if (!hasValidSignature(rawBody, req.headers?.['x-line-signature'], secret)) {
+    return res.status(403).send('Invalid signature');
+  }
+
+  let body;
+  try {
+    body = JSON.parse(rawBody.toString('utf8'));
+  } catch {
+    return res.status(400).send('Invalid JSON');
+  }
+
+  const events = Array.isArray(body?.events) ? body.events : [];
 
   for (const event of events) {
     if (event.type === 'follow' && event.source?.userId) {

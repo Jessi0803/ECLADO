@@ -815,8 +815,6 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         img: '',
         qty,
         list_price: listPrice,
-        professional_price: professionalPrice,
-        apply_tier_multiplier: product.apply_tier_multiplier !== false,
         member_role: role,
         price: unitPrice,
         unit_price: unitPrice,
