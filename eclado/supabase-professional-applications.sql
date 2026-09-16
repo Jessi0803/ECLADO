@@ -17,6 +17,11 @@ create table if not exists public.professional_applications (
     check (status in ('pending', 'approved', 'rejected')),
   source text not null default 'standalone'
     check (source in ('registration', 'standalone')),
+  admin_notification_sent_at timestamptz,
+  admin_notification_attempts integer not null default 0
+    check (admin_notification_attempts >= 0),
+  admin_notification_last_attempt_at timestamptz,
+  admin_notification_error text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -25,7 +30,11 @@ create index if not exists idx_professional_applications_status
   on public.professional_applications (status, created_at desc);
 
 alter table public.professional_applications
-  add column if not exists source text not null default 'standalone';
+  add column if not exists source text not null default 'standalone',
+  add column if not exists admin_notification_sent_at timestamptz,
+  add column if not exists admin_notification_attempts integer not null default 0,
+  add column if not exists admin_notification_last_attempt_at timestamptz,
+  add column if not exists admin_notification_error text;
 
 drop trigger if exists trg_professional_applications_updated_at on public.professional_applications;
 create trigger trg_professional_applications_updated_at

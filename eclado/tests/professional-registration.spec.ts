@@ -138,11 +138,13 @@ test('一般會員註冊：signUp metadata 攜帶 role=consumer，不觸發 prof
 
 test('美容師申請頁：送出後安全 RPC 帶正確資料並進入審核中', async ({ page }) => {
   let capturedApplicationBody: Record<string, unknown> | null = null;
+  let capturedAdminNotice: Record<string, unknown> | null = null;
 
   await mockEcladoApis(page, {
     authUser: loggedInUser('consumer@example.com'),
     profiles: [consumerProfile()],
     onApplicationInsert: application => { capturedApplicationBody = application; },
+    onApplicationAdminNotice: request => { capturedAdminNotice = request; },
   });
 
   await page.goto('/professional-apply');
@@ -165,6 +167,7 @@ test('美容師申請頁：送出後安全 RPC 帶正確資料並進入審核中
   expect(app.studio_name).toBe('獨立申請工作室');
   expect(app.status).toBe('pending');
   expect(app.source).toBe('standalone');
+  expect(capturedAdminNotice).toEqual({ applicationId:app.id });
 });
 
 test('審核中會員不能再次送出美容師申請', async ({ page }) => {

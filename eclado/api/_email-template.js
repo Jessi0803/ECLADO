@@ -17,7 +17,12 @@ function textToHtml(text = '') {
     .join('<br>');
 }
 
-function buildBrandedEmailHtml(text) {
+function buildBrandedEmailHtml(text, options = {}) {
+  const ctaUrl = String(options.ctaUrl || '').trim();
+  const ctaLabel = String(options.ctaLabel || '').trim();
+  const cta = ctaUrl && ctaLabel
+    ? `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:28px;"><tr><td style="background:#181817;"><a href="${escapeHtml(ctaUrl)}" style="display:inline-block;padding:13px 24px;color:#ffffff;text-decoration:none;font-size:13px;letter-spacing:0.08em;">${escapeHtml(ctaLabel)}</a></td></tr></table>`
+    : '';
   return `<!doctype html>
 <html lang="zh-Hant">
   <head>
@@ -38,6 +43,7 @@ function buildBrandedEmailHtml(text) {
             <tr>
               <td style="padding:38px 36px;font-size:14px;line-height:1.9;color:#4b4945;word-break:break-word;">
                 ${textToHtml(text)}
+                ${cta}
               </td>
             </tr>
             <tr>

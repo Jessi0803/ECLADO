@@ -199,6 +199,7 @@ export type MockEcladoApiOptions = {
   onApplicationUpdate?: (update: Record<string, unknown>, url: string) => void;
   onApplicationInsert?: (application: Record<string, unknown>) => void;
   onApplicationNotice?: (request: Record<string, unknown>) => void;
+  onApplicationAdminNotice?: (request: Record<string, unknown>) => void;
   onPurchaseOrderSave?: (request: Record<string, unknown>) => void;
   onPurchaseOrderDelete?: (orderId: number) => void;
   onLinePush?: (body: Record<string, unknown>) => void;
@@ -1015,6 +1016,12 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     const body = route.request().postDataJSON();
     options.onApplicationNotice?.(body);
     return json(route, { ok: true, channel: 'line', status: 'approved' });
+  });
+
+  await page.route('**/api/professional-application-admin-notice', async route => {
+    const body = route.request().postDataJSON();
+    options.onApplicationAdminNotice?.(body);
+    return json(route, { ok: true, sent: true });
   });
 
   await page.route('**/rest/v1/professional_applications**', async route => {
