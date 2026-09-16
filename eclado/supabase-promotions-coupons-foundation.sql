@@ -201,6 +201,7 @@ create table if not exists public.coupon_campaigns (
   active boolean not null default true,
   total_usage_limit integer check (total_usage_limit is null or total_usage_limit > 0),
   per_member_limit integer check (per_member_limit is null or per_member_limit > 0),
+  audience_mode text not null default 'roles',
   audience_roles text[] not null default array['consumer', 'pro', 'instructor', 'distributor']::text[],
   allow_guest boolean not null default true,
   stacking_policy text not null default 'allow_auto_gifts' check (
@@ -215,8 +216,12 @@ create table if not exists public.coupon_campaigns (
     start_at is null or end_at is null or start_at < end_at
   ),
   constraint coupon_campaigns_audience_check check (
-    cardinality(audience_roles) > 0
-    and audience_roles <@ array['consumer', 'pro', 'instructor', 'distributor']::text[]
+    (audience_mode = 'roles'
+      and cardinality(audience_roles) > 0
+      and audience_roles <@ array['consumer', 'pro', 'instructor', 'distributor']::text[])
+    or (audience_mode = 'members'
+      and cardinality(audience_roles) = 0
+      and allow_guest is false)
   )
 );
 
@@ -251,6 +256,106 @@ create index if not exists coupon_campaigns_live_idx
 
 comment on table public.coupon_campaigns is
   'Coupon bundle header. Version 1 stores exactly one normalized code per campaign and is never publicly selectable.';
+
+create table if not exists public.coupon_campaign_members (
+  id bigint generated always as identity primary key,
+  coupon_campaign_id uuid not null references public.coupon_campaigns(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  unique (coupon_campaign_id, user_id)
+);
+
+alter table public.coupon_campaigns
+  add column if not exists audience_mode text not null default 'roles';
+alter table public.coupon_campaigns
+  drop constraint if exists coupon_campaigns_audience_check,
+  drop constraint if exists coupon_campaigns_audience_mode_check;
+alter table public.coupon_campaigns
+  add constraint coupon_campaigns_audience_mode_check check (
+    (audience_mode = 'roles'
+      and cardinality(audience_roles) > 0
+      and audience_roles <@ array['consumer', 'pro', 'instructor', 'distributor']::text[])
+    or (audience_mode = 'members'
+      and cardinality(audience_roles) = 0
+      and allow_guest is false)
+  );
+
+create index if not exists coupon_campaign_members_user_idx
+  on public.coupon_campaign_members (user_id, coupon_campaign_id);
+
+create or replace function public.coupon_campaign_allows_identity(p_campaign_id uuid, p_member_role text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce((
+    select case campaign.audience_mode
+      when 'members' then auth.uid() is not null and exists (
+        select 1 from public.coupon_campaign_members target
+        where target.coupon_campaign_id = campaign.id and target.user_id = auth.uid()
+      )
+      else p_member_role = any(campaign.audience_roles)
+        and (auth.uid() is not null or campaign.allow_guest is true)
+    end
+    from public.coupon_campaigns campaign
+    where campaign.id = p_campaign_id
+  ), false);
+$$;
+
+create or replace function public.search_coupon_members(p_query text, p_limit integer default 20)
+returns table (user_id uuid, name text, email text, phone text, role text)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  query_text text := btrim(coalesce(p_query, ''));
+  result_limit integer := least(greatest(coalesce(p_limit, 20), 1), 50);
+begin
+  if not public.has_backoffice_permission('promotions.manage') then
+    raise exception 'Promotion management access required' using errcode = '42501';
+  end if;
+  if length(query_text) < 2 then return; end if;
+  return query
+  select profile.id, profile.name, profile.email, profile.phone, profile.role
+  from public.profiles profile
+  where coalesce(profile.name, '') ilike '%' || query_text || '%'
+    or coalesce(profile.email, '') ilike '%' || query_text || '%'
+    or coalesce(profile.phone, '') ilike '%' || query_text || '%'
+  order by profile.name nulls last, profile.created_at desc, profile.id
+  limit result_limit;
+end;
+$$;
+
+create or replace function public.get_coupon_campaign_members(p_coupon_campaign_id uuid)
+returns table (user_id uuid, name text, email text, phone text, role text)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.has_backoffice_permission('promotions.manage') then
+    raise exception 'Promotion management access required' using errcode = '42501';
+  end if;
+  return query
+  select profile.id, profile.name, profile.email, profile.phone, profile.role
+  from public.coupon_campaign_members target
+  join public.profiles profile on profile.id = target.user_id
+  where target.coupon_campaign_id = p_coupon_campaign_id
+  order by profile.name nulls last, profile.created_at desc, profile.id;
+end;
+$$;
+
+revoke all on function public.coupon_campaign_allows_identity(uuid, text) from public;
+revoke all on function public.search_coupon_members(text, integer) from public, anon;
+revoke all on function public.get_coupon_campaign_members(uuid) from public, anon;
+grant execute on function public.search_coupon_members(text, integer) to authenticated;
+grant execute on function public.get_coupon_campaign_members(uuid) to authenticated;
 
 -- --------------------------------------------------------------------------
 -- Coupon bundles reference one or more coupon-only atomic promotions.
@@ -514,6 +619,7 @@ create trigger trg_protect_order_pricing_snapshot
 alter table public.promotion_scopes enable row level security;
 alter table public.coupon_campaigns enable row level security;
 alter table public.coupon_promotions enable row level security;
+alter table public.coupon_campaign_members enable row level security;
 alter table public.coupon_redemptions enable row level security;
 alter table public.promotion_gift_reservations enable row level security;
 alter table public.order_adjustments enable row level security;
@@ -521,6 +627,7 @@ alter table public.order_adjustments enable row level security;
 revoke all on table public.promotion_scopes from anon, authenticated;
 revoke all on table public.coupon_campaigns from anon, authenticated;
 revoke all on table public.coupon_promotions from anon, authenticated;
+revoke all on table public.coupon_campaign_members from anon, authenticated;
 revoke all on table public.coupon_redemptions from anon, authenticated;
 revoke all on table public.promotion_gift_reservations from anon, authenticated;
 revoke all on table public.order_adjustments from anon, authenticated;
@@ -528,7 +635,8 @@ revoke all on table public.order_adjustments from anon, authenticated;
 grant select, insert, update, delete on table
   public.promotion_scopes,
   public.coupon_campaigns,
-  public.coupon_promotions
+  public.coupon_promotions,
+  public.coupon_campaign_members
 to authenticated;
 
 grant select on table
@@ -539,6 +647,7 @@ to authenticated;
 
 grant usage, select on sequence public.promotion_scopes_id_seq to authenticated;
 grant usage, select on sequence public.coupon_promotions_id_seq to authenticated;
+grant usage, select on sequence public.coupon_campaign_members_id_seq to authenticated;
 
 drop policy if exists "promotion_scopes_manage" on public.promotion_scopes;
 create policy "promotion_scopes_manage"
@@ -555,6 +664,12 @@ create policy "coupon_campaigns_manage"
 drop policy if exists "coupon_promotions_manage" on public.coupon_promotions;
 create policy "coupon_promotions_manage"
   on public.coupon_promotions for all to authenticated
+  using (public.has_backoffice_permission('promotions.manage'))
+  with check (public.has_backoffice_permission('promotions.manage'));
+
+drop policy if exists "coupon_campaign_members_manage" on public.coupon_campaign_members;
+create policy "coupon_campaign_members_manage"
+  on public.coupon_campaign_members for all to authenticated
   using (public.has_backoffice_permission('promotions.manage'))
   with check (public.has_backoffice_permission('promotions.manage'));
 
@@ -610,6 +725,7 @@ begin
       'active', to_jsonb(old) -> 'active',
       'total_usage_limit', to_jsonb(old) -> 'total_usage_limit',
       'per_member_limit', to_jsonb(old) -> 'per_member_limit',
+      'audience_mode', to_jsonb(old) -> 'audience_mode',
       'audience_roles', to_jsonb(old) -> 'audience_roles',
       'allow_guest', to_jsonb(old) -> 'allow_guest',
       'stacking_policy', to_jsonb(old) -> 'stacking_policy',
@@ -623,6 +739,7 @@ begin
       'active', to_jsonb(new) -> 'active',
       'total_usage_limit', to_jsonb(new) -> 'total_usage_limit',
       'per_member_limit', to_jsonb(new) -> 'per_member_limit',
+      'audience_mode', to_jsonb(new) -> 'audience_mode',
       'audience_roles', to_jsonb(new) -> 'audience_roles',
       'allow_guest', to_jsonb(new) -> 'allow_guest',
       'stacking_policy', to_jsonb(new) -> 'stacking_policy',
@@ -684,6 +801,11 @@ create trigger trg_audit_coupon_campaigns
 drop trigger if exists trg_audit_coupon_promotions on public.coupon_promotions;
 create trigger trg_audit_coupon_promotions
   after insert or update or delete on public.coupon_promotions
+  for each row execute function public.capture_promotion_configuration_audit();
+
+drop trigger if exists trg_audit_coupon_campaign_members on public.coupon_campaign_members;
+create trigger trg_audit_coupon_campaign_members
+  after insert or update or delete on public.coupon_campaign_members
   for each row execute function public.capture_promotion_configuration_audit();
 
 commit;

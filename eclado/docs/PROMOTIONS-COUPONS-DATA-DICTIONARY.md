@@ -30,6 +30,7 @@
 ```text
 coupon_campaigns
   ├─ coupon_promotions ── promotions
+  ├─ coupon_campaign_members ── profiles
   │                         └─ promotion_scopes
   ├─ coupon_redemptions ── orders
   └─ promotion_gift_reservations ── product_variants
@@ -90,6 +91,7 @@ orders
 | `active` | `boolean` | 是 | 手動啟用開關。 |
 | `total_usage_limit` | `integer` | 否 | 全部使用上限；空值表示不限。保留中的訂單也占用額度。 |
 | `per_member_limit` | `integer` | 否 | 每位會員／訪客身份可使用次數；空值表示不限。 |
+| `audience_mode` | `text` | 是 | `roles` 依會員身分判斷；`members` 只允許明確指定的登入會員。 |
 | `audience_roles` | `text[]` | 是 | 可使用的會員類型，例如 consumer、pro、instructor、distributor。訪客依 consumer 規則處理。 |
 | `allow_guest` | `boolean` | 是 | 是否允許未登入訪客使用。 |
 | `stacking_policy` | `text` | 是 | `coupon_only`、`allow_auto_gifts` 或 `allow_all`。預設 `allow_auto_gifts`。 |
@@ -103,11 +105,24 @@ orders
 
 - 前台輸入代碼後呼叫後端 RPC；不允許直接 select 優惠券資料。
 - 後端正規化代碼後檢查唯一值、啟用狀態、期間、會員資格與使用上限。
+- 指定會員模式不開放訪客；會員日後變更身分仍保留資格，直到管理員將其移出名單。
 - 驗證成功後讀取 `coupon_promotions`，逐項評估所打包的活動。
 - 如果所有子活動都不成立，不占用優惠券使用次數。
 - 訂單只保存優惠券名稱與遮罩，不在訂單公開資料完整顯示代碼。
 
-### 3. `coupon_promotions`
+### 3. `coupon_campaign_members`
+
+記錄指定會員優惠券的可用會員名單。會員搜尋只透過具備 `promotions.manage` 權限的後端 RPC 提供必要欄位，不直接開放會員表。
+
+| 欄位 | 建議型別 | 必填 | 對應與用途 |
+|---|---|---:|---|
+| `id` | `bigint generated always as identity` | 是 | 主鍵。 |
+| `coupon_campaign_id` | `uuid` | 是 | 對應 `coupon_campaigns.id`。 |
+| `user_id` | `uuid` | 是 | 對應 `profiles.id`；同一張券不可重複指定同一會員。 |
+| `created_by` | `uuid` | 否 | 加入名單的管理員。 |
+| `created_at` | `timestamptz` | 是 | 加入時間。 |
+
+### 4. `coupon_promotions`
 
 優惠券與單一活動之間的關聯表。
 
@@ -126,7 +141,7 @@ orders
 - 修改已被多張優惠券引用的活動時，後台必須顯示受影響優惠券數量。
 - 優惠券期間與活動期間同時成立時才可套用；後台應警告期間不相交的設定。
 
-### 4. `coupon_redemptions`
+### 5. `coupon_redemptions`
 
 優惠券額度與每人使用次數的交易紀錄。
 
@@ -153,7 +168,7 @@ orders
 - 取消、失敗或逾期改為 `released`，額度重新開放。
 - 已付款後取消是否歸還優惠券不自動處理，需由未來退款政策或管理員操作決定。
 
-### 5. `promotion_gift_reservations`
+### 6. `promotion_gift_reservations`
 
 保留未付款訂單已承諾的贈品規格庫存。
 
@@ -181,7 +196,7 @@ orders
 - 付款成功後轉為 `consumed`，並透過既有訂單庫存配置正式扣庫存。
 - 付款失敗、取消或逾期時轉為 `released`。
 
-### 6. `order_adjustments`
+### 7. `order_adjustments`
 
 記錄訂單實際成立的每一項優惠，供訂單明細、稽核與統計使用。
 
@@ -287,6 +302,16 @@ orders
 - 已被優惠券或訂單引用的活動只能封存。
 - 已有 redemption 或訂單紀錄的優惠券只能封存。
 - 訂單 adjustment、優惠券核銷及價格快照不得由一般管理員直接修改。
+
+## 指定會員功能的部署順序
+
+既有正式資料庫新增指定會員優惠券時，依序執行：
+
+1. `supabase-coupon-member-targeting.sql`
+2. `supabase-coupon-discount-engine.sql`
+3. `supabase-promotion-gifts-engine.sql`
+
+最後一步會重新掛回含贈品判斷的公開計價與建單函式；順序不可顛倒。
 
 ## 第一版不建立的資料表
 

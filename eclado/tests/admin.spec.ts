@@ -1511,6 +1511,51 @@ test('編輯優惠券會依後端排序還原活動執行順序', async ({ page 
   await expect(orderedActivities.locator(':scope > div').nth(1)).toContainText('九折');
 });
 
+test('優惠券可搜尋並指定個別會員使用', async ({ page }) => {
+  const couponSaves: Record<string, unknown>[] = [];
+  const couponPromotions = [
+    { ...activePromotion, id:'coupon-pct', name:'九折', benefit_type:'percentage_discount', activation_type:'coupon_only', discount_rate:0.9, archived_at:null },
+  ];
+  await mockAdminApis(page, { promotions:couponPromotions, onCouponCampaignSave:payload => couponSaves.push(payload) });
+  await page.goto('/admin'); await openAdminSection(page, /活動管理/);
+  await page.getByRole('button', { name:'優惠券方案' }).click();
+  await page.getByRole('button', { name:'+ 新增優惠券' }).click();
+  await page.getByLabel('優惠券名稱 *').fill('指定會員券');
+  await page.getByLabel('優惠碼 *').fill('member-only');
+  await page.getByText(/九折 · 10% OFF/).click();
+  await page.getByText('指定會員', { exact:true }).click();
+  await page.getByLabel('搜尋指定會員').fill('測試');
+  await page.getByRole('button', { name:'搜尋', exact:true }).click();
+  const results = page.getByLabel('會員搜尋結果');
+  await expect(results.getByText('測試會員', { exact:true })).toBeVisible();
+  await results.getByText('測試會員', { exact:true }).click();
+  await expect(page.getByText('已指定 1 位會員')).toBeVisible();
+  await page.getByRole('button', { name:'建立優惠券' }).click();
+  await expect.poll(() => couponSaves.length).toBe(1);
+  expect(couponSaves[0]).toMatchObject({
+    audience_mode:'members', member_ids:['user-consumer-1'], audience_roles:[], allow_guest:false,
+  });
+});
+
+test('編輯指定會員優惠券會還原既有會員名單', async ({ page }) => {
+  const couponPromotions = [
+    { ...activePromotion, id:'coupon-pct', name:'九折', benefit_type:'percentage_discount', activation_type:'coupon_only', discount_rate:0.9, archived_at:null },
+  ];
+  await mockAdminApis(page, {
+    promotions:couponPromotions,
+    couponCampaigns:[{ id:'coupon-member-1', name:'會員專屬券', code:'MEMBER', active:true, audience_mode:'members', audience_roles:[], allow_guest:false, stacking_policy:'coupon_only', archived_at:null }],
+    couponPromotions:[{ id:10, coupon_campaign_id:'coupon-member-1', promotion_id:'coupon-pct', sort_order:0 }],
+    couponCampaignMembers:[{ coupon_campaign_id:'coupon-member-1', user_id:'user-line-1' }],
+  });
+  await page.goto('/admin'); await openAdminSection(page, /活動管理/);
+  await page.getByRole('button', { name:'優惠券方案' }).click();
+  await expect(page.getByText('指定會員 1 位')).toBeVisible();
+  await page.getByRole('button', { name:'編輯' }).click();
+  const selected = page.getByLabel('已指定會員');
+  await expect(selected.getByText('LINE 會員', { exact:true })).toBeVisible();
+  await expect(selected.getByText(/專業會員 · line-member@example.com/)).toBeVisible();
+});
+
 test('重複優惠碼顯示可理解的中文提示', async ({ page }) => {
   const couponPromotions = [
     { ...activePromotion, id:'coupon-pct', name:'九折', benefit_type:'percentage_discount', activation_type:'coupon_only', discount_rate:0.9, archived_at:null },

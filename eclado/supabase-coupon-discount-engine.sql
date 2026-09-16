@@ -237,8 +237,7 @@ begin
       and (target.end_at is null or target.end_at > now());
 
     if not found
-      or not (member_role = any(campaign.audience_roles))
-      or (current_user_id is null and campaign.allow_guest is false)
+      or not public.coupon_campaign_allows_identity(campaign.id, member_role)
     then
       raise exception '優惠碼無效或目前無法使用' using errcode = '22023';
     end if;
@@ -548,8 +547,7 @@ begin
       and target.code_normalized = normalized_code
       and target.active = true
       and target.archived_at is null
-      and (quote_result ->> 'member_role') = any(target.audience_roles)
-      and (current_user_id is not null or target.allow_guest = true)
+      and public.coupon_campaign_allows_identity(target.id, quote_result ->> 'member_role')
       and (target.start_at is null or target.start_at <= now())
       and (target.end_at is null or target.end_at > now());
     if not found then
@@ -767,15 +765,48 @@ declare
   target_id uuid := nullif(p_payload ->> 'id', '')::uuid;
   promotion_id uuid;
   position integer := 0;
+  audience_mode_value text := coalesce(nullif(p_payload ->> 'audience_mode', ''), 'roles');
+  audience_role_values text[];
+  selected_member_ids uuid[];
 begin
   if not public.has_backoffice_permission('promotions.manage') then raise exception 'Promotion management access required' using errcode = '42501'; end if;
   if nullif(btrim(p_payload ->> 'name'), '') is null or nullif(btrim(p_payload ->> 'code'), '') is null then raise exception 'Coupon name and code are required' using errcode = '22023'; end if;
   if jsonb_array_length(coalesce(p_payload -> 'promotion_ids', '[]'::jsonb)) = 0 then raise exception 'Choose at least one coupon activity' using errcode = '22023'; end if;
+  if audience_mode_value not in ('roles', 'members') then raise exception 'Invalid coupon audience mode' using errcode = '22023'; end if;
+
+  select coalesce(array_agg(distinct role_name), '{}'::text[])
+  into audience_role_values
+  from jsonb_array_elements_text(coalesce(p_payload -> 'audience_roles', '[]'::jsonb)) role_name;
+
+  select coalesce(array_agg(distinct member_id), '{}'::uuid[])
+  into selected_member_ids
+  from (
+    select value::uuid as member_id
+    from jsonb_array_elements_text(coalesce(p_payload -> 'member_ids', '[]'::jsonb))
+  ) selected;
+
+  if audience_mode_value = 'roles' and cardinality(audience_role_values) = 0 then
+    raise exception 'Choose at least one member role' using errcode = '22023';
+  end if;
+  if audience_mode_value = 'members' and cardinality(selected_member_ids) = 0 then
+    raise exception 'Choose at least one member' using errcode = '22023';
+  end if;
+  if audience_mode_value = 'members' and exists (
+    select 1
+    from unnest(selected_member_ids) as selected(member_id)
+    where not exists (
+      select 1
+      from public.profiles profile
+      where profile.id = selected.member_id
+    )
+  ) then
+    raise exception 'Selected member not found' using errcode = '22023';
+  end if;
   if target_id is null then
-    insert into public.coupon_campaigns (name, description, code, code_normalized, start_at, end_at, active, total_usage_limit, per_member_limit, audience_roles, allow_guest, stacking_policy, created_by, updated_by)
-    values (btrim(p_payload ->> 'name'), nullif(btrim(p_payload ->> 'description'), ''), btrim(p_payload ->> 'code'), upper(btrim(p_payload ->> 'code')), nullif(p_payload ->> 'start_at', '')::timestamptz, nullif(p_payload ->> 'end_at', '')::timestamptz, coalesce((p_payload ->> 'active')::boolean, true), nullif(p_payload ->> 'total_usage_limit', '')::integer, nullif(p_payload ->> 'per_member_limit', '')::integer, array(select jsonb_array_elements_text(coalesce(p_payload -> 'audience_roles', '["consumer","pro","instructor","distributor"]'::jsonb))), coalesce((p_payload ->> 'allow_guest')::boolean, true), coalesce(p_payload ->> 'stacking_policy', 'allow_auto_gifts'), auth.uid(), auth.uid()) returning id into target_id;
+    insert into public.coupon_campaigns (name, description, code, code_normalized, start_at, end_at, active, total_usage_limit, per_member_limit, audience_mode, audience_roles, allow_guest, stacking_policy, created_by, updated_by)
+    values (btrim(p_payload ->> 'name'), nullif(btrim(p_payload ->> 'description'), ''), btrim(p_payload ->> 'code'), upper(btrim(p_payload ->> 'code')), nullif(p_payload ->> 'start_at', '')::timestamptz, nullif(p_payload ->> 'end_at', '')::timestamptz, coalesce((p_payload ->> 'active')::boolean, true), nullif(p_payload ->> 'total_usage_limit', '')::integer, nullif(p_payload ->> 'per_member_limit', '')::integer, audience_mode_value, case when audience_mode_value = 'roles' then audience_role_values else '{}'::text[] end, case when audience_mode_value = 'roles' then coalesce((p_payload ->> 'allow_guest')::boolean, true) else false end, coalesce(p_payload ->> 'stacking_policy', 'allow_auto_gifts'), auth.uid(), auth.uid()) returning id into target_id;
   else
-    update public.coupon_campaigns set name = btrim(p_payload ->> 'name'), description = nullif(btrim(p_payload ->> 'description'), ''), code = btrim(p_payload ->> 'code'), start_at = nullif(p_payload ->> 'start_at', '')::timestamptz, end_at = nullif(p_payload ->> 'end_at', '')::timestamptz, active = coalesce((p_payload ->> 'active')::boolean, true), total_usage_limit = nullif(p_payload ->> 'total_usage_limit', '')::integer, per_member_limit = nullif(p_payload ->> 'per_member_limit', '')::integer, audience_roles = array(select jsonb_array_elements_text(coalesce(p_payload -> 'audience_roles', '["consumer","pro","instructor","distributor"]'::jsonb))), allow_guest = coalesce((p_payload ->> 'allow_guest')::boolean, true), stacking_policy = coalesce(p_payload ->> 'stacking_policy', 'allow_auto_gifts'), updated_by = auth.uid()
+    update public.coupon_campaigns set name = btrim(p_payload ->> 'name'), description = nullif(btrim(p_payload ->> 'description'), ''), code = btrim(p_payload ->> 'code'), start_at = nullif(p_payload ->> 'start_at', '')::timestamptz, end_at = nullif(p_payload ->> 'end_at', '')::timestamptz, active = coalesce((p_payload ->> 'active')::boolean, true), total_usage_limit = nullif(p_payload ->> 'total_usage_limit', '')::integer, per_member_limit = nullif(p_payload ->> 'per_member_limit', '')::integer, audience_mode = audience_mode_value, audience_roles = case when audience_mode_value = 'roles' then audience_role_values else '{}'::text[] end, allow_guest = case when audience_mode_value = 'roles' then coalesce((p_payload ->> 'allow_guest')::boolean, true) else false end, stacking_policy = coalesce(p_payload ->> 'stacking_policy', 'allow_auto_gifts'), updated_by = auth.uid()
     where id = target_id and archived_at is null;
     if not found then raise exception 'Coupon campaign not found' using errcode = 'P0002'; end if;
     delete from public.coupon_promotions link where link.coupon_campaign_id = target_id;
@@ -784,6 +815,15 @@ begin
     insert into public.coupon_promotions (coupon_campaign_id, promotion_id, sort_order) values (target_id, promotion_id, position);
     position := position + 1;
   end loop;
+  delete from public.coupon_campaign_members target
+  where target.coupon_campaign_id = target_id
+    and (audience_mode_value = 'roles' or not (target.user_id = any(selected_member_ids)));
+  if audience_mode_value = 'members' then
+    insert into public.coupon_campaign_members (coupon_campaign_id, user_id, created_by)
+    select target_id, member_id, auth.uid()
+    from unnest(selected_member_ids) member_id
+    on conflict (coupon_campaign_id, user_id) do nothing;
+  end if;
   return target_id;
 end;
 $$;

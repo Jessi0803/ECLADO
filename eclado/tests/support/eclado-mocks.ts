@@ -234,6 +234,7 @@ export type MockEcladoApiOptions = {
   promotionScopes?: Record<string, unknown>[];
   couponCampaigns?: Record<string, unknown>[];
   couponPromotions?: Record<string, unknown>[];
+  couponCampaignMembers?: Record<string, unknown>[];
   orders?: Record<string, unknown>[];
   profiles?: Record<string, unknown>[];
   professionalSales?: Record<string, unknown>[];
@@ -261,6 +262,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   const promotionScopes = options.promotionScopes || [];
   const couponCampaigns = options.couponCampaigns || [];
   const couponPromotions = options.couponPromotions || [];
+  const couponCampaignMembers = options.couponCampaignMembers || [];
   const orders = options.orders || [];
   const profiles = [...(options.profiles || [])];
   const applications = (options.applications || []).map(application => ({ ...application }));
@@ -711,6 +713,24 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     return json(route, couponCampaigns);
   });
   await page.route('**/rest/v1/coupon_promotions**', async route => json(route, couponPromotions));
+  await page.route('**/rest/v1/coupon_campaign_members**', async route => json(route, couponCampaignMembers));
+  await page.route('**/rest/v1/rpc/get_coupon_campaign_members', async route => {
+    const request = route.request().postDataJSON();
+    const selectedIds = couponCampaignMembers
+      .filter(link => link.coupon_campaign_id === request?.p_coupon_campaign_id)
+      .map(link => link.user_id);
+    return json(route, profiles.filter(profile => selectedIds.includes(profile.id)).map(profile => ({
+      user_id:profile.id, name:profile.name, email:profile.email, phone:profile.phone, role:profile.role,
+    })));
+  });
+  await page.route('**/rest/v1/rpc/search_coupon_members', async route => {
+    const request = route.request().postDataJSON();
+    const query = String(request?.p_query || '').toLowerCase();
+    const limit = Math.min(Math.max(Number(request?.p_limit) || 20, 1), 50);
+    return json(route, profiles.filter(profile => [profile.name, profile.email, profile.phone].some(value => String(value || '').toLowerCase().includes(query))).slice(0, limit).map(profile => ({
+      user_id:profile.id, name:profile.name, email:profile.email, phone:profile.phone, role:profile.role,
+    })));
+  });
   await page.route('**/rest/v1/rpc/save_discount_promotion', async route => {
     const request = route.request().postDataJSON();
     options.onDiscountPromotionSave?.(request?.p_payload || {});

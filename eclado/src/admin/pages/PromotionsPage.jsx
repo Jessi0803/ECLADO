@@ -15,6 +15,7 @@ export default function Promotions({ products }) {
   const [scopes, setScopes] = useState([]);
   const [coupons, setCoupons] = useState([]);
   const [links, setLinks] = useState([]);
+  const [couponMembers, setCouponMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingPromotion, setEditingPromotion] = useState(null);
   const [editingCoupon, setEditingCoupon] = useState(null);
@@ -22,22 +23,24 @@ export default function Promotions({ products }) {
 
   async function load() {
     setLoading(true); setLoadError('');
-    const [promotionResult, scopeResult, couponResult, linkResult] = await Promise.all([
+    const [promotionResult, scopeResult, couponResult, linkResult, memberLinkResult] = await Promise.all([
       supabase.from('promotions').select('*').is('archived_at', null).order('created_at', { ascending:false }),
       supabase.from('promotion_scopes').select('*'),
       supabase.from('coupon_campaigns').select('*').is('archived_at', null).order('created_at', { ascending:false }),
       supabase.from('coupon_promotions').select('*').order('sort_order'),
+      supabase.from('coupon_campaign_members').select('coupon_campaign_id,user_id'),
     ]);
-    const error = promotionResult.error || scopeResult.error || couponResult.error || linkResult.error;
+    const error = promotionResult.error || scopeResult.error || couponResult.error || linkResult.error || memberLinkResult.error;
     if (error) setLoadError(`載入失敗：${error.message}`);
     setPromotions(promotionResult.data || []); setScopes(scopeResult.data || []);
-    setCoupons(couponResult.data || []); setLinks(linkResult.data || []); setLoading(false);
+    setCoupons(couponResult.data || []); setLinks(linkResult.data || []);
+    setCouponMembers(memberLinkResult.data || []); setLoading(false);
   }
 
   useEffect(() => { load(); }, []);
 
   if (editingPromotion) return <DiscountPromotionForm promo={editingPromotion === 'new' ? null : editingPromotion} products={products} scopes={scopes} onClose={() => { setEditingPromotion(null); load(); }} />;
-  if (editingCoupon) return <CouponForm coupon={editingCoupon === 'new' ? null : editingCoupon} promotions={promotions.filter(p => p.activation_type === 'coupon_only' && !p.archived_at && ['percentage_discount', 'fixed_discount', 'amount_gift', 'quantity_gift'].includes(p.benefit_type))} linkedIds={editingCoupon === 'new' ? [] : links.filter(link => link.coupon_campaign_id === editingCoupon.id).map(link => link.promotion_id)} onClose={() => { setEditingCoupon(null); load(); }} />;
+  if (editingCoupon) return <CouponForm coupon={editingCoupon === 'new' ? null : editingCoupon} promotions={promotions.filter(p => p.activation_type === 'coupon_only' && !p.archived_at && ['percentage_discount', 'fixed_discount', 'amount_gift', 'quantity_gift'].includes(p.benefit_type))} linkedIds={editingCoupon === 'new' ? [] : links.filter(link => link.coupon_campaign_id === editingCoupon.id).map(link => link.promotion_id)} linkedMemberIds={editingCoupon === 'new' ? [] : couponMembers.filter(link => link.coupon_campaign_id === editingCoupon.id).map(link => link.user_id)} onClose={() => { setEditingCoupon(null); load(); }} />;
 
   return <div>
     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18, gap:16, flexWrap:'wrap' }}>
@@ -48,7 +51,7 @@ export default function Promotions({ products }) {
       {[['promotions','優惠活動'],['coupons','優惠券方案']].map(([value,label]) => <button key={value} onClick={() => setTab(value)} style={{ padding:'11px 20px', border:'none', borderBottom:tab === value ? '2px solid var(--dark)' : '2px solid transparent', background:'none', color:tab === value ? 'var(--dark)' : 'var(--mid)', cursor:'pointer', fontSize:13 }}>{label}</button>)}
     </div>
     {loadError && <div role="alert" style={{ marginBottom:16, color:'var(--red)', fontSize:13 }}>{loadError}</div>}
-    {loading ? <Empty text="載入中…" /> : tab === 'promotions' ? <PromotionList list={promotions} scopes={scopes} products={products} onEdit={setEditingPromotion} onReload={load} /> : <CouponList list={coupons} links={links} promotions={promotions} onEdit={setEditingCoupon} onReload={load} />}
+    {loading ? <Empty text="載入中…" /> : tab === 'promotions' ? <PromotionList list={promotions} scopes={scopes} products={products} onEdit={setEditingPromotion} onReload={load} /> : <CouponList list={coupons} links={links} memberLinks={couponMembers} promotions={promotions} onEdit={setEditingCoupon} onReload={load} />}
   </div>;
 }
 
@@ -76,7 +79,7 @@ function PromotionList({ list, scopes, products, onEdit, onReload }) {
   </div>;
 }
 
-function CouponList({ list, links, promotions, onEdit, onReload }) {
+function CouponList({ list, links, memberLinks, promotions, onEdit, onReload }) {
   async function archive(coupon) {
     if (!confirm(`確定停用優惠券「${coupon.name}」？既有訂單與核銷紀錄會保留。`)) return;
     const { error } = await supabase.from('coupon_campaigns').update({ active:false, archived_at:new Date().toISOString() }).eq('id', coupon.id);
@@ -85,7 +88,9 @@ function CouponList({ list, links, promotions, onEdit, onReload }) {
   if (!list.length) return <Empty text="目前還沒有優惠券方案" />;
   return <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(320px, 1fr))', gap:16 }}>{list.map(coupon => {
     const benefitNames = links.filter(link => link.coupon_campaign_id === coupon.id).map(link => promotions.find(p => p.id === link.promotion_id)?.name).filter(Boolean);
-    return <Card key={coupon.id}><div style={{ display:'flex', justifyContent:'space-between', gap:12 }}><div><h3 style={{ fontSize:15, marginBottom:5 }}>{coupon.name}</h3><code style={{ color:'var(--gold)', letterSpacing:'0.12em' }}>{coupon.code}</code></div><span style={{ fontSize:11, color:coupon.active ? '#287a50' : 'var(--mid)' }}>{coupon.active ? '啟用' : '停用'}</span></div><div style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7 }}>{benefitNames.join(' ＋ ') || '尚未連結折扣活動'}</div><div style={{ fontSize:11, color:'var(--mid)', lineHeight:1.7 }}>每人上限：{coupon.per_member_limit || '不限'} 次 · 總上限：{coupon.total_usage_limit || '不限'} 次<br />訪客：{coupon.allow_guest ? '可使用' : '不可使用'} · 疊加：{stackingLabel(coupon.stacking_policy)}</div><div style={{ display:'flex', gap:8, marginTop:'auto' }}><button onClick={() => onEdit(coupon)} style={secondaryButton}>編輯</button><button onClick={() => archive(coupon)} style={{ ...secondaryButton, flex:'none', color:'var(--red)' }}>停用</button></div></Card>;
+    const targetMemberCount = memberLinks.filter(link => link.coupon_campaign_id === coupon.id).length;
+    const audienceLabel = coupon.audience_mode === 'members' ? `指定會員 ${targetMemberCount} 位` : `依會員身分${coupon.allow_guest ? '（含訪客）' : ''}`;
+    return <Card key={coupon.id}><div style={{ display:'flex', justifyContent:'space-between', gap:12 }}><div><h3 style={{ fontSize:15, marginBottom:5 }}>{coupon.name}</h3><code style={{ color:'var(--gold)', letterSpacing:'0.12em' }}>{coupon.code}</code></div><span style={{ fontSize:11, color:coupon.active ? '#287a50' : 'var(--mid)' }}>{coupon.active ? '啟用' : '停用'}</span></div><div style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7 }}>{benefitNames.join(' ＋ ') || '尚未連結折扣活動'}</div><div style={{ fontSize:11, color:'var(--mid)', lineHeight:1.7 }}>適用：{audienceLabel}<br />每人上限：{coupon.per_member_limit || '不限'} 次 · 總上限：{coupon.total_usage_limit || '不限'} 次<br />疊加：{stackingLabel(coupon.stacking_policy)}</div><div style={{ display:'flex', gap:8, marginTop:'auto' }}><button onClick={() => onEdit(coupon)} style={secondaryButton}>編輯</button><button onClick={() => archive(coupon)} style={{ ...secondaryButton, flex:'none', color:'var(--red)' }}>停用</button></div></Card>;
   })}</div>;
 }
 
@@ -138,9 +143,11 @@ function DiscountPromotionForm({ promo, products, scopes, onClose }) {
   </form></Editor>;
 }
 
-function CouponForm({ coupon, promotions, linkedIds, onClose }) {
-  const [form,setForm] = useState({ name:coupon?.name || '', code:coupon?.code || '', description:coupon?.description || '', promotion_ids:[...new Set(linkedIds)], start_at:toLocalInput(coupon?.start_at), end_at:toLocalInput(coupon?.end_at), total_usage_limit:coupon?.total_usage_limit || '', per_member_limit:coupon?.per_member_limit || '', audience_roles:new Set(coupon?.audience_roles || ROLES.map(([role]) => role)), allow_guest:coupon?.allow_guest ?? true, stacking_policy:coupon?.stacking_policy || 'allow_auto_gifts', active:coupon?.active ?? true });
+function CouponForm({ coupon, promotions, linkedIds, linkedMemberIds, onClose }) {
+  const [form,setForm] = useState({ name:coupon?.name || '', code:coupon?.code || '', description:coupon?.description || '', promotion_ids:[...new Set(linkedIds)], audience_mode:coupon?.audience_mode || 'roles', member_ids:[...new Set(linkedMemberIds)], start_at:toLocalInput(coupon?.start_at), end_at:toLocalInput(coupon?.end_at), total_usage_limit:coupon?.total_usage_limit || '', per_member_limit:coupon?.per_member_limit || '', audience_roles:new Set(coupon?.audience_roles || ROLES.map(([role]) => role)), allow_guest:coupon?.allow_guest ?? true, stacking_policy:coupon?.stacking_policy || 'allow_auto_gifts', active:coupon?.active ?? true });
   const [saving,setSaving] = useState(false); const [error,setError] = useState('');
+  const [memberQuery,setMemberQuery] = useState(''); const [memberResults,setMemberResults] = useState([]);
+  const [selectedMembers,setSelectedMembers] = useState([]); const [memberSearchLoading,setMemberSearchLoading] = useState(false);
   const set = (key,value) => setForm(current => ({ ...current, [key]:value }));
   function toggleSet(key,value) { const next = new Set(form[key]); next.has(value) ? next.delete(value) : next.add(value); set(key,next); }
   function togglePromotion(id) {
@@ -161,14 +168,39 @@ function CouponForm({ coupon, promotions, linkedIds, onClose }) {
       return { ...current, promotion_ids:promotionIds };
     });
   }
+  useEffect(() => {
+    if (!coupon?.id || coupon.audience_mode !== 'members') return;
+    supabase.rpc('get_coupon_campaign_members', { p_coupon_campaign_id:coupon.id }).then(({ data, error:loadError }) => {
+      if (loadError) setError(`指定會員載入失敗：${loadError.message}`);
+      else setSelectedMembers(data || []);
+    });
+  }, [coupon?.id, coupon?.audience_mode]);
+  async function searchMembers() {
+    const query = memberQuery.trim();
+    if (query.length < 2) return setError('請至少輸入 2 個字元搜尋會員');
+    setError(''); setMemberSearchLoading(true);
+    const { data, error:searchError } = await supabase.rpc('search_coupon_members', { p_query:query, p_limit:20 });
+    setMemberSearchLoading(false);
+    if (searchError) return setError(`會員搜尋失敗：${searchError.message}`);
+    setMemberResults(data || []);
+  }
+  function toggleMember(member) {
+    const removing = form.member_ids.includes(member.user_id);
+    setForm(current => {
+      const exists = current.member_ids.includes(member.user_id);
+      return { ...current, member_ids:exists ? current.member_ids.filter(id => id !== member.user_id) : [...current.member_ids, member.user_id] };
+    });
+    setSelectedMembers(current => removing ? current.filter(item => item.user_id !== member.user_id) : current.some(item => item.user_id === member.user_id) ? current : [...current, member]);
+  }
   async function save(event) {
     event.preventDefault(); setError('');
     if (!form.name.trim() || !form.code.trim()) return setError('請輸入優惠券名稱與代碼');
     if (!form.promotion_ids.length) return setError('請至少打包一個優惠券專用活動');
-    if (!form.audience_roles.size) return setError('請至少選擇一種適用會員');
+    if (form.audience_mode === 'roles' && !form.audience_roles.size) return setError('請至少選擇一種適用會員');
+    if (form.audience_mode === 'members' && !form.member_ids.length) return setError('請至少指定一位會員');
     if (form.start_at && form.end_at && new Date(form.start_at) >= new Date(form.end_at)) return setError('結束時間必須晚於開始時間');
     setSaving(true);
-    const payload = { id:coupon?.id || null, ...form, code:form.code.trim().toUpperCase(), promotion_ids:form.promotion_ids, audience_roles:[...form.audience_roles], total_usage_limit:form.total_usage_limit === '' ? null : Number(form.total_usage_limit), per_member_limit:form.per_member_limit === '' ? null : Number(form.per_member_limit), start_at:form.start_at ? new Date(form.start_at).toISOString() : null, end_at:form.end_at ? new Date(form.end_at).toISOString() : null };
+    const payload = { id:coupon?.id || null, ...form, code:form.code.trim().toUpperCase(), promotion_ids:form.promotion_ids, member_ids:form.audience_mode === 'members' ? form.member_ids : [], audience_roles:form.audience_mode === 'roles' ? [...form.audience_roles] : [], allow_guest:form.audience_mode === 'roles' && form.allow_guest, total_usage_limit:form.total_usage_limit === '' ? null : Number(form.total_usage_limit), per_member_limit:form.per_member_limit === '' ? null : Number(form.per_member_limit), start_at:form.start_at ? new Date(form.start_at).toISOString() : null, end_at:form.end_at ? new Date(form.end_at).toISOString() : null };
     const { error:saveError } = await supabase.rpc('save_coupon_campaign', { p_payload:payload }); setSaving(false);
     if (saveError) {
       const message = String(saveError.message || '請稍後再試');
@@ -184,7 +216,7 @@ function CouponForm({ coupon, promotions, linkedIds, onClose }) {
     <Field label="顧客說明（選填）"><textarea style={{ ...inputStyle, border:'1px solid var(--border)', padding:10 }} rows={2} value={form.description} onChange={e => set('description',e.target.value)} /></Field>
     <Field label={`打包優惠活動 *（已選 ${form.promotion_ids.length}）`}><CouponPromotionPicker promotions={promotions} selectedIds={form.promotion_ids} onToggle={togglePromotion} onMove={movePromotion} /></Field>
     <div style={gridStyle}><Field label="總使用上限（選填）"><input type="number" min="1" style={inputStyle} value={form.total_usage_limit} onChange={e => set('total_usage_limit',e.target.value)} /></Field><Field label="每位會員／訪客上限（選填）"><input type="number" min="1" style={inputStyle} value={form.per_member_limit} onChange={e => set('per_member_limit',e.target.value)} /></Field><Field label="與自動活動疊加"><select style={inputStyle} value={form.stacking_policy} onChange={e => set('stacking_policy',e.target.value)}><option value="coupon_only">只套用優惠券</option><option value="allow_auto_gifts">優惠券＋自動贈品</option><option value="allow_all">優惠券＋自動折扣＋自動贈品</option></select></Field></div>
-    <Field label="適用會員"><div style={{ display:'flex', flexWrap:'wrap', gap:16 }}>{ROLES.map(([role,label]) => <label key={role} style={{ fontSize:13 }}><input type="checkbox" checked={form.audience_roles.has(role)} onChange={() => toggleSet('audience_roles',role)} /> {label}</label>)}<label style={{ fontSize:13 }}><input type="checkbox" checked={form.allow_guest} onChange={e => set('allow_guest',e.target.checked)} /> 允許訪客</label></div></Field>
+    <Field label="適用對象"><div style={{ display:'flex', flexWrap:'wrap', gap:18, marginBottom:14 }}><label style={{ fontSize:13 }}><input type="radio" name="audience-mode" checked={form.audience_mode === 'roles'} onChange={() => set('audience_mode','roles')} /> 依會員身分</label><label style={{ fontSize:13 }}><input type="radio" name="audience-mode" checked={form.audience_mode === 'members'} onChange={() => set('audience_mode','members')} /> 指定會員</label></div>{form.audience_mode === 'roles' ? <div style={{ display:'flex', flexWrap:'wrap', gap:16 }}>{ROLES.map(([role,label]) => <label key={role} style={{ fontSize:13 }}><input type="checkbox" checked={form.audience_roles.has(role)} onChange={() => toggleSet('audience_roles',role)} /> {label}</label>)}<label style={{ fontSize:13 }}><input type="checkbox" checked={form.allow_guest} onChange={e => set('allow_guest',e.target.checked)} /> 允許訪客</label></div> : <MemberPicker query={memberQuery} setQuery={setMemberQuery} loading={memberSearchLoading} results={memberResults} selected={selectedMembers} selectedIds={form.member_ids} onSearch={searchMembers} onToggle={toggleMember} onClear={() => { set('member_ids',[]); setSelectedMembers([]); }} />}</Field>
     <div style={gridStyle}><Field label="開始時間（選填）"><input type="datetime-local" style={inputStyle} value={form.start_at} onChange={e => set('start_at',e.target.value)} /></Field><Field label="結束時間（選填）"><input type="datetime-local" style={inputStyle} value={form.end_at} onChange={e => set('end_at',e.target.value)} /></Field></div>
     <SaveButtons saving={saving} onClose={onClose} label={coupon ? '儲存變更' : '建立優惠券'} />
   </form></Editor>;
@@ -210,6 +242,32 @@ function CouponPromotionPicker({ promotions, selectedIds, onToggle, onMove }) {
       <span style={{ ...labelStyle, marginBottom:6 }}>可加入活動</span>
       <div style={{ display:'grid', gap:7 }}>{available.map(promotion => <label key={promotion.id} style={{ border:'1px solid var(--border)', padding:'9px 12px', fontSize:12, background:'#fff' }}><input type="checkbox" checked={false} onChange={() => onToggle(promotion.id)} /> {promotion.name} · {getBenefitLabel(promotion, [])}</label>)}</div>
     </div>}
+  </div>;
+}
+
+function MemberPicker({ query, setQuery, loading, results, selected, selectedIds, onSearch, onToggle, onClear }) {
+  const roleLabel = role => ROLES.find(([value]) => value === role)?.[1] || (role === 'pending' ? '審核中' : role || '一般會員');
+  const handleKeyDown = event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      onSearch();
+    }
+  };
+  return <div style={{ display:'grid', gap:12 }}>
+    <p style={{ fontSize:11, lineHeight:1.7, color:'var(--mid)' }}>只有被指定且已登入的會員可以使用；指定會員模式不開放訪客。</p>
+    <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) auto', gap:8 }}>
+      <input aria-label="搜尋指定會員" value={query} onChange={event => setQuery(event.target.value)} onKeyDown={handleKeyDown} placeholder="輸入姓名、Email 或手機號碼" style={{ ...inputStyle, border:'1px solid var(--border)', padding:'10px 12px' }} />
+      <button type="button" onClick={onSearch} disabled={loading} style={{ ...secondaryButton, flex:'none', minWidth:76 }}>{loading ? '搜尋中…' : '搜尋'}</button>
+    </div>
+    {results.length > 0 && <div aria-label="會員搜尋結果" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(250px,1fr))', gap:7, maxHeight:260, overflow:'auto' }}>{results.map(member => {
+      const checked = selectedIds.includes(member.user_id);
+      return <label key={member.user_id} style={{ border:`1px solid ${checked ? 'var(--gold)' : 'var(--border)'}`, padding:'9px 11px', background:checked ? 'var(--off)' : '#fff', fontSize:12, cursor:'pointer' }}><input type="checkbox" checked={checked} onChange={() => onToggle(member)} /> <strong style={{ fontWeight:500 }}>{member.name || '未填姓名'}</strong> · {roleLabel(member.role)}<small style={{ display:'block', marginLeft:18, marginTop:4, color:'var(--mid)', overflowWrap:'anywhere' }}>{member.email || '無 Email'}{member.phone ? `｜${member.phone}` : ''}</small></label>;
+    })}</div>}
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}><span style={{ fontSize:12, color:'var(--dark)' }}>已指定 {selectedIds.length} 位會員</span>{selectedIds.length > 0 && <button type="button" onClick={onClear} style={{ border:'none', background:'none', color:'var(--red)', fontSize:11, cursor:'pointer' }}>全部清除</button>}</div>
+    {selectedIds.length > 0 && <div aria-label="已指定會員" style={{ display:'grid', gap:7 }}>{selectedIds.map(userId => {
+      const member = selected.find(item => item.user_id === userId);
+      return <div key={userId} style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) auto', gap:10, alignItems:'center', padding:'9px 11px', background:'var(--off)', border:'1px solid var(--border)', fontSize:12 }}><div><strong style={{ fontWeight:500 }}>{member?.name || '會員資料載入中'}</strong>{member && <small style={{ display:'block', color:'var(--mid)', marginTop:3, overflowWrap:'anywhere' }}>{roleLabel(member.role)} · {member.email || '無 Email'}{member.phone ? `｜${member.phone}` : ''}</small>}</div><button type="button" onClick={() => onToggle(member || { user_id:userId })} style={{ border:'none', background:'none', color:'var(--red)', fontSize:11, cursor:'pointer' }}>移除</button></div>;
+    })}</div>}
   </div>;
 }
 
