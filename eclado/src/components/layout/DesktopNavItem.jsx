@@ -49,7 +49,7 @@ export default function DesktopNavItem({ item, scrolled, setPage, user }) {
         <div style={{ position:'absolute', top:'100%', left:'50%', transform:'translateX(-50%)', background:'rgba(250,250,249,0.98)', backdropFilter:'blur(16px)', border:'1px solid var(--light)', minWidth:520, boxShadow:'0 8px 32px rgba(0,0,0,0.08)', zIndex:200, padding:16, animation:'fadeInDown 0.18s ease', display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
           {item.children.map(group => (
             <div key={group.view}>
-              <div style={{ padding:'6px 12px 8px', fontSize:11, color:'var(--gold)', letterSpacing:'0.12em' }}>{group.label}</div>
+              <div style={{ padding:'6px 12px 8px', fontSize:11, color:'var(--accent)', letterSpacing:'0.12em' }}>{group.label}</div>
               {group.items.map(child => (
                 <a key={child} href={shopPath(group.view, child)} onClick={event => { event.preventDefault(); goProductFilter(group.view, child); }} style={{ display:'block', width:'100%', textAlign:'left', background:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:13, color:'var(--dark)', padding:'9px 12px', letterSpacing:'0.04em', transition:'background 0.15s', textDecoration:'none', boxSizing:'border-box' }} onMouseEnter={event => { event.currentTarget.style.background='var(--off-white)'; event.currentTarget.style.color='var(--black)'; }} onMouseLeave={event => { event.currentTarget.style.background='none'; event.currentTarget.style.color='var(--dark)'; }}>{child}</a>
               ))}

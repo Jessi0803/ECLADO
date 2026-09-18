@@ -466,7 +466,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                   <CheckoutField label="電子信箱" name="email" type="email" value={form.email} onChange={setField('email')} />
 
                   {fulfillmentMethod === FULFILLMENT_DELIVERY && <div>
-                    <label style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:7 }}>收件地址 <span style={{ color:'var(--gold)' }}>*</span></label>
+                    <label style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:7 }}>收件地址 <span style={{ color:'var(--accent)' }}>*</span></label>
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
                       {[['city','縣市'],['district','區域']].map(([k,ph]) => (
                         <input key={k} type="text" value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} required placeholder={ph}
@@ -543,7 +543,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                       </button>
                     </div>
                     {couponQuote?.coupon && (
-                      <p style={{ marginTop:9, fontSize:12, color:'var(--gold)', lineHeight:1.6 }}>
+                      <p style={{ marginTop:9, fontSize:12, color:'var(--accent)', lineHeight:1.6 }}>
                         已套用「{couponQuote.coupon.name}」，本次共折抵 NT$ {couponQuote.discount.toLocaleString()}。
                       </p>
                     )}

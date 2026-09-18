@@ -49,7 +49,7 @@ export default function TopProductsCarousel({ products, user, onAdd, onSelect, i
       <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
         <div style={{ display:'flex', justifyContent:'space-between', gap:24, alignItems:'flex-end', marginBottom: isMobile ? 28 : 42, flexWrap:'wrap' }}>
           <div style={{ maxWidth:680 }}>
-            <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>Popular</p>
+            <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--accent)', textTransform:'uppercase', marginBottom:10 }}>Popular</p>
             <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(24px,3.6vw,46px)', fontWeight:300, lineHeight:1.1, color:'var(--black)', marginBottom:14 }}>熱門商品</h2>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>

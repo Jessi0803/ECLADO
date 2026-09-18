@@ -61,10 +61,10 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
       aria-live="polite"
       data-testid="cart-shipping-progress"
       style={{
-        border:`1px solid ${professionalProgress.eligible ? 'var(--gold)' : '#b87855'}`,
+        border:`1px solid ${professionalProgress.eligible ? 'var(--accent)' : '#b87855'}`,
         borderLeft: professionalProgress.eligible && !professionalProgress.freeShipping
-          ? '4px solid var(--gold)'
-          : `1px solid ${professionalProgress.eligible ? 'var(--gold)' : '#b87855'}`,
+          ? '4px solid var(--accent)'
+          : `1px solid ${professionalProgress.eligible ? 'var(--accent)' : '#b87855'}`,
         background: professionalProgress.eligible && !professionalProgress.freeShipping ? '#fff8e8' : 'var(--white)',
         padding: drawer ? '6px 9px' : (professionalProgress.eligible && !professionalProgress.freeShipping ? '14px 16px' : '12px 14px'),
         marginBottom: drawer ? 0 : 18,
@@ -90,7 +90,7 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
         </div>
 
         {cart.length > 0 && promotions.some(isPromotionLive) && discount === 0 && (
-          <div style={{ background:'var(--off-white)', border:'1px solid var(--gold)', padding:'14px 18px', marginBottom:24, fontSize:13, color:'var(--dark)', lineHeight:1.65 }}>
+          <div style={{ background:'var(--off-white)', border:'1px solid var(--accent)', padding:'14px 18px', marginBottom:24, fontSize:13, color:'var(--dark)', lineHeight:1.65 }}>
             目前有<strong>限時優惠</strong>，但購物車內還沒有「活動指定商品」，所以尚無折抵。
           </div>
         )}
@@ -115,7 +115,7 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
                     <div>
                       <p data-testid="cart-item-name" style={{ fontFamily:'var(--font-display)', fontSize:14, fontWeight:400, marginBottom:3 }}>{item.nameZh}</p>
                       <p data-testid="cart-item-specification" style={{ fontSize:12, color:'var(--dark)', marginBottom:6 }}>{item.size}</p>
-                      <p style={{ fontSize:11, color: fulfillment.type === 'preorder' ? 'var(--gold)' : 'var(--dark)', marginBottom:10, lineHeight:1.5 }}>{fulfillment.type === 'loading' ? '庫存資料載入中' : `${fulfillment.label} · ${fulfillment.shipping}`}</p>
+                      <p style={{ fontSize:11, color: fulfillment.type === 'preorder' ? 'var(--accent)' : 'var(--dark)', marginBottom:10, lineHeight:1.5 }}>{fulfillment.type === 'loading' ? '庫存資料載入中' : `${fulfillment.label} · ${fulfillment.shipping}`}</p>
                       <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                         <button onClick={() => updateQty(getCartKey(item),-1)} style={{ width:26, height:26, border:'1px solid var(--light)', background:'none', cursor:'pointer', fontSize:15, lineHeight:1 }}>−</button>
                         <span style={{ fontSize:14, minWidth:20, textAlign:'center', fontFamily:'var(--font-display)' }}>{item.qty}</span>
@@ -138,14 +138,14 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
               {!drawer && professionalProgressNotice}
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13 }}><span>小計</span><span style={{ fontFamily:'var(--font-display)' }}>NT$ {subtotal.toLocaleString()}</span></div>
               {discount > 0 && promotion && (
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13, color:'var(--gold)' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13, color:'var(--accent)' }}>
                   <span>{promotion.name}</span>
                   <span style={{ fontFamily:'var(--font-display)' }}>−NT$ {discount.toLocaleString()}</span>
                 </div>
               )}
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13 }}>
                 <span>運費</span>
-                <span style={{ fontFamily:'var(--font-display)' }}>{shipping === 0 ? <span style={{ color:'var(--gold)', fontFamily:'var(--font-body)' }}>免運</span> : `NT$ ${shipping}`}</span>
+                <span style={{ fontFamily:'var(--font-display)' }}>{shipping === 0 ? <span style={{ color:'var(--accent)', fontFamily:'var(--font-body)' }}>免運</span> : `NT$ ${shipping}`}</span>
               </div>
               <div style={{ height:1, background:'var(--light)', margin:drawer ? '8px 0' : '16px 0' }} />
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 10 : 24, fontWeight:500 }}>

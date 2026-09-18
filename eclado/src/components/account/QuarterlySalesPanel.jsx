@@ -29,7 +29,7 @@ export default function QuarterlySalesPanel({ sales, loading = false, error = ''
     <section aria-label="季度採購統計" style={{ marginBottom:isMobile ? 34 : 42 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:16, marginBottom:16 }}>
         <div>
-          <p style={{ fontSize:10, color:'var(--gold)', letterSpacing:'0.18em', textTransform:'uppercase', marginBottom:6 }}>Quarterly Purchase</p>
+          <p style={{ fontSize:10, color:'var(--accent)', letterSpacing:'0.18em', textTransform:'uppercase', marginBottom:6 }}>Quarterly Purchase</p>
           <h2 style={{ fontFamily:'var(--font-display)', fontSize:isMobile ? 24 : 30, fontWeight:300 }}>季度採購統計</h2>
         </div>
         <span style={{ fontSize:11, color:'var(--dark)' }}>{PROFESSIONAL_ROLE_LABELS[current.role] || current.role}</span>

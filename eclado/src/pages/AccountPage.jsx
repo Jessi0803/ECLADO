@@ -256,7 +256,7 @@ export default function AccountPage({ user, setPage, onSignOut }) {
     <div style={{ minHeight:'100vh', paddingTop:68, background:'var(--white)' }}>
       <div style={{ background:'var(--off-white)', borderBottom:'1px solid var(--light)', padding:isMobile ? '42px 20px 30px' : '58px 32px 38px' }}>
         <div style={{ maxWidth:1040, margin:'0 auto' }}>
-          <p style={{ fontSize:11, letterSpacing:'0.26em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>Account</p>
+          <p style={{ fontSize:11, letterSpacing:'0.26em', color:'var(--accent)', textTransform:'uppercase', marginBottom:10 }}>Account</p>
           <h1 style={{ fontFamily:'var(--font-display)', fontSize:isMobile ? 30 : 46, fontWeight:300, color:'var(--black)', marginBottom:12 }}>會員專區</h1>
           <p style={{ fontSize:14, color:'var(--dark)', lineHeight:1.8 }}>您好，{user.name}</p>
         </div>
@@ -282,10 +282,10 @@ export default function AccountPage({ user, setPage, onSignOut }) {
                 <div style={{ fontSize:15, color:'var(--black)' }}>{getMemberTier(user).label}</div>
               </div>
               {!isProfessionalMember(user) && (
-                <div style={{ marginTop:4, padding:'16px', background:'var(--off-white)', borderLeft:'2px solid var(--gold)' }}>
+                <div style={{ marginTop:4, padding:'16px', background:'var(--off-white)', borderLeft:'2px solid var(--accent)' }}>
                   {proAppStatus === 'pending' ? (
                     <>
-                      <div style={{ fontSize:11, letterSpacing:'0.1em', color:'var(--gold)', textTransform:'uppercase', marginBottom:6 }}>美容師申請審核中</div>
+                      <div style={{ fontSize:11, letterSpacing:'0.1em', color:'var(--accent)', textTransform:'uppercase', marginBottom:6 }}>美容師申請審核中</div>
                       <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7 }}>我們正在審核您的申請，通過後將自動開通專業會員功能。</p>
                     </>
                   ) : proAppStatus === 'rejected' ? (
@@ -296,7 +296,7 @@ export default function AccountPage({ user, setPage, onSignOut }) {
                     </>
                   ) : (
                     <>
-                      <div style={{ fontSize:11, letterSpacing:'0.1em', color:'var(--gold)', textTransform:'uppercase', marginBottom:6 }}>成為認證美容師</div>
+                      <div style={{ fontSize:11, letterSpacing:'0.1em', color:'var(--accent)', textTransform:'uppercase', marginBottom:6 }}>成為認證美容師</div>
                       <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7, marginBottom:10 }}>享有院線商品購買資格及專業折扣。</p>
                       <button onClick={() => goProfessionalApply(user, setPage)} style={{ background:'none', border:'none', padding:0, fontSize:12, color:'var(--black)', cursor:'pointer', fontFamily:'var(--font-body)', letterSpacing:'0.08em', fontWeight:500 }}>申請專業會員 →</button>
                     </>
@@ -358,7 +358,7 @@ export default function AccountPage({ user, setPage, onSignOut }) {
                       </div>
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap', justifyContent:'flex-end' }}>
                         {paymentState && <span style={{ flexShrink:0, fontSize:10, letterSpacing:'0.06em', border:`1px solid ${getPaymentStateColor(paymentState)}`, color:getPaymentStateColor(paymentState), padding:'5px 8px' }}>{getPaymentStateLabel(paymentState)}</span>}
-                        <span style={{ flexShrink:0, fontSize:11, letterSpacing:'0.08em', border:'1px solid var(--gold)', color:'var(--black)', padding:'5px 9px' }}>{getOrderStatusLabel(order.status)}</span>
+                        <span style={{ flexShrink:0, fontSize:11, letterSpacing:'0.08em', border:'1px solid var(--accent)', color:'var(--black)', padding:'5px 9px' }}>{getOrderStatusLabel(order.status)}</span>
                       </div>
                     </div>
                     <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '1fr auto', gap:isMobile ? 12 : 24, borderTop:'1px solid var(--light)', paddingTop:14 }}>
@@ -368,15 +368,15 @@ export default function AccountPage({ user, setPage, onSignOut }) {
                             <span>
                               {item.name || item.nameZh || '商品'} × {item.qty || 1}
                               {item.fulfillment && (
-                                <span style={{ display:'block', fontSize:12, color: item.fulfillment_type === 'preorder' ? 'var(--gold)' : 'var(--dark)' }}>{item.fulfillment_type === 'loading' ? '庫存資料載入中' : `${item.fulfillment} · ${item.shipping_time || ''}`}</span>
+                                <span style={{ display:'block', fontSize:12, color: item.fulfillment_type === 'preorder' ? 'var(--accent)' : 'var(--dark)' }}>{item.fulfillment_type === 'loading' ? '庫存資料載入中' : `${item.fulfillment} · ${item.shipping_time || ''}`}</span>
                               )}
                             </span>
                             {item.price != null && <span>NT$ {Number(item.price).toLocaleString()}</span>}
                           </div>
                         ))}
-                        {order.promotion_name && <div style={{ fontSize:12, color:'var(--gold)' }}>活動：{order.promotion_name}</div>}
+                        {order.promotion_name && <div style={{ fontSize:12, color:'var(--accent)' }}>活動：{order.promotion_name}</div>}
                         {order.fulfillment_method === 'onsite_pickup' && (
-                          <div style={{ marginTop:4, padding:'12px 14px', background:'var(--off-white)', border:'1px solid var(--gold)', fontSize:12, color:'var(--dark)' }}>
+                          <div style={{ marginTop:4, padding:'12px 14px', background:'var(--off-white)', border:'1px solid var(--accent)', fontSize:12, color:'var(--dark)' }}>
                             客訂商品現場自取{order.status === 'ready_for_pickup' ? '，商品已可取貨' : order.status === 'picked_up' ? '，已完成取貨' : '，目前正在處理中'}。
                           </div>
                         )}

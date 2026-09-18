@@ -69,15 +69,15 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
             <div style={{ position:'absolute', inset:0, background:'linear-gradient(to right, rgba(14,14,12,0.88) 45%, rgba(14,14,12,0.15))' }} />
             <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', justifyContent:'center', padding:heroPad, maxWidth: isMobile ? '92vw' : 780, opacity: animating?0:1, transition:'opacity 0.45s' }}>
               <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-                <div style={{ width:28, height:1, background:'var(--gold)' }} />
-                <span style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase', fontFamily:'var(--font-body)' }}>{HERO_SLIDES[slide].accent}</span>
+                <div style={{ width:28, height:3, background:'var(--accent-on-dark)' }} />
+                <span style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--accent-on-dark-text)', textTransform:'uppercase', fontFamily:'var(--font-body)' }}>{HERO_SLIDES[slide].accent}</span>
               </div>
               <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,44px)' : 'clamp(40px,7.5vw,104px)', fontWeight:300, color:'#fff', textShadow:'0 2px 16px rgba(0,0,0,0.22)', lineHeight:1.0, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
               <p style={{ fontSize:15, color:'rgba(255,255,255,0.65)', letterSpacing:'0.06em', marginBottom:36, fontWeight:300, lineHeight:1.8, maxWidth:560 }}>{HERO_SLIDES[slide].sub}</p>
               <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
-                <button onClick={() => setPage('shop')} style={{ background:'var(--white)', color:'var(--black)', border:'none', padding:'13px 28px', fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}
-                  onMouseEnter={e=>{e.target.style.background='var(--gold)';e.target.style.color='var(--white)';}}
-                  onMouseLeave={e=>{e.target.style.background='var(--white)';e.target.style.color='var(--black)';}}
+                <button onClick={() => setPage('shop')} style={{ background:'var(--white)', color:'var(--accent)', border:'none', padding:'13px 28px', fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}
+                  onMouseEnter={e=>{e.target.style.background='var(--accent)';e.target.style.color='var(--white)';}}
+                  onMouseLeave={e=>{e.target.style.background='var(--white)';e.target.style.color='var(--accent)';}}
                 >{HERO_SLIDES[slide].cta}</button>
               </div>
             </div>
@@ -90,9 +90,9 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
             <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse at center, rgba(14,14,12,0.5) 0%, rgba(14,14,12,0.82) 100%)' }} />
             <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center', textAlign:'center', padding: isMobile ? '0 6vw' : '0 8vw', opacity: animating?0:1, transition:'opacity 0.45s' }}>
               <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20 }}>
-                <div style={{ width:20, height:1, background:'var(--gold)' }} />
-                <span style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase' }}>{HERO_SLIDES[slide].accent}</span>
-                <div style={{ width:20, height:1, background:'var(--gold)' }} />
+                <div style={{ width:20, height:3, background:'var(--accent-on-dark)' }} />
+                <span style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--accent-on-dark-text)', textTransform:'uppercase' }}>{HERO_SLIDES[slide].accent}</span>
+                <div style={{ width:20, height:3, background:'var(--accent-on-dark)' }} />
               </div>
               <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,46px)' : 'clamp(38px,8vw,112px)', fontWeight:300, color:'#fff', textShadow:'0 2px 16px rgba(0,0,0,0.22)', lineHeight:1.0, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
               <p style={{ fontSize:15, color:'rgba(255,255,255,0.6)', letterSpacing:'0.06em', marginBottom:40, fontWeight:300, maxWidth:520, lineHeight:1.8 }}>{HERO_SLIDES[slide].sub}</p>
@@ -117,12 +117,12 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
             <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', justifyContent:'center', alignItems: isMobile ? 'flex-start' : 'flex-end', padding:heroPad, opacity: animating?0:1, transition:'opacity 0.45s' }}>
               <div style={{ maxWidth:520, textAlign: isMobile ? 'left' : 'right' }}>
                 <div style={{ display:'flex', alignItems:'center', justifyContent: isMobile ? 'flex-start' : 'flex-end', gap:12, marginBottom:16 }}>
-                  <span style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase' }}>{HERO_SLIDES[slide].accent}</span>
-                  <div style={{ width:28, height:1, background:'var(--gold)' }} />
+                  <span style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--accent-on-dark-text)', textTransform:'uppercase' }}>{HERO_SLIDES[slide].accent}</span>
+                  <div style={{ width:28, height:3, background:'var(--accent-on-dark)' }} />
                 </div>
                 <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,44px)' : 'clamp(36px,6.5vw,92px)', fontWeight:300, color:'#fff', textShadow:'0 2px 16px rgba(0,0,0,0.22)', lineHeight:1.05, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
                 <p style={{ fontSize:15, color:'rgba(255,255,255,0.6)', letterSpacing:'0.06em', marginBottom:36, fontWeight:300, lineHeight:1.8 }}>{HERO_SLIDES[slide].sub}</p>
-                <button onClick={() => setPage('login')} style={{ background:'var(--gold)', color:'var(--white)', border:'none', padding:'13px 28px', fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}
+                <button onClick={() => setPage('login')} style={{ background:'var(--accent)', color:'var(--white)', border:'none', padding:'13px 28px', fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}
                   onMouseEnter={e=>e.target.style.opacity='0.85'}
                   onMouseLeave={e=>e.target.style.opacity='1'}
                 >{HERO_SLIDES[slide].cta}</button>
@@ -214,7 +214,7 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
       {/* PRO SECTION */}
       <section style={{ background:'var(--dark)', padding: isMobile ? '60px 0' : '100px 0' }}>
         <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px', textAlign:'center' }} className="px-page">
-          <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:14 }}>Professional</p>
+          <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--accent-on-dark-text)', textTransform:'uppercase', marginBottom:14 }}>Professional</p>
           <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(24px,3.6vw,48px)', fontWeight:300, color:'var(--white)', marginBottom:18, lineHeight:1.1 }}>美容師專業會員</h2>
           <p style={{ fontSize:14, color:'rgba(255,255,255,0.5)', maxWidth:480, margin:'0 auto 36px', lineHeight:1.8 }}>
             申請成為認證美容師會員，享有院線保養品購買資格<br />及專業折扣價格，共同提升客戶的保養體驗。
@@ -222,14 +222,14 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
           <div style={{ display:'flex', gap: isMobile ? 16 : 32, justifyContent:'center', marginBottom:40, flexWrap:'wrap' }}>
             {['院線保養品購買資格','專業折扣優惠價','產品操作培訓','優先新品體驗'].map(item => (
               <div key={item} style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <div style={{ width:1, height:12, background:'var(--gold)', flexShrink:0 }} />
+                <div style={{ width:3, height:12, background:'var(--accent-on-dark)', flexShrink:0 }} />
                 <span style={{ fontSize:13, color:'rgba(255,255,255,0.7)', letterSpacing:'0.06em' }}>{item}</span>
               </div>
             ))}
           </div>
-          <button onClick={() => goProfessionalApply(user, setPage)} style={{ background:'transparent', border:'1px solid var(--gold)', color:'var(--gold)', padding:'13px 40px', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', transition:'all 0.25s' }}
-            onMouseEnter={e=>{e.target.style.background='var(--gold)';e.target.style.color='var(--black)';}}
-            onMouseLeave={e=>{e.target.style.background='transparent';e.target.style.color='var(--gold)';}}
+          <button onClick={() => goProfessionalApply(user, setPage)} style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.6)', color:'var(--white)', padding:'13px 40px', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', transition:'all 0.25s' }}
+            onMouseEnter={e=>{e.target.style.background='var(--accent)';e.target.style.color='var(--white)';}}
+            onMouseLeave={e=>{e.target.style.background='transparent';e.target.style.color='var(--white)';}}
           >申請美容師會員</button>
         </div>
       </section>

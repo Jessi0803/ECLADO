@@ -15,7 +15,7 @@ export default function PromoSection({ promo, user, addToCart, onSelect, isMobil
     return (
       <section style={{ background:'var(--white)', padding: isMobile ? '48px 0' : '72px 0', borderTop:'1px solid var(--light)', borderBottom:'1px solid var(--light)' }}>
         <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
-          <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', marginBottom:10 }}>限時優惠</p>
+          <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--accent)', marginBottom:10 }}>限時優惠</p>
           <p style={{ fontSize:14, color:'#555', lineHeight:1.75 }}>
             活動「<strong style={{ color:'var(--black)' }}>{promo.name}</strong>」已建立，但目前<strong>沒有可顯示的商品</strong>。
             請到後台確認已勾選商品，且商品編號需與官網一致。
@@ -30,7 +30,7 @@ export default function PromoSection({ promo, user, addToCart, onSelect, isMobil
     <section style={{ background:'var(--white)', padding: isMobile ? '60px 0' : '100px 0', borderTop:'1px solid var(--light)', borderBottom:'1px solid var(--light)' }}>
       <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
         <div style={{ marginBottom: isMobile ? 36 : 56 }}>
-          <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', marginBottom:10 }}>限時優惠</p>
+          <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--accent)', marginBottom:10 }}>限時優惠</p>
           <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(26px,4vw,52px)', fontWeight:300, lineHeight:1.1, color:'var(--black)', marginBottom:12 }}>{promo.name}</h2>
           {promo.description && (
             <p style={{ fontSize:14, color:'#555', lineHeight:1.75, maxWidth:560, marginBottom:0 }}>{promo.description}</p>

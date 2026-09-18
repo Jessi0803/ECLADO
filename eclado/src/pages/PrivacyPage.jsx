@@ -99,7 +99,7 @@ export default function PrivacyPage() {
     <div style={{ paddingTop: 68 }}>
       <div style={{ background: 'var(--off-white)', padding: isMobile ? '48px 20px 32px' : '64px 32px 40px', borderBottom: '1px solid var(--light)' }}>
         <div style={{ maxWidth: 860, margin: '0 auto' }}>
-          <p style={{ fontSize: 11, letterSpacing: '0.28em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 10 }}>Legal</p>
+          <p style={{ fontSize: 11, letterSpacing: '0.28em', color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 10 }}>Legal</p>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: isMobile ? 30 : 44, fontWeight: 300, color: 'var(--black)', marginBottom: 12 }}>隱私權政策</h1>
           <p style={{ fontSize: 13, color: 'var(--dark)', lineHeight: 1.8 }}>Privacy Policy — 依《個人資料保護法》及國際通用規範訂定</p>
         </div>

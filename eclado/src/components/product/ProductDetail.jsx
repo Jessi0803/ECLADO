@@ -99,18 +99,18 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
 
           {/* 右：資訊 */}
           <div>
-            <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>{[product.category, product.series].filter(Boolean).join('｜')}</p>
+            <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--accent)', textTransform:'uppercase', marginBottom:10 }}>{[product.category, product.series].filter(Boolean).join('｜')}</p>
             <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 26 : 34, fontWeight:300, color:'var(--black)', lineHeight:1.2, marginBottom:6 }}>{product.nameZh}</h1>
-            {product.subtitle && <p style={{ fontSize:13, color:'var(--gold)', letterSpacing:'0.08em', marginBottom:8 }}>{product.subtitle}</p>}
+            {product.subtitle && <p style={{ fontSize:13, color:'var(--accent)', letterSpacing:'0.08em', marginBottom:8 }}>{product.subtitle}</p>}
             <p style={{ fontSize:12, color:'var(--dark)', letterSpacing:'0.1em', marginBottom:28 }}>{product.name} · {displayProduct.size}</p>
             <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:10, marginBottom:22 }}>
-              <span style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--white)', background: fulfillment.type === 'preorder' ? 'var(--gold)' : fulfillment.type === 'loading' ? 'var(--mid)' : 'var(--black)', padding:'5px 10px' }}>{fulfillment.label}</span>
+              <span style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--white)', background: fulfillment.type === 'preorder' ? 'var(--accent)' : fulfillment.type === 'loading' ? 'var(--mid)' : 'var(--black)', padding:'5px 10px' }}>{fulfillment.label}</span>
               {fulfillment.shipping && <span style={{ fontSize:13, color:'var(--dark)', lineHeight:1.6 }}>{fulfillment.shipping}</span>}
             </div>
 
             {primaryPromo && (
-              <div style={{ background:'var(--off-white)', border:'1px solid var(--gold)', padding:'14px 18px', marginBottom:20 }}>
-                <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--gold)', textTransform:'uppercase', marginBottom:6 }}>限時優惠</p>
+              <div style={{ background:'var(--off-white)', border:'1px solid var(--accent)', padding:'14px 18px', marginBottom:20 }}>
+                <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--accent)', textTransform:'uppercase', marginBottom:6 }}>限時優惠</p>
                 <p style={{ fontSize:14, color:'var(--black)', fontWeight:500, marginBottom:0 }}>{primaryPromo.name}</p>
               </div>
             )}
@@ -132,7 +132,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
             {/* 價格 or 購買資格 */}
             {displayProduct.isProOnly && !isProfessionalMember(user) ? (
               <div style={{ borderTop:'1px solid var(--light)', borderBottom:'1px solid var(--light)', padding:'24px 0', marginBottom:28 }}>
-                <p style={{ fontSize:10, letterSpacing:'0.22em', color:'var(--gold)', textTransform:'uppercase', marginBottom:12 }}>院線專業商品</p>
+                <p style={{ fontSize:10, letterSpacing:'0.22em', color:'var(--accent)', textTransform:'uppercase', marginBottom:12 }}>院線專業商品</p>
                 <p style={{ fontSize:14, color:'var(--dark)', lineHeight:1.85, marginBottom:20 }}>
                   若您想了解使用方式或購買資格，歡迎私訊 LINE 官方帳號詢問。
                 </p>
@@ -147,7 +147,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
                 <div style={{ display:'flex', alignItems:'baseline', gap:12, flexWrap:'wrap' }}>
                   {promoDisplay ? (
                     <>
-                      <span style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, color:'var(--gold)' }}>NT$ {promoDisplay.price.toLocaleString()}</span>
+                      <span style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, color:'var(--accent)' }}>NT$ {promoDisplay.price.toLocaleString()}</span>
                       <span style={{ fontSize:13, color:'var(--dark)', textDecoration:'line-through' }}>NT$ {showPrice.toLocaleString()}</span>
                     </>
                   ) : (
@@ -155,7 +155,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
                       <span style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, color:'var(--black)' }}>NT$ {showPrice.toLocaleString()}</span>
                       {hasTierPrice && <>
                       <span style={{ fontSize:13, color:'var(--dark)', textDecoration:'line-through' }}>NT$ {displayProduct.price.toLocaleString()}</span>
-                        <span style={{ fontSize:10, background:'var(--gold)', color:'var(--white)', padding:'3px 8px', letterSpacing:'0.1em', fontWeight:500 }}>{priceLabel}</span>
+                        <span style={{ fontSize:10, background:'var(--accent)', color:'var(--white)', padding:'3px 8px', letterSpacing:'0.1em', fontWeight:500 }}>{priceLabel}</span>
                       </>}
                     </>
                   )}
@@ -177,7 +177,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
                   <span style={{ width:36, textAlign:'center', fontSize:14, color:'var(--black)' }}>{qty}</span>
                   <button onClick={() => setQty(q => q+1)} style={{ width:40, height:48, background:'none', border:'none', cursor:'pointer', fontSize:16, color:'var(--dark)', fontFamily:'var(--font-body)' }}>+</button>
                 </div>
-                <button onClick={handleAdd} style={{ flex:1, minWidth:180, height:48, background: added ? 'var(--gold)' : 'var(--black)', color:'var(--white)', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12, letterSpacing:'0.16em', textTransform:'uppercase', transition:'background 0.3s' }}>
+                <button onClick={handleAdd} style={{ flex:1, minWidth:180, height:48, background: added ? 'var(--accent)' : 'var(--black)', color:'var(--white)', border:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12, letterSpacing:'0.16em', textTransform:'uppercase', transition:'background 0.3s' }}>
                   {added ? '✓ 已加入購物車' : '加入購物車'}
                 </button>
               </div>
@@ -201,7 +201,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
                 <div>
                   {content.map((feature, index) => (
                     <div key={index} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-                      <div style={{ width:4, height:4, background:'var(--gold)', flexShrink:0 }} />
+                      <div style={{ width:4, height:4, background:'var(--accent)', flexShrink:0 }} />
                       <span style={{ fontSize:14, color:'#555', lineHeight:1.9 }}>{feature}</span>
                     </div>
                   ))}

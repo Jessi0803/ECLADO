@@ -37,7 +37,7 @@ function formatDateTime(value) {
 function statusColor(status) {
   if (['paid', 'preparing', 'shipped', 'delivered'].includes(status)) return 'var(--green)';
   if (['cancelled', 'returned'].includes(status)) return 'var(--red)';
-  return 'var(--gold)';
+  return 'var(--accent)';
 }
 
 export default function GuestOrderLookupPage({ setPage }) {
@@ -249,7 +249,7 @@ export default function GuestOrderLookupPage({ setPage }) {
       <section style={{ maxWidth:920, margin:'0 auto', padding:isMobile ? '52px 20px 80px' : '76px 32px 96px' }}>
         {!order ? (
           <div style={{ maxWidth:560, margin:'0 auto', background:'var(--white)', border:'1px solid var(--light)', padding:isMobile ? '28px 20px' : '40px' }}>
-            <p style={{ color:'var(--gold)', fontSize:11, letterSpacing:'0.2em', marginBottom:10 }}>GUEST ORDER</p>
+            <p style={{ color:'var(--accent)', fontSize:11, letterSpacing:'0.2em', marginBottom:10 }}>GUEST ORDER</p>
             <h1 style={{ fontFamily:'var(--font-display)', fontSize:isMobile ? 28 : 36, fontWeight:400, marginBottom:12 }}>訪客訂單查詢</h1>
             <p style={{ color:'var(--dark)', fontSize:13, lineHeight:1.8, marginBottom:28 }}>
               請輸入訂單成立信中的短查詢碼，以及結帳時填寫的手機號碼，即可查看訂單、付款及物流狀態。
@@ -275,7 +275,7 @@ export default function GuestOrderLookupPage({ setPage }) {
             <div style={{ background:'var(--white)', border:'1px solid var(--light)', padding:isMobile ? '24px 20px' : '30px 32px' }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:20, flexWrap:'wrap' }}>
                 <div>
-                  <p style={{ color:'var(--gold)', fontSize:11, letterSpacing:'0.2em', marginBottom:9 }}>GUEST ORDER</p>
+                  <p style={{ color:'var(--accent)', fontSize:11, letterSpacing:'0.2em', marginBottom:9 }}>GUEST ORDER</p>
                   <h1 style={{ fontFamily:'var(--font-display)', fontSize:isMobile ? 26 : 34, fontWeight:400, marginBottom:10 }}>訪客訂單明細</h1>
                   <div style={{ fontSize:12, color:'var(--dark)', lineHeight:1.8, wordBreak:'break-all' }}>訂單編號：{order.id}</div>
                   <div style={{ fontSize:12, color:'var(--dark)' }}>成立時間：{formatDateTime(order.created_at || order.date) || '—'}</div>
@@ -309,7 +309,7 @@ export default function GuestOrderLookupPage({ setPage }) {
                 </div>
                 <div style={{ borderTop:'1px solid var(--light)', marginTop:20, paddingTop:16, display:'grid', gap:9, fontSize:13 }}>
                   <div style={{ display:'flex', justifyContent:'space-between' }}><span>小計</span><span>NT$ {Number(order.subtotal || 0).toLocaleString()}</span></div>
-                  {Number(order.discount) > 0 && <div style={{ display:'flex', justifyContent:'space-between', color:'var(--gold)' }}><span>活動折扣{order.promotion_name ? ` · ${order.promotion_name}` : ''}</span><span>−NT$ {Number(order.discount).toLocaleString()}</span></div>}
+                  {Number(order.discount) > 0 && <div style={{ display:'flex', justifyContent:'space-between', color:'var(--accent)' }}><span>活動折扣{order.promotion_name ? ` · ${order.promotion_name}` : ''}</span><span>−NT$ {Number(order.discount).toLocaleString()}</span></div>}
                   <div style={{ display:'flex', justifyContent:'space-between' }}><span>運費</span><span>{Number(order.shipping) === 0 ? '免運' : `NT$ ${Number(order.shipping).toLocaleString()}`}</span></div>
                   <div style={{ display:'flex', justifyContent:'space-between', borderTop:'1px solid var(--light)', paddingTop:12, fontWeight:600 }}><span>合計</span><span style={{ fontFamily:'var(--font-display)', fontSize:18 }}>NT$ {Number(order.total || 0).toLocaleString()}</span></div>
                 </div>

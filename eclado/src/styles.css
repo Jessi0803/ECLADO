@@ -6,7 +6,9 @@
     --mid: #c8c7c5;
     --dark: #2a2a28;
     --black: #141412;
-    --gold: #b8a98a;
+    --accent: #041384;
+    --accent-on-dark: #041384;
+    --accent-on-dark-text: rgba(255,255,255,0.85);
     --font-display: 'Open Sans', 'Noto Sans TC', Helvetica, Arial, sans-serif;
     --font-body: 'Open Sans', 'Noto Sans TC', Helvetica, sans-serif;
     --font-zh: 'Noto Sans TC', sans-serif;
@@ -75,7 +77,7 @@
   .home-series-block { padding:76px 0 62px; border-bottom:1px solid var(--light); }
   .home-series-block:last-child { border-bottom:0; padding-bottom:0; }
   .home-series-header { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; margin-bottom:42px; }
-  .home-series-header p { font-size:11px; letter-spacing:.28em; color:var(--gold); text-transform:uppercase; margin:0 0 10px; }
+  .home-series-header p { font-size:11px; letter-spacing:.28em; color:var(--accent); text-transform:uppercase; margin:0 0 10px; }
   .home-series-header h2 { font-family:var(--font-display); font-size:clamp(24px,3.6vw,46px); font-weight:300; line-height:1.1; color:var(--black); margin:0; }
   .home-series-nav { display:flex; align-items:center; gap:10px; }
   .home-series-nav button { width:44px; height:44px; border:1px solid var(--light); background:var(--white); color:var(--black); cursor:pointer; font-size:18px; }
@@ -92,7 +94,7 @@
   .journal-article-body section { margin-bottom:48px; }
   .journal-article-body h2 { font-family:var(--font-display); font-size:clamp(24px,3vw,34px); font-weight:300; line-height:1.35; color:var(--black); margin-bottom:20px; }
   .journal-article-body p { font-size:15px; line-height:2.05; color:#4f4f4b; margin-bottom:15px; letter-spacing:0.02em; }
-  .journal-article-body .journal-callout { padding:30px 32px 16px; background:var(--off-white); border-left:2px solid var(--gold); }
+  .journal-article-body .journal-callout { padding:30px 32px 16px; background:var(--off-white); border-left:2px solid var(--accent); }
   .journal-disclaimer { border-top:1px solid var(--light); padding-top:22px; margin-top:64px; }
   .journal-data-table { margin:28px 0; }
   .journal-figure { margin:28px 0; }
@@ -104,7 +106,7 @@
   .journal-figure figcaption { margin-top:12px; font-size:12px; line-height:1.8; color:#62625e; }
   .journal-figure figcaption .journal-section-note { margin-top:6px; }
   .journal-data-table table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:14px; line-height:1.7; color:var(--dark); }
-  .journal-data-table caption { text-align:left; color:var(--gold); font-size:12px; padding-bottom:12px; }
+  .journal-data-table caption { text-align:left; color:var(--accent); font-size:12px; padding-bottom:12px; }
   .journal-data-table th, .journal-data-table td { padding:16px 10px; border-bottom:1px solid var(--light); overflow-wrap:anywhere; }
   .journal-data-table thead { background:var(--off-white); }
   .journal-data-table th { font-weight:400; text-align:left; }
@@ -115,11 +117,11 @@
   .journal-article-body .journal-section-note { margin-top:14px; }
   .journal-article-body .journal-supplement { margin-top:36px; margin-bottom:24px; }
   .journal-article-body .journal-supplement h2 { font-family:var(--font-body); font-size:12px; line-height:1.8; letter-spacing:0.06em; margin-bottom:10px; color:#62625e; }
-  .journal-disclaimer span { display:block; font-size:10px; letter-spacing:0.16em; color:var(--gold); margin-bottom:10px; }
+  .journal-disclaimer span { display:block; font-size:10px; letter-spacing:0.16em; color:var(--accent); margin-bottom:10px; }
   .journal-disclaimer p { font-size:12px; line-height:1.8; color:var(--mid); margin:0; }
   .journal-prev-next { max-width:1120px; margin:0 auto 84px; padding:32px 24px 0; border-top:1px solid var(--light); display:grid; grid-template-columns:1fr 1fr; gap:44px; }
   .journal-prev-next a { max-width:420px; display:inline-block; text-align:inherit; color:var(--black); text-decoration:none; font-family:var(--font-display); font-size:18px; font-weight:300; line-height:1.5; }
-  .journal-prev-next a span { display:block; font-family:var(--font-body); font-size:10px; letter-spacing:0.15em; color:var(--gold); margin-bottom:7px; }
+  .journal-prev-next a span { display:block; font-family:var(--font-body); font-size:10px; letter-spacing:0.15em; color:var(--accent); margin-bottom:7px; }
   .g2   { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
   .g3   { display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; }
   .gfooter { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }

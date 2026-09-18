@@ -26,7 +26,7 @@ export default function ProductCard({ product, user, onAdd, onSelect, promotions
   return (
     <article onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ position:'relative' }}>
       {onPromo && (
-        <div style={{ position:'absolute', top:10, right:10, zIndex:3, background:'var(--gold)', color:'var(--white)', fontSize:10, padding:'3px 9px', letterSpacing:'0.1em', fontWeight:500 }}>活動中</div>
+        <div style={{ position:'absolute', top:10, right:10, zIndex:3, background:'var(--accent)', color:'var(--white)', fontSize:10, padding:'3px 9px', letterSpacing:'0.1em', fontWeight:500 }}>活動中</div>
       )}
       <div style={{ position:'relative', overflow:'hidden', width:'min(100%, 540px)', aspectRatio:'1', margin:'0 auto 14px', background:'var(--off-white)' }}>
         <a href={productHref} onClick={event => { event.preventDefault(); onSelect(); }} aria-label={`查看${product.nameZh}`} style={{ position:'absolute', inset:0, display:'block', color:'inherit', textDecoration:'none' }}>
@@ -46,7 +46,7 @@ export default function ProductCard({ product, user, onAdd, onSelect, promotions
           <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
             {promoDisplay ? (
               <>
-                <span style={{ fontSize:15, fontWeight:500, fontFamily:'var(--font-display)', color:'var(--gold)' }}>NT$ {promoDisplay.price.toLocaleString()}</span>
+                <span style={{ fontSize:15, fontWeight:500, fontFamily:'var(--font-display)', color:'var(--accent)' }}>NT$ {promoDisplay.price.toLocaleString()}</span>
                 <span style={{ fontSize:11, color:'var(--dark)', textDecoration:'line-through' }}>NT$ {showPrice.toLocaleString()}</span>
               </>
             ) : (

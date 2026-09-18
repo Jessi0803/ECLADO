@@ -10,7 +10,7 @@ export default function KnowledgeJournal({ isMobile, onOpenArticle, onOpenJourna
       <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
         <div style={{ display:'flex', justifyContent:'space-between', gap:24, alignItems:'flex-end', flexWrap:'wrap', marginBottom: isMobile ? 28 : 42 }}>
           <div style={{ maxWidth:560 }}>
-            <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:12 }}>Journal</p>
+            <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--accent)', textTransform:'uppercase', marginBottom:12 }}>Journal</p>
             <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(24px,3.6vw,46px)', fontWeight:300, lineHeight:1.1, color:'var(--black)', marginBottom:18 }}>保養專欄</h2>
           </div>
           <button onClick={onOpenJournal} style={{ background:'none', border:'none', borderBottom:'1px solid var(--dark)', color:'var(--dark)', padding:'0 0 4px', cursor:'pointer', fontSize:12, letterSpacing:'0.06em' }}>瀏覽全部專欄 →</button>
@@ -22,7 +22,7 @@ export default function KnowledgeJournal({ isMobile, onOpenArticle, onOpenJourna
               <a key={article.title} href={`/journal/${article.slug}`} onClick={event => { event.preventDefault(); onOpenArticle(article); }} style={{ color:'inherit', textDecoration:'none', border:'1px solid var(--light)', background:'var(--off-white)', display:'flex', flexDirection:'column' }}>
                 <img src={article.img} alt="" style={{ width:'100%', aspectRatio:'4 / 3', background:article.imageBackground, objectFit:article.imageFit || 'cover', display:'block' }} />
                 <div style={{ padding:'12px 10px 14px', display:'flex', flexDirection:'column', gap:6 }}>
-                  <span style={{ fontSize:10, letterSpacing:'0.14em', color:'var(--gold)', textTransform:'uppercase' }}>{article.category}</span>
+                  <span style={{ fontSize:10, letterSpacing:'0.14em', color:'var(--accent)', textTransform:'uppercase' }}>{article.category}</span>
                   <h3 style={{ fontFamily:'var(--font-display)', fontSize:14, lineHeight:1.4, fontWeight:300, color:'var(--black)' }}>{article.title}</h3>
                   <p style={{ fontSize:11, lineHeight:1.7, color:'var(--dark)' }}>{article.excerpt}</p>
                 </div>
@@ -36,7 +36,7 @@ export default function KnowledgeJournal({ isMobile, onOpenArticle, onOpenJourna
                 <img src={leadArticle.img} alt="" style={{ width:'100%', aspectRatio:'16 / 10', background:leadArticle.imageBackground, objectFit:leadArticle.imageFit || 'cover', display:'block' }} />
                 <div style={{ padding:'24px 24px 26px', display:'flex', flexDirection:'column', gap:14 }}>
                   <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', fontSize:11, color:'var(--mid)' }}>
-                    <span style={{ letterSpacing:'0.16em', color:'var(--gold)', textTransform:'uppercase' }}>{leadArticle.category}</span>
+                    <span style={{ letterSpacing:'0.16em', color:'var(--accent)', textTransform:'uppercase' }}>{leadArticle.category}</span>
                   </div>
                   <h3 style={{ fontFamily:'var(--font-display)', fontSize:30, lineHeight:1.3, fontWeight:300, color:'var(--black)' }}>{leadArticle.title}</h3>
                   <p style={{ fontSize:14, lineHeight:1.9, color:'var(--dark)' }}>{leadArticle.excerpt}</p>
@@ -49,7 +49,7 @@ export default function KnowledgeJournal({ isMobile, onOpenArticle, onOpenJourna
                     <img src={article.img} alt="" style={{ width:'100%', height:'100%', background:article.imageBackground, objectFit:article.imageFit || 'cover', display:'block' }} />
                     <div style={{ padding:'18px 18px 20px', display:'flex', flexDirection:'column', gap:10 }}>
                       <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', fontSize:11, color:'var(--mid)' }}>
-                        <span style={{ letterSpacing:'0.16em', color:'var(--gold)', textTransform:'uppercase' }}>{article.category}</span>
+                        <span style={{ letterSpacing:'0.16em', color:'var(--accent)', textTransform:'uppercase' }}>{article.category}</span>
                       </div>
                       <h3 style={{ fontFamily:'var(--font-display)', fontSize:22, lineHeight:1.35, fontWeight:300, color:'var(--black)' }}>{article.title}</h3>
                       <p style={{ fontSize:13, lineHeight:1.8, color:'var(--dark)' }}>{article.excerpt}</p>
@@ -65,7 +65,7 @@ export default function KnowledgeJournal({ isMobile, onOpenArticle, onOpenJourna
                     <img src={article.img} alt="" style={{ width:'100%', aspectRatio:'16 / 9', background:article.imageBackground, objectFit:article.imageFit || 'cover', display:'block' }} />
                     <div style={{ padding:'16px 16px 18px', display:'flex', flexDirection:'column', gap:10, flex:1 }}>
                       <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', fontSize:11, color:'var(--mid)' }}>
-                        <span style={{ letterSpacing:'0.16em', color:'var(--gold)', textTransform:'uppercase' }}>{article.category}</span>
+                        <span style={{ letterSpacing:'0.16em', color:'var(--accent)', textTransform:'uppercase' }}>{article.category}</span>
                       </div>
                       <h3 style={{ fontFamily:'var(--font-display)', fontSize:21, lineHeight:1.35, fontWeight:300, color:'var(--black)' }}>{article.title}</h3>
                       <p style={{ fontSize:13, lineHeight:1.8, color:'var(--dark)' }}>{article.excerpt}</p>

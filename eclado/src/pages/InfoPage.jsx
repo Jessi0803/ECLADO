@@ -96,7 +96,7 @@ export default function InfoPage({ user }) {
     <div style={{ paddingTop:68 }}>
       <div style={{ background:'var(--off-white)', padding: isMobile ? '48px 20px 0' : '64px 32px 0', borderBottom:'1px solid var(--light)' }}>
         <div style={{ maxWidth:900, margin:'0 auto' }}>
-          <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>Service</p>
+          <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--accent)', textTransform:'uppercase', marginBottom:10 }}>Service</p>
           <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 30 : 44, fontWeight:300, color:'var(--black)', marginBottom:32 }}>購物說明</h1>
           <div className="info-tabs">
             {Object.keys(sections).map(key => (

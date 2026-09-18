@@ -93,7 +93,7 @@ export default function PaymentResultPage({ setPage }) {
   }
 
   const [title, description] = CONTENT[status] || CONTENT.pending;
-  const accentColor = status === 'paid' ? '#176b3a' : status === 'checking' || status === 'pending' ? 'var(--gold)' : '#9a4a2b';
+  const accentColor = status === 'paid' ? '#176b3a' : status === 'checking' || status === 'pending' ? 'var(--accent)' : '#9a4a2b';
   return (
     <main style={{ minHeight:'75vh', paddingTop:68, display:'flex', alignItems:'center' }}>
       <section style={{ width:'100%', maxWidth:680, margin:'0 auto', padding:isMobile ? '56px 20px' : '80px 40px', textAlign:'center' }}>

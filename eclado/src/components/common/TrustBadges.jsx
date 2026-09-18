@@ -16,7 +16,7 @@ export default function TrustBadges({ isMobile = false, compact = false }) {
     }}>
       {TRUST_BADGES.map(item => (
         <div key={item} style={{ display:'flex', alignItems:'center', gap:8, minWidth:0 }}>
-          <div style={{ width:4, height:4, background:'var(--gold)', borderRadius:'50%', flexShrink:0 }} />
+          <div style={{ width:4, height:4, background:'var(--accent)', borderRadius:'50%', flexShrink:0 }} />
           <span style={{ fontSize: isMobile ? 11 : 11, letterSpacing: isMobile ? '0.02em' : '0.08em', color: compact ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.5)', whiteSpace:'nowrap' }}>{item}</span>
         </div>
       ))}

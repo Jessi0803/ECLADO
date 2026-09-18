@@ -43,8 +43,8 @@ export default function EventProductsPage({
       <section style={{ background: 'var(--black)', color: 'var(--white)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '54px 24px 48px' : '82px 32px 72px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-            <span style={{ width: 30, height: 1, background: 'var(--gold)' }} />
-            <p style={{ margin: 0, color: 'var(--gold)', fontSize: 10, letterSpacing: '0.28em', textTransform: 'uppercase' }}>Private Event Selection</p>
+            <span style={{ width: 30, height: 3, background: 'var(--accent-on-dark)' }} />
+            <p style={{ margin: 0, color: 'var(--accent-on-dark-text)', fontSize: 10, letterSpacing: '0.28em', textTransform: 'uppercase' }}>Private Event Selection</p>
           </div>
           <h1 style={{ margin: '0 0 18px', fontFamily: 'var(--font-display)', fontWeight: 400, fontSize: isMobile ? 34 : 52, letterSpacing: '0.04em' }}>活動限定商品</h1>
           <p style={{ margin: 0, maxWidth: 560, color: 'rgba(255,255,255,0.68)', fontSize: 13, lineHeight: 1.9, letterSpacing: '0.04em' }}>

@@ -240,10 +240,10 @@ export default function App() {
       {showProBanner && !authPage && !cartOpen && (
         <div style={{ position:'fixed', bottom:24, left:'50%', transform:'translateX(-50%)', zIndex:200, background:'var(--black)', color:'var(--white)', padding:'16px 20px', display:'flex', alignItems:'center', gap:16, boxShadow:'0 4px 24px rgba(0,0,0,0.25)', maxWidth:'calc(100vw - 32px)', width:440 }}>
           <div style={{ flex:1 }}>
-            <div style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--gold)', textTransform:'uppercase', marginBottom:4 }}>美容師專業會員</div>
+            <div style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--accent-on-dark-text)', textTransform:'uppercase', marginBottom:4 }}>美容師專業會員</div>
             <div style={{ fontSize:13, lineHeight:1.6 }}>您是美容師嗎？申請專業會員享有院線商品與專業折扣。</div>
           </div>
-          <button onClick={() => { dismissProBanner(); goProfessionalApply(user, setPage); }} style={{ background:'var(--gold)', color:'var(--black)', border:'none', padding:'9px 16px', fontSize:11, letterSpacing:'0.1em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}>立即申請</button>
+          <button onClick={() => { dismissProBanner(); goProfessionalApply(user, setPage); }} style={{ background:'var(--accent)', color:'var(--white)', border:'none', padding:'9px 16px', fontSize:11, letterSpacing:'0.1em', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}>立即申請</button>
           <button onClick={dismissProBanner} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.4)', fontSize:20, cursor:'pointer', lineHeight:1, padding:'0 4px', flexShrink:0 }}>×</button>
         </div>
       )}

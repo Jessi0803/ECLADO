@@ -169,14 +169,14 @@ export default function ShopPage({
         <div style={{ position:'relative', height:'100%', maxWidth:1280, margin:'0 auto', padding: isMobile ? '0 24px' : '0 32px', display:'flex', alignItems:'flex-end', justifyContent:'space-between', flexWrap:'wrap', gap:12, paddingBottom: isMobile ? 28 : 36 }}>
           <div>
             <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
-              <div style={{ width:28, height:1, background:'var(--gold)' }} />
-              <p style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--gold)', textTransform:'uppercase', margin:0 }}>Shop</p>
+              <div style={{ width:28, height:3, background:'var(--accent-on-dark)' }} />
+              <p style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--accent-on-dark-text)', textTransform:'uppercase', margin:0 }}>Shop</p>
             </div>
             <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 28 : 42, fontWeight:500, color:'var(--white)', lineHeight:1.1, margin:0 }}>{filterTitle}</h1>
           </div>
           {isProfessionalMember(user) && (
             <div style={{ display:'flex', alignItems:'center', gap:8, paddingBottom:4 }}>
-              <span style={{ fontSize:10, background:'var(--gold)', color:'var(--black)', padding:'3px 8px', letterSpacing:'0.12em', fontWeight:600 }}>{getMemberTier(user).badge}</span>
+              <span style={{ fontSize:10, background:'var(--accent)', color:'var(--white)', padding:'3px 8px', letterSpacing:'0.12em', fontWeight:600 }}>{getMemberTier(user).badge}</span>
               <span style={{ fontSize:12, color:'var(--dark)', letterSpacing:'0.04em' }}>{getMemberTier(user).priceLabel}已啟用</span>
             </div>
           )}

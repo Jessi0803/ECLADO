@@ -61,7 +61,7 @@ export function getPaymentStateColor(state) {
   if (state === 'paid') return 'var(--green)';
   if (state === 'failed') return 'var(--red)';
   if (['expired', 'cancelled'].includes(state)) return 'var(--mid)';
-  return 'var(--gold)';
+  return 'var(--accent)';
 }
 
 export function getOrderStatusLabel(status) {

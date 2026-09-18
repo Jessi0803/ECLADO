@@ -40,7 +40,7 @@ export default function PaymentInfo({
     <div style={{ background:'var(--off-white)', padding:'24px 28px', marginBottom:20 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14, gap:12 }}>
         <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase' }}>付款資訊</p>
-        <span style={{ fontSize:10, background:'var(--gold)', color:'var(--white)', padding:'3px 10px', letterSpacing:'0.1em' }}>{paymentResult.methodLabel}</span>
+        <span style={{ fontSize:10, background:'var(--accent)', color:'var(--white)', padding:'3px 10px', letterSpacing:'0.1em' }}>{paymentResult.methodLabel}</span>
       </div>
       <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'8px 20px', fontSize:13 }}>
         <span style={{ color:'var(--dark)' }}>訂單編號</span>

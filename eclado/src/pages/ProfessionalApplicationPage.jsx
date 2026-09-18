@@ -112,7 +112,7 @@ export default function ProfessionalApplicationPage({ setPage, user, authReady, 
           <div style={{ display:'flex', gap:18, flexWrap:'wrap', marginBottom:24 }}>
             <button onClick={() => window.history.back()} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.78)', cursor:'pointer', fontSize:12, letterSpacing:'0.08em', fontFamily:'var(--font-body)', padding:0 }}>← 返回</button>
           </div>
-          <p style={{ fontSize:10, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:12 }}>Professional Membership</p>
+          <p style={{ fontSize:10, letterSpacing:'0.28em', color:'var(--accent)', textTransform:'uppercase', marginBottom:12 }}>Professional Membership</p>
           <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(22px,3vw,34px)', fontWeight:300, lineHeight:1.2, marginBottom:14 }}>申請成為專業會員</h1>
           <p style={{ fontSize:14, color:'rgba(255,255,255,0.62)', lineHeight:1.8, maxWidth:560 }}>請填寫以下基本資料，完成後我們將盡快與您聯繫，協助開立客戶資料、提供產品目錄與報價內容。</p>
         </div>
@@ -128,7 +128,7 @@ export default function ProfessionalApplicationPage({ setPage, user, authReady, 
             <button type="button" onClick={() => setPage('account')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 28px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>前往會員專區</button>
           </div>
         ) : blocked === 'pending' ? (
-          <div style={{ border:'1px solid var(--gold)', background:'#fffdf5', padding:'28px' }}>
+          <div style={{ border:'1px solid var(--accent)', background:'#fffdf5', padding:'28px' }}>
             <h2 style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:300, marginBottom:10 }}>申請審核中</h2>
             <p style={{ fontSize:14, lineHeight:1.8, marginBottom:20, color:'var(--dark)' }}>我們正在審核您的美容師會員申請，通過後將自動開通專業價與院線商品購買資格。</p>
             <button type="button" onClick={() => setPage('account')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 28px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>前往會員專區</button>

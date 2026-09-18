@@ -59,7 +59,7 @@ export default function JournalArticlePage({ articleSlug, onBack, onOpenArticle 
             <span aria-hidden="true" style={{ margin:'0 8px', color:'var(--mid)' }}>›</span>
             <a href="/journal" onClick={event => { event.preventDefault(); onBack(); }} style={{ color:'var(--dark)', fontSize:11, textDecoration:'none', borderBottom:'1px solid var(--mid)', paddingBottom:4 }}>保養專欄</a>
           </nav>
-          <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--gold)', marginBottom:18 }}>{article.category}</p>
+          <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--accent)', marginBottom:18 }}>{article.category}</p>
           <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(34px,5.4vw,68px)', fontWeight:300, lineHeight:1.18, color:'var(--black)', marginBottom:24 }}>{article.title}</h1>
           <p style={{ maxWidth:650, margin:'0 auto', fontSize:15, lineHeight:1.9, color:'var(--dark)' }}>{article.excerpt}</p>
         </header>
@@ -117,13 +117,13 @@ export default function JournalArticlePage({ articleSlug, onBack, onOpenArticle 
 
       <section style={{ background:'var(--off-white)', padding:'72px 0 88px', borderTop:'1px solid var(--light)' }}>
         <div style={{ maxWidth:1120, margin:'0 auto', padding:'0 24px' }} className="px-page">
-          <p style={{ fontSize:10, letterSpacing:'0.22em', color:'var(--gold)', marginBottom:10 }}>RELATED JOURNAL</p>
+          <p style={{ fontSize:10, letterSpacing:'0.22em', color:'var(--accent)', marginBottom:10 }}>RELATED JOURNAL</p>
           <h2 style={{ fontFamily:'var(--font-display)', fontSize:32, fontWeight:300, marginBottom:32 }}>延伸閱讀</h2>
           <div className="journal-related-grid">
             {related.map(item => (
               <a key={item.slug} href={`/journal/${item.slug}`} onClick={event => { event.preventDefault(); onOpenArticle(item); }} style={{ color:'inherit', textDecoration:'none' }}>
                 <img src={item.img} alt="" style={{ width:'100%', aspectRatio:'16 / 9', background:item.imageBackground, objectFit:item.imageFit || 'cover', display:'block', marginBottom:14 }} />
-                <span style={{ fontSize:10, color:'var(--gold)', letterSpacing:'0.12em' }}>{item.category}</span>
+                <span style={{ fontSize:10, color:'var(--accent)', letterSpacing:'0.12em' }}>{item.category}</span>
                 <h3 style={{ fontFamily:'var(--font-display)', fontSize:19, fontWeight:300, lineHeight:1.45, marginTop:8 }}>{item.title}</h3>
               </a>
             ))}

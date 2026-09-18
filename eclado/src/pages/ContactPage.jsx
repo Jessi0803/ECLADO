@@ -35,7 +35,7 @@ export default function ContactPage() {
     <div style={{ paddingTop:68, minHeight:'80vh' }}>
       <div style={{ background:'var(--off-white)', padding:isMobile ? '48px 20px 36px' : '64px 32px 48px', borderBottom:'1px solid var(--light)' }}>
         <div style={{ maxWidth:860, margin:'0 auto' }}>
-          <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--gold)', textTransform:'uppercase', marginBottom:10 }}>Contact</p>
+          <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--accent)', textTransform:'uppercase', marginBottom:10 }}>Contact</p>
           <h1 style={{ fontFamily:'var(--font-display)', fontSize:isMobile ? 30 : 44, fontWeight:300, color:'var(--black)', marginBottom:12 }}>聯絡我們</h1>
           <p style={{ fontSize:14, color:'var(--dark)', lineHeight:1.8 }}>有任何問題、諮詢或合作需求，歡迎透過以下方式與我們聯繫。</p>
         </div>
