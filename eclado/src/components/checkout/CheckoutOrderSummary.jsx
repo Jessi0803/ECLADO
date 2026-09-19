@@ -13,7 +13,7 @@ export default function CheckoutOrderSummary({ items, summary, user, fulfillment
     <div style={{ background:'var(--off-white)', padding:'28px 24px', height:'fit-content' }}>
       <h3 style={{ fontFamily:'var(--font-display)', fontSize:16, fontWeight:400, marginBottom:20, letterSpacing:'0.04em' }}>訂單明細</h3>
       {hasPreorderItem && (
-        <div style={{ background:'var(--white)', border:'1px solid var(--accent)', padding:'12px 14px', marginBottom:16, fontSize:12, color:'var(--dark)', lineHeight:1.7 }}>
+        <div style={{ background:'var(--accent-tint)', border:'1px solid var(--accent)', padding:'12px 14px', marginBottom:16, fontSize:12, color:'var(--dark)', lineHeight:1.7 }}>
           訂單含預購商品，預購品項出貨時間為 7-14 個工作天。
         </div>
       )}

@@ -42,6 +42,17 @@ export async function fetchMemberProfile(userId) {
     .single();
 }
 
+export const MEMBER_NAME_MAX_LENGTH = 50;
+
+export async function updateMemberName(userId, name) {
+  return supabase
+    .from('profiles')
+    .update({ name })
+    .eq('id', userId)
+    .select('name')
+    .single();
+}
+
 export async function hasProfessionalApplication(userId) {
   const { data } = await supabase
     .from('professional_applications')

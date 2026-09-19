@@ -65,13 +65,13 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
         borderLeft: professionalProgress.eligible && !professionalProgress.freeShipping
           ? '4px solid var(--accent)'
           : `1px solid ${professionalProgress.eligible ? 'var(--accent)' : '#b87855'}`,
-        background: professionalProgress.eligible && !professionalProgress.freeShipping ? '#fff8e8' : 'var(--white)',
+        background: professionalProgress.eligible && !professionalProgress.freeShipping ? 'var(--accent-tint)' : 'var(--white)',
         padding: drawer ? '6px 9px' : (professionalProgress.eligible && !professionalProgress.freeShipping ? '14px 16px' : '12px 14px'),
         marginBottom: drawer ? 0 : 18,
         fontSize: drawer ? 10 : (professionalProgress.eligible && !professionalProgress.freeShipping ? 14 : 12),
         fontWeight: professionalProgress.eligible && !professionalProgress.freeShipping ? 600 : 400,
         lineHeight: drawer ? 1.35 : 1.65,
-        color: professionalProgress.eligible && !professionalProgress.freeShipping ? '#76500a' : (professionalProgress.eligible ? 'var(--dark)' : '#8a4c2d'),
+        color: professionalProgress.eligible && !professionalProgress.freeShipping ? 'var(--accent)' : (professionalProgress.eligible ? 'var(--dark)' : '#8a4c2d'),
         textAlign: drawer ? 'right' : 'left',
         maxWidth: drawer ? '68%' : undefined,
       }}
@@ -90,7 +90,7 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
         </div>
 
         {cart.length > 0 && promotions.some(isPromotionLive) && discount === 0 && (
-          <div style={{ background:'var(--off-white)', border:'1px solid var(--accent)', padding:'14px 18px', marginBottom:24, fontSize:13, color:'var(--dark)', lineHeight:1.65 }}>
+          <div style={{ background:'var(--accent-tint)', border:'1px solid var(--accent)', padding:'14px 18px', marginBottom:24, fontSize:13, color:'var(--dark)', lineHeight:1.65 }}>
             目前有<strong>限時優惠</strong>，但購物車內還沒有「活動指定商品」，所以尚無折抵。
           </div>
         )}

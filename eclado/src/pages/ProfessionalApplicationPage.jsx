@@ -128,7 +128,7 @@ export default function ProfessionalApplicationPage({ setPage, user, authReady, 
             <button type="button" onClick={() => setPage('account')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 28px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>前往會員專區</button>
           </div>
         ) : blocked === 'pending' ? (
-          <div style={{ border:'1px solid var(--accent)', background:'#fffdf5', padding:'28px' }}>
+          <div style={{ border:'1px solid var(--accent)', background:'var(--accent-tint)', padding:'28px' }}>
             <h2 style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:300, marginBottom:10 }}>申請審核中</h2>
             <p style={{ fontSize:14, lineHeight:1.8, marginBottom:20, color:'var(--dark)' }}>我們正在審核您的美容師會員申請，通過後將自動開通專業價與院線商品購買資格。</p>
             <button type="button" onClick={() => setPage('account')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 28px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>前往會員專區</button>

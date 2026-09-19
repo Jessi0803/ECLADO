@@ -715,22 +715,27 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   });
   await page.route('**/rest/v1/coupon_promotions**', async route => json(route, couponPromotions));
   await page.route('**/rest/v1/coupon_campaign_members**', async route => json(route, couponCampaignMembers));
+  const couponMemberRow = (profile: Record<string, unknown>) => {
+    const application = applications
+      .filter(row => row.user_id === profile.id)
+      .sort((a, b) => Number(b.status === 'approved') - Number(a.status === 'approved') || String(b.created_at).localeCompare(String(a.created_at)))[0];
+    return {
+      user_id:profile.id, name:profile.name, email:profile.email, phone:profile.phone, role:profile.role,
+      contact_name:application?.contact_name ?? null, studio_name:application?.studio_name ?? null,
+    };
+  };
   await page.route('**/rest/v1/rpc/get_coupon_campaign_members', async route => {
     const request = route.request().postDataJSON();
     const selectedIds = couponCampaignMembers
       .filter(link => link.coupon_campaign_id === request?.p_coupon_campaign_id)
       .map(link => link.user_id);
-    return json(route, profiles.filter(profile => selectedIds.includes(profile.id)).map(profile => ({
-      user_id:profile.id, name:profile.name, email:profile.email, phone:profile.phone, role:profile.role,
-    })));
+    return json(route, profiles.filter(profile => selectedIds.includes(profile.id)).map(couponMemberRow));
   });
   await page.route('**/rest/v1/rpc/search_coupon_members', async route => {
     const request = route.request().postDataJSON();
     const query = String(request?.p_query || '').toLowerCase();
     const limit = Math.min(Math.max(Number(request?.p_limit) || 20, 1), 50);
-    return json(route, profiles.filter(profile => [profile.name, profile.email, profile.phone].some(value => String(value || '').toLowerCase().includes(query))).slice(0, limit).map(profile => ({
-      user_id:profile.id, name:profile.name, email:profile.email, phone:profile.phone, role:profile.role,
-    })));
+    return json(route, profiles.map(couponMemberRow).filter(member => [member.name, member.email, member.phone, member.contact_name, member.studio_name].some(value => String(value || '').toLowerCase().includes(query))).slice(0, limit));
   });
   await page.route('**/rest/v1/rpc/save_discount_promotion', async route => {
     const request = route.request().postDataJSON();
@@ -991,7 +996,11 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     if (method === 'PATCH') {
       const body = route.request().postDataJSON();
       options.onProfileUpdate?.(body, route.request().url());
-      return json(route, [body]);
+      const profileId = new URL(route.request().url()).searchParams.get('id')?.replace(/^eq\./, '');
+      const profile = profiles.find(row => String(row.id) === String(profileId));
+      if (profile) Object.assign(profile, body);
+      const updated = profile || body;
+      return json(route, hasObjectAccept(route) ? updated : [updated]);
     }
     return json(route, []);
   });

@@ -225,3 +225,30 @@ test('DB 已有 pending 申請的 consumer 會員不能再次送出（DB 層防�
   await expect(page.getByRole('button', { name: '送出申請' })).toHaveCount(0);
   expect(appInsertCalled).toBe(false);
 });
+
+test('會員可以在會員資料編輯自己的姓名', async ({ page }) => {
+  const profileUpdates: Record<string, unknown>[] = [];
+  await mockEcladoApis(page, {
+    authUser: loggedInUser('pro@example.com'),
+    profiles: [loggedInProfile('pro')],
+    onProfileUpdate: body => profileUpdates.push(body),
+  });
+
+  await page.goto('/professional-apply');
+  const memberInfo = page.locator('div', { has: page.getByText('會員資料', { exact: true }) }).last();
+  await expect(memberInfo.getByText('已是美容師', { exact: true })).toBeVisible();
+
+  await memberInfo.getByRole('button', { name: '編輯', exact: true }).click();
+  const input = page.getByLabel('編輯姓名');
+  await input.fill('   ');
+  await page.getByRole('button', { name: '儲存', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveText('請輸入姓名');
+  expect(profileUpdates).toHaveLength(0);
+
+  await input.fill('  王小美  ');
+  await page.getByRole('button', { name: '儲存', exact: true }).click();
+  await expect(page.getByLabel('編輯姓名')).toHaveCount(0);
+  await expect(memberInfo.getByText('王小美', { exact: true })).toBeVisible();
+  await expect(memberInfo.getByText('已是美容師', { exact: true })).toHaveCount(0);
+  expect(profileUpdates).toEqual([{ name: '王小美' }]);
+});

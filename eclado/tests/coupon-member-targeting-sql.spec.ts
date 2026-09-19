@@ -30,3 +30,13 @@ test('優惠券儲存會同步指定會員名單並保留既有身分模式相�
   expect(engine).toContain('insert into public.coupon_campaign_members');
   expect(engine).toContain('on conflict (coupon_campaign_id, user_id) do nothing');
 });
+
+test('指定會員搜尋會帶出並比對美容師聯絡人與皮膚管理院', () => {
+  const contactMigration = fs.readFileSync(path.join(root, 'supabase-coupon-member-contact-name.sql'), 'utf8');
+  expect(contactMigration).toContain('drop function if exists public.search_coupon_members(text, integer)');
+  expect(contactMigration).toContain("coalesce(application.contact_name, '') ilike");
+  expect(contactMigration).toContain("coalesce(application.studio_name, '') ilike");
+  expect(contactMigration.match(/public\.has_backoffice_permission\('promotions\.manage'\)/g)?.length).toBe(2);
+  expect(contactMigration).toContain('grant execute on function public.search_coupon_members(text, integer) to authenticated');
+  expect(contactMigration).not.toContain('to anon');
+});

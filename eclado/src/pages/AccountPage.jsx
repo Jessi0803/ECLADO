@@ -13,7 +13,9 @@ import useAdminAccess from '../hooks/useAdminAccess.js';
 import {
   fetchLatestProApplication,
   goProfessionalApply,
+  MEMBER_NAME_MAX_LENGTH,
   openAdmin,
+  updateMemberName,
 } from '../services/membership.js';
 import { fetchAccountOrders } from '../services/accountOrders.js';
 import { fetchProfessionalApplicationStatus } from '../services/professionalApplications.js';
@@ -21,7 +23,7 @@ import { getMemberPaymentInstructions, getMemberPaymentSummaries, retrySinopacPa
 import { getPendingPayment, savePendingPayment } from '../services/pendingPayment.js';
 import { fetchMyProfessionalSales } from '../services/professionalSales.js';
 
-export default function AccountPage({ user, setPage, onSignOut }) {
+export default function AccountPage({ user, setPage, onSignOut, onUserUpdated }) {
   const isMobile = useIsMobile();
   const isAdmin = useAdminAccess(user?.uid);
   const [orders, setOrders] = useState([]);
@@ -35,6 +37,34 @@ export default function AccountPage({ user, setPage, onSignOut }) {
   const [professionalSales, setProfessionalSales] = useState(null);
   const [professionalSalesLoading, setProfessionalSalesLoading] = useState(false);
   const [professionalSalesError, setProfessionalSalesError] = useState('');
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [savingName, setSavingName] = useState(false);
+  const [nameError, setNameError] = useState('');
+
+  function startEditName() {
+    setNameDraft(user?.name || '');
+    setNameError('');
+    setEditingName(true);
+  }
+
+  async function saveName(event) {
+    event.preventDefault();
+    const name = nameDraft.trim();
+    if (!name) return setNameError('請輸入姓名');
+    if (name.length > MEMBER_NAME_MAX_LENGTH) return setNameError(`姓名最多 ${MEMBER_NAME_MAX_LENGTH} 個字`);
+    if (name === user?.name) return setEditingName(false);
+    setSavingName(true);
+    setNameError('');
+    const { error: updateError } = await updateMemberName(user.uid, name);
+    if (updateError) {
+      setSavingName(false);
+      return setNameError('姓名更新失敗，請稍後再試');
+    }
+    await onUserUpdated?.();
+    setSavingName(false);
+    setEditingName(false);
+  }
 
   useEffect(() => {
     // SPA navigation keeps the previous page's scroll position. A long order
@@ -268,8 +298,31 @@ export default function AccountPage({ user, setPage, onSignOut }) {
             <div style={{ fontSize:12, letterSpacing:'0.16em', color:'var(--dark)', textTransform:'uppercase', marginBottom:18 }}>會員資料</div>
             <div style={{ display:'grid', gap:14 }}>
               <div>
-                <div style={{ fontSize:11, color:'var(--dark)', marginBottom:4 }}>姓名</div>
-                <div style={{ fontSize:15, color:'var(--black)' }}>{user.name}</div>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:4 }}>
+                  <div style={{ fontSize:11, color:'var(--dark)' }}>姓名</div>
+                  {!editingName && (
+                    <button type="button" onClick={startEditName} style={{ background:'none', border:'none', padding:0, fontSize:11, letterSpacing:'0.08em', color:'var(--accent)', cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3 }}>編輯</button>
+                  )}
+                </div>
+                {editingName ? (
+                  <form onSubmit={saveName} style={{ display:'grid', gap:10 }}>
+                    <input
+                      aria-label="編輯姓名"
+                      value={nameDraft}
+                      onChange={event => { setNameDraft(event.target.value); if (nameError) setNameError(''); }}
+                      maxLength={MEMBER_NAME_MAX_LENGTH}
+                      autoFocus
+                      style={{ width:'100%', border:'none', borderBottom:'1px solid var(--black)', padding:'8px 0', fontSize:15, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--black)', boxSizing:'border-box' }}
+                    />
+                    {nameError && <p role="alert" style={{ fontSize:12, color:'#c0392b' }}>{nameError}</p>}
+                    <div style={{ display:'flex', gap:8 }}>
+                      <button type="submit" disabled={savingName} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'8px 18px', fontSize:11, letterSpacing:'0.1em', cursor: savingName ? 'wait' : 'pointer' }}>{savingName ? '儲存中…' : '儲存'}</button>
+                      <button type="button" disabled={savingName} onClick={() => { setEditingName(false); setNameError(''); }} style={{ background:'none', color:'var(--dark)', border:'1px solid var(--light)', padding:'8px 18px', fontSize:11, letterSpacing:'0.1em', cursor:'pointer' }}>取消</button>
+                    </div>
+                  </form>
+                ) : (
+                  <div style={{ fontSize:15, color:'var(--black)' }}>{user.name}</div>
+                )}
               </div>
               {visibleEmail && (
                 <div>
@@ -282,7 +335,7 @@ export default function AccountPage({ user, setPage, onSignOut }) {
                 <div style={{ fontSize:15, color:'var(--black)' }}>{getMemberTier(user).label}</div>
               </div>
               {!isProfessionalMember(user) && (
-                <div style={{ marginTop:4, padding:'16px', background:'var(--off-white)', borderLeft:'2px solid var(--accent)' }}>
+                <div style={{ marginTop:4, padding:'16px', background:'var(--accent-tint)', borderLeft:'2px solid var(--accent)' }}>
                   {proAppStatus === 'pending' ? (
                     <>
                       <div style={{ fontSize:11, letterSpacing:'0.1em', color:'var(--accent)', textTransform:'uppercase', marginBottom:6 }}>美容師申請審核中</div>
@@ -358,7 +411,7 @@ export default function AccountPage({ user, setPage, onSignOut }) {
                       </div>
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap', justifyContent:'flex-end' }}>
                         {paymentState && <span style={{ flexShrink:0, fontSize:10, letterSpacing:'0.06em', border:`1px solid ${getPaymentStateColor(paymentState)}`, color:getPaymentStateColor(paymentState), padding:'5px 8px' }}>{getPaymentStateLabel(paymentState)}</span>}
-                        <span style={{ flexShrink:0, fontSize:11, letterSpacing:'0.08em', border:'1px solid var(--accent)', color:'var(--black)', padding:'5px 9px' }}>{getOrderStatusLabel(order.status)}</span>
+                        <span style={{ flexShrink:0, fontSize:11, letterSpacing:'0.08em', border:'1px solid var(--accent)', background:'var(--accent-tint)', color:'var(--black)', padding:'5px 9px' }}>{getOrderStatusLabel(order.status)}</span>
                       </div>
                     </div>
                     <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '1fr auto', gap:isMobile ? 12 : 24, borderTop:'1px solid var(--light)', paddingTop:14 }}>
@@ -376,7 +429,7 @@ export default function AccountPage({ user, setPage, onSignOut }) {
                         ))}
                         {order.promotion_name && <div style={{ fontSize:12, color:'var(--accent)' }}>活動：{order.promotion_name}</div>}
                         {order.fulfillment_method === 'onsite_pickup' && (
-                          <div style={{ marginTop:4, padding:'12px 14px', background:'var(--off-white)', border:'1px solid var(--accent)', fontSize:12, color:'var(--dark)' }}>
+                          <div style={{ marginTop:4, padding:'12px 14px', background:'var(--accent-tint)', border:'1px solid var(--accent)', fontSize:12, color:'var(--dark)' }}>
                             客訂商品現場自取{order.status === 'ready_for_pickup' ? '，商品已可取貨' : order.status === 'picked_up' ? '，已完成取貨' : '，目前正在處理中'}。
                           </div>
                         )}

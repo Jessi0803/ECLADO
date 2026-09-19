@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../services/supabase.js';
 import { getPromotionPhase, PromoBadge } from '../components/StatusIndicators.jsx';
 
-const ROLES = [['consumer', '一般會員'], ['pro', '專業會員'], ['instructor', '師資'], ['distributor', '經銷']];
+const ROLES = [['consumer', '一般會員'], ['pro', '美容師'], ['instructor', '師資'], ['distributor', '經銷商']];
 const inputStyle = { width:'100%', border:'none', borderBottom:'1px solid var(--border)', padding:'10px 0', fontSize:14, outline:'none', background:'none', boxSizing:'border-box' };
 const labelStyle = { fontSize:11, letterSpacing:'0.12em', color:'var(--mid)', display:'block', marginBottom:8 };
 const panelStyle = { background:'var(--white)', border:'1px solid var(--border)', padding:'clamp(20px, 4vw, 32px)', maxWidth:920 };
@@ -177,7 +177,6 @@ function CouponForm({ coupon, promotions, linkedIds, linkedMemberIds, onClose })
   }, [coupon?.id, coupon?.audience_mode]);
   async function searchMembers() {
     const query = memberQuery.trim();
-    if (query.length < 2) return setError('請至少輸入 2 個字元搜尋會員');
     setError(''); setMemberSearchLoading(true);
     const { data, error:searchError } = await supabase.rpc('search_coupon_members', { p_query:query, p_limit:20 });
     setMemberSearchLoading(false);
@@ -247,6 +246,7 @@ function CouponPromotionPicker({ promotions, selectedIds, onToggle, onMove }) {
 
 function MemberPicker({ query, setQuery, loading, results, selected, selectedIds, onSearch, onToggle, onClear }) {
   const roleLabel = role => ROLES.find(([value]) => value === role)?.[1] || (role === 'pending' ? '審核中' : role || '一般會員');
+  const contactLabel = member => member?.contact_name ? <span style={{ color:'var(--mid)', fontWeight:400 }}> · 聯絡人 {member.contact_name}</span> : null;
   const handleKeyDown = event => {
     if (event.key === 'Enter') {
       event.preventDefault();
@@ -256,17 +256,17 @@ function MemberPicker({ query, setQuery, loading, results, selected, selectedIds
   return <div style={{ display:'grid', gap:12 }}>
     <p style={{ fontSize:11, lineHeight:1.7, color:'var(--mid)' }}>只有被指定且已登入的會員可以使用；指定會員模式不開放訪客。</p>
     <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) auto', gap:8 }}>
-      <input aria-label="搜尋指定會員" value={query} onChange={event => setQuery(event.target.value)} onKeyDown={handleKeyDown} placeholder="輸入姓名、Email 或手機號碼" style={{ ...inputStyle, border:'1px solid var(--border)', padding:'10px 12px' }} />
+      <input aria-label="搜尋指定會員" value={query} onChange={event => setQuery(event.target.value)} onKeyDown={handleKeyDown} placeholder="輸入姓名、聯絡人、皮膚管理院、Email 或手機" style={{ ...inputStyle, border:'1px solid var(--border)', padding:'10px 12px' }} />
       <button type="button" onClick={onSearch} disabled={loading} style={{ ...secondaryButton, flex:'none', minWidth:76 }}>{loading ? '搜尋中…' : '搜尋'}</button>
     </div>
     {results.length > 0 && <div aria-label="會員搜尋結果" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(250px,1fr))', gap:7, maxHeight:260, overflow:'auto' }}>{results.map(member => {
       const checked = selectedIds.includes(member.user_id);
-      return <label key={member.user_id} style={{ border:`1px solid ${checked ? 'var(--gold)' : 'var(--border)'}`, padding:'9px 11px', background:checked ? 'var(--off)' : '#fff', fontSize:12, cursor:'pointer' }}><input type="checkbox" checked={checked} onChange={() => onToggle(member)} /> <strong style={{ fontWeight:500 }}>{member.name || '未填姓名'}</strong> · {roleLabel(member.role)}<small style={{ display:'block', marginLeft:18, marginTop:4, color:'var(--mid)', overflowWrap:'anywhere' }}>{member.email || '無 Email'}{member.phone ? `｜${member.phone}` : ''}</small></label>;
+      return <label key={member.user_id} style={{ border:`1px solid ${checked ? 'var(--gold)' : 'var(--border)'}`, padding:'9px 11px', background:checked ? 'var(--off)' : '#fff', fontSize:12, cursor:'pointer' }}><input type="checkbox" checked={checked} onChange={() => onToggle(member)} /> <strong style={{ fontWeight:500 }}>{member.name || '未填姓名'}</strong>{contactLabel(member)} · {roleLabel(member.role)}<small style={{ display:'block', marginLeft:18, marginTop:4, color:'var(--mid)', overflowWrap:'anywhere' }}>{member.email || '無 Email'}{member.phone ? `｜${member.phone}` : ''}</small></label>;
     })}</div>}
     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}><span style={{ fontSize:12, color:'var(--dark)' }}>已指定 {selectedIds.length} 位會員</span>{selectedIds.length > 0 && <button type="button" onClick={onClear} style={{ border:'none', background:'none', color:'var(--red)', fontSize:11, cursor:'pointer' }}>全部清除</button>}</div>
     {selectedIds.length > 0 && <div aria-label="已指定會員" style={{ display:'grid', gap:7 }}>{selectedIds.map(userId => {
       const member = selected.find(item => item.user_id === userId);
-      return <div key={userId} style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) auto', gap:10, alignItems:'center', padding:'9px 11px', background:'var(--off)', border:'1px solid var(--border)', fontSize:12 }}><div><strong style={{ fontWeight:500 }}>{member?.name || '會員資料載入中'}</strong>{member && <small style={{ display:'block', color:'var(--mid)', marginTop:3, overflowWrap:'anywhere' }}>{roleLabel(member.role)} · {member.email || '無 Email'}{member.phone ? `｜${member.phone}` : ''}</small>}</div><button type="button" onClick={() => onToggle(member || { user_id:userId })} style={{ border:'none', background:'none', color:'var(--red)', fontSize:11, cursor:'pointer' }}>移除</button></div>;
+      return <div key={userId} style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) auto', gap:10, alignItems:'center', padding:'9px 11px', background:'var(--off)', border:'1px solid var(--border)', fontSize:12 }}><div><strong style={{ fontWeight:500 }}>{member?.name || '會員資料載入中'}</strong>{contactLabel(member)}{member && <small style={{ display:'block', color:'var(--mid)', marginTop:3, overflowWrap:'anywhere' }}>{roleLabel(member.role)} · {member.email || '無 Email'}{member.phone ? `｜${member.phone}` : ''}</small>}</div><button type="button" onClick={() => onToggle(member || { user_id:userId })} style={{ border:'none', background:'none', color:'var(--red)', fontSize:11, cursor:'pointer' }}>移除</button></div>;
     })}</div>}
   </div>;
 }

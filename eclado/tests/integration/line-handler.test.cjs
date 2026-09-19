@@ -105,7 +105,7 @@ test('LINE callback - 新使用者會建立 auth user、profiles 與 magic link'
   assert.ok(calls.some(call => call.url === `${SUPABASE_URL}/auth/v1/admin/generate_link`));
 });
 
-test('LINE callback - 已存在會員會更新名稱並重用既有帳號', async () => {
+test('LINE callback - 已存在會員未填姓名時會補上 LINE 名稱並重用既有帳號', async () => {
   const calls = [];
   const originalFetch = global.fetch;
   const originalEnv = {
@@ -163,6 +163,64 @@ test('LINE callback - 已存在會員會更新名稱並重用既有帳號', asyn
   assert.equal(res.redirectedTo, 'https://ecladotaiwan.com/line-callback#access_token=magic');
   assert.equal(res.statusCode, 200);
   assert.ok(calls.some(call => call.url === `${SUPABASE_URL}/rest/v1/profiles?id=eq.user-999`));
+});
+
+test('LINE callback - 已存在會員已有姓名時不會用 LINE 名稱覆蓋', async () => {
+  const calls = [];
+  const originalFetch = global.fetch;
+  const originalEnv = {
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+    LINE_LOGIN_CHANNEL_SECRET: process.env.LINE_LOGIN_CHANNEL_SECRET,
+  };
+
+  process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
+  process.env.LINE_LOGIN_CHANNEL_SECRET = 'test-login-secret';
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+
+    if (url === 'https://api.line.me/oauth2/v2.1/token') {
+      return jsonResponse(200, { access_token: 'line-access-token' });
+    }
+
+    if (url === 'https://api.line.me/v2/profile') {
+      return jsonResponse(200, { userId: 'U9999999999', displayName: '新名稱' });
+    }
+
+    if (String(url).startsWith(`${SUPABASE_URL}/rest/v1/profiles?line_user_id=eq.U9999999999`)) {
+      return jsonResponse(200, [{ id: 'user-999', email: 'old@example.com', name: '會員自訂名稱' }]);
+    }
+
+    if (String(url).startsWith(`${SUPABASE_URL}/rest/v1/profiles?id=eq.user-999`)) {
+      throw new Error('should not overwrite a member-edited name');
+    }
+
+    if (url === `${SUPABASE_URL}/auth/v1/admin/generate_link`) {
+      return jsonResponse(200, { action_link: 'https://ecladotaiwan.com/line-callback#access_token=magic' });
+    }
+
+    if (url === `${SUPABASE_URL}/auth/v1/admin/users`) {
+      throw new Error('should not create auth user for existing profile');
+    }
+
+    if (url === `${SUPABASE_URL}/rest/v1/profiles`) {
+      throw new Error('should not insert profile for existing user');
+    }
+
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  const res = createRes();
+
+  try {
+    await lineCallback(lineCallbackReq({ code: 'line-code' }), res);
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.redirectedTo, 'https://ecladotaiwan.com/line-callback#access_token=magic');
+  assert.equal(res.statusCode, 200);
+  assert.ok(!calls.some(call => call.url.startsWith(`${SUPABASE_URL}/rest/v1/profiles?id=eq.user-999`)));
 });
 
 test('LINE callback - LINE email 與既有會員相同時會綁定同一個帳戶', async () => {

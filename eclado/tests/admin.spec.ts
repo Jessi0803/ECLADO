@@ -1537,6 +1537,29 @@ test('優惠券可搜尋並指定個別會員使用', async ({ page }) => {
   });
 });
 
+test('指定會員可用美容師聯絡人搜尋並顯示聯絡人名稱', async ({ page }) => {
+  const couponPromotions = [
+    { ...activePromotion, id:'coupon-pct', name:'九折', benefit_type:'percentage_discount', activation_type:'coupon_only', discount_rate:0.9, archived_at:null },
+  ];
+  await mockAdminApis(page, {
+    promotions:couponPromotions,
+    profiles:[{ id:'user-pro-ying', email:'ying@example.com', name:'Ying', phone:'0955555555', role:'pro', created_at:'2026-05-04T00:00:00.000Z' }],
+    applications:[{ ...adminApplicationRows[0], id:'app-ying', user_id:'user-pro-ying', user_email:'ying@example.com', studio_name:'Kirei美肌集盒', contact_name:'盧垚垚', status:'approved' }],
+  });
+  await page.goto('/admin'); await openAdminSection(page, /活動管理/);
+  await page.getByRole('button', { name:'優惠券方案' }).click();
+  await page.getByRole('button', { name:'+ 新增優惠券' }).click();
+  await page.getByText('指定會員', { exact:true }).click();
+  await page.getByLabel('搜尋指定會員').fill('盧垚垚');
+  await page.getByRole('button', { name:'搜尋', exact:true }).click();
+  const results = page.getByLabel('會員搜尋結果');
+  await expect(results).toContainText('Ying');
+  await expect(results).toContainText('聯絡人 盧垚垚');
+  await expect(results).toContainText('美容師');
+  await results.getByText('Ying', { exact:true }).click();
+  await expect(page.getByLabel('已指定會員')).toContainText('聯絡人 盧垚垚');
+});
+
 test('編輯指定會員優惠券會還原既有會員名單', async ({ page }) => {
   const couponPromotions = [
     { ...activePromotion, id:'coupon-pct', name:'九折', benefit_type:'percentage_discount', activation_type:'coupon_only', discount_rate:0.9, archived_at:null },
@@ -1553,7 +1576,7 @@ test('編輯指定會員優惠券會還原既有會員名單', async ({ page }) 
   await page.getByRole('button', { name:'編輯' }).click();
   const selected = page.getByLabel('已指定會員');
   await expect(selected.getByText('LINE 會員', { exact:true })).toBeVisible();
-  await expect(selected.getByText(/專業會員 · line-member@example.com/)).toBeVisible();
+  await expect(selected.getByText(/美容師 · line-member@example.com/)).toBeVisible();
 });
 
 test('重複優惠碼顯示可理解的中文提示', async ({ page }) => {

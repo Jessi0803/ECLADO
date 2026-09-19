@@ -127,21 +127,23 @@ module.exports = async function handler(req, res) {
 
     // 3. Find existing profile by line_user_id
     const existing = await expectOk(await sb(
-      `/rest/v1/profiles?line_user_id=eq.${lineUserId}&select=id,email`
+      `/rest/v1/profiles?line_user_id=eq.${lineUserId}&select=id,email,name`
     ), 'profiles_lookup');
 
     let email, userId;
 
     if (existing.length > 0) {
       ({ id: userId, email } = existing[0]);
-      // Keep displayName up to date
-      await expectOk(await sb(`/rest/v1/profiles?id=eq.${userId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ name: displayName }),
-      }), 'profiles_update');
+      // Members can edit their name on the account page, so only fill it when empty.
+      if (!String(existing[0].name || '').trim()) {
+        await expectOk(await sb(`/rest/v1/profiles?id=eq.${userId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ name: displayName }),
+        }), 'profiles_update');
+      }
     } else {
       const existingByEmail = lineEmail ? await expectOk(await sb(
-        `/rest/v1/profiles?email=eq.${encodeURIComponent(lineEmail)}&select=id,email,line_user_id`
+        `/rest/v1/profiles?email=eq.${encodeURIComponent(lineEmail)}&select=id,email,name,line_user_id`
       ), 'profiles_email_lookup') : [];
 
       if (existingByEmail.length > 0) {
@@ -149,7 +151,10 @@ module.exports = async function handler(req, res) {
         email = email || lineEmail;
         await expectOk(await sb(`/rest/v1/profiles?id=eq.${userId}`, {
           method: 'PATCH',
-          body: JSON.stringify({ name: displayName, line_user_id: lineUserId }),
+          body: JSON.stringify({
+            line_user_id: lineUserId,
+            ...(String(existingByEmail[0].name || '').trim() ? {} : { name: displayName }),
+          }),
         }), 'profiles_link_line');
       } else {
         // 4. New user — create Supabase auth user

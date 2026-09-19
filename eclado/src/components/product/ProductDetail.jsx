@@ -109,7 +109,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
             </div>
 
             {primaryPromo && (
-              <div style={{ background:'var(--off-white)', border:'1px solid var(--accent)', padding:'14px 18px', marginBottom:20 }}>
+              <div style={{ background:'var(--accent-tint)', border:'1px solid var(--accent)', padding:'14px 18px', marginBottom:20 }}>
                 <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--accent)', textTransform:'uppercase', marginBottom:6 }}>限時優惠</p>
                 <p style={{ fontSize:14, color:'var(--black)', fontWeight:500, marginBottom:0 }}>{primaryPromo.name}</p>
               </div>

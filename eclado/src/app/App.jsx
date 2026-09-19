@@ -207,7 +207,7 @@ export default function App() {
       case 'pro-login': return <LoginPage setPage={setPage} />;
       case 'reset-password': return <ResetPasswordPage setPage={setPage} />;
       case 'professional-apply': return <ProfessionalApplicationPage setPage={setPage} user={user} authReady={authReady} onUserUpdated={refreshUser} />;
-      case 'account':  return <AccountPage user={user} setPage={setPage} onSignOut={handleSignOut} />;
+      case 'account':  return <AccountPage user={user} setPage={setPage} onSignOut={handleSignOut} onUserUpdated={refreshUser} />;
       case 'about':    return <AboutPage />;
       case 'info':     return <InfoPage user={user} />;
       case 'journal':  return <JournalPage onOpenArticle={article => openJournalArticle(article, 'journal')} />;
