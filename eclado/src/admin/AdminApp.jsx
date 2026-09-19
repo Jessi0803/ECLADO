@@ -3,7 +3,11 @@ import { supabase } from '../services/supabase.js';
 import { withProductImagePublicUrl } from '../services/catalogData.js';
 import { normalizeMember, normalizeOrder, normalizeProduct } from './domain/mappers.js';
 import { normalizeProfessionalSales } from '../domain/professionalSales.js';
-import { updateMemberRoleWithMembership } from '../services/professionalSales.js';
+import {
+  saveProfessionalSalesAdjustment,
+  setProfessionalMembershipStart,
+  updateMemberRoleWithMembership,
+} from '../services/professionalSales.js';
 import Sidebar from './components/Sidebar.jsx';
 import AIReorder from './pages/AIReorderPage.jsx';
 import Analytics from './pages/AnalyticsPage.jsx';
@@ -469,6 +473,29 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
     return { ok: true, message: '會員類型與季度起算日已更新。' };
   }
 
+  async function changeMembershipStart(membershipId, startedOn) {
+    const { error } = await setProfessionalMembershipStart(membershipId, startedOn);
+    if (error) {
+      console.error('update membership start failed', error);
+      const message = /overlaps/i.test(error.message || '') ? '起始日與其他資格期間重疊'
+        : /future|empty/i.test(error.message || '') ? '起始日不可空白或晚於今天'
+        : error.message || '請稍後再試';
+      return { ok: false, message: `資格起始日更新失敗：${message}` };
+    }
+    await fetchAll();
+    return { ok: true, message: '資格起始日已更新，季度已重新計算。' };
+  }
+
+  async function saveSalesAdjustment(membershipId, quarterNumber, amount, note) {
+    const { error } = await saveProfessionalSalesAdjustment(membershipId, quarterNumber, amount, note);
+    if (error) {
+      console.error('save sales adjustment failed', error);
+      return { ok: false, message: `線下採購補登失敗：${error.message || '請稍後再試'}` };
+    }
+    await fetchAll();
+    return { ok: true, message: '線下採購已補登。' };
+  }
+
   async function deleteMemberWithSync(member) {
     if (!member?.id) return '找不到會員 ID，無法刪除。';
     try {
@@ -516,8 +543,8 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
       case 'inventory': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'promotions': return <Promotions products={products} />;
       case 'procurement': return <ProcurementPage />;
-      case 'members': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={membersDefaultFilter} />;
-      case 'applications': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter="app_pending" />;
+      case 'members': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={membersDefaultFilter} />;
+      case 'applications': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter="app_pending" />;
       case 'analytics': return <Analytics orders={orders} />;
       case 'ai': return <AIReorder products={activeProducts} orders={orders} />;
       default: return null;

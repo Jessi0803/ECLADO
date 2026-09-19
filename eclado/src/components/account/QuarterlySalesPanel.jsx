@@ -44,6 +44,7 @@ export default function QuarterlySalesPanel({ sales, loading = false, error = ''
           <div style={{ textAlign:isMobile ? 'left' : 'right' }}>
             <div style={{ fontFamily:'var(--font-display)', fontSize:isMobile ? 28 : 34, fontWeight:300, color:'var(--black)' }}>{formatMoney(current.sales_amount)}</div>
             <div style={{ marginTop:5, fontSize:11, color:'var(--dark)' }}>{current.order_count} 筆有效訂單</div>
+            {current.offline_sales_amount > 0 && <div style={{ marginTop:3, fontSize:11, color:'var(--dark)' }}>含線下採購 {formatMoney(current.offline_sales_amount)}</div>}
           </div>
         </div>
       </div>
@@ -59,7 +60,7 @@ export default function QuarterlySalesPanel({ sales, loading = false, error = ''
           ))}
         </div>
       )}
-      <p style={{ fontSize:10, color:'var(--dark)', lineHeight:1.7, marginTop:10 }}>統計付款成功訂單的商品實付金額，不含運費；取消或退貨訂單不列入。</p>
+      <p style={{ fontSize:10, color:'var(--dark)', lineHeight:1.7, marginTop:10 }}>統計付款成功訂單的商品實付金額，不含運費；取消或退貨訂單不列入。線下採購由管理員補登並計入當季。</p>
     </section>
   );
 }

@@ -3,13 +3,7 @@ import { Badge, TypeBadge } from '../components/StatusIndicators.jsx';
 import OrderMemberAssignmentDialog from '../components/OrderMemberAssignmentDialog.jsx';
 import { orderBelongsToMember } from '../domain/mappers.js';
 import usePanelHistory from '../hooks/usePanelHistory.js';
-import {
-  formatMoney,
-  formatQuarterPeriod,
-  formatTaiwanDate,
-  PROFESSIONAL_ROLE_LABELS,
-  quarterTitle,
-} from '../../domain/professionalSales.js';
+import ProfessionalQuarterSection from '../components/ProfessionalQuarterSection.jsx';
 
 const APP_STATUS_LABEL = { pending: '待審核', approved: '已核准', rejected: '已拒絕' };
 const APP_SOURCE_LABEL = { registration: '註冊申請', upgrade: '事後申請', standalone: '表單申請' };
@@ -35,7 +29,7 @@ function memberHasPendingApp(applications, memberId) {
 export default function Members({
   members, orders = [],
   applications = [], applicationsLoading = false, applicationsError = '',
-  onChangeMemberRole, onUpdateApplicationStatus, onSendApplicationNotice, onDeleteMember, onAssignGuestOrder, defaultFilter = 'all',
+  onChangeMemberRole, onChangeMembershipStart, onSaveSalesAdjustment, onUpdateApplicationStatus, onSendApplicationNotice, onDeleteMember, onAssignGuestOrder, defaultFilter = 'all',
 }) {
   const [filter, setFilter] = useState(defaultFilter);
   const [selected, setSelected] = useState(null);
@@ -265,44 +259,11 @@ export default function Members({
             </div>
           ))}
           {selected.professionalSales?.memberships?.length > 0 && (
-            <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
-              <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 12, letterSpacing: '0.08em' }}>專業資格季度</div>
-              {selected.professionalSales.currentQuarter && (
-                <div style={{ padding: '14px', background: 'var(--off)', borderLeft: '3px solid var(--gold)', marginBottom: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 7 }}>
-                    <strong style={{ fontSize: 12, fontWeight: 500 }}>{quarterTitle(selected.professionalSales.currentQuarter)}</strong>
-                    <span style={{ fontSize: 11, color: 'var(--mid)' }}>{PROFESSIONAL_ROLE_LABELS[selected.professionalSales.currentQuarter.role] || selected.professionalSales.currentQuarter.role}</span>
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 10 }}>{formatQuarterPeriod(selected.professionalSales.currentQuarter)}</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: 11, color: 'var(--mid)' }}>{selected.professionalSales.currentQuarter.order_count} 筆有效訂單</span>
-                    <span style={{ fontSize: 18, fontWeight: 500 }}>{formatMoney(selected.professionalSales.currentQuarter.sales_amount)}</span>
-                  </div>
-                </div>
-              )}
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 430 }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                      {['季度', '期間', '訂單', '採購額'].map(label => <th key={label} style={{ padding: '8px 6px', textAlign: label === '採購額' ? 'right' : 'left', fontSize: 10, color: 'var(--mid)', fontWeight: 400 }}>{label}</th>)}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selected.professionalSales.quarters.slice(0, 4).map(quarter => (
-                      <tr key={`${quarter.membership_id}-${quarter.quarter_number}`} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '9px 6px', fontSize: 11 }}>{quarterTitle(quarter)}{quarter.is_partial ? ' *' : ''}</td>
-                        <td style={{ padding: '9px 6px', fontSize: 10, color: 'var(--mid)' }}>{formatQuarterPeriod(quarter)}</td>
-                        <td style={{ padding: '9px 6px', fontSize: 11 }}>{quarter.order_count}</td>
-                        <td style={{ padding: '9px 6px', fontSize: 11, textAlign: 'right', whiteSpace: 'nowrap' }}>{formatMoney(quarter.sales_amount)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div style={{ marginTop: 14, fontSize: 10, color: 'var(--mid)', lineHeight: 1.7 }}>
-                資格歷程：{selected.professionalSales.memberships.map(membership => `${PROFESSIONAL_ROLE_LABELS[membership.role] || membership.role} ${formatTaiwanDate(membership.started_on)} 起${membership.ended_on ? `，${formatTaiwanDate(membership.ended_on)} 結束` : ''}`).join('；')}
-              </div>
-            </div>
+            <ProfessionalQuarterSection
+              sales={selected.professionalSales}
+              onChangeStart={onChangeMembershipStart}
+              onSaveAdjustment={onSaveSalesAdjustment}
+            />
           )}
           {selected.cert && (
             <div style={{ marginTop: 16, padding: '12px', background: 'var(--off)', border: '1px solid var(--border)' }}>

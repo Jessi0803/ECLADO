@@ -1945,6 +1945,28 @@ test('師資會員專區顯示依資格起算日計算的季度採購統計', as
   await expect(panel.getByText('3 筆有效訂單')).toBeVisible();
 });
 
+test('師資會員專區的季度採購包含管理員補登的線下採購', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: authUser('instructor@example.com'),
+    profiles: [profile('instructor', 'instructor@example.com')],
+    professionalSales: [{
+      member_id: TEST_USER_ID,
+      memberships: [{ id: 'membership-1', role: 'instructor', started_on: '2026-09-07', ended_on: null }],
+      quarters: [{
+        membership_id: 'membership-1', role: 'instructor', quarter_number: 1,
+        period_start: '2026-09-07', period_end_exclusive: '2026-12-07',
+        is_current: true, is_partial: false, sales_amount: 58600, online_sales_amount: 28600,
+        offline_sales_amount: 30000, order_count: 3,
+      }],
+    }],
+  });
+
+  await page.goto('/account');
+  const panel = page.getByRole('region', { name: '季度採購統計' });
+  await expect(panel.getByText('NT$ 58,600')).toBeVisible();
+  await expect(panel.getByText('含線下採購 NT$ 30,000')).toBeVisible();
+});
+
 test('從首頁捲動位置進入長訂單會員專區時回到頁首', async ({ page }) => {
   const orders = Array.from({ length: 24 }, (_, index) => ({
     id: `ACCOUNT-SCROLL-${String(index + 1).padStart(2, '0')}`,

@@ -77,8 +77,8 @@ export default function Nav({ setPage, onOpenCart, cartCount, user, setUser, pag
           <div className="nav-right">
             {user ? (
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                {isProfessionalMember(user) && <span style={{ fontSize:10, letterSpacing:'0.1em', background: darkMode ? 'var(--black)' : 'rgba(255,255,255,0.15)', color:'var(--white)', padding:'3px 8px', fontWeight:500 }}>{getMemberTier(user).badge}</span>}
-                {isAdmin && <button onClick={openAdmin} style={{ background: darkMode ? 'var(--black)' : 'rgba(255,255,255,0.16)', color:'var(--white)', border:'1px solid rgba(255,255,255,0.22)', padding:'5px 10px', fontSize:11, letterSpacing:'0.1em', cursor:'pointer', fontFamily:'var(--font-body)' }}>後台</button>}
+                {isProfessionalMember(user) && <span style={{ fontSize:10, letterSpacing:'0.1em', background: darkMode ? 'var(--black)' : 'rgba(255,255,255,0.15)', color:'var(--white)', height:20, padding:'0 8px', display:'inline-flex', alignItems:'center', boxSizing:'border-box', fontWeight:500 }}>{getMemberTier(user).badge}</span>}
+                {isAdmin && <button onClick={openAdmin} style={{ background: darkMode ? 'var(--black)' : 'rgba(255,255,255,0.16)', color:'var(--white)', border:'1px solid rgba(255,255,255,0.22)', height:20, padding:'0 10px', display:'inline-flex', alignItems:'center', boxSizing:'border-box', lineHeight:1, fontSize:11, letterSpacing:'0.1em', cursor:'pointer', fontFamily:'var(--font-body)' }}>後台</button>}
                 <button onClick={() => setPage('account')} aria-label="會員專區" style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:iconCol, fontFamily:'var(--font-body)', display:'inline-flex', alignItems:'center', gap:6, padding:'4px 0' }}>
                   <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><path d="M20 21a8 8 0 0 0-16 0" /><circle cx="12" cy="7" r="4" /></svg>
                   <span>{user.name}</span>

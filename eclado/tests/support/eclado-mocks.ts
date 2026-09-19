@@ -190,6 +190,8 @@ export type MockEcladoApiOptions = {
   onProductImageUpload?: (path: string) => void;
   onProfileUpdate?: (update: Record<string, unknown>, url: string) => void;
   onMemberRoleChange?: (memberId: string, role: string) => void;
+  onMembershipStartChange?: (payload: Record<string, unknown>) => void;
+  onSalesAdjustmentSave?: (payload: Record<string, unknown>) => void;
   onMemberDelete?: (memberId: string) => void;
   onPromotionInsert?: (promotion: Record<string, unknown>) => void;
   onPromotionUpdate?: (update: Record<string, unknown>, url: string) => void;
@@ -463,10 +465,39 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     return json(route, options.professionalSales || []);
   });
 
+
   await page.route('**/rest/v1/rpc/get_my_professional_sales', async route => {
     const payload = (options.professionalSales || [])
       .find(item => String(item.member_id) === String(authUser?.id));
     return json(route, payload || { member_id: authUser?.id || '', memberships: [], quarters: [] });
+  });
+
+  const professionalSales = (options.professionalSales || []) as Array<{
+    memberships?: Array<Record<string, unknown>>;
+    quarters?: Array<Record<string, unknown>>;
+  }>;
+  await page.route('**/rest/v1/rpc/set_professional_membership_start', async route => {
+    const request = route.request().postDataJSON() || {};
+    options.onMembershipStartChange?.(request);
+    for (const payload of professionalSales) {
+      const membership = payload.memberships?.find(item => item.id === request.p_membership_id);
+      if (membership) membership.started_on = request.p_started_on;
+    }
+    return json(route, { membership_id: request.p_membership_id, started_on: request.p_started_on, changed: true });
+  });
+  await page.route('**/rest/v1/rpc/save_professional_sales_adjustment', async route => {
+    const request = route.request().postDataJSON() || {};
+    options.onSalesAdjustmentSave?.(request);
+    for (const payload of professionalSales) {
+      const quarter = payload.quarters?.find(item => item.membership_id === request.p_membership_id && Number(item.quarter_number) === Number(request.p_quarter_number));
+      if (!quarter) continue;
+      const online = Number(quarter.online_sales_amount ?? quarter.sales_amount ?? 0);
+      quarter.online_sales_amount = online;
+      quarter.offline_sales_amount = Number(request.p_amount) || 0;
+      quarter.offline_note = request.p_note || null;
+      quarter.sales_amount = online + (Number(request.p_amount) || 0);
+    }
+    return json(route, { membership_id: request.p_membership_id, quarter_number: request.p_quarter_number, amount: request.p_amount, note: request.p_note });
   });
 
   await page.route('**/rest/v1/rpc/set_member_role_with_membership', async route => {

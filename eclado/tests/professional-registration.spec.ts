@@ -235,7 +235,7 @@ test('會員可以在會員資料編輯自己的姓名', async ({ page }) => {
   });
 
   await page.goto('/professional-apply');
-  const memberInfo = page.locator('div', { has: page.getByText('會員資料', { exact: true }) }).last();
+  const memberInfo = page.getByRole('complementary').filter({ hasText: '會員資料' });
   await expect(memberInfo.getByText('已是美容師', { exact: true })).toBeVisible();
 
   await memberInfo.getByRole('button', { name: '編輯', exact: true }).click();

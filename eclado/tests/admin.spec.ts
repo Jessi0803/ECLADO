@@ -1982,6 +1982,47 @@ test('會員管理只在會員詳細顯示師資目前季度採購額與資格�
   await expect(panel.getByText(/師資 2026\/09\/07 起/)).toBeVisible();
 });
 
+test('會員管理可回溯資格起始日並補登線下季度採購', async ({ page }) => {
+  const memberId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  const startChanges: Record<string, unknown>[] = [];
+  const adjustments: Record<string, unknown>[] = [];
+  await mockAdminApis(page, {
+    profiles: [{ ...adminProfileRows[0], id: memberId, name: '老經銷商', role: 'distributor' }],
+    applications: [],
+    professionalSales: [{
+      member_id: memberId,
+      memberships: [{ id: 'membership-dist-1', role: 'distributor', started_on: '2025-03-01', ended_on: null }],
+      quarters: [
+        { membership_id: 'membership-dist-1', role: 'distributor', quarter_number: 2, period_start: '2025-06-01', period_end_exclusive: '2025-09-01', is_current: true, is_partial: false, sales_amount: 3000, online_sales_amount: 3000, offline_sales_amount: 0, order_count: 1 },
+        { membership_id: 'membership-dist-1', role: 'distributor', quarter_number: 1, period_start: '2025-03-01', period_end_exclusive: '2025-06-01', is_current: false, is_partial: false, sales_amount: 0, online_sales_amount: 0, offline_sales_amount: 0, order_count: 0 },
+      ],
+    }],
+    onMembershipStartChange: payload => startChanges.push(payload),
+    onSalesAdjustmentSave: payload => adjustments.push(payload),
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+  await page.getByText('老經銷商').locator('xpath=ancestor::tr').getByRole('button', { name: '查看老經銷商詳情' }).click();
+  const panel = page.getByRole('dialog', { name: '會員詳情' });
+
+  await panel.getByRole('button', { name: '修改起始日' }).click();
+  await panel.getByLabel('資格起始日').fill('2024-12-01');
+  await panel.getByRole('button', { name: '儲存', exact: true }).click();
+  await expect(panel.getByText('資格起始日已更新，季度已重新計算。')).toBeVisible();
+  expect(startChanges).toEqual([{ p_membership_id: 'membership-dist-1', p_started_on: '2024-12-01' }]);
+
+  await panel.getByRole('button', { name: '資格第 1 季補登線下採購' }).click();
+  await panel.getByLabel('線下採購金額').fill('120000');
+  await panel.getByLabel('補登備註').fill('官網上線前線下採購');
+  await panel.getByRole('button', { name: '儲存', exact: true }).click();
+  await expect(panel.getByText('線下採購已補登。')).toBeVisible();
+  expect(adjustments).toEqual([{ p_membership_id: 'membership-dist-1', p_quarter_number: 1, p_amount: 120000, p_note: '官網上線前線下採購' }]);
+  const table = panel.getByRole('table', { name: '資格季度採購' });
+  await expect(table.getByText('NT$ 120,000')).toHaveCount(2);
+  await expect(table.getByText('補登備註：官網上線前線下採購')).toBeVisible();
+});
+
 test('會員管理可刪除會員並同步資料庫', async ({ page }) => {
   const deletedMemberIds: string[] = [];
   await mockAdminApis(page, {

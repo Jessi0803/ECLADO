@@ -459,7 +459,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                     </div>
                   </div>
 
-                  <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:20 }}>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:20 }}>
                     <CheckoutField label="收件人姓名（請填寫證件上的姓名）" hint="為避免影響取件，請填寫與取件證件相符的姓名。" name="name" value={form.name} onChange={setField('name')} />
                     <CheckoutField label="手機號碼" name="phone" type="tel" placeholder="09xx-xxx-xxx" value={form.phone} onChange={setField('phone')} />
                   </div>
