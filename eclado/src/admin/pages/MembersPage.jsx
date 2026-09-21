@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, TypeBadge } from '../components/StatusIndicators.jsx';
 import OrderMemberAssignmentDialog from '../components/OrderMemberAssignmentDialog.jsx';
 import { orderBelongsToMember } from '../domain/mappers.js';
@@ -30,6 +30,7 @@ export default function Members({
   members, orders = [],
   applications = [], applicationsLoading = false, applicationsError = '',
   onChangeMemberRole, onChangeMembershipStart, onSaveSalesAdjustment, onUpdateApplicationStatus, onSendApplicationNotice, onDeleteMember, onAssignGuestOrder, defaultFilter = 'all',
+  focusMemberId = '', backToOrderId = '', onOpenOrder, onClearCrossLink,
 }) {
   const [filter, setFilter] = useState(defaultFilter);
   const [selected, setSelected] = useState(null);
@@ -41,9 +42,19 @@ export default function Members({
   const [assignmentOpen, setAssignmentOpen] = useState(false);
   const [assignmentNotice, setAssignmentNotice] = useState('');
   const [savingTypeId, setSavingTypeId] = useState('');
-  const closeDetails = usePanelHistory(!!selected, () => setSelected(null));
+  const focusedMemberRef = useRef('');
+  const closeDetails = usePanelHistory(!!selected, () => { setSelected(null); onClearCrossLink?.(); });
 
   useEffect(() => { setFilter(defaultFilter); }, [defaultFilter]);
+
+  // 從訂單詳情跳過來時直接開啟該會員（同一位只自動開一次）。
+  useEffect(() => {
+    if (!focusMemberId || focusedMemberRef.current === focusMemberId) return;
+    const target = members.find(member => member.id === focusMemberId);
+    if (!target) return;
+    focusedMemberRef.current = focusMemberId;
+    openMemberDetails(target);
+  }, [focusMemberId, members]);
 
   useEffect(() => {
     if (!selected) return;
@@ -243,6 +254,9 @@ export default function Members({
             <div><button type="button" className="detail-panel-mobile-back" onClick={closeDetails}>← 返回</button><h3 style={{ fontSize: 15, fontWeight: 500 }}>會員詳情</h3></div>
             <button type="button" aria-label="關閉會員詳情" onClick={closeDetails} style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--mid)', cursor: 'pointer' }}>×</button>
           </div>
+          {backToOrderId && selected.id === focusMemberId && onOpenOrder && (
+            <button type="button" onClick={() => onOpenOrder(backToOrderId, '', '')} style={{ background: 'none', border: 'none', padding: 0, marginBottom: 16, fontSize: 12, color: 'var(--blue)', cursor: 'pointer' }}>← 回到訂單 {backToOrderId}</button>
+          )}
           <div style={{ display: 'flex', align: 'center', gap: 14, marginBottom: 24 }}>
             <div style={{ width: 48, height: 48, background: 'var(--off)', border: '1px solid var(--border)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 400, fontFamily: 'var(--font-d)' }}>
               {selected.name[0]}
@@ -350,8 +364,14 @@ export default function Members({
               <div style={{ fontSize: 12, color: 'var(--mid)', padding: '16px 0', textAlign: 'center' }}>尚無訂單</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 280, overflowY: 'auto' }}>
-                {memberOrders.map(o => (
-                  <div key={o.id} style={{ padding: '10px 12px', border: '1px solid var(--border)', background: 'var(--off)' }}>
+                {memberOrders.map(o => {
+                  const Row = onOpenOrder ? 'button' : 'div';
+                  return (
+                  <Row
+                    key={o.id}
+                    {...(onOpenOrder ? { type: 'button', onClick: () => onOpenOrder(o.id, selected.id, selected.name), 'aria-label': `查看訂單 ${o.id}` } : {})}
+                    style={{ padding: '10px 12px', border: '1px solid var(--border)', background: 'var(--off)', textAlign: 'left', width: '100%', cursor: onOpenOrder ? 'pointer' : 'default', font: 'inherit', color: 'inherit', display: 'block' }}
+                  >
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                       <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--dark)' }}>{o.id}</span>
                       <Badge status={o.status} />
@@ -360,8 +380,9 @@ export default function Members({
                       <span>{o.date}</span>
                       <span style={{ color: 'var(--dark)', fontWeight: 500 }}>NT$ {o.total.toLocaleString()}</span>
                     </div>
-                  </div>
-                ))}
+                  </Row>
+                  );
+                })}
               </div>
             )}
           </div>

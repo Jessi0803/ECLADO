@@ -1982,6 +1982,37 @@ test('會員管理只在會員詳細顯示師資目前季度採購額與資格�
   await expect(panel.getByText(/師資 2026\/09\/07 起/)).toBeVisible();
 });
 
+test('訂單與會員詳情可雙向跳轉並顯示返回列', async ({ page }) => {
+  const guestOrder = {
+    ...adminOrderRows[0], id: 'E2E-GUEST-ORDER-002', member: '訪客', user_id: null,
+  };
+  await mockAdminApis(page, { orders: [...adminOrderRows, guestOrder], profiles: adminProfileRows });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByRole('row').filter({ hasText: 'E2E-GUEST-ORDER-002' }).click();
+  const orderPanel = page.getByRole('dialog', { name: '訂單詳情' });
+  await expect(orderPanel.getByRole('button', { name: '訪客' })).toHaveCount(0);
+  await page.goBack();
+  await expect(orderPanel).toHaveCount(0);
+
+  await page.getByRole('row').filter({ hasText: 'E2E-ORDER-001' }).click();
+  await orderPanel.getByRole('button', { name: '測試會員' }).click();
+
+  const memberPanel = page.getByRole('dialog', { name: '會員詳情' });
+  await expect(memberPanel.getByText('測試會員').first()).toBeVisible();
+  const backToOrder = memberPanel.getByRole('button', { name: '← 回到訂單 E2E-ORDER-001' });
+  await expect(backToOrder).toBeVisible();
+
+  await memberPanel.getByRole('button', { name: '查看訂單 E2E-ORDER-001' }).click();
+  await expect(orderPanel.getByText('E2E-ORDER-001').first()).toBeVisible();
+  await expect(orderPanel.getByRole('button', { name: '← 回到會員 測試會員' })).toBeVisible();
+
+  await orderPanel.getByRole('button', { name: '← 回到會員 測試會員' }).click();
+  await expect(memberPanel.getByText('測試會員').first()).toBeVisible();
+  await expect(memberPanel.getByRole('button', { name: /← 回到訂單/ })).toHaveCount(0);
+});
+
 test('會員管理可回溯資格起始日並補登線下季度採購', async ({ page }) => {
   const memberId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
   const startChanges: Record<string, unknown>[] = [];

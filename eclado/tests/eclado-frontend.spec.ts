@@ -488,7 +488,7 @@ test('後台以規格表格與交易式 RPC 儲存商品', async ({ page }) => {
   expect(savedRequest?.p_variants?.[0]?.procurement_unit_cost_usd).toBeNull();
 });
 
-test('後台新商品預設為草稿並提供四種發布狀態', async ({ page }) => {
+test('後台新商品預設為草稿並提供五種發布狀態', async ({ page }) => {
   const admin = authUser('ecladotaiwan@gmail.com');
   await mockEcladoApis(page, {
     authUser: admin,
@@ -510,6 +510,7 @@ test('後台新商品預設為草稿並提供四種發布狀態', async ({ page 
     '草稿（前台不可見）',
     '正式上架',
     '活動限定（僅活動網址可見）',
+    '贈品專用（僅由優惠活動加入訂單）',
     '已下架',
   ]);
   await expect(page.getByRole('button', { name: '建立草稿' })).toBeVisible();
@@ -1111,7 +1112,8 @@ test('數字型規格 ID 經 localStorage 還原後仍保留商品與正確價�
   await page.reload();
   const cartDrawer = await openCart(page);
   await expect(cartDrawer.getByText('胜肽修護精華液', { exact: false })).toBeVisible();
-  await expect(cartDrawer.getByText('胜肽修護精華液 · 60ml')).toBeVisible();
+  await expect(cartDrawer.getByTestId('cart-item-name')).toHaveText('胜肽修護精華液');
+  await expect(cartDrawer.getByTestId('cart-item-specification')).toHaveText('60ml');
   await expect(cartDrawer.getByText('NT$ 6,880').first()).toBeVisible();
   await expect(cartDrawer.getByText('NT$ 非數值')).toHaveCount(0);
 });

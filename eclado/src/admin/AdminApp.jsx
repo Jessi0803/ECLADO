@@ -32,6 +32,8 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
   const mainRef = useRef(null);
   const [ordersDefaultFilter, setOrdersDefaultFilter] = useState('all');
   const [membersDefaultFilter, setMembersDefaultFilter] = useState('all');
+  // 訂單 ↔ 會員互相跳轉：記住來源，讓詳情面板顯示返回列。
+  const [crossLink, setCrossLink] = useState(null);
   const [products, setProducts] = useState([]);
   const [members, setMembers] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -473,6 +475,20 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
     return { ok: true, message: '會員類型與季度起算日已更新。' };
   }
 
+  function openMemberFromOrder(memberId, orderId) {
+    if (!canReadMembers || !memberId) return;
+    setCrossLink({ memberId, backOrderId: orderId });
+    setMembersDefaultFilter('all');
+    setPage('members');
+  }
+
+  function openOrderFromMember(orderId, memberId, memberName) {
+    if (!canReadOrders || !orderId) return;
+    setCrossLink({ orderId, backMemberId: memberId, backMemberName: memberName });
+    setOrdersDefaultFilter('all');
+    setPage('orders');
+  }
+
   async function changeMembershipStart(membershipId, startedOn) {
     const { error } = await setProfessionalMembershipStart(membershipId, startedOn);
     if (error) {
@@ -534,7 +550,7 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
     }
     switch (page) {
       case 'dashboard': return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;
-      case 'orders': return <Orders orders={orders} members={members} persistOrderPatch={persistOrderPatch} onDeleteCancelledOrder={deleteCancelledOrder} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={ordersDefaultFilter} />;
+      case 'orders': return <Orders orders={orders} members={members} persistOrderPatch={persistOrderPatch} onDeleteCancelledOrder={deleteCancelledOrder} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={ordersDefaultFilter} focusOrderId={crossLink?.orderId || ''} backToMember={crossLink?.backMemberId ? { id: crossLink.backMemberId, name: crossLink.backMemberName } : null} onOpenMember={canReadMembers ? openMemberFromOrder : null} onClearCrossLink={() => setCrossLink(null)} />;
       case 'audit': return <AuditLogsPage />;
       case 'catalog': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'backorders': return <BackordersPage onInventoryChanged={fetchAll} />;
@@ -543,7 +559,7 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
       case 'inventory': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'promotions': return <Promotions products={products} />;
       case 'procurement': return <ProcurementPage />;
-      case 'members': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={membersDefaultFilter} />;
+      case 'members': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={membersDefaultFilter} focusMemberId={crossLink?.memberId || ''} backToOrderId={crossLink?.backOrderId || ''} onOpenOrder={canReadOrders ? openOrderFromMember : null} onClearCrossLink={() => setCrossLink(null)} />;
       case 'applications': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter="app_pending" />;
       case 'analytics': return <Analytics orders={orders} />;
       case 'ai': return <AIReorder products={activeProducts} orders={orders} />;

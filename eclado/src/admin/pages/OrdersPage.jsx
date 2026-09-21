@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { getPaymentStateLabel, PAYMENT_METHODS } from '../../domain/payments.js';
 import { SF_EXPRESS_TRACKING_URL } from '../../domain/shipping.js';
 import { supabase } from '../../services/supabase.js';
@@ -74,7 +74,7 @@ function hasPaidOrderRecord(order) {
   );
 }
 
-export default function Orders({ orders, members = [], persistOrderPatch, onDeleteCancelledOrder, onAssignGuestOrder, defaultFilter = 'all' }) {
+export default function Orders({ orders, members = [], persistOrderPatch, onDeleteCancelledOrder, onAssignGuestOrder, defaultFilter = 'all', focusOrderId = '', backToMember = null, onOpenMember, onClearCrossLink }) {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState(defaultFilter);
   const [stockFilter, setStockFilter] = useState('all');
@@ -84,7 +84,8 @@ export default function Orders({ orders, members = [], persistOrderPatch, onDele
   const [lineNotice, setLineNotice] = useState('');
   const [assignmentOpen, setAssignmentOpen] = useState(false);
   const [assignmentNotice, setAssignmentNotice] = useState('');
-  const closeDetails = usePanelHistory(!!selected, () => setSelected(null));
+  const focusedOrderRef = useRef('');
+  const closeDetails = usePanelHistory(!!selected, () => { setSelected(null); onClearCrossLink?.(); });
 
   useEffect(() => {
     setTrackingInput(selected?.tracking || '');
@@ -97,6 +98,15 @@ export default function Orders({ orders, members = [], persistOrderPatch, onDele
     setStockFilter('all');
     setSelected(null);
   }, [defaultFilter]);
+
+  // 從會員詳情跳過來時直接開啟該訂單（同一筆只自動開一次）。
+  useEffect(() => {
+    if (!focusOrderId || focusedOrderRef.current === focusOrderId) return;
+    const target = orders.find(order => order.id === focusOrderId);
+    if (!target) return;
+    focusedOrderRef.current = focusOrderId;
+    setSelected(target);
+  }, [focusOrderId, orders]);
 
   const byStatus = orders.filter(order => matchesStatusFilter(order, filter));
   const showInventoryFilters = byStatus.some(order => INVENTORY_ACTIVE_STATUSES.has(order.status));
@@ -467,10 +477,15 @@ export default function Orders({ orders, members = [], persistOrderPatch, onDele
             <div><button type="button" className="detail-panel-mobile-back" onClick={closeDetails}>← 返回</button><h3 style={{ fontSize: 15, fontWeight: 500 }}>訂單詳情</h3></div>
             <button type="button" className="hide-mobile" aria-label="關閉訂單詳情" onClick={closeDetails} style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--mid)', cursor: 'pointer', lineHeight: 1 }}>×</button>
           </div>
+          {backToMember && selected.user_id === backToMember.id && (
+            <button type="button" onClick={() => onOpenMember?.(backToMember.id, '')} style={{ background: 'none', border: 'none', padding: 0, marginBottom: 14, fontSize: 12, color: 'var(--blue)', cursor: 'pointer' }}>← 回到會員 {backToMember.name || ''}</button>
+          )}
           <div style={{ fontSize: 12, color: 'var(--mid)', marginBottom: 4 }}>訂單編號</div>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, color: 'var(--dark)' }}>{selected.id}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>訂購人</div><div style={{ fontSize: 13 }}>{selected.member}</div></div>
+            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>訂購人</div>{selected.user_id && onOpenMember && members.some(member => member.id === selected.user_id)
+              ? <button type="button" onClick={() => onOpenMember(selected.user_id, selected.id)} style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, color: 'var(--blue)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', textAlign: 'left' }}>{selected.member}</button>
+              : <div style={{ fontSize: 13 }}>{selected.member}</div>}</div>
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>日期</div><div style={{ fontSize: 13 }}>{selected.date}</div></div>
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>類型</div><TypeBadge type={getOrderDisplayType(selected)} /></div>
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>付款方式</div><div style={{ fontSize: 13 }}>{getPaymentMethodLabel(selected.paymentMethod)}</div></div>
