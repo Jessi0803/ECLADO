@@ -11,7 +11,9 @@ export function isQuarterlySalesRole(role) {
 
 export function normalizeProfessionalSales(value) {
   const payload = value && typeof value === 'object' ? value : {};
-  const memberships = Array.isArray(payload.memberships) ? payload.memberships : [];
+  // A membership ended on the day it started covers no dates (same-day role toggles).
+  const memberships = (Array.isArray(payload.memberships) ? payload.memberships : [])
+    .filter(membership => !membership.ended_on || String(membership.ended_on) > String(membership.started_on));
   const quarters = (Array.isArray(payload.quarters) ? payload.quarters : [])
     .map(quarter => ({
       ...quarter,

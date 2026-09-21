@@ -32,3 +32,16 @@ test('只有客訂規格的商品不會被熱門商品 fallback 補入', () => {
   expect(getPopularProducts(products, { byId: {}, byName: {} }, 8).map(product => product.id))
     .toEqual([2, 3]);
 });
+
+test('專業資格歷程忽略同日開始又結束的空紀錄', async () => {
+  const { normalizeProfessionalSales } = await import('../src/domain/professionalSales.js');
+  const sales = normalizeProfessionalSales({
+    member_id: 'm1',
+    memberships: [
+      { id: 'empty', role: 'distributor', started_on: '2026-09-07', ended_on: '2026-09-07' },
+      { id: 'real', role: 'distributor', started_on: '2026-09-07', ended_on: '2026-09-16' },
+    ],
+    quarters: [],
+  });
+  expect(sales.memberships.map(item => item.id)).toEqual(['real']);
+});

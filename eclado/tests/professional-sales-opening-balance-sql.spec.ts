@@ -30,3 +30,16 @@ test('季度總額合併官網訂單與線下補登', () => {
   expect(sql).toContain("target_order.status in ('paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered')");
   expect(sql).toContain('limit 40');
 });
+
+const emptyPeriodSql = fs.readFileSync(
+  path.resolve(process.cwd(), 'supabase-professional-memberships-empty-periods.sql'),
+  'utf8',
+);
+
+test('同日切換身分的空資格紀錄會被清除且不影響回溯起始日', () => {
+  expect(emptyPeriodSql).toContain('where membership.ended_on = membership.started_on');
+  expect(emptyPeriodSql).toContain('and membership.started_on >= effective_on');
+  expect(emptyPeriodSql).toContain("and coalesce(other.ended_on, 'infinity'::date) > other.started_on");
+  expect(emptyPeriodSql.match(/public\.has_backoffice_permission\('members\.write'\)/g)?.length).toBe(2);
+  expect(emptyPeriodSql).not.toContain('to anon');
+});
