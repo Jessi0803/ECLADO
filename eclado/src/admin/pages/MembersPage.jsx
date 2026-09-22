@@ -26,6 +26,31 @@ function memberHasPendingApp(applications, memberId) {
   return appsForMember(applications, memberId).some(a => a.status === 'pending');
 }
 
+function normalizeMemberSearch(value) {
+  return String(value || '').trim().toLocaleLowerCase('zh-TW');
+}
+
+function normalizePhone(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function applicationsForMember(applications, member) {
+  if (!member) return [];
+  const memberEmail = normalizeMemberSearch(member.email);
+  const related = applications.filter(application => (
+    application.user_id === member.id
+    || (memberEmail && normalizeMemberSearch(application.user_email) === memberEmail)
+    || (typeof member.id === 'string' && member.id === `app:${application.id}`)
+  ));
+  return [...new Map(related.map(application => [application.id, application])).values()]
+    .sort((a, b) => {
+      const statusPriority = { pending: 3, approved: 2, rejected: 1 };
+      const priorityDifference = (statusPriority[b.status] || 0) - (statusPriority[a.status] || 0);
+      if (priorityDifference) return priorityDifference;
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
+}
+
 export default function Members({
   members, orders = [],
   applications = [], applicationsLoading = false, applicationsError = '',
@@ -33,6 +58,7 @@ export default function Members({
   focusMemberId = '', backToOrderId = '', onOpenOrder, onClearCrossLink,
 }) {
   const [filter, setFilter] = useState(defaultFilter);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selected, setSelected] = useState(null);
   const [typeNotice, setTypeNotice] = useState('');
   const [deleteNotice, setDeleteNotice] = useState('');
@@ -64,11 +90,31 @@ export default function Members({
 
   const pendingAppCount = applications.filter(a => a.status === 'pending').length;
 
-  const filtered = filter === 'all'
-    ? members
-    : filter === 'app_pending'
-      ? members.filter(m => memberHasPendingApp(applications, m.id) || m.type === 'pending')
-      : members.filter(m => m.type === filter);
+  const filtered = useMemo(() => {
+    const roleFiltered = filter === 'all'
+      ? members
+      : filter === 'app_pending'
+        ? members.filter(m => memberHasPendingApp(applications, m.id) || m.type === 'pending')
+        : members.filter(m => m.type === filter);
+    const query = normalizeMemberSearch(searchQuery);
+    if (!query) return roleFiltered;
+
+    const phoneQuery = normalizePhone(query);
+    return roleFiltered.filter(member => {
+      const relatedApplications = applicationsForMember(applications, member);
+      const searchableText = [member.id, member.name, member.email, member.phone]
+        .concat(relatedApplications.flatMap(application => [
+          application.contact_name,
+          application.phone,
+          application.studio_name,
+        ]))
+        .map(normalizeMemberSearch)
+        .join(' ');
+      return searchableText.includes(query)
+        || (phoneQuery.length > 0 && [member.phone, ...relatedApplications.map(application => application.phone)]
+          .some(phone => normalizePhone(phone).includes(phoneQuery)));
+    });
+  }, [applications, filter, members, searchQuery]);
 
   const memberOrders = selected
     ? orders.filter(order => orderBelongsToMember(order, selected.id))
@@ -170,6 +216,26 @@ export default function Members({
           </div>
         </div>
 
+        <div className="members-search-controls">
+          <div className="members-search-field">
+            <span aria-hidden="true">⌕</span>
+            <input
+              type="search"
+              aria-label="搜尋會員"
+              autoComplete="off"
+              placeholder="搜尋姓名、聯絡人、美容院、Email、手機或會員編號"
+              value={searchQuery}
+              onChange={event => setSearchQuery(event.target.value)}
+            />
+            {searchQuery && (
+              <button type="button" aria-label="清除會員搜尋" onClick={() => setSearchQuery('')}>清除</button>
+            )}
+          </div>
+          <span className="members-search-result" aria-live="polite">
+            {searchQuery.trim() ? `找到 ${filtered.length} 位會員` : `共 ${filtered.length} 位會員`}
+          </span>
+        </div>
+
         {applicationsError && (
           <div style={{ background: 'oklch(0.60 0.18 25 / 0.08)', border: '1px solid oklch(0.60 0.18 25 / 0.3)', padding: '12px 16px', marginBottom: 16, fontSize: 12, color: 'var(--red)', lineHeight: 1.7 }}>
             ⚠ {applicationsError}
@@ -197,21 +263,50 @@ export default function Members({
               </tr>
             </thead>
             <tbody>
-              {filtered.map(m => (
+              {filtered.length === 0 && (
+                <tr className="members-empty-row">
+                  <td colSpan={9}>
+                    {searchQuery.trim()
+                      ? `找不到符合「${searchQuery.trim()}」的會員`
+                      : '目前沒有符合篩選條件的會員'}
+                  </td>
+                </tr>
+              )}
+              {filtered.map(m => {
+                const application = applicationsForMember(applications, m)[0] || null;
+                const contactName = String(application?.contact_name || '').trim();
+                const studioName = String(application?.studio_name || '').trim();
+                const profileName = String(m.name || '').trim();
+                const showProfileName = contactName
+                  && normalizeMemberSearch(contactName) !== normalizeMemberSearch(profileName);
+                const displayName = contactName || profileName;
+                const applicationPhone = String(application?.phone || '').trim();
+                const displayPhone = applicationPhone || m.phone || '';
+                return (
                 <tr key={m.id} onClick={() => openMemberDetails(m)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: selected?.id === m.id ? 'var(--off)' : 'transparent', transition: 'background 0.1s' }}
                 onMouseEnter={e => { if (selected?.id !== m.id) e.currentTarget.style.background = 'var(--off)'; }}
                 onMouseLeave={e => { if (selected?.id !== m.id) e.currentTarget.style.background = 'transparent'; }}>
-                  <td data-label="姓名" style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>{m.name}</td>
+                  <td data-label="姓名" className="member-identity-cell" style={{ padding: '13px 14px' }}>
+                    <div className="member-identity-primary">{displayName}</div>
+                    {studioName && <div className="member-identity-studio">{studioName}</div>}
+                    {showProfileName && (
+                      <div className="member-identity-profile">
+                        {m.lineUserId ? 'LINE 名稱' : '會員名稱'}：{profileName}
+                      </div>
+                    )}
+                  </td>
                   <td data-label="Email" title={m.email} style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{m.email}</td>
-                  <td data-label="電話" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{m.phone}</td>
+                  <td data-label="電話" className="member-phone-cell" style={{ padding: '13px 14px' }}>
+                    <div>{displayPhone || '—'}</div>
+                    {applicationPhone && <div className="member-phone-source">美容師申請</div>}
+                  </td>
                   <td data-label="類型" style={{ padding: '13px 14px' }}><TypeBadge type={m.type} /></td>
                   <td data-label="申請" style={{ padding: '13px 14px', fontSize: 11 }}>
                     {(() => {
-                      const app = appsForMember(applications, m.id)[0];
-                      if (!app) return <span style={{ color: 'var(--light)' }}>—</span>;
+                      if (!application) return <span style={{ color: 'var(--light)' }}>—</span>;
                       return (
-                        <span style={{ padding: '3px 8px', background: APP_STATUS_BG[app.status] || '#f5f5f5', color: APP_STATUS_COLOR[app.status] || '#555' }}>
-                          {APP_STATUS_LABEL[app.status] || app.status}
+                        <span style={{ padding: '3px 8px', background: APP_STATUS_BG[application.status] || '#f5f5f5', color: APP_STATUS_COLOR[application.status] || '#555' }}>
+                          {APP_STATUS_LABEL[application.status] || application.status}
                         </span>
                       );
                     })()}
@@ -239,7 +334,8 @@ export default function Members({
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

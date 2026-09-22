@@ -754,76 +754,77 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                   </button>
                 </div>
 
-                <div style={{ overflowX: 'auto', border: '1px solid var(--border)' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: canManageProcurementCost ? 1010 : 900 }}>
-                    <thead>
-                      <tr style={{ background: 'var(--off)', borderBottom: '1px solid var(--border)' }}>
-                        {['順序', '規格', 'SKU', '市場價', '專業價', '庫存', ...(canManageProcurementCost ? ['進貨 USD'] : []), '客訂', '預設', '啟用', '操作'].map(header => (
-                          <th key={header} style={{ padding: '9px 8px', textAlign: 'left', fontSize: 10, color: 'var(--mid)', fontWeight: 500, whiteSpace: 'nowrap' }}>{header}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {editing.variants.map((variant, index) => (
-                        <tr key={variant.id || index} style={{ borderBottom: '1px solid var(--border)', opacity: variant.active === false ? 0.55 : 1 }}>
-                          <td style={{ padding: '8px' }}>
-                            <div style={{ display: 'flex', gap: 4 }}>
-                              <button type="button" aria-label={`規格 ${index + 1} 上移`} disabled={index === 0} onClick={() => moveVariant(index, -1)}
-                                style={{ border: '1px solid var(--border)', background: 'none', cursor: index === 0 ? 'not-allowed' : 'pointer', color: 'var(--mid)', padding: '3px 6px' }}>↑</button>
-                              <button type="button" aria-label={`規格 ${index + 1} 下移`} disabled={index === editing.variants.length - 1} onClick={() => moveVariant(index, 1)}
-                                style={{ border: '1px solid var(--border)', background: 'none', cursor: index === editing.variants.length - 1 ? 'not-allowed' : 'pointer', color: 'var(--mid)', padding: '3px 6px' }}>↓</button>
-                            </div>
-                          </td>
-                          <td style={{ padding: '8px' }}>
-                            <input aria-label={`規格 ${index + 1} 名稱`} value={variant.size} onChange={e => updateVariant(index, 'size', e.target.value)}
-                              style={{ ...inp, minWidth: 110 }} placeholder="例如 500ml" />
-                          </td>
-                          <td style={{ padding: '8px' }}>
-                            <input aria-label={`規格 ${index + 1} SKU`} value={variant.sku || ''} onChange={e => updateVariant(index, 'sku', e.target.value)}
-                              style={{ ...inp, minWidth: 120 }} placeholder="例如 PHA-500" />
-                          </td>
-                          <td style={{ padding: '8px' }}>
-                            <input aria-label={`規格 ${index + 1} 市場價`} type="number" min="0" value={variant.price} onChange={e => updateVariant(index, 'price', e.target.value)}
-                              style={{ ...inp, width: 82 }} />
-                          </td>
-                          <td style={{ padding: '8px' }}>
-                            <input aria-label={`規格 ${index + 1} 專業價`} type="number" min="0" value={variant.proPrice} onChange={e => updateVariant(index, 'proPrice', e.target.value)}
-                              style={{ ...inp, width: 82 }} />
-                          </td>
-                          <td style={{ padding: '8px' }}>
+                <div className="catalog-variants-list">
+                  {editing.variants.map((variant, index) => (
+                    <section className="catalog-variant-card" key={variant.id || index} style={{ opacity: variant.active === false ? 0.6 : 1 }}>
+                      <div className="catalog-variant-card-header">
+                        <div>
+                          <strong>規格 {index + 1}</strong>
+                          <span>{variant.size || '尚未命名'}{variant.sku ? ` · ${variant.sku}` : ''}</span>
+                        </div>
+                        <div className="catalog-variant-card-actions">
+                          <button type="button" aria-label={`規格 ${index + 1} 上移`} disabled={index === 0} onClick={() => moveVariant(index, -1)}>↑</button>
+                          <button type="button" aria-label={`規格 ${index + 1} 下移`} disabled={index === editing.variants.length - 1} onClick={() => moveVariant(index, 1)}>↓</button>
+                          <button type="button" className="catalog-variant-remove" onClick={() => removeVariant(index)} disabled={editing.variants.length === 1}>移除</button>
+                        </div>
+                      </div>
+
+                      <div className="catalog-variant-fields">
+                        <div className="catalog-variant-primary-fields">
+                          <label>
+                            <span>規格名稱</span>
+                            <input aria-label={`規格 ${index + 1} 名稱`} value={variant.size} onChange={e => updateVariant(index, 'size', e.target.value)} style={inp} placeholder="例如 500ml" />
+                          </label>
+                          <label>
+                            <span>SKU</span>
+                            <input aria-label={`規格 ${index + 1} SKU`} value={variant.sku || ''} onChange={e => updateVariant(index, 'sku', e.target.value)} style={inp} placeholder="例如 PHA-500" />
+                          </label>
+                        </div>
+                        <div className="catalog-variant-number-fields">
+                          <label>
+                            <span>市場價</span>
+                            <input aria-label={`規格 ${index + 1} 市場價`} type="number" min="0" value={variant.price} onChange={e => updateVariant(index, 'price', e.target.value)} style={inp} />
+                          </label>
+                          <label>
+                            <span>專業價</span>
+                            <input aria-label={`規格 ${index + 1} 專業價`} type="number" min="0" value={variant.proPrice} onChange={e => updateVariant(index, 'proPrice', e.target.value)} style={inp} />
+                          </label>
+                          <label>
+                            <span>販售庫存</span>
                             <input aria-label={`規格 ${index + 1} 庫存`} type="number" min="0" value={editing.publicationStatus === 'gift_only' ? 0 : variant.stock} disabled={editing.publicationStatus === 'gift_only'} onChange={e => updateVariant(index, 'stock', e.target.value)}
                               title={editing.publicationStatus === 'gift_only' ? '贈品專用商品請在下方管理贈品庫存' : undefined}
-                              style={{ ...inp, width: 70, opacity: editing.publicationStatus === 'gift_only' ? 0.45 : 1 }} />
-                          </td>
+                              style={{ ...inp, opacity: editing.publicationStatus === 'gift_only' ? 0.45 : 1 }} />
+                          </label>
                           {canManageProcurementCost && (
-                            <td style={{ padding: '8px' }}>
+                            <label>
+                              <span>進貨 USD</span>
                               <input aria-label={`規格 ${index + 1} 進貨 USD 單價`} type="number" min="0" step="0.01" value={variant.procurementUnitCostUsd ?? ''}
-                                onChange={e => updateVariant(index, 'procurementUnitCostUsd', e.target.value)} style={{ ...inp, width: 86 }} placeholder="未設定" />
-                            </td>
+                                onChange={e => updateVariant(index, 'procurementUnitCostUsd', e.target.value)} style={inp} placeholder="未設定" />
+                            </label>
                           )}
-                          <td style={{ padding: '8px', textAlign: 'center' }}>
-                            <input aria-label={`規格 ${index + 1} 客訂規格`} type="checkbox" checked={!!variant.isCustomOrder}
-                              onChange={e => updateVariant(index, 'isCustomOrder', e.target.checked)} />
-                          </td>
-                          <td style={{ padding: '8px', textAlign: 'center' }}>
-                            <input aria-label={`規格 ${index + 1} 設為預設`} type="radio" name="defaultVariant" checked={!!variant.isDefault}
-                              onChange={() => setDefaultVariant(index)} />
-                          </td>
-                          <td style={{ padding: '8px', textAlign: 'center' }}>
-                            <input aria-label={`規格 ${index + 1} 啟用`} type="checkbox" checked={variant.active !== false}
-                              disabled={!!variant.isDefault}
-                              onChange={e => updateVariant(index, 'active', e.target.checked)} />
-                          </td>
-                          <td style={{ padding: '8px' }}>
-                            <button type="button" onClick={() => removeVariant(index)} disabled={editing.variants.length === 1}
-                              style={{ padding: '5px 9px', background: 'none', border: '1px solid var(--border)', color: 'var(--mid)', fontSize: 10, cursor: editing.variants.length === 1 ? 'not-allowed' : 'pointer' }}>
-                              移除
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                        </div>
+                      </div>
+
+                      <div className="catalog-variant-options">
+                        <label>
+                          <input aria-label={`規格 ${index + 1} 客訂規格`} type="checkbox" checked={!!variant.isCustomOrder}
+                            onChange={e => updateVariant(index, 'isCustomOrder', e.target.checked)} />
+                          <span>客訂規格</span>
+                        </label>
+                        <label>
+                          <input aria-label={`規格 ${index + 1} 設為預設`} type="radio" name="defaultVariant" checked={!!variant.isDefault}
+                            onChange={() => setDefaultVariant(index)} />
+                          <span>預設規格</span>
+                        </label>
+                        <label>
+                          <input aria-label={`規格 ${index + 1} 啟用`} type="checkbox" checked={variant.active !== false}
+                            disabled={!!variant.isDefault}
+                            onChange={e => updateVariant(index, 'active', e.target.checked)} />
+                          <span>啟用販售</span>
+                        </label>
+                      </div>
+                    </section>
+                  ))}
                 </div>
                 <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 7 }}>移除既有規格後，資料庫會將它停用並保留歷史紀錄；預設規格不可停用。</p>
               </div>

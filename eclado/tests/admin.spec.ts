@@ -1118,6 +1118,59 @@ test('商品管理可編輯名稱、規格價格與院線限定並透過 RPC 儲
   expect(savedRequest?.p_variants?.[0]).toMatchObject({ price: 4200, pro_price: 3100, is_custom_order: true });
 });
 
+test('商品規格編輯改為多列卡片且窄畫面不需水平滑動', async ({ page }) => {
+  await page.setViewportSize({ width: 430, height: 932 });
+  await mockAdminApis(page, { productVariants: adminProductVariants });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /商品 & 庫存/);
+  await page.getByText('胜肽修護精華液').locator('xpath=ancestor::tr').getByRole('button', { name: '編輯' }).click();
+
+  const panel = page.getByRole('dialog', { name: '編輯商品' });
+  const card = panel.locator('.catalog-variant-card').first();
+  await expect(card).toBeVisible();
+  await expect(card.getByText('規格名稱', { exact: true })).toBeVisible();
+  await expect(card.getByText('販售庫存', { exact: true })).toBeVisible();
+  await expect(card.getByText('預設規格', { exact: true })).toBeVisible();
+
+  const layout = await panel.evaluate(element => ({ clientWidth: element.clientWidth, scrollWidth: element.scrollWidth }));
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1);
+  const [nameBox, skuBox, priceBox, proPriceBox, stockBox] = await Promise.all([
+    panel.getByLabel('規格 1 名稱').boundingBox(),
+    panel.getByLabel('規格 1 SKU').boundingBox(),
+    panel.getByLabel('規格 1 市場價').boundingBox(),
+    panel.getByLabel('規格 1 專業價').boundingBox(),
+    panel.getByLabel('規格 1 庫存').boundingBox(),
+  ]);
+  expect(nameBox).not.toBeNull();
+  expect(skuBox).not.toBeNull();
+  expect(priceBox).not.toBeNull();
+  expect(proPriceBox).not.toBeNull();
+  expect(stockBox).not.toBeNull();
+  expect(Math.abs(skuBox!.y - nameBox!.y)).toBeLessThanOrEqual(1);
+  expect(priceBox!.y).toBeGreaterThan(nameBox!.y);
+  expect(Math.abs(proPriceBox!.y - priceBox!.y)).toBeLessThanOrEqual(1);
+  expect(stockBox!.y).toBeGreaterThanOrEqual(priceBox!.y);
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const [desktopNameBox, desktopPriceBox, desktopProPriceBox, desktopStockBox, desktopCostBox] = await Promise.all([
+    panel.getByLabel('規格 1 名稱').boundingBox(),
+    panel.getByLabel('規格 1 市場價').boundingBox(),
+    panel.getByLabel('規格 1 專業價').boundingBox(),
+    panel.getByLabel('規格 1 庫存').boundingBox(),
+    panel.getByLabel('規格 1 進貨 USD 單價').boundingBox(),
+  ]);
+  expect(desktopNameBox).not.toBeNull();
+  expect(desktopPriceBox).not.toBeNull();
+  expect(desktopProPriceBox).not.toBeNull();
+  expect(desktopStockBox).not.toBeNull();
+  expect(desktopCostBox).not.toBeNull();
+  expect(desktopPriceBox!.width).toBeLessThan(desktopNameBox!.width);
+  for (const numericBox of [desktopProPriceBox, desktopStockBox, desktopCostBox]) {
+    expect(Math.abs(numericBox!.y - desktopPriceBox!.y)).toBeLessThanOrEqual(1);
+  }
+});
+
 test('商品管理可從本機上傳圖片並以規格 RPC 建立草稿', async ({ page }) => {
   let savedRequest: Record<string, any> | null = null;
   let savedImagesRequest: Record<string, any> | null = null;
@@ -1906,6 +1959,81 @@ test('手機會員管理標題與篩選列上下排列，篩選項目維持三�
 
   const firstRowWidths = await tabButtons.evaluateAll(buttons => buttons.slice(0, 3).map(button => button.getBoundingClientRect().width));
   expect(Math.max(...firstRowWidths) - Math.min(...firstRowWidths)).toBeLessThan(1);
+});
+
+test('會員管理可依會員與美容師申請資料搜尋，並與類型篩選共用', async ({ page }) => {
+  await mockAdminApis(page, {
+    profiles: [
+      { ...adminProfileRows[0], id: 'member-consumer-search', name: '王小美', email: 'amy@example.com', phone: '0912-345-678' },
+      { ...adminProfileRows[1], id: 'member-pro-search', name: '林美容師', email: 'pro.special@example.com', phone: '0988-765-432', line_user_id: 'U-PRO-SEARCH' },
+      { ...adminProfileRows[1], id: 'member-pro-same-name', name: '同名美容師', email: 'same@example.com', phone: '', line_user_id: 'U-PRO-SAME' },
+    ],
+    applications: [
+      {
+        ...adminApplicationRows[0],
+        id: 'application-pro-search',
+        user_id: 'member-pro-search',
+        user_email: 'pro.special@example.com',
+        contact_name: '陳美玲',
+        phone: '0977-112-233',
+        studio_name: '晴光美學工作室',
+        status: 'approved',
+      },
+      {
+        ...adminApplicationRows[0],
+        id: 'application-pro-same-name',
+        user_id: 'member-pro-same-name',
+        user_email: 'same@example.com',
+        contact_name: '同名美容師',
+        phone: '0966-111-222',
+        studio_name: '同名美學館',
+        status: 'approved',
+      },
+    ],
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+
+  const search = page.getByRole('searchbox', { name: '搜尋會員' });
+  await expect(search).toBeVisible();
+
+  await search.fill('amy@');
+  await expect(page.getByText('王小美', { exact: true })).toBeVisible();
+  await expect(page.getByText('陳美玲', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('找到 1 位會員')).toBeVisible();
+
+  await search.fill('0988765');
+  await expect(page.getByText('陳美玲', { exact: true })).toBeVisible();
+  await expect(page.getByText('王小美', { exact: true })).toHaveCount(0);
+
+  await search.fill('member-consumer');
+  await expect(page.getByText('王小美', { exact: true })).toBeVisible();
+
+  for (const applicationQuery of ['陳美玲', '0977112', '晴光美學']) {
+    await search.fill(applicationQuery);
+    await expect(page.getByText('陳美玲', { exact: true })).toBeVisible();
+    await expect(page.getByText('王小美', { exact: true })).toHaveCount(0);
+  }
+
+  await search.fill('陳美玲');
+  const professionalRow = page.getByText('陳美玲', { exact: true }).locator('xpath=ancestor::tr');
+  await expect(professionalRow).toContainText('晴光美學工作室');
+  await expect(professionalRow).toContainText('LINE 名稱：林美容師');
+  await expect(professionalRow).toContainText('0977-112-233');
+  await expect(professionalRow).toContainText('美容師申請');
+
+  await search.fill('同名美容師');
+  const sameNameRow = page.getByText('同名美容師', { exact: true }).locator('xpath=ancestor::tr');
+  await expect(sameNameRow).toContainText('同名美學館');
+  await expect(sameNameRow).not.toContainText('LINE 名稱：同名美容師');
+
+  await search.fill('member-consumer');
+  await page.getByRole('button', { name: '美容師', exact: true }).click();
+  await expect(page.getByText('找不到符合「member-consumer」的會員')).toBeVisible();
+  await page.getByRole('button', { name: '清除會員搜尋' }).click();
+  await expect(page.getByText('陳美玲', { exact: true })).toBeVisible();
+  await expect(page.getByText('王小美', { exact: true })).toHaveCount(0);
 });
 
 test('會員管理待審核數量使用與訂單待確認相同的 badge 樣式', async ({ page }) => {

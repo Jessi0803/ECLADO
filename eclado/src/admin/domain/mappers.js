@@ -246,6 +246,7 @@ export function normalizeMember(row, allOrders, professionalSales = null) {
     name: row.name || (row.email ? row.email.split('@')[0] : '未命名'),
     email: row.email || '',
     phone: row.phone || '',
+    lineUserId: row.line_user_id || '',
     type: row.role || 'consumer',
     cert: row.cert || '',
     joined: row.created_at ? row.created_at.slice(0, 10) : '',
