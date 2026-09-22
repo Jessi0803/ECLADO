@@ -57,7 +57,7 @@ export default function AdminGate({ children }) {
   if (session === undefined || (session && backofficeAccess === undefined)) return null; // loading
 
   const hasBackofficeAccess = session && backofficeAccess?.permissions?.length > 0;
-  if (hasBackofficeAccess) return React.cloneElement(children, { adminEmail: session.user.email, backofficeAccess, onSignOut: signOut });
+  if (hasBackofficeAccess) return React.cloneElement(children, { adminEmail: session.user.email, adminUserId: session.user.id, backofficeAccess, onSignOut: signOut });
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--sidebar)', padding: 16 }}>

@@ -29,7 +29,7 @@ function memberHasPendingApp(applications, memberId) {
 export default function Members({
   members, orders = [],
   applications = [], applicationsLoading = false, applicationsError = '',
-  onChangeMemberRole, onChangeMembershipStart, onSaveSalesAdjustment, onUpdateApplicationStatus, onSendApplicationNotice, onDeleteMember, onAssignGuestOrder, defaultFilter = 'all',
+  onChangeMemberRole, onChangeMembershipStart, onSaveSalesAdjustment, onUpdateApplicationStatus, onSendApplicationNotice, onDeleteMember, currentAdminUserId = '', onAssignGuestOrder, defaultFilter = 'all',
   focusMemberId = '', backToOrderId = '', onOpenOrder, onClearCrossLink,
 }) {
   const [filter, setFilter] = useState(defaultFilter);
@@ -387,7 +387,7 @@ export default function Members({
             )}
           </div>
 
-          {onDeleteMember && !(typeof selected.id === 'string' && selected.id.startsWith('app:')) && (
+          {onDeleteMember && selected.id !== currentAdminUserId && !(typeof selected.id === 'string' && selected.id.startsWith('app:')) && (
             <div style={{ marginTop: 24, padding: '16px', border: '1px solid oklch(0.60 0.18 25 / 0.28)', background: 'oklch(0.60 0.18 25 / 0.06)' }}>
               <div style={{ fontSize: 11, color: 'var(--red)', marginBottom: 8, letterSpacing: '0.08em' }}>刪除會員</div>
               {deleteNotice && (

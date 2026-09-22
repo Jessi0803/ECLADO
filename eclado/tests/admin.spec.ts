@@ -2076,6 +2076,31 @@ test('會員管理可刪除會員並同步資料庫', async ({ page }) => {
   await expect(page.getByRole('cell', { name: '測試會員' })).toHaveCount(0);
 });
 
+test('會員管理不提供刪除目前登入管理員的操作', async ({ page }) => {
+  await mockAdminApis(page, {
+    profiles: [
+      ...adminProfileRows,
+      { id: 'admin-user-1', email: 'baby90522@gmail.com', name: '目前管理員', phone: '', role: 'consumer', created_at: '2026-05-01T00:00:00.000Z' },
+    ],
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+  await page.getByText('目前管理員').locator('xpath=ancestor::tr').getByRole('button', { name: '查看目前管理員詳情' }).click();
+  await expect(page.getByRole('dialog', { name: '會員詳情' }).getByRole('button', { name: '刪除會員' })).toHaveCount(0);
+});
+
+test('只有會員寫入權限才顯示刪除會員操作', async ({ page }) => {
+  await mockAdminApis(page, {
+    backofficeAccess: { role: 'admin', permissions: ['members.read'] },
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+  await page.locator('.admin-members-table td[data-label="姓名"]').filter({ hasText: /^測試會員$/ }).click();
+  await expect(page.getByRole('dialog', { name: '會員詳情' }).getByRole('button', { name: '刪除會員' })).toHaveCount(0);
+});
+
 test('營業分析與 AI 補貨只使用真實訂單統計，不套用預設銷量', async ({ page }) => {
   await page.addInitScript(() => {
     (window as any).claude = {

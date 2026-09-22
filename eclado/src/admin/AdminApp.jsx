@@ -26,7 +26,7 @@ import {
   hasBackofficePermission,
 } from './domain/access.js';
 
-export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
+export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, onSignOut }) {
   const defaultPage = getDefaultBackofficePage(backofficeAccess);
   const [page, setPage] = useState(defaultPage);
   const mainRef = useRef(null);
@@ -44,6 +44,7 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
   const hasPermission = permission => hasBackofficePermission(backofficeAccess, permission);
   const canReadOrders = hasPermission(BACKOFFICE_PERMISSIONS.ORDERS_READ);
   const canReadMembers = hasPermission(BACKOFFICE_PERMISSIONS.MEMBERS_READ);
+  const canWriteMembers = hasPermission(BACKOFFICE_PERMISSIONS.MEMBERS_WRITE);
   const canReadCatalog = hasPermission(BACKOFFICE_PERMISSIONS.CATALOG_READ);
   const canManageProcurementCost = hasPermission(BACKOFFICE_PERMISSIONS.PROCUREMENT_MANAGE);
 
@@ -514,6 +515,7 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
 
   async function deleteMemberWithSync(member) {
     if (!member?.id) return '找不到會員 ID，無法刪除。';
+    if (member.id === adminUserId) return '不可刪除目前登入中的管理員帳號。';
     try {
       const { data } = await supabase.auth.getSession();
       const token = data?.session?.access_token;
@@ -559,8 +561,8 @@ export default function AdminApp({ adminEmail, backofficeAccess, onSignOut }) {
       case 'inventory': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'promotions': return <Promotions products={products} />;
       case 'procurement': return <ProcurementPage />;
-      case 'members': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={membersDefaultFilter} focusMemberId={crossLink?.memberId || ''} backToOrderId={crossLink?.backOrderId || ''} onOpenOrder={canReadOrders ? openOrderFromMember : null} onClearCrossLink={() => setCrossLink(null)} />;
-      case 'applications': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={deleteMemberWithSync} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter="app_pending" />;
+      case 'members': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={membersDefaultFilter} focusMemberId={crossLink?.memberId || ''} backToOrderId={crossLink?.backOrderId || ''} onOpenOrder={canReadOrders ? openOrderFromMember : null} onClearCrossLink={() => setCrossLink(null)} />;
+      case 'applications': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter="app_pending" />;
       case 'analytics': return <Analytics orders={orders} />;
       case 'ai': return <AIReorder products={activeProducts} orders={orders} />;
       default: return null;

@@ -30,13 +30,13 @@ async function requireAdmin(req, supabaseUrl, anonKey) {
   }
 
   try {
-    const allowed = await readSupabaseJson(`${supabaseUrl}/rest/v1/rpc/is_eclado_admin`, {
+    const allowed = await readSupabaseJson(`${supabaseUrl}/rest/v1/rpc/has_backoffice_permission`, {
       method: 'POST',
       headers: jsonHeaders({
         apikey: anonKey,
         Authorization: authorization,
       }),
-      body: '{}',
+      body: JSON.stringify({ requested_permission: 'members.write' }),
     });
     if (allowed !== true) {
       return { ok: false, status: 403, error: 'Forbidden' };
@@ -64,6 +64,10 @@ async function serviceRequest(supabaseUrl, serviceKey, path, options = {}) {
   });
 }
 
+function firstRow(value) {
+  return Array.isArray(value) ? (value[0] || null) : null;
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'DELETE' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -86,14 +90,48 @@ module.exports = async function handler(req, res) {
   if (!memberId) {
     return res.status(400).json({ error: 'memberId required' });
   }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(memberId)) {
+    return res.status(400).json({ ok: false, error: 'memberId 格式不正確。' });
+  }
+
+  if (memberId === admin.user?.id) {
+    return res.status(403).json({ ok: false, error: '不可刪除目前登入中的管理員帳號。' });
+  }
 
   try {
-    const profiles = await serviceRequest(
-      supabaseUrl,
-      serviceKey,
-      `/rest/v1/profiles?id=eq.${encodeURIComponent(memberId)}&select=id,name,role`,
-    );
-    const beforeData = Array.isArray(profiles) ? (profiles[0] || { id: memberId }) : { id: memberId };
+    const [actorRows, profiles, targetAdminRows] = await Promise.all([
+      serviceRequest(
+        supabaseUrl,
+        serviceKey,
+        `/rest/v1/admin_users?user_id=eq.${encodeURIComponent(admin.user?.id || '')}&select=user_id,role,active`,
+      ),
+      serviceRequest(
+        supabaseUrl,
+        serviceKey,
+        `/rest/v1/profiles?id=eq.${encodeURIComponent(memberId)}&select=id,name,role`,
+      ),
+      serviceRequest(
+        supabaseUrl,
+        serviceKey,
+        `/rest/v1/admin_users?user_id=eq.${encodeURIComponent(memberId)}&select=user_id,role,active`,
+      ),
+    ]);
+
+    const actor = firstRow(actorRows);
+    const profile = firstRow(profiles);
+    const targetAdmin = firstRow(targetAdminRows);
+
+    if (!actor?.active || !['admin', 'super_admin'].includes(actor.role)) {
+      return res.status(403).json({ ok: false, error: '管理員權限已失效，請重新登入。' });
+    }
+    if (!profile) {
+      return res.status(404).json({ ok: false, error: '找不到要刪除的會員資料。' });
+    }
+    if (targetAdmin) {
+      return res.status(403).json({ ok: false, error: '後台人員帳號不可由會員刪除流程移除。' });
+    }
+
+    const beforeData = profile;
 
     await serviceRequest(supabaseUrl, serviceKey, `/auth/v1/admin/users/${encodeURIComponent(memberId)}`, {
       method: 'DELETE',
@@ -107,14 +145,17 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify({
           actor_user_id: admin.user?.id || null,
           actor_email: admin.user?.email || null,
-          actor_role: 'admin',
+          actor_role: actor.role,
           actor_type: 'admin',
           action: 'profiles.delete',
           entity_type: 'profiles',
           entity_id: memberId,
           before_data: beforeData,
           after_data: null,
-          metadata: { source: 'admin-delete-member-api' },
+          metadata: {
+            source: 'admin-delete-member-api',
+            target_backoffice_role: targetAdmin?.role || null,
+          },
         }),
       });
     } catch (auditError) {
