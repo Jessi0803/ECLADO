@@ -132,6 +132,7 @@ test('新版庫存配置以規格庫存為準並保存付款配置、回補與 F
   expect(sql).toContain('from public.product_variants\n  where id = p_variant_id\n  for update');
   expect(sql).toContain("'payment_allocate'");
   expect(sql).toContain("'fifo_allocate'");
+  expect(sql).toContain("'fulfillment_close'");
   expect(sql).toContain("'release'");
   expect(sql).toContain('order by item.priority_at, orders.created_at, item.id');
   expect(sql).toContain("has_backoffice_permission('backorders.manage')");
@@ -139,6 +140,17 @@ test('新版庫存配置以規格庫存為準並保存付款配置、回補與 F
   expect(sql).toContain("new.status in ('ready_for_pickup', 'picked_up', 'shipped', 'delivered')");
   expect(sql).toContain('allocation.backorder_qty > 0');
   expect(sql).not.toContain('update public.purchase_orders');
+});
+
+test('待補頁未啟用期間允許訂單繼續履約，並以結案事件移出待補清單', () => {
+  const sql = read('supabase-order-inventory-allocation.sql');
+  expect(sql).toContain('create or replace function public.close_backorders_for_fulfillment');
+  expect(sql).toContain("state in ('allocated', 'partial', 'backordered', 'closed', 'released')");
+  expect(sql).toContain('closed_backorder_qty = closed_backorder_qty + allocation.backorder_qty');
+  expect(sql).toContain('backorder_qty = 0');
+  expect(sql).toContain("state = 'closed'");
+  expect(sql).toContain('perform public.close_backorders_for_fulfillment(new.id)');
+  expect(sql).not.toContain('Order still contains backordered inventory and cannot be completed');
 });
 
 test('待補商品權限只授予最高管理員並保留商品小編角色', () => {

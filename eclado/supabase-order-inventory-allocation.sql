@@ -3,8 +3,9 @@
 -- Canonical inventory lives on product_variants.stock. An order receives stock
 -- only when it first enters an inventory-active (paid/fulfilment) status.
 -- Backorders remain attached to the paid order until an administrator runs the
--- FIFO allocation RPC. Purchase-order "received" status is intentionally not
--- connected to this migration and continues to update status/time only.
+-- FIFO allocation RPC, or staff advances the order into fulfilment and closes
+-- the unresolved shortage. Purchase-order "received" status is intentionally
+-- not connected to this migration and continues to update status/time only.
 
 begin;
 
@@ -22,12 +23,14 @@ create table if not exists public.order_inventory_allocations (
   backorder_qty integer not null default 0 check (backorder_qty >= 0),
   stock_deducted_qty integer not null default 0 check (stock_deducted_qty >= 0),
   released_qty integer not null default 0 check (released_qty >= 0),
-  state text not null check (state in ('allocated', 'partial', 'backordered', 'released')),
+  closed_backorder_qty integer not null default 0 check (closed_backorder_qty >= 0),
+  state text not null check (state in ('allocated', 'partial', 'backordered', 'closed', 'released')),
   source text not null default 'payment_allocation'
     check (source in ('payment_allocation', 'legacy_snapshot')),
   priority_at timestamptz not null default now(),
   allocated_at timestamptz,
   last_allocated_at timestamptz,
+  closed_at timestamptz,
   released_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -35,6 +38,28 @@ create table if not exists public.order_inventory_allocations (
   check (allocated_qty + backorder_qty <= requested_qty),
   check (stock_deducted_qty <= allocated_qty)
 );
+
+-- Keep this migration rerunnable for databases that already have the v2
+-- allocation tables without the operational close state.
+alter table public.order_inventory_allocations
+  add column if not exists closed_backorder_qty integer not null default 0;
+alter table public.order_inventory_allocations
+  add column if not exists closed_at timestamptz;
+alter table public.order_inventory_allocations
+  drop constraint if exists order_inventory_allocations_closed_backorder_qty_check;
+alter table public.order_inventory_allocations
+  add constraint order_inventory_allocations_closed_backorder_qty_check
+  check (closed_backorder_qty >= 0);
+alter table public.order_inventory_allocations
+  drop constraint if exists order_inventory_allocations_closed_quantity_check;
+alter table public.order_inventory_allocations
+  add constraint order_inventory_allocations_closed_quantity_check
+  check (allocated_qty + backorder_qty + closed_backorder_qty <= requested_qty);
+alter table public.order_inventory_allocations
+  drop constraint if exists order_inventory_allocations_state_check;
+alter table public.order_inventory_allocations
+  add constraint order_inventory_allocations_state_check
+  check (state in ('allocated', 'partial', 'backordered', 'closed', 'released'));
 
 create index if not exists idx_order_inventory_allocations_fifo
   on public.order_inventory_allocations (product_variant_id, priority_at, id)
@@ -47,11 +72,17 @@ create table if not exists public.inventory_allocation_events (
   allocation_id bigint not null references public.order_inventory_allocations(id) on delete cascade,
   order_id text not null references public.orders(id) on delete cascade deferrable initially deferred,
   product_variant_id bigint not null references public.product_variants(id) on delete restrict,
-  event_type text not null check (event_type in ('payment_allocate', 'fifo_allocate', 'release')),
+  event_type text not null check (event_type in ('payment_allocate', 'fifo_allocate', 'fulfillment_close', 'release')),
   quantity integer not null check (quantity > 0),
   actor_user_id uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now()
 );
+
+alter table public.inventory_allocation_events
+  drop constraint if exists inventory_allocation_events_event_type_check;
+alter table public.inventory_allocation_events
+  add constraint inventory_allocation_events_event_type_check
+  check (event_type in ('payment_allocate', 'fifo_allocate', 'fulfillment_close', 'release'));
 
 create index if not exists idx_inventory_allocation_events_order
   on public.inventory_allocation_events (order_id, created_at, id);
@@ -280,6 +311,46 @@ begin
 end;
 $$;
 
+create or replace function public.close_backorders_for_fulfillment(target_order_id text)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  allocation record;
+begin
+  -- The backorder screen is not part of the current fulfilment workflow. When
+  -- staff advances an order, close only the unresolved shortage. Already
+  -- allocated stock remains deducted and no unavailable stock is invented.
+  for allocation in
+    select item.*
+    from public.order_inventory_allocations item
+    where item.order_id = target_order_id
+      and item.backorder_qty > 0
+      and item.state in ('partial', 'backordered')
+    order by item.product_variant_id, item.item_index
+    for update
+  loop
+    insert into public.inventory_allocation_events (
+      allocation_id, order_id, product_variant_id, event_type, quantity, actor_user_id
+    ) values (
+      allocation.id, target_order_id, allocation.product_variant_id,
+      'fulfillment_close', allocation.backorder_qty, auth.uid()
+    );
+
+    update public.order_inventory_allocations
+    set
+      closed_backorder_qty = closed_backorder_qty + allocation.backorder_qty,
+      backorder_qty = 0,
+      state = 'closed',
+      closed_at = now(),
+      updated_at = now()
+    where id = allocation.id;
+  end loop;
+end;
+$$;
+
 create or replace function public.sync_inventory_allocation_for_order()
 returns trigger
 language plpgsql
@@ -290,6 +361,9 @@ begin
   if tg_op = 'INSERT' then
     if public.order_consumes_inventory(new.status) then
       perform public.allocate_inventory_for_paid_order(new.id, new.items);
+    end if;
+    if new.status in ('ready_for_pickup', 'picked_up', 'shipped', 'delivered') then
+      perform public.close_backorders_for_fulfillment(new.id);
     end if;
     return new;
   end if;
@@ -312,17 +386,8 @@ begin
     perform public.release_inventory_for_order(old.id);
   end if;
 
-  if new.status in ('ready_for_pickup', 'picked_up', 'shipped', 'delivered')
-    and exists (
-      select 1
-      from public.order_inventory_allocations allocation
-      where allocation.order_id = new.id
-        and allocation.backorder_qty > 0
-        and allocation.state in ('partial', 'backordered')
-    )
-  then
-    raise exception 'Order still contains backordered inventory and cannot be completed'
-      using errcode = '55000';
+  if new.status in ('ready_for_pickup', 'picked_up', 'shipped', 'delivered') then
+    perform public.close_backorders_for_fulfillment(new.id);
   end if;
 
   return new;
@@ -387,6 +452,25 @@ end
 join public.products product on product.id = variant.product_id
 where public.order_consumes_inventory(orders.status)
 on conflict (order_id, item_index) do nothing;
+
+-- Existing fulfilment-stage orders may have been backfilled above. Close their
+-- unresolved shortages so rerunning this migration produces the same current
+-- workflow as future status changes.
+do $$
+declare target_order record;
+begin
+  for target_order in
+    select distinct orders.id
+    from public.orders orders
+    join public.order_inventory_allocations allocation on allocation.order_id = orders.id
+    where orders.status in ('ready_for_pickup', 'picked_up', 'shipped', 'delivered')
+      and allocation.backorder_qty > 0
+      and allocation.state in ('partial', 'backordered')
+  loop
+    perform public.close_backorders_for_fulfillment(target_order.id);
+  end loop;
+end;
+$$;
 
 create or replace function public.get_admin_inventory_allocations()
 returns table (
@@ -571,6 +655,7 @@ $$;
 
 revoke all on function public.allocate_inventory_for_paid_order(text, jsonb) from public, anon, authenticated;
 revoke all on function public.release_inventory_for_order(text) from public, anon, authenticated;
+revoke all on function public.close_backorders_for_fulfillment(text) from public, anon, authenticated;
 revoke all on function public.sync_inventory_allocation_for_order() from public, anon, authenticated;
 revoke all on function public.sync_product_stock_mirror(integer) from public, anon, authenticated;
 revoke all on function public.get_admin_inventory_allocations() from public, anon;
@@ -584,5 +669,7 @@ comment on table public.order_inventory_allocations is
   'Canonical per-order-line inventory allocation and backorder state. FIFO priority is fixed when payment is confirmed.';
 comment on function public.allocate_backordered_inventory(bigint) is
   'Allocates current variant stock to paid backorders in FIFO payment order. Does not receive purchase orders or add stock.';
+comment on function public.close_backorders_for_fulfillment(text) is
+  'Closes unresolved shortages when staff advances an order into fulfilment. Preserves allocated stock and an auditable close event.';
 
 commit;
