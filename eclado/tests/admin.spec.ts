@@ -1708,7 +1708,7 @@ test('後台核准美容師申請會同步 application status 與 profiles.role'
   await openAdminSection(page, /會員管理/);
   await page.getByRole('button', { name: /待審核申請/ }).click();
   await page.getByText('審核中會員').click();
-  await expect(page.getByText('審核中工作室')).toBeVisible();
+  await expect(page.getByRole('dialog', { name:'會員詳情' }).getByText('審核中工作室')).toBeVisible();
   await page.getByRole('button', { name: '核准' }).click();
 
   await expect.poll(() => applicationUpdates.some(update => update.status === 'approved')).toBe(true);
@@ -1793,6 +1793,47 @@ test('會員列表提供查看詳情按鈕並開啟既有會員詳情面板', as
   const panel = page.getByRole('dialog', { name: '會員詳情' });
   await expect(panel).toBeVisible();
   await expect(panel.getByText(firstMember.name, { exact: true })).toBeVisible();
+});
+
+test('會員詳細只顯示目前美容師申請的私人證照圖片與歷史筆數', async ({ page }) => {
+  const member = adminProfileRows[0];
+  await mockAdminApis(page, {
+    profiles:[member],
+    applications:[
+      {
+        id:'application-current-certificate', user_id:member.id, user_email:member.email,
+        studio_name:'目前工作室', contact_name:member.name, phone:member.phone,
+        address:'台北市目前路1號', social_media:'@current', certificate:'目前證書',
+        status:'pending', source:'standalone', created_at:'2026-09-20T00:00:00.000Z',
+        professional_application_certificates:[{
+          id:'certificate-current', application_id:'application-current-certificate',
+          storage_path:`${member.id}/application-current-certificate/certificate.jpg`,
+          original_name:'美容證照.jpg', mime_type:'image/jpeg', file_size:1024, sort_order:0,
+        }],
+      },
+      {
+        id:'application-history-certificate', user_id:member.id, user_email:member.email,
+        studio_name:'歷史工作室', contact_name:member.name, phone:member.phone,
+        address:'台北市歷史路1號', social_media:'@history', certificate:'不應展開的歷史證書',
+        status:'rejected', source:'standalone', created_at:'2026-08-20T00:00:00.000Z',
+        professional_application_certificates:[],
+      },
+    ],
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+  await page.getByRole('button', { name:`查看${member.name}詳情` }).click();
+  const panel = page.getByRole('dialog', { name:'會員詳情' });
+  const certificateImage = panel.getByRole('img', { name:'證照圖片 1' });
+  await expect(certificateImage).toBeVisible();
+  await expect(certificateImage).toHaveCSS('object-fit', 'contain');
+  const certificateBox = await certificateImage.boundingBox();
+  expect(certificateBox).not.toBeNull();
+  expect(certificateBox!.width).toBeLessThanOrEqual(160);
+  await expect(panel.getByText('美容證照.jpg')).toBeVisible();
+  await expect(panel.getByText('另有 1 筆歷史申請')).toBeVisible();
+  await expect(panel.getByText('不應展開的歷史證書')).toHaveCount(0);
 });
 
 test('訂單詳細可將單張訪客訂單歸戶至會員', async ({ page }) => {

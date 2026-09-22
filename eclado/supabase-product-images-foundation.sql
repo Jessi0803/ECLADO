@@ -121,6 +121,29 @@ create policy "product_images_delete_admin"
 grant select on public.product_images to anon, authenticated;
 grant insert, update, delete on public.product_images to authenticated;
 
+-- Storage evaluates every applicable SELECT policy. Keep catalog-table access
+-- behind a narrow security-definer predicate so reads from other private
+-- buckets never require direct SELECT permission on public.products.
+create or replace function public.is_public_product_image_storage_path(p_storage_path text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.product_images image
+    join public.products product on product.id = image.product_id
+    where image.storage_path = p_storage_path
+      and image.active is true
+      and product.active is true
+  );
+$$;
+
+revoke all on function public.is_public_product_image_storage_path(text) from public;
+grant execute on function public.is_public_product_image_storage_path(text) to anon, authenticated;
+
 drop policy if exists "product_images_storage_select_linked" on storage.objects;
 drop policy if exists "product_images_storage_select_admin" on storage.objects;
 drop policy if exists "product_images_storage_insert_admin" on storage.objects;
@@ -131,14 +154,7 @@ create policy "product_images_storage_select_linked"
   on storage.objects for select to anon, authenticated
   using (
     bucket_id = 'product-images'
-    and exists (
-      select 1
-      from public.product_images image
-      join public.products product on product.id = image.product_id
-      where image.storage_path = storage.objects.name
-        and image.active is true
-        and product.active is true
-    )
+    and public.is_public_product_image_storage_path(storage.objects.name)
   );
 
 create policy "product_images_storage_select_admin"

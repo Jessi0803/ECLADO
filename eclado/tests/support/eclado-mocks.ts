@@ -188,6 +188,7 @@ export type MockEcladoApiOptions = {
   onProductWithVariantsSave?: (request: Record<string, unknown>) => void;
   onProductImagesSave?: (request: Record<string, unknown>) => void;
   onProductImageUpload?: (path: string) => void;
+  onProfessionalCertificateUpload?: (path: string) => void;
   onProfileUpdate?: (update: Record<string, unknown>, url: string) => void;
   onMemberRoleChange?: (memberId: string, role: string) => void;
   onMembershipStartChange?: (payload: Record<string, unknown>) => void;
@@ -317,6 +318,19 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     const path = decodeURIComponent(route.request().url().split(marker)[1] || '');
     if (route.request().method() === 'POST') options.onProductImageUpload?.(path);
     return json(route, { Key: `product-images/${path}` });
+  });
+
+  await page.route('**/storage/v1/object/professional-certificates/**', async route => {
+    const marker = '/storage/v1/object/professional-certificates/';
+    const path = decodeURIComponent(route.request().url().split(marker)[1] || '');
+    if (route.request().method() === 'POST') options.onProfessionalCertificateUpload?.(path);
+    return json(route, { Key: `professional-certificates/${path}` });
+  });
+
+  await page.route('**/storage/v1/object/sign/professional-certificates/**', async route => {
+    const marker = '/storage/v1/object/sign/professional-certificates/';
+    const path = decodeURIComponent(route.request().url().split(marker)[1] || '');
+    return json(route, { signedURL: `/mock-professional-certificate/${encodeURIComponent(path)}` });
   });
 
   await page.route('**/rest/v1/product_variants**', async route => {
@@ -993,6 +1007,35 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       user_email: authUser.email,
       status: 'pending',
       source: 'standalone',
+    };
+    options.onApplicationInsert?.(application);
+    const profile = profiles.find(row => String(row.id) === String(authUser.id));
+    if (profile) profile.role = 'pending';
+    return json(route, application.id);
+  });
+
+  await page.route('**/rest/v1/rpc/submit_professional_application_with_certificates', async route => {
+    const body = route.request().postDataJSON();
+    if (!authUser) return json(route, { message: 'Authentication required' }, 403);
+    const certificates = Array.isArray(body.p_certificates) ? body.p_certificates : [];
+    const application = {
+      id: body.p_application_id || `app-e2e-${Date.now()}`,
+      studio_name: body.p_studio_name,
+      contact_name: body.p_contact_name,
+      phone: body.p_phone,
+      address: body.p_address,
+      social_media: body.p_social_media,
+      certificate: body.p_certificate,
+      user_id: authUser.id,
+      user_email: authUser.email,
+      status: 'pending',
+      source: 'standalone',
+      professional_application_certificates: certificates.map((certificate: Record<string, unknown>, index: number) => ({
+        id: `certificate-${index + 1}`,
+        application_id: body.p_application_id,
+        ...certificate,
+        sort_order: index,
+      })),
     };
     options.onApplicationInsert?.(application);
     const profile = profiles.find(row => String(row.id) === String(authUser.id));

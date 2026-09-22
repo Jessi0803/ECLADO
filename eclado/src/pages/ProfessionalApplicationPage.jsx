@@ -7,7 +7,34 @@ import {
 import { getMemberRole } from '../domain/catalog.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
 import { fetchLatestProApplication } from '../services/membership.js';
-import { createProfessionalApplication } from '../services/professionalApplications.js';
+import {
+  createProfessionalApplication,
+  PROFESSIONAL_CERTIFICATE_MAX_FILES,
+  validateProfessionalCertificateFiles,
+} from '../services/professionalApplications.js';
+
+function CertificateFilePreview({ file, index, onRemove }) {
+  const [previewUrl, setPreviewUrl] = useState('');
+
+  useEffect(() => {
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'72px minmax(0, 1fr) auto', alignItems:'center', gap:12, padding:'9px', border:'1px solid var(--light)', background:'var(--off-white)' }}>
+      {previewUrl
+        ? <img src={previewUrl} alt={`待上傳證照圖片 ${index + 1}`} style={{ display:'block', width:72, height:58, objectFit:'contain', border:'1px solid var(--light)', background:'var(--white)' }} />
+        : <div style={{ width:72, height:58, background:'var(--white)', border:'1px solid var(--light)' }} />}
+      <div style={{ minWidth:0 }}>
+        <div title={file.name} style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:12 }}>{file.name}</div>
+        <div style={{ marginTop:4, color:'var(--mid)', fontSize:10 }}>{(file.size / 1024 / 1024).toFixed(2)} MB</div>
+      </div>
+      <button type="button" onClick={onRemove} style={{ flex:'0 0 auto', border:'none', background:'none', color:'#b64032', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:11 }}>移除</button>
+    </div>
+  );
+}
 
 export default function ProfessionalApplicationPage({ setPage, user, authReady, onUserUpdated }) {
   const [form, setForm] = useState({
@@ -19,6 +46,7 @@ export default function ProfessionalApplicationPage({ setPage, user, authReady, 
     certificate: '',
   });
   const [submitted, setSubmitted] = useState(false);
+  const [certificateFiles, setCertificateFiles] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [gateLoading, setGateLoading] = useState(true);
@@ -26,6 +54,29 @@ export default function ProfessionalApplicationPage({ setPage, user, authReady, 
   const isMobile = useIsMobile();
   const inputStyle = { width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--black)', boxSizing:'border-box' };
   const field = key => e => setForm(prev => ({ ...prev, [key]: e.target.value }));
+
+  function selectCertificateFiles(event) {
+    const selectedFiles = Array.from(event.target.files || []);
+    const existingKeys = new Set(certificateFiles.map(file => `${file.name}:${file.size}:${file.lastModified}:${file.type}`));
+    const additions = selectedFiles.filter(file => {
+      const key = `${file.name}:${file.size}:${file.lastModified}:${file.type}`;
+      if (existingKeys.has(key)) return false;
+      existingKeys.add(key);
+      return true;
+    });
+    const nextFiles = [...certificateFiles, ...additions];
+    const validationError = validateProfessionalCertificateFiles(nextFiles);
+    if (validationError) {
+      setSubmitError(validationError);
+      event.target.value = '';
+      return;
+    }
+    setCertificateFiles(nextFiles);
+    setSubmitError('');
+    // Allow selecting another file (or the same file after removing it) in a
+    // later picker interaction instead of replacing the current batch.
+    event.target.value = '';
+  }
 
   useEffect(() => {
     if (!authReady) return;
@@ -90,9 +141,9 @@ export default function ProfessionalApplicationPage({ setPage, user, authReady, 
       user_email: user.email || null,
       status: 'pending',
       source: 'standalone',
-    });
+    }, certificateFiles);
     if (error) {
-      setSubmitError('送出失敗，請稍後再試。');
+      setSubmitError(error.message || '送出失敗，請稍後再試。');
       setSubmitting(false);
       return;
     }
@@ -190,6 +241,33 @@ export default function ProfessionalApplicationPage({ setPage, user, authReady, 
                 onFocus={e=>e.target.style.borderColor='var(--dark)'}
                 onBlur={e=>e.target.style.borderColor='var(--light)'}
                 style={{ ...inputStyle, resize:'vertical', border:'1px solid var(--light)', padding:'12px', lineHeight:1.7, borderBottom:'1px solid var(--light)' }} />
+            </div>
+
+            <div>
+              <label style={labelStyle}>⑦ 證照圖片（選填，最多 {PROFESSIONAL_CERTIFICATE_MAX_FILES} 張）</label>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                onChange={selectCertificateFiles}
+                aria-describedby="certificate-image-help"
+                style={{ ...inputStyle, padding:'12px 0', cursor:'pointer' }}
+              />
+              <p id="certificate-image-help" style={{ marginTop:8, color:'var(--mid)', fontSize:11, lineHeight:1.6 }}>
+                支援 JPG、PNG、WebP，單張不超過 5 MB。
+              </p>
+              {certificateFiles.length > 0 && (
+                <div style={{ display:'grid', gap:8, marginTop:12 }}>
+                  {certificateFiles.map((file, index) => (
+                    <CertificateFilePreview
+                      key={`${file.name}-${file.size}-${file.lastModified}-${file.type}`}
+                      file={file}
+                      index={index}
+                      onRemove={() => setCertificateFiles(files => files.filter((_, fileIndex) => fileIndex !== index))}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             {submitError && <p style={{ fontSize:13, color:'#c0392b', marginTop:4 }}>{submitError}</p>}

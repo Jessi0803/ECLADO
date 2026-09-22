@@ -113,7 +113,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
         canReadOrders ? supabase.from('orders').select('*').order('created_at', { ascending: false }) : emptyResult(),
         canReadMembers ? supabase.from('profiles').select('*').order('created_at', { ascending: false }) : emptyResult(),
         canReadCatalog ? supabase.rpc('get_admin_catalog') : Promise.resolve({ data: { products: [], variants: [], images: [] }, error: null }),
-        canReadMembers ? supabase.from('professional_applications').select('*').order('created_at', { ascending: false }) : emptyResult(),
+        canReadMembers ? supabase.from('professional_applications').select('*, professional_application_certificates(*)').order('created_at', { ascending: false }) : emptyResult(),
         canReadOrders ? supabase.rpc('get_admin_order_payment_methods') : emptyResult(),
         canReadOrders ? supabase.rpc('get_admin_order_payment_details') : emptyResult(),
         canReadOrders ? supabase.rpc('get_admin_inventory_allocations') : emptyResult(),

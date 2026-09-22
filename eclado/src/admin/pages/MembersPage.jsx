@@ -4,11 +4,66 @@ import OrderMemberAssignmentDialog from '../components/OrderMemberAssignmentDial
 import { orderBelongsToMember } from '../domain/mappers.js';
 import usePanelHistory from '../hooks/usePanelHistory.js';
 import ProfessionalQuarterSection from '../components/ProfessionalQuarterSection.jsx';
+import { supabase } from '../../services/supabase.js';
+import { PROFESSIONAL_CERTIFICATE_BUCKET } from '../../services/professionalApplications.js';
 
 const APP_STATUS_LABEL = { pending: '待審核', approved: '已核准', rejected: '已拒絕' };
 const APP_SOURCE_LABEL = { registration: '註冊申請', upgrade: '事後申請', standalone: '表單申請' };
 const APP_STATUS_COLOR = { pending: '#b8860b', approved: '#2e7d32', rejected: '#c62828' };
 const APP_STATUS_BG = { pending: '#fff8e1', approved: '#e8f5e9', rejected: '#ffebee' };
+
+function ApplicationCertificateImages({ certificates = [] }) {
+  const [previews, setPreviews] = useState([]);
+  const [previewError, setPreviewError] = useState('');
+  const certificateList = Array.isArray(certificates) ? certificates : [];
+  const certificateKey = certificateList
+    .map(certificate => `${certificate.storage_path}:${certificate.sort_order}:${certificate.original_name}`)
+    .join('|');
+
+  useEffect(() => {
+    let active = true;
+    const sorted = [...certificateList].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+    if (!sorted.length) {
+      setPreviews([]);
+      setPreviewError('');
+      return () => { active = false; };
+    }
+    setPreviews([]);
+    setPreviewError('');
+    Promise.all(sorted.map(async certificate => {
+      const { data, error } = await supabase.storage
+        .from(PROFESSIONAL_CERTIFICATE_BUCKET)
+        .createSignedUrl(certificate.storage_path, 300);
+      if (error || !data?.signedUrl) throw error || new Error('無法建立預覽網址');
+      return { ...certificate, signedUrl: data.signedUrl };
+    })).then(items => {
+      if (active) setPreviews(items);
+    }).catch(error => {
+      if (active) setPreviewError(error?.message || '證照圖片載入失敗');
+    });
+    return () => { active = false; };
+  }, [certificateKey]);
+
+  if (!certificateList.length) {
+    return <div style={{ fontSize:12, color:'var(--mid)' }}>未上傳證照圖片</div>;
+  }
+  if (previewError) {
+    return <div style={{ fontSize:12, color:'var(--red)' }}>證照圖片載入失敗：{previewError}</div>;
+  }
+  if (!previews.length) {
+    return <div style={{ fontSize:12, color:'var(--mid)' }}>證照圖片載入中…</div>;
+  }
+  return (
+    <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
+      {previews.map((certificate, index) => (
+        <a key={certificate.id || certificate.storage_path} href={certificate.signedUrl} target="_blank" rel="noreferrer" style={{ display:'block', width:160, maxWidth:'100%', minWidth:0, color:'inherit', textDecoration:'none' }}>
+          <img src={certificate.signedUrl} alt={`證照圖片 ${index + 1}`} style={{ display:'block', width:'100%', height:120, objectFit:'contain', border:'1px solid var(--border)', background:'var(--white)' }} />
+          <div title={certificate.original_name} style={{ marginTop:4, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:'var(--mid)', fontSize:10 }}>{certificate.original_name || `證照圖片 ${index + 1}`}</div>
+        </a>
+      ))}
+    </div>
+  );
+}
 
 function appsForMember(applications, memberId) {
   if (!memberId) return [];
@@ -417,6 +472,10 @@ export default function Members({
                     <div style={{ fontSize: 12, lineHeight: 1.6, wordBreak: 'break-all' }}>{val}</div>
                   </div>
                 ) : null)}
+                <div style={{ marginBottom:10 }}>
+                  <div style={{ fontSize:10, color:'var(--mid)', marginBottom:6 }}>證照圖片</div>
+                  <ApplicationCertificateImages certificates={latestApp.professional_application_certificates || []} />
+                </div>
                 {latestApp.status === 'pending' && onUpdateApplicationStatus && (
                   <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
                     <button type="button" disabled={reviewingId === latestApp.id} onClick={() => reviewApplication(latestApp.id, 'approved')} style={{ flex: 1, padding: '10px 0', fontSize: 12, background: 'var(--dark)', color: '#fff', border: 'none', cursor: reviewingId === latestApp.id ? 'wait' : 'pointer', opacity: reviewingId === latestApp.id ? 0.6 : 1 }}>核准</button>
