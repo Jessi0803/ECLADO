@@ -242,6 +242,10 @@ export type MockEcladoApiOptions = {
   orders?: Record<string, unknown>[];
   profiles?: Record<string, unknown>[];
   professionalSales?: Record<string, unknown>[];
+  memberNotes?: Record<string, unknown>[];
+  sidebarFavorites?: string[] | null;
+  onSidebarFavoritesSave?: (favorites: string[]) => void;
+  onMemberNoteSave?: (payload: Record<string, unknown>) => void;
   applications?: Record<string, unknown>[];
   auditLogs?: Record<string, unknown>[];
   procurementOrders?: Record<string, unknown>[];
@@ -479,6 +483,35 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     return json(route, options.professionalSales || []);
   });
 
+
+  let sidebarFavorites = options.sidebarFavorites ?? null;
+  await page.route('**/rest/v1/admin_preferences**', async route => {
+    const method = route.request().method();
+    if (method === 'GET') {
+      const row = sidebarFavorites ? { sidebar_favorites: sidebarFavorites } : null;
+      return json(route, hasObjectAccept(route) ? row : (row ? [row] : []));
+    }
+    const body = route.request().postDataJSON() || {};
+    sidebarFavorites = Array.isArray(body.sidebar_favorites) ? body.sidebar_favorites : [];
+    options.onSidebarFavoritesSave?.(sidebarFavorites);
+    return json(route, [body], 201);
+  });
+
+  const memberNotes = (options.memberNotes || []).map(note => ({ ...note }));
+  await page.route('**/rest/v1/rpc/get_admin_member_notes', async route => json(route, memberNotes));
+  await page.route('**/rest/v1/rpc/save_member_admin_note', async route => {
+    const request = route.request().postDataJSON() || {};
+    options.onMemberNoteSave?.(request);
+    const note = String(request.p_note || '').trim();
+    const index = memberNotes.findIndex(item => item.user_id === request.p_user_id);
+    if (!note) {
+      if (index >= 0) memberNotes.splice(index, 1);
+    } else {
+      const row = { user_id: request.p_user_id, note, updated_by_email: 'admin@example.com', updated_at: '2026-09-22T02:00:00.000Z' };
+      if (index >= 0) memberNotes[index] = row; else memberNotes.push(row);
+    }
+    return json(route, { user_id: request.p_user_id, note: note || null, changed: true });
+  });
 
   await page.route('**/rest/v1/rpc/get_my_professional_sales', async route => {
     const payload = (options.professionalSales || [])

@@ -14,6 +14,9 @@
   --red: oklch(0.60 0.18 25);
   --yellow: oklch(0.78 0.14 80);
   --blue: oklch(0.60 0.12 240);
+  --purple: oklch(0.55 0.14 305);
+  --note-member: var(--blue);
+  --note-customer: var(--purple);
   --font: 'Open Sans', 'Noto Sans TC', sans-serif;
   --font-d: 'Open Sans', 'Noto Sans TC', sans-serif;
 }
@@ -681,3 +684,10 @@ input, select, textarea { font-family: var(--font); }
     padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
   }
 }
+
+/* 導覽列常用星號：平常淡、滑過該列時清楚；觸控裝置一律半透明可點 */
+.sidebar-star { color: rgba(255,255,255,0.45); opacity: 0.35; cursor: pointer; transition: opacity 0.15s, color 0.15s; }
+.sidebar-item:hover .sidebar-star, .sidebar-star:focus-visible { opacity: 1; }
+.sidebar-star:hover { color: var(--gold); }
+.sidebar-star.is-starred { color: var(--gold); opacity: 1; }
+@media (hover: none) { .sidebar-star { opacity: 0.6; } }

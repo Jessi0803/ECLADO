@@ -126,7 +126,7 @@ async function openAdminCatalog(page: import('@playwright/test').Page) {
     await openMenu.click();
     await expect(page.locator('.app-sidebar')).toHaveClass(/\bopen\b/);
   }
-  await page.getByRole('button', { name: /商品 & 庫存/ }).click();
+  await page.locator('.app-sidebar button:not(.sidebar-star)').filter({ hasText: /商品 & 庫存/ }).first().click();
 }
 
 async function triggerProductsRealtime(page: import('@playwright/test').Page) {

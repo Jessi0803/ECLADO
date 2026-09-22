@@ -71,13 +71,29 @@ function SidebarIcon({ name }) {
   }
 }
 
-export default function Sidebar({ page, setPage, open, onClose, adminEmail, backofficeAccess, onSignOut }) {
-  const visibleGroups = MENU_GROUPS
-    .map(group => ({
-      ...group,
-      items: group.items.filter(item => canAccessBackofficePage(backofficeAccess, item.id)),
-    }))
+function StarIcon({ filled }) {
+  return (
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round">
+      <path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.8L12 16.9l-5.25 2.7 1-5.8L3.5 9.7l5.9-.9L12 3.5z" />
+    </svg>
+  );
+}
+
+export default function Sidebar({ page, setPage, open, onClose, adminEmail, backofficeAccess, onSignOut, favorites = null, onToggleFavorite = null }) {
+  const favoriteIds = new Set(favorites || []);
+  const accessibleGroups = MENU_GROUPS.map(group => ({
+    ...group,
+    items: group.items.filter(item => canAccessBackofficePage(backofficeAccess, item.id)),
+  }));
+  // 常用依原本選單順序排列；加入常用的頁面從原分類移出。
+  const favoriteItems = accessibleGroups.flatMap(group => group.items).filter(item => favoriteIds.has(item.id));
+  const visibleGroups = accessibleGroups
+    .map(group => ({ ...group, items: group.items.filter(item => !favoriteIds.has(item.id)) }))
     .filter(group => group.items.length > 0);
+  // 還沒有常用時不顯示常用分類，加入第一個後才出現。
+  const menuGroups = favoriteItems.length > 0
+    ? [{ title: '常用', items: favoriteItems }, ...visibleGroups]
+    : visibleGroups;
   const roleLabel = BACKOFFICE_ROLE_LABELS[backofficeAccess?.role] || '後台人員';
 
   return (
@@ -97,7 +113,7 @@ export default function Sidebar({ page, setPage, open, onClose, adminEmail, back
 
       {/* Menu */}
       <nav style={{ flex: 1, padding: '12px 0', overflowY: 'auto' }}>
-        {visibleGroups.map((group, gi) => (
+        {menuGroups.map((group, gi) => (
           <div key={group.title} style={{ marginBottom: 8, paddingTop: gi === 0 ? 4 : 12 }}>
             <div style={{
               padding: '8px 24px 6px',
@@ -107,25 +123,46 @@ export default function Sidebar({ page, setPage, open, onClose, adminEmail, back
               textTransform: 'uppercase',
               fontWeight: 500,
             }}>{group.title}</div>
-            {group.items.map(item => (
-              <button key={item.id} onClick={() => { setPage(item.id); if (onClose) onClose(); }} style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                width: '100%', padding: '11px 24px', border: 'none',
-                background: page === item.id ? 'rgba(255,255,255,0.08)' : 'transparent',
-                color: page === item.id ? '#fff' : 'rgba(255,255,255,0.45)',
-                fontSize: 13, letterSpacing: '0.04em', textAlign: 'left',
-                borderLeft: page === item.id ? '2px solid var(--gold)' : '2px solid transparent',
-                transition: 'all 0.15s',
-              }}
-              onMouseEnter={e => { if (page !== item.id) e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; }}
-              onMouseLeave={e => { if (page !== item.id) e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; }}
-              >
-                <span style={{ width:20, height:18, display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0, opacity:0.8 }}>
-                  <SidebarIcon name={item.icon} />
-                </span>
-                {item.label}
-              </button>
-            ))}
+            {group.items.map(item => {
+              const active = page === item.id;
+              const starred = favoriteIds.has(item.id);
+              return (
+                <div key={item.id} className="sidebar-item" style={{
+                  display: 'flex', alignItems: 'center',
+                  background: active ? 'rgba(255,255,255,0.08)' : 'transparent',
+                  borderLeft: active ? '2px solid var(--gold)' : '2px solid transparent',
+                  transition: 'all 0.15s',
+                }}>
+                  <button onClick={() => { setPage(item.id); if (onClose) onClose(); }} style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    flex: 1, minWidth: 0, padding: '11px 0 11px 22px', border: 'none', background: 'transparent',
+                    color: active ? '#fff' : 'rgba(255,255,255,0.45)',
+                    fontSize: 13, letterSpacing: '0.04em', textAlign: 'left',
+                  }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; }}
+                  >
+                    <span style={{ width:20, height:18, display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0, opacity:0.8 }}>
+                      <SidebarIcon name={item.icon} />
+                    </span>
+                    {item.label}
+                  </button>
+                  {onToggleFavorite && (
+                    <button
+                      type="button"
+                      className={'sidebar-star' + (starred ? ' is-starred' : '')}
+                      aria-label={starred ? `將${item.label}移出常用` : `將${item.label}加入常用`}
+                      aria-pressed={starred}
+                      title={starred ? '移出常用' : '加入常用'}
+                      onClick={() => onToggleFavorite(item.id)}
+                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, marginRight: 10, border: 'none', background: 'transparent', padding: 0, flexShrink: 0 }}
+                    >
+                      <StarIcon filled={starred} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         ))}
       </nav>

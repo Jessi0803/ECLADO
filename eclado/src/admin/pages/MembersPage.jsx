@@ -3,6 +3,7 @@ import { Badge, TypeBadge } from '../components/StatusIndicators.jsx';
 import OrderMemberAssignmentDialog from '../components/OrderMemberAssignmentDialog.jsx';
 import { orderBelongsToMember } from '../domain/mappers.js';
 import usePanelHistory from '../hooks/usePanelHistory.js';
+import MemberNoteSection from '../components/MemberNoteSection.jsx';
 import ProfessionalQuarterSection from '../components/ProfessionalQuarterSection.jsx';
 import { supabase } from '../../services/supabase.js';
 import { PROFESSIONAL_CERTIFICATE_BUCKET } from '../../services/professionalApplications.js';
@@ -110,7 +111,7 @@ export default function Members({
   members, orders = [],
   applications = [], applicationsLoading = false, applicationsError = '',
   onChangeMemberRole, onChangeMembershipStart, onSaveSalesAdjustment, onUpdateApplicationStatus, onSendApplicationNotice, onDeleteMember, currentAdminUserId = '', onAssignGuestOrder, defaultFilter = 'all',
-  focusMemberId = '', backToOrderId = '', onOpenOrder, onClearCrossLink,
+  focusMemberId = '', backToOrderId = '', onOpenOrder, onClearCrossLink, memberNotes = {}, onSaveMemberNote,
 }) {
   const [filter, setFilter] = useState(defaultFilter);
   const [searchQuery, setSearchQuery] = useState('');
@@ -423,6 +424,9 @@ export default function Members({
               <span style={{ fontWeight: 400 }}>{val}</span>
             </div>
           ))}
+          {!(typeof selected.id === 'string' && selected.id.startsWith('app:')) && (
+            <MemberNoteSection memberId={selected.id} note={memberNotes[String(selected.id)]} onSave={onSaveMemberNote} />
+          )}
           {selected.professionalSales?.memberships?.length > 0 && (
             <ProfessionalQuarterSection
               sales={selected.professionalSales}

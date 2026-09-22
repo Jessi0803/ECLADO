@@ -55,7 +55,7 @@ async function openAdminSection(page: Page, name: RegExp) {
     await mobileMenu.click();
     await expect(page.locator('.app-sidebar')).toHaveClass(/\bopen\b/);
   }
-  await page.getByRole('button', { name }).click();
+  await page.locator('.app-sidebar button:not(.sidebar-star)').filter({ hasText: name }).first().click();
 }
 
 const adminProductVariants = [
@@ -92,6 +92,43 @@ test('後台登入權限：管理員 session 可進入儀表板', async ({ page 
   await expect(page.getByText('E2E-ORDER-001')).toBeVisible();
   await expect(page.getByText('ECL-20260504-0044')).toHaveCount(0);
   await expect(page.getByRole('button', { name: '待補商品', exact: true })).toHaveCount(0);
+});
+
+test('導覽列可將頁面加入常用並依原本選單順序顯示', async ({ page }) => {
+  const saves: string[][] = [];
+  await mockAdminApis(page, { sidebarFavorites: null, onSidebarFavoritesSave: favorites => saves.push(favorites) });
+  await page.goto('/admin');
+  if ((page.viewportSize()?.width || 0) <= 900) await page.getByRole('button', { name: '開啟選單' }).click();
+  const sidebar = page.locator('.app-sidebar');
+
+  await expect(sidebar.getByText('常用', { exact: true })).toHaveCount(0);
+  await sidebar.getByRole('button', { name: '將會員管理加入常用' }).click();
+  await sidebar.getByRole('button', { name: '將訂單管理加入常用' }).click();
+  await expect(sidebar.getByText('常用', { exact: true })).toBeVisible();
+  expect(saves).toEqual([['members'], ['members', 'orders']]);
+
+  const labels = await sidebar.locator('nav > div').first().locator('button:not(.sidebar-star)').allInnerTexts();
+  expect(labels.map(label => label.trim())).toEqual(['訂單管理', '會員管理']);
+  await expect(sidebar.getByRole('button', { name: '將訂單管理移出常用' })).toHaveAttribute('aria-pressed', 'true');
+
+  await sidebar.getByRole('button', { name: '將訂單管理移出常用' }).click();
+  expect(saves.at(-1)).toEqual(['members']);
+  await expect(sidebar.locator('nav > div').nth(1).getByText('訂單管理')).toBeVisible();
+});
+
+test('導覽列會載入帳號已存的常用並隱藏沒有權限的頁面', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: adminUser(),
+    backofficeAccess: { role: 'order_staff', permissions: ['orders.read', 'orders.write'] },
+    orders: adminOrderRows,
+    sidebarFavorites: ['members', 'orders'],
+  });
+  await page.goto('/admin');
+  if ((page.viewportSize()?.width || 0) <= 900) await page.getByRole('button', { name: '開啟選單' }).click();
+  const favoritesGroup = page.locator('.app-sidebar nav > div').first();
+  await expect(favoritesGroup.getByText('常用')).toBeVisible();
+  await expect(favoritesGroup.getByText('訂單管理')).toBeVisible();
+  await expect(page.locator('.app-sidebar').getByText('會員管理')).toHaveCount(0);
 });
 
 test('只有最高管理員能看到待補商品管理', async ({ page }) => {
@@ -321,9 +358,9 @@ test('後台側邊欄將操作紀錄歸在會員分類', async ({ page }) => {
   const operationsGroup = navGroups.filter({ has: page.getByText('營運', { exact: true }) });
   const membersGroup = navGroups.filter({ has: page.getByText('會員', { exact: true }) });
 
-  await expect(operationsGroup.getByRole('button', { name: '操作紀錄' })).toHaveCount(0);
-  await expect(membersGroup.getByRole('button', { name: '操作紀錄' })).toBeVisible();
-  await membersGroup.getByRole('button', { name: '操作紀錄' }).click();
+  await expect(operationsGroup.getByRole('button', { name: '操作紀錄', exact: true })).toHaveCount(0);
+  await expect(membersGroup.getByRole('button', { name: '操作紀錄', exact: true })).toBeVisible();
+  await membersGroup.getByRole('button', { name: '操作紀錄', exact: true }).click();
   await expect(page.getByRole('heading', { name: '操作紀錄' })).toBeVisible();
 });
 
@@ -2149,6 +2186,76 @@ test('會員管理只在會員詳細顯示師資目前季度採購額與資格�
   await expect(panel.getByText('專業資格季度')).toBeVisible();
   await expect(panel.getByText('2026/09/07－2026/12/06').first()).toBeVisible();
   await expect(panel.getByText(/師資 2026\/09\/07 起/)).toBeVisible();
+});
+
+test('會員內部備註可在會員詳情編輯並顯示於該會員的訂單', async ({ page }) => {
+  const noteSaves: Record<string, unknown>[] = [];
+  await mockAdminApis(page, { orders: adminOrderRows, profiles: adminProfileRows, onMemberNoteSave: payload => noteSaves.push(payload) });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  const memberRow = page.getByRole('row').filter({ hasText: 'E2E-ORDER-001' });
+  await expect(memberRow.getByLabel('此會員有內部備註')).toHaveCount(0);
+  await memberRow.click();
+  const orderPanel = page.getByRole('dialog', { name: '訂單詳情' });
+  await orderPanel.getByRole('button', { name: '測試會員' }).click();
+
+  const memberPanel = page.getByRole('dialog', { name: '會員詳情' });
+  const noteSection = memberPanel.getByRole('region', { name: '會員內部備註' });
+  await expect(noteSection.getByText('尚無備註')).toBeVisible();
+  await noteSection.getByRole('button', { name: '新增備註' }).click();
+  await noteSection.getByLabel('會員內部備註內容').fill('  偏好週二出貨\n皮膚管理院在二樓  ');
+  await noteSection.getByRole('button', { name: '儲存', exact: true }).click();
+  await expect(noteSection.getByText(/偏好週二出貨/)).toBeVisible();
+  await expect(noteSection.getByText(/最後更新：admin@example.com/)).toBeVisible();
+  expect(noteSaves).toEqual([{ p_user_id: 'user-consumer-1', p_note: '偏好週二出貨\n皮膚管理院在二樓' }]);
+
+  await memberPanel.getByRole('button', { name: '← 回到訂單 E2E-ORDER-001' }).click();
+  await expect(orderPanel.getByLabel('會員內部備註（僅後台可見）')).toContainText('偏好週二出貨');
+  await page.goBack();
+  await expect(page.getByRole('row').filter({ hasText: 'E2E-ORDER-001' }).getByLabel('此會員有內部備註')).toBeVisible();
+});
+
+test('訂單列表以兩種顏色標籤區分會員內部備註與顧客訂單備註', async ({ page }) => {
+  const noteOrder = { ...adminOrderRows[0], id: 'E2E-NOTE-ORDER-001', note: '請放管理室' };
+  await mockAdminApis(page, {
+    orders: [...adminOrderRows, noteOrder],
+    profiles: adminProfileRows,
+    memberNotes: [{ user_id: 'user-consumer-1', note: '偏好週二出貨', updated_by_email: 'admin@example.com', updated_at: '2026-09-22T02:00:00.000Z' }],
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  const plainRow = page.getByRole('row').filter({ hasText: 'E2E-ORDER-001' });
+  await expect(plainRow.getByLabel('此會員有內部備註')).toHaveAttribute('title', '會員內部備註（僅後台可見）：偏好週二出貨');
+  await expect(plainRow.getByLabel('此訂單有顧客備註')).toHaveCount(0);
+
+  const noteRow = page.getByRole('row').filter({ hasText: 'E2E-NOTE-ORDER-001' });
+  await expect(noteRow.getByLabel('此會員有內部備註')).toBeVisible();
+  await expect(noteRow.getByLabel('此訂單有顧客備註')).toHaveAttribute('title', '顧客訂單備註：請放管理室');
+  await noteRow.click();
+  const orderPanel = page.getByRole('dialog', { name: '訂單詳情' });
+  await expect(orderPanel.getByLabel('會員內部備註（僅後台可見）')).toContainText('偏好週二出貨');
+  await expect(orderPanel.getByLabel('顧客訂單備註')).toContainText('請放管理室');
+});
+
+test('只有訂單權限的帳號看得到會員內部備註但不能跳到會員詳情', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: adminUser(),
+    backofficeAccess: { role: 'order_staff', permissions: ['orders.read', 'orders.write'] },
+    orders: adminOrderRows,
+    profiles: adminProfileRows,
+    memberNotes: [{ user_id: 'user-consumer-1', note: '只收週二出貨', updated_by_email: 'admin@example.com', updated_at: '2026-09-22T02:00:00.000Z' }],
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  const memberRow = page.getByRole('row').filter({ hasText: 'E2E-ORDER-001' });
+  await expect(memberRow.getByLabel('此會員有內部備註')).toBeVisible();
+  await memberRow.click();
+  const orderPanel = page.getByRole('dialog', { name: '訂單詳情' });
+  await expect(orderPanel.getByLabel('會員內部備註（僅後台可見）')).toContainText('只收週二出貨');
+  await expect(orderPanel.getByRole('button', { name: '測試會員' })).toHaveCount(0);
 });
 
 test('訂單與會員詳情可雙向跳轉並顯示返回列', async ({ page }) => {

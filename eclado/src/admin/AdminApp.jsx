@@ -3,6 +3,7 @@ import { supabase } from '../services/supabase.js';
 import { withProductImagePublicUrl } from '../services/catalogData.js';
 import { normalizeMember, normalizeOrder, normalizeProduct } from './domain/mappers.js';
 import { normalizeProfessionalSales } from '../domain/professionalSales.js';
+import { fetchSidebarFavorites, saveSidebarFavorites } from '../services/adminPreferences.js';
 import {
   saveProfessionalSalesAdjustment,
   setProfessionalMembershipStart,
@@ -36,6 +37,35 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
   const [crossLink, setCrossLink] = useState(null);
   const [products, setProducts] = useState([]);
   const [members, setMembers] = useState([]);
+  const [memberNotes, setMemberNotes] = useState({});
+  // null = 尚未載入或資料表不存在（此時不顯示「常用」功能）
+  const [sidebarFavorites, setSidebarFavorites] = useState(null);
+
+  useEffect(() => {
+    if (!adminUserId) return undefined;
+    let cancelled = false;
+    fetchSidebarFavorites(adminUserId).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error) {
+        console.error('sidebar favorites fetch failed', error);
+        return;
+      }
+      setSidebarFavorites(Array.isArray(data?.sidebar_favorites) ? data.sidebar_favorites : []);
+    });
+    return () => { cancelled = true; };
+  }, [adminUserId]);
+
+  async function toggleSidebarFavorite(pageId) {
+    if (!sidebarFavorites) return;
+    const previous = sidebarFavorites;
+    const next = previous.includes(pageId) ? previous.filter(id => id !== pageId) : [...previous, pageId];
+    setSidebarFavorites(next);
+    const { error } = await saveSidebarFavorites(adminUserId, next);
+    if (error) {
+      console.error('sidebar favorites save failed', error);
+      setSidebarFavorites(previous);
+    }
+  }
   const [orders, setOrders] = useState([]);
   const [applications, setApplications] = useState([]);
   const [applicationsLoading, setApplicationsLoading] = useState(true);
@@ -109,7 +139,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
     setApplicationsLoading(canReadMembers);
     try {
       const emptyResult = () => Promise.resolve({ data: [], error: null });
-      const [ordersRes, profilesRes, catalogRes, applicationsRes, paymentMethodsRes, paymentDetailsRes, inventoryAllocationsRes, professionalSalesRes] = await Promise.all([
+      const [ordersRes, profilesRes, catalogRes, applicationsRes, paymentMethodsRes, paymentDetailsRes, inventoryAllocationsRes, professionalSalesRes, memberNotesRes] = await Promise.all([
         canReadOrders ? supabase.from('orders').select('*').order('created_at', { ascending: false }) : emptyResult(),
         canReadMembers ? supabase.from('profiles').select('*').order('created_at', { ascending: false }) : emptyResult(),
         canReadCatalog ? supabase.rpc('get_admin_catalog') : Promise.resolve({ data: { products: [], variants: [], images: [] }, error: null }),
@@ -118,6 +148,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
         canReadOrders ? supabase.rpc('get_admin_order_payment_details') : emptyResult(),
         canReadOrders ? supabase.rpc('get_admin_inventory_allocations') : emptyResult(),
         canReadMembers ? supabase.rpc('get_admin_professional_sales') : emptyResult(),
+        canReadMembers || canReadOrders ? supabase.rpc('get_admin_member_notes') : emptyResult(),
       ]);
       if (ordersRes.error) throw ordersRes.error;
       if (profilesRes.error) throw profilesRes.error;
@@ -158,6 +189,11 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
         })(),
       }));
       setOrders(realOrders);
+      if (memberNotesRes.error) console.error('member notes fetch failed', memberNotesRes.error);
+      setMemberNotes(Object.fromEntries((memberNotesRes.error ? [] : (memberNotesRes.data || [])).map(row => [
+        String(row.user_id),
+        { note: row.note || '', updatedByEmail: row.updated_by_email || '', updatedAt: row.updated_at || '' },
+      ])));
 
       const professionalSalesByMember = new Map(
         (professionalSalesRes.error ? [] : (professionalSalesRes.data || []))
@@ -476,6 +512,16 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
     return { ok: true, message: '會員類型與季度起算日已更新。' };
   }
 
+  async function saveMemberNote(memberId, note) {
+    const { error } = await supabase.rpc('save_member_admin_note', { p_user_id: memberId, p_note: note });
+    if (error) {
+      console.error('save member note failed', error);
+      return { ok: false, message: `備註儲存失敗：${error.message || '請稍後再試'}` };
+    }
+    await fetchAll();
+    return { ok: true };
+  }
+
   function openMemberFromOrder(memberId, orderId) {
     if (!canReadMembers || !memberId) return;
     setCrossLink({ memberId, backOrderId: orderId });
@@ -552,7 +598,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
     }
     switch (page) {
       case 'dashboard': return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;
-      case 'orders': return <Orders orders={orders} members={members} persistOrderPatch={persistOrderPatch} onDeleteCancelledOrder={deleteCancelledOrder} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={ordersDefaultFilter} focusOrderId={crossLink?.orderId || ''} backToMember={crossLink?.backMemberId ? { id: crossLink.backMemberId, name: crossLink.backMemberName } : null} onOpenMember={canReadMembers ? openMemberFromOrder : null} onClearCrossLink={() => setCrossLink(null)} />;
+      case 'orders': return <Orders orders={orders} members={members} persistOrderPatch={persistOrderPatch} onDeleteCancelledOrder={deleteCancelledOrder} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={ordersDefaultFilter} memberNotes={memberNotes} focusOrderId={crossLink?.orderId || ''} backToMember={crossLink?.backMemberId ? { id: crossLink.backMemberId, name: crossLink.backMemberName } : null} onOpenMember={canReadMembers ? openMemberFromOrder : null} onClearCrossLink={() => setCrossLink(null)} />;
       case 'audit': return <AuditLogsPage />;
       case 'catalog': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'backorders': return <BackordersPage onInventoryChanged={fetchAll} />;
@@ -561,7 +607,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
       case 'inventory': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'promotions': return <Promotions products={products} />;
       case 'procurement': return <ProcurementPage />;
-      case 'members': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={membersDefaultFilter} focusMemberId={crossLink?.memberId || ''} backToOrderId={crossLink?.backOrderId || ''} onOpenOrder={canReadOrders ? openOrderFromMember : null} onClearCrossLink={() => setCrossLink(null)} />;
+      case 'members': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={membersDefaultFilter} memberNotes={memberNotes} onSaveMemberNote={canWriteMembers ? saveMemberNote : null} focusMemberId={crossLink?.memberId || ''} backToOrderId={crossLink?.backOrderId || ''} onOpenOrder={canReadOrders ? openOrderFromMember : null} onClearCrossLink={() => setCrossLink(null)} />;
       case 'applications': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter="app_pending" />;
       case 'analytics': return <Analytics orders={orders} />;
       case 'ai': return <AIReorder products={activeProducts} orders={orders} />;
@@ -590,7 +636,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
       {/* 手機抽屜遮罩 */}
       {drawerOpen && <div className="mobile-overlay" onClick={() => setDrawerOpen(false)} />}
 
-      <Sidebar page={page} setPage={setPage} open={drawerOpen} onClose={() => setDrawerOpen(false)} adminEmail={adminEmail} backofficeAccess={backofficeAccess} onSignOut={onSignOut} />
+      <Sidebar page={page} setPage={setPage} open={drawerOpen} onClose={() => setDrawerOpen(false)} adminEmail={adminEmail} backofficeAccess={backofficeAccess} onSignOut={onSignOut} favorites={sidebarFavorites} onToggleFavorite={sidebarFavorites ? toggleSidebarFavorite : null} />
       <main ref={mainRef} className="app-main">
         {loadError && (
           <div style={{ background: 'oklch(0.60 0.18 25 / 0.08)', border: '1px solid oklch(0.60 0.18 25 / 0.3)', padding: '10px 16px', marginBottom: 20, fontSize: 12, color: 'var(--red)' }}>

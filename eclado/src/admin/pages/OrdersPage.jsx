@@ -74,7 +74,43 @@ function hasPaidOrderRecord(order) {
   );
 }
 
-export default function Orders({ orders, members = [], persistOrderPatch, onDeleteCancelledOrder, onAssignGuestOrder, defaultFilter = 'all', focusOrderId = '', backToMember = null, onOpenMember, onClearCrossLink }) {
+const NOTE_KINDS = {
+  member: { title: '會員內部備註（僅後台可見）', label: '此會員有內部備註', color: 'var(--note-member)' },
+  customer: { title: '顧客訂單備註', label: '此訂單有顧客備註', color: 'var(--note-customer)' },
+};
+
+const NOTE_ICON_PATHS = {
+  // 人像：會員內部備註
+  member: <><circle cx="12" cy="8" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" /></>,
+  // 對話框：顧客訂單備註
+  customer: <path d="M4 5h16v11H9l-5 4z" />,
+};
+
+function NoteTag({ kind, text }) {
+  const config = NOTE_KINDS[kind];
+  return (
+    <span role="img" title={`${config.title}：${text}`} aria-label={config.label} style={{ display: 'inline-flex', marginLeft: 6, color: config.color, verticalAlign: 'middle' }}>
+      <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        {NOTE_ICON_PATHS[kind]}
+      </svg>
+    </span>
+  );
+}
+
+function NoteBox({ kind, text }) {
+  const config = NOTE_KINDS[kind];
+  return (
+    <div aria-label={config.title} style={{ marginBottom: 12, padding: '10px 12px', border: '1px solid var(--border)', borderLeft: `3px solid ${config.color}`, background: 'var(--off)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: config.color, marginBottom: 4 }}>
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{NOTE_ICON_PATHS[kind]}</svg>
+        {config.title}
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--dark)', lineHeight: 1.7, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{text}</div>
+    </div>
+  );
+}
+
+export default function Orders({ orders, members = [], persistOrderPatch, onDeleteCancelledOrder, onAssignGuestOrder, defaultFilter = 'all', memberNotes = {}, focusOrderId = '', backToMember = null, onOpenMember, onClearCrossLink }) {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState(defaultFilter);
   const [stockFilter, setStockFilter] = useState('all');
@@ -441,7 +477,13 @@ export default function Orders({ orders, members = [], persistOrderPatch, onDele
                 onMouseEnter={e => { if (selected?.id !== o.id) e.currentTarget.style.background = 'var(--off)'; }}
                 onMouseLeave={e => { if (selected?.id !== o.id) e.currentTarget.style.background = 'transparent'; }}>
                   <td data-label="訂單編號" style={{ padding: '13px 14px', fontSize: 12, fontWeight: 500, color: 'var(--dark)', whiteSpace: 'nowrap' }}>{o.id}</td>
-                  <td data-label="訂購人" style={{ padding: '13px 14px', fontSize: 13 }}>{o.member}</td>
+                  <td data-label="訂購人" style={{ padding: '13px 14px', fontSize: 13 }}>
+                    {o.member}
+                    {o.user_id && memberNotes[String(o.user_id)]?.note && (
+                      <NoteTag kind="member" text={memberNotes[String(o.user_id)].note} />
+                    )}
+                    {o.note && <NoteTag kind="customer" text={o.note} />}
+                  </td>
                   <td data-label="類型" style={{ padding: '13px 14px' }}>
                     <div style={{ display:'inline-flex', flexDirection:'column', alignItems:'flex-start' }}>
                       <TypeBadge type={getOrderDisplayType(o)} />
@@ -491,6 +533,10 @@ export default function Orders({ orders, members = [], persistOrderPatch, onDele
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>付款方式</div><div style={{ fontSize: 13 }}>{getPaymentMethodLabel(selected.paymentMethod)}</div></div>
           </div>
 
+          {selected.user_id && memberNotes[String(selected.user_id)]?.note && (
+            <NoteBox kind="member" text={memberNotes[String(selected.user_id)].note} />
+          )}
+          {selected.note && <NoteBox kind="customer" text={selected.note} />}
           {!selected.user_id && onAssignGuestOrder && (
             <div style={{ marginBottom: 20, padding: '12px', border: '1px solid var(--border)', background: 'var(--off)' }}>
               <div style={{ fontSize: 11, color: 'var(--mid)', lineHeight: 1.6, marginBottom: 9 }}>此訂單尚未綁定會員。確認訂購人身分後，可將訂單歸戶至既有會員。</div>
@@ -562,12 +608,6 @@ export default function Orders({ orders, members = [], persistOrderPatch, onDele
             <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 8 }}>收件地址</div>
             <div style={{ fontSize: 12, lineHeight: 1.7, marginBottom: 20, color: 'var(--dark)' }}>{selected.address}</div>
           </>}
-          {selected.note && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>備註</div>
-              <div style={{ fontSize: 12, color: 'var(--dark)', lineHeight: 1.7 }}>{selected.note}</div>
-            </div>
-          )}
           {/* 托運/出貨區塊 */}
           {selected.fulfillmentMethod !== 'onsite_pickup' && !['cancelled', 'returned'].includes(selected.status) && (
             <div style={{ marginBottom: 20 }}>
