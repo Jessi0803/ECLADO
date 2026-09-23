@@ -43,6 +43,8 @@ export default function ProfessionalApplicationPage({ setPage, user, authReady, 
     phone: '',
     address: '',
     socialMedia: '',
+    invoiceCompanyName: '',
+    invoiceTaxId: '',
     certificate: '',
   });
   const [submitted, setSubmitted] = useState(false);
@@ -130,12 +132,21 @@ export default function ProfessionalApplicationPage({ setPage, user, authReady, 
       setSubmitting(false);
       return;
     }
+    const invoiceCompanyName = form.invoiceCompanyName.trim();
+    const invoiceTaxId = form.invoiceTaxId.trim();
+    if ((invoiceCompanyName || invoiceTaxId) && (!invoiceCompanyName || !/^\d{8}$/.test(invoiceTaxId))) {
+      setSubmitError('公司抬頭與統一編號請一併填寫，統一編號需為 8 位數字。');
+      setSubmitting(false);
+      return;
+    }
     const { error } = await createProfessionalApplication({
       studio_name: form.studioName,
       contact_name: form.contactName,
       phone: form.phone,
       address: form.address,
       social_media: form.socialMedia,
+      invoice_company_name: invoiceCompanyName,
+      invoice_tax_id: invoiceTaxId,
       certificate: form.certificate,
       user_id: user.uid,
       user_email: user.email || null,
@@ -234,8 +245,26 @@ export default function ProfessionalApplicationPage({ setPage, user, authReady, 
                 style={inputStyle} />
             </div>
 
+            <div style={twoCol}>
+              <div>
+                <label style={labelStyle}>⑥ 公司抬頭（選填）</label>
+                <input type="text" aria-label="公司抬頭（選填）" value={form.invoiceCompanyName} onChange={field('invoiceCompanyName')} maxLength={120}
+                  onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
+                  onBlur={e=>e.target.style.borderBottomColor='var(--light)'}
+                  style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>⑦ 統一編號（選填）</label>
+                <input type="text" aria-label="統一編號（選填）" inputMode="numeric" value={form.invoiceTaxId} maxLength={8}
+                  onChange={e => setForm(prev => ({ ...prev, invoiceTaxId:e.target.value.replace(/\D/g, '').slice(0, 8) }))}
+                  onFocus={e=>e.target.style.borderBottomColor='var(--dark)'}
+                  onBlur={e=>e.target.style.borderBottomColor='var(--light)'}
+                  style={inputStyle} />
+              </div>
+            </div>
+
             <div>
-              <label style={labelStyle}>⑥ 美容相關證書（請填寫證書名稱或描述）</label>
+              <label style={labelStyle}>⑧ 美容相關證書（請填寫證書名稱或描述）</label>
               <textarea value={form.certificate} onChange={field('certificate')} required rows="3"
                 placeholder="例：美容丙級技術士證照、美容師執照..."
                 onFocus={e=>e.target.style.borderColor='var(--dark)'}
@@ -244,7 +273,7 @@ export default function ProfessionalApplicationPage({ setPage, user, authReady, 
             </div>
 
             <div>
-              <label style={labelStyle}>⑦ 證照圖片（選填，最多 {PROFESSIONAL_CERTIFICATE_MAX_FILES} 張）</label>
+              <label style={labelStyle}>⑨ 證照圖片（選填，最多 {PROFESSIONAL_CERTIFICATE_MAX_FILES} 張）</label>
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"

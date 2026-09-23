@@ -83,6 +83,8 @@ export const adminApplicationRows = [
     phone: '0933333333',
     address: '台中市測試路 3 號',
     social_media: '@pending',
+    invoice_company_name: '審核中美容有限公司',
+    invoice_tax_id: '12345678',
     certificate: '美容證書',
     status: 'pending',
     source: 'registration',
@@ -182,6 +184,7 @@ export type MockEcladoApiOptions = {
   onOrderPricingRequest?: (request: Record<string, unknown>) => void;
   onCouponQuote?: (request: Record<string, unknown>) => void;
   onOrderUpdate?: (update: Record<string, unknown>, url: string) => void;
+  onInvoiceNumberSave?: (orderId: string, invoiceNumber: string | null) => void;
   onCancelledOrderDelete?: (orderId: string) => void;
   onProductInsert?: (product: Record<string, unknown>) => void;
   onProductUpdate?: (update: Record<string, unknown>, url: string) => void;
@@ -636,6 +639,16 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     return json(route, { deleted: true, order_id: orderId });
   });
 
+  await page.route('**/rest/v1/rpc/save_order_invoice_number', async route => {
+    const request = route.request().postDataJSON();
+    const orderId = String(request?.p_order_id || '');
+    const invoiceNumber = String(request?.p_invoice_number || '').trim().toUpperCase() || null;
+    options.onInvoiceNumberSave?.(orderId, invoiceNumber);
+    const order = orders.find(row => String(row.id) === orderId);
+    if (order) order.invoice_number = invoiceNumber;
+    return json(route, invoiceNumber);
+  });
+
   await page.route('**/rest/v1/rpc/get_procurement_management_data', async route => json(route, procurement));
 
   await page.route('**/rest/v1/rpc/save_procurement_address', async route => {
@@ -973,6 +986,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       coupon_campaign_id: couponApplied ? 'coupon-e2e-1' : null,
       coupon_name: couponApplied ? 'E2E 優惠券' : null,
       coupon_code_mask: couponApplied ? 'E2***' : null,
+      invoice_type: request.p_invoice_type || 'personal',
+      invoice_company_name: request.p_invoice_type === 'company' ? request.p_invoice_company_name : null,
+      invoice_tax_id: request.p_invoice_type === 'company' ? request.p_invoice_tax_id : null,
       adjustments: couponApplied ? [{ promotion_id:'coupon-benefit-1', coupon_campaign_id:'coupon-e2e-1', adjustment_type:'fixed_discount', name:'E2E 折抵', amount:100, sort_order:1 }] : [],
       payment_token: `payment-token-${orderId}`,
     };
@@ -993,6 +1009,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       user_id: authUser?.id || null,
       promotion_id: selectedPromotion?.promotion.id || null,
       promotion_name: selectedPromotion?.promotion.name || null,
+      invoice_type: request.p_invoice_type || 'personal',
+      invoice_company_name: request.p_invoice_type === 'company' ? request.p_invoice_company_name : null,
+      invoice_tax_id: request.p_invoice_type === 'company' ? request.p_invoice_tax_id : null,
     });
     return json(route, result);
   });
@@ -1035,6 +1054,8 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       phone: body.p_phone,
       address: body.p_address,
       social_media: body.p_social_media,
+      invoice_company_name: body.p_invoice_company_name,
+      invoice_tax_id: body.p_invoice_tax_id,
       certificate: body.p_certificate,
       user_id: authUser.id,
       user_email: authUser.email,
@@ -1058,6 +1079,8 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       phone: body.p_phone,
       address: body.p_address,
       social_media: body.p_social_media,
+      invoice_company_name: body.p_invoice_company_name,
+      invoice_tax_id: body.p_invoice_tax_id,
       certificate: body.p_certificate,
       user_id: authUser.id,
       user_email: authUser.email,
@@ -1148,7 +1171,16 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       options.onApplicationUpdate?.(body, route.request().url());
       const id = queryValue(route.request().url(), 'id').replace(/^eq\./, '');
       const application = applications.find(row => String(row.id) === id);
-      if (application) Object.assign(application, body);
+      if (application) {
+        Object.assign(application, body);
+        if (body.status === 'approved' && application.user_id) {
+          const profile = profiles.find(row => String(row.id) === String(application.user_id));
+          if (profile) {
+            if (application.invoice_company_name) profile.default_invoice_company_name = application.invoice_company_name;
+            if (application.invoice_tax_id) profile.default_invoice_tax_id = application.invoice_tax_id;
+          }
+        }
+      }
       return json(route, [body]);
     }
     return json(route, []);

@@ -58,6 +58,9 @@ export async function createAuthoritativeOrder({
   paymentMethod,
   fulfillmentMethod = 'delivery',
   couponCode = '',
+  invoiceType = 'personal',
+  invoiceCompanyName = '',
+  invoiceTaxId = '',
 }) {
   const { data, error } = await supabase.rpc('create_order_with_pricing', {
     p_items: toPricingItems(items),
@@ -69,6 +72,9 @@ export async function createAuthoritativeOrder({
     p_payment_method: paymentMethod,
     p_fulfillment_method: fulfillmentMethod,
     p_coupon_code: couponCode || null,
+    p_invoice_type: invoiceType,
+    p_invoice_company_name: invoiceType === 'company' ? invoiceCompanyName : null,
+    p_invoice_tax_id: invoiceType === 'company' ? invoiceTaxId : null,
   });
   if (error) throw error;
   if (!data?.order_id) {

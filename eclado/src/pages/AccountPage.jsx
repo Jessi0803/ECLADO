@@ -14,8 +14,10 @@ import {
   fetchLatestProApplication,
   goProfessionalApply,
   MEMBER_NAME_MAX_LENGTH,
+  MEMBER_PROFILE_TEXT_MAX_LENGTH,
   openAdmin,
   updateMemberName,
+  updateMemberInvoiceDefaults,
 } from '../services/membership.js';
 import { fetchAccountOrders } from '../services/accountOrders.js';
 import { fetchProfessionalApplicationStatus } from '../services/professionalApplications.js';
@@ -41,6 +43,10 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
   const [nameDraft, setNameDraft] = useState('');
   const [savingName, setSavingName] = useState(false);
   const [nameError, setNameError] = useState('');
+  const [editingInvoiceDefaults, setEditingInvoiceDefaults] = useState(false);
+  const [savingInvoiceDefaults, setSavingInvoiceDefaults] = useState(false);
+  const [invoiceDefaultsError, setInvoiceDefaultsError] = useState('');
+  const [invoiceDefaultsDraft, setInvoiceDefaultsDraft] = useState({ companyName: '', taxId: '' });
 
   function startEditName() {
     setNameDraft(user?.name || '');
@@ -64,6 +70,45 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
     await onUserUpdated?.();
     setSavingName(false);
     setEditingName(false);
+  }
+
+  function startEditInvoiceDefaults() {
+    setInvoiceDefaultsDraft({
+      companyName: user?.defaultInvoiceCompanyName || '',
+      taxId: user?.defaultInvoiceTaxId || '',
+    });
+    setInvoiceDefaultsError('');
+    setEditingInvoiceDefaults(true);
+  }
+
+  function setInvoiceDefaultsField(name) {
+    return event => {
+      setInvoiceDefaultsDraft(current => ({ ...current, [name]: event.target.value }));
+      if (invoiceDefaultsError) setInvoiceDefaultsError('');
+    };
+  }
+
+  async function saveInvoiceDefaults(event) {
+    event.preventDefault();
+    const taxId = invoiceDefaultsDraft.taxId.trim();
+    if (taxId && !/^\d{8}$/.test(taxId)) {
+      setInvoiceDefaultsError('統一編號請輸入 8 位數字');
+      return;
+    }
+    setSavingInvoiceDefaults(true);
+    setInvoiceDefaultsError('');
+    const { error: updateError } = await updateMemberInvoiceDefaults(user.uid, {
+      default_invoice_company_name: invoiceDefaultsDraft.companyName.trim() || null,
+      default_invoice_tax_id: taxId || null,
+    });
+    if (updateError) {
+      setSavingInvoiceDefaults(false);
+      setInvoiceDefaultsError('發票預設資料更新失敗，請稍後再試');
+      return;
+    }
+    await onUserUpdated?.();
+    setSavingInvoiceDefaults(false);
+    setEditingInvoiceDefaults(false);
   }
 
   useEffect(() => {
@@ -334,6 +379,60 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
                 <div style={{ fontSize:11, color:'var(--dark)', marginBottom:4 }}>會員類型</div>
                 <div style={{ fontSize:15, color:'var(--black)' }}>{getMemberTier(user).label}</div>
               </div>
+              {isProfessionalMember(user) && (
+                <div style={{ borderTop:'1px solid var(--light)', paddingTop:14 }}>
+                  <div style={{ fontSize:11, letterSpacing:'0.08em', color:'var(--dark)', marginBottom:12 }}>美容院資料</div>
+                  <div style={{ display:'grid', gap:10 }}>
+                    {[
+                      ['美容院名稱', user.studioName],
+                      ['聯絡人', user.studioContactName],
+                      ['聯絡電話', user.studioPhone],
+                      ['地址', user.studioAddress],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <div style={{ fontSize:10, color:'var(--dark)', marginBottom:3 }}>{label}</div>
+                        <div style={{ fontSize:13, color:value ? 'var(--black)' : 'var(--mid)', lineHeight:1.6, overflowWrap:'anywhere' }}>{value || '尚未設定'}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {isProfessionalMember(user) && (
+                <div style={{ borderTop:'1px solid var(--light)', paddingTop:14 }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:12 }}>
+                  <div style={{ fontSize:11, letterSpacing:'0.08em', color:'var(--dark)' }}>發票預設資料</div>
+                  {!editingInvoiceDefaults && (
+                    <button type="button" aria-label="編輯發票預設資料" onClick={startEditInvoiceDefaults} style={{ background:'none', border:'none', padding:0, fontSize:11, letterSpacing:'0.08em', color:'var(--accent)', cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3 }}>編輯</button>
+                  )}
+                </div>
+                {editingInvoiceDefaults ? (
+                  <form onSubmit={saveInvoiceDefaults} style={{ display:'grid', gap:14 }}>
+                    <label style={{ display:'grid', gap:5, fontSize:11, color:'var(--dark)' }}>
+                      公司抬頭
+                      <input value={invoiceDefaultsDraft.companyName} onChange={setInvoiceDefaultsField('companyName')} maxLength={MEMBER_PROFILE_TEXT_MAX_LENGTH}
+                        style={{ width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'8px 0', fontSize:13, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--black)', boxSizing:'border-box' }} />
+                    </label>
+                    <label style={{ display:'grid', gap:5, fontSize:11, color:'var(--dark)' }}>
+                      統一編號
+                      <input inputMode="numeric" value={invoiceDefaultsDraft.taxId} onChange={setInvoiceDefaultsField('taxId')} maxLength={8}
+                        style={{ width:'100%', border:'none', borderBottom:'1px solid var(--light)', padding:'8px 0', fontSize:13, fontFamily:'var(--font-body)', outline:'none', background:'none', color:'var(--black)', boxSizing:'border-box' }} />
+                    </label>
+                    {invoiceDefaultsError && <p role="alert" style={{ fontSize:12, color:'#c0392b', lineHeight:1.6 }}>{invoiceDefaultsError}</p>}
+                    <div style={{ display:'flex', gap:8 }}>
+                      <button type="submit" disabled={savingInvoiceDefaults} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'8px 18px', fontSize:11, letterSpacing:'0.1em', cursor:savingInvoiceDefaults ? 'wait' : 'pointer' }}>{savingInvoiceDefaults ? '儲存中…' : '儲存'}</button>
+                      <button type="button" disabled={savingInvoiceDefaults} onClick={() => { setEditingInvoiceDefaults(false); setInvoiceDefaultsError(''); }} style={{ background:'none', color:'var(--dark)', border:'1px solid var(--light)', padding:'8px 18px', fontSize:11, letterSpacing:'0.1em', cursor:'pointer' }}>取消</button>
+                    </div>
+                  </form>
+                ) : (
+                  <div>
+                    <div style={{ fontSize:10, color:'var(--dark)', marginBottom:3 }}>公司抬頭</div>
+                    <div style={{ fontSize:13, color:user.defaultInvoiceCompanyName ? 'var(--black)' : 'var(--mid)', lineHeight:1.6 }}>{user.defaultInvoiceCompanyName || '尚未設定'}</div>
+                    <div style={{ fontSize:10, color:'var(--dark)', margin:'9px 0 3px' }}>統一編號</div>
+                    <div style={{ fontSize:13, color:user.defaultInvoiceTaxId ? 'var(--black)' : 'var(--mid)' }}>{user.defaultInvoiceTaxId || '尚未設定'}</div>
+                  </div>
+                )}
+                </div>
+              )}
               {!isProfessionalMember(user) && (
                 <div style={{ marginTop:4, padding:'16px', background:'var(--accent-tint)', borderLeft:'2px solid var(--accent)' }}>
                   {proAppStatus === 'pending' ? (

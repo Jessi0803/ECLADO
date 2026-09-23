@@ -157,6 +157,8 @@ test('美容師申請頁：送出後安全 RPC 帶正確資料並進入審核中
   await page.locator('form input[type="tel"]').fill('0933333333');
   await inputs.nth(2).fill('台中市西區申請路2號');      // 地址
   await inputs.nth(3).fill('@apply_studio');           // IG
+  await page.getByLabel(/公司抬頭/).fill('獨立申請有限公司');
+  await page.getByLabel(/統一編號/).fill('12345678');
   await page.locator('form textarea').fill('美容師乙級證書');
   await page.locator('form').evaluate((form: HTMLFormElement) => form.requestSubmit());
 
@@ -165,9 +167,34 @@ test('美容師申請頁：送出後安全 RPC 帶正確資料並進入審核中
   expect(capturedApplicationBody).not.toBeNull();
   const app = capturedApplicationBody as Record<string, unknown>;
   expect(app.studio_name).toBe('獨立申請工作室');
+  expect(app.invoice_company_name).toBe('獨立申請有限公司');
+  expect(app.invoice_tax_id).toBe('12345678');
   expect(app.status).toBe('pending');
   expect(app.source).toBe('standalone');
   expect(capturedAdminNotice).toEqual({ applicationId:app.id });
+});
+
+test('美容師申請發票資料可留白，填寫時需同時提供公司抬頭與八位統編', async ({ page }) => {
+  let insertCount = 0;
+  await mockEcladoApis(page, {
+    authUser: loggedInUser('consumer@example.com'),
+    profiles: [consumerProfile()],
+    onApplicationInsert: () => { insertCount += 1; },
+  });
+
+  await page.goto('/professional-apply');
+  const inputs = page.locator('form input[type="text"]');
+  await inputs.nth(0).fill('統編驗證工作室');
+  await inputs.nth(1).fill('統編驗證人');
+  await page.locator('form input[type="tel"]').fill('0933333333');
+  await inputs.nth(2).fill('台北市測試路1號');
+  await inputs.nth(3).fill('@invoice_validation');
+  await page.getByLabel(/公司抬頭/).fill('只有抬頭有限公司');
+  await page.locator('form textarea').fill('美容丙級技術士證照');
+  await page.locator('form').evaluate((form: HTMLFormElement) => form.requestSubmit());
+
+  await expect(page.getByText('公司抬頭與統一編號請一併填寫，統一編號需為 8 位數字。')).toBeVisible();
+  expect(insertCount).toBe(0);
 });
 
 test('美容師申請可選填上傳最多三張私人證照圖片', async ({ page }) => {
@@ -287,4 +314,59 @@ test('會員可以在會員資料編輯自己的姓名', async ({ page }) => {
   await expect(memberInfo.getByText('王小美', { exact: true })).toBeVisible();
   await expect(memberInfo.getByText('已是美容師', { exact: true })).toHaveCount(0);
   expect(profileUpdates).toEqual([{ name: '王小美' }]);
+});
+
+test('專業會員只能查看美容院資料並可編輯預設發票資料', async ({ page }) => {
+  const profileUpdates: Record<string, unknown>[] = [];
+  await mockEcladoApis(page, {
+    authUser: loggedInUser('pro@example.com'),
+    profiles: [{
+      ...loggedInProfile('pro'),
+      studio_name: '舊美容院',
+      studio_contact_name: '舊聯絡人',
+      studio_phone: '0911000000',
+      studio_address: '舊地址',
+      default_invoice_company_name: '舊公司',
+      default_invoice_tax_id: '12345678',
+    }],
+    onProfileUpdate: body => profileUpdates.push(body),
+  });
+
+  await page.goto('/account');
+  const memberInfo = page.getByRole('complementary').filter({ hasText: '會員資料' });
+  await expect(memberInfo.getByText('舊美容院', { exact: true })).toBeVisible();
+  await expect(memberInfo.getByLabel('美容院名稱')).toHaveCount(0);
+  await expect(memberInfo.getByLabel('聯絡人')).toHaveCount(0);
+  await memberInfo.getByRole('button', { name: '編輯發票預設資料' }).click();
+  await memberInfo.getByLabel('公司抬頭').fill('小美美容有限公司');
+  await memberInfo.getByLabel('統一編號').fill('1234');
+  await memberInfo.getByRole('button', { name: '儲存', exact:true }).click();
+  await expect(memberInfo.getByRole('alert')).toHaveText('統一編號請輸入 8 位數字');
+  expect(profileUpdates).toHaveLength(0);
+
+  await memberInfo.getByLabel('統一編號').fill('87654321');
+  await memberInfo.getByRole('button', { name: '儲存', exact:true }).click();
+  await expect(memberInfo.getByText('小美美容有限公司', { exact:true })).toBeVisible();
+  expect(profileUpdates).toEqual([{
+    default_invoice_company_name: '小美美容有限公司',
+    default_invoice_tax_id: '87654321',
+  }]);
+});
+
+test('一般會員不顯示美容院與發票預設資料', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: loggedInUser('consumer@example.com'),
+    profiles: [{
+      ...consumerProfile(),
+      studio_name: '不應顯示的美容院',
+      studio_contact_name: '不應顯示的聯絡人',
+    }],
+  });
+
+  await page.goto('/account');
+  const memberInfo = page.getByRole('complementary').filter({ hasText: '會員資料' });
+  await expect(memberInfo.getByText('美容院資料', { exact:true })).toHaveCount(0);
+  await expect(memberInfo.getByText('不應顯示的美容院', { exact:true })).toHaveCount(0);
+  await expect(memberInfo.getByText('發票預設資料', { exact:true })).toHaveCount(0);
+  await expect(memberInfo.getByRole('button', { name:'編輯發票預設資料' })).toHaveCount(0);
 });

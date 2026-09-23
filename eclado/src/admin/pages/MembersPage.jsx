@@ -158,7 +158,10 @@ export default function Members({
     const phoneQuery = normalizePhone(query);
     return roleFiltered.filter(member => {
       const relatedApplications = applicationsForMember(applications, member);
-      const searchableText = [member.id, member.name, member.email, member.phone]
+      const searchableText = [
+        member.id, member.name, member.email, member.phone,
+        member.studioName, member.studioContactName, member.studioPhone, member.studioAddress,
+      ]
         .concat(relatedApplications.flatMap(application => [
           application.contact_name,
           application.phone,
@@ -167,7 +170,7 @@ export default function Members({
         .map(normalizeMemberSearch)
         .join(' ');
       return searchableText.includes(query)
-        || (phoneQuery.length > 0 && [member.phone, ...relatedApplications.map(application => application.phone)]
+        || (phoneQuery.length > 0 && [member.phone, member.studioPhone, ...relatedApplications.map(application => application.phone)]
           .some(phone => normalizePhone(phone).includes(phoneQuery)));
     });
   }, [applications, filter, members, searchQuery]);
@@ -330,14 +333,15 @@ export default function Members({
               )}
               {filtered.map(m => {
                 const application = applicationsForMember(applications, m)[0] || null;
-                const contactName = String(application?.contact_name || '').trim();
-                const studioName = String(application?.studio_name || '').trim();
+                const contactName = String(m.studioContactName || application?.contact_name || '').trim();
+                const studioName = String(m.studioName || application?.studio_name || '').trim();
                 const profileName = String(m.name || '').trim();
                 const showProfileName = contactName
                   && normalizeMemberSearch(contactName) !== normalizeMemberSearch(profileName);
                 const displayName = contactName || profileName;
                 const applicationPhone = String(application?.phone || '').trim();
-                const displayPhone = applicationPhone || m.phone || '';
+                const studioPhone = String(m.studioPhone || '').trim();
+                const displayPhone = studioPhone || applicationPhone || m.phone || '';
                 return (
                 <tr key={m.id} onClick={() => openMemberDetails(m)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: selected?.id === m.id ? 'var(--off)' : 'transparent', transition: 'background 0.1s' }}
                 onMouseEnter={e => { if (selected?.id !== m.id) e.currentTarget.style.background = 'var(--off)'; }}
@@ -354,7 +358,7 @@ export default function Members({
                   <td data-label="Email" title={m.email} style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{m.email}</td>
                   <td data-label="電話" className="member-phone-cell" style={{ padding: '13px 14px' }}>
                     <div>{displayPhone || '—'}</div>
-                    {applicationPhone && <div className="member-phone-source">美容師申請</div>}
+                    {(studioPhone || applicationPhone) && <div className="member-phone-source">美容院聯絡</div>}
                   </td>
                   <td data-label="類型" style={{ padding: '13px 14px' }}><TypeBadge type={m.type} /></td>
                   <td data-label="申請" style={{ padding: '13px 14px', fontSize: 11 }}>
@@ -424,6 +428,30 @@ export default function Members({
               <span style={{ fontWeight: 400 }}>{val}</span>
             </div>
           ))}
+          <div style={{ marginTop:16, padding:'14px', background:'var(--off)', border:'1px solid var(--border)' }}>
+            <div style={{ fontSize:11, color:'var(--mid)', marginBottom:10, letterSpacing:'0.08em' }}>目前美容院資料</div>
+            {[
+              ['美容院名稱', selected.studioName],
+              ['聯絡人', selected.studioContactName],
+              ['聯絡電話', selected.studioPhone],
+              ['地址', selected.studioAddress],
+            ].map(([label, value]) => (
+              <div key={label} style={{ display:'grid', gridTemplateColumns:'88px minmax(0, 1fr)', gap:10, marginBottom:7, fontSize:12 }}>
+                <span style={{ color:'var(--mid)' }}>{label}</span>
+                <span style={{ overflowWrap:'anywhere' }}>{value || '—'}</span>
+              </div>
+            ))}
+            <div style={{ borderTop:'1px solid var(--border)', margin:'12px 0 10px', paddingTop:12, fontSize:11, color:'var(--mid)', letterSpacing:'0.08em' }}>預設發票資料</div>
+            {[
+              ['公司抬頭', selected.defaultInvoiceCompanyName],
+              ['統一編號', selected.defaultInvoiceTaxId],
+            ].map(([label, value]) => (
+              <div key={label} style={{ display:'grid', gridTemplateColumns:'88px minmax(0, 1fr)', gap:10, marginBottom:7, fontSize:12 }}>
+                <span style={{ color:'var(--mid)' }}>{label}</span>
+                <span style={{ overflowWrap:'anywhere' }}>{value || '—'}</span>
+              </div>
+            ))}
+          </div>
           {!(typeof selected.id === 'string' && selected.id.startsWith('app:')) && (
             <MemberNoteSection memberId={selected.id} note={memberNotes[String(selected.id)]} onSave={onSaveMemberNote} />
           )}
@@ -468,6 +496,8 @@ export default function Members({
                   ['電話', latestApp.phone],
                   ['地址', latestApp.address],
                   ['社群帳號', latestApp.social_media],
+                  ['公司抬頭', latestApp.invoice_company_name],
+                  ['統一編號', latestApp.invoice_tax_id],
                   ['證書說明', latestApp.certificate],
                   ['申請時間', latestApp.created_at ? new Date(latestApp.created_at).toLocaleString('zh-TW') : '—'],
                 ].map(([label, val]) => val ? (

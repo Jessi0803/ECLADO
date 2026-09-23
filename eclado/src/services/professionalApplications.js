@@ -98,6 +98,8 @@ export async function createProfessionalApplication(application, certificateFile
     p_certificate: application.certificate,
     p_application_id: applicationId,
     p_certificates: certificateMetadata,
+    p_invoice_company_name: application.invoice_company_name || null,
+    p_invoice_tax_id: application.invoice_tax_id || null,
   });
   if (result.error || !result.data) {
     if (uploadedPaths.length) {

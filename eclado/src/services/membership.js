@@ -37,12 +37,13 @@ export function openAdmin() {
 export async function fetchMemberProfile(userId) {
   return supabase
     .from('profiles')
-    .select('role, line_user_id, name')
+    .select('role, line_user_id, name, studio_name, studio_contact_name, studio_phone, studio_address, default_invoice_company_name, default_invoice_tax_id')
     .eq('id', userId)
     .single();
 }
 
 export const MEMBER_NAME_MAX_LENGTH = 50;
+export const MEMBER_PROFILE_TEXT_MAX_LENGTH = 120;
 
 export async function updateMemberName(userId, name) {
   return supabase
@@ -50,6 +51,15 @@ export async function updateMemberName(userId, name) {
     .update({ name })
     .eq('id', userId)
     .select('name')
+    .single();
+}
+
+export async function updateMemberInvoiceDefaults(userId, profile) {
+  return supabase
+    .from('profiles')
+    .update(profile)
+    .eq('id', userId)
+    .select('default_invoice_company_name, default_invoice_tax_id')
     .single();
 }
 

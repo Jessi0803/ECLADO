@@ -110,11 +110,14 @@ function NoteBox({ kind, text }) {
   );
 }
 
-export default function Orders({ orders, members = [], persistOrderPatch, onDeleteCancelledOrder, onAssignGuestOrder, defaultFilter = 'all', memberNotes = {}, focusOrderId = '', backToMember = null, onOpenMember, onClearCrossLink }) {
+export default function Orders({ orders, members = [], persistOrderPatch, onSaveInvoiceNumber, onDeleteCancelledOrder, onAssignGuestOrder, defaultFilter = 'all', memberNotes = {}, focusOrderId = '', backToMember = null, onOpenMember, onClearCrossLink }) {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState(defaultFilter);
   const [stockFilter, setStockFilter] = useState('all');
   const [trackingInput, setTrackingInput] = useState('');
+  const [invoiceNumberInput, setInvoiceNumberInput] = useState('');
+  const [savingInvoiceNumber, setSavingInvoiceNumber] = useState(false);
+  const [invoiceNotice, setInvoiceNotice] = useState('');
   const [pushing, setPushing] = useState(false);
   const [deletingOrder, setDeletingOrder] = useState(false);
   const [lineNotice, setLineNotice] = useState('');
@@ -125,9 +128,30 @@ export default function Orders({ orders, members = [], persistOrderPatch, onDele
 
   useEffect(() => {
     setTrackingInput(selected?.tracking || '');
+    setInvoiceNumberInput(selected?.invoiceNumber || '');
+    setInvoiceNotice('');
     setAssignmentOpen(false);
     setAssignmentNotice('');
   }, [selected?.id]);
+
+  async function saveInvoiceNumber() {
+    if (!selected || !onSaveInvoiceNumber || savingInvoiceNumber) return;
+    setSavingInvoiceNumber(true);
+    setInvoiceNotice('');
+    try {
+      const normalizedInvoiceNumber = await onSaveInvoiceNumber(selected.id, invoiceNumberInput);
+      setInvoiceNumberInput(normalizedInvoiceNumber || '');
+      setSelected(current => current ? { ...current, invoiceNumber: normalizedInvoiceNumber || '' } : current);
+      setInvoiceNotice(normalizedInvoiceNumber ? '發票號碼已儲存。' : '發票號碼已清除。');
+    } catch (error) {
+      const message = error?.message || '請稍後再試';
+      setInvoiceNotice(/permission|required|42501/i.test(message)
+        ? '目前帳號沒有修改發票號碼的權限。'
+        : `發票號碼儲存失敗：${message}`);
+    } finally {
+      setSavingInvoiceNumber(false);
+    }
+  }
 
   useEffect(() => {
     setFilter(getStatusFilter(defaultFilter));
@@ -589,6 +613,33 @@ export default function Orders({ orders, members = [], persistOrderPatch, onDele
               <div style={{ fontSize: 13, color: 'var(--dark)' }}>{selected.phone}</div>
             </div>
           )}
+          <div style={{ border:'1px solid var(--border)', background:'var(--off)', padding:'14px', marginBottom:16 }}>
+            <div style={{ fontSize:11, color:'var(--mid)', letterSpacing:'0.08em', marginBottom:10 }}>發票資訊</div>
+            <div style={{ display:'grid', gridTemplateColumns:'82px minmax(0, 1fr)', gap:'7px 10px', fontSize:12, marginBottom:12 }}>
+              <span style={{ color:'var(--mid)' }}>發票類型</span>
+              <span>{selected.invoiceType === 'company' ? '公司' : selected.invoiceType === 'personal' ? '個人' : '未記錄'}</span>
+              {selected.invoiceType === 'company' && <>
+                <span style={{ color:'var(--mid)' }}>公司抬頭</span>
+                <span style={{ overflowWrap:'anywhere' }}>{selected.invoiceCompanyName || '—'}</span>
+                <span style={{ color:'var(--mid)' }}>統一編號</span>
+                <span>{selected.invoiceTaxId || '—'}</span>
+              </>}
+            </div>
+            {onSaveInvoiceNumber && (
+              <div>
+                <label htmlFor="admin-order-invoice-number" style={{ display:'block', fontSize:11, color:'var(--mid)', marginBottom:6 }}>發票號碼</label>
+                <div style={{ display:'flex', gap:8 }}>
+                  <input id="admin-order-invoice-number" value={invoiceNumberInput} maxLength={40} onChange={event => { setInvoiceNumberInput(event.target.value.toUpperCase()); setInvoiceNotice(''); }} placeholder="例如 AB12345678"
+                    style={{ flex:1, minWidth:0, padding:'8px 10px', border:'1px solid var(--border)', fontSize:12, outline:'none', background:'var(--white)', textTransform:'uppercase' }} />
+                  <button type="button" onClick={saveInvoiceNumber} disabled={savingInvoiceNumber}
+                    style={{ padding:'8px 12px', background:'var(--dark)', color:'#fff', border:'none', fontSize:11, whiteSpace:'nowrap', cursor:savingInvoiceNumber ? 'wait' : 'pointer', opacity:savingInvoiceNumber ? 0.55 : 1 }}>
+                    {savingInvoiceNumber ? '儲存中…' : '儲存'}
+                  </button>
+                </div>
+                {invoiceNotice && <div role="status" style={{ marginTop:7, fontSize:11, lineHeight:1.6, color:invoiceNotice.includes('失敗') || invoiceNotice.includes('沒有') ? 'var(--red)' : 'var(--green)' }}>{invoiceNotice}</div>}
+              </div>
+            )}
+          </div>
           {lineNotice && (
             <div style={{
               border: '1px solid var(--border)',

@@ -35,12 +35,26 @@ create table if not exists public.profiles (
   name text,
   phone text,
   line_user_id text unique,
+  studio_name text,
+  studio_contact_name text,
+  studio_phone text,
+  studio_address text,
+  default_invoice_company_name text,
+  default_invoice_tax_id text,
   role text not null default 'consumer'
     check (role in ('consumer', 'pro', 'instructor', 'distributor', 'pending')),
   cert text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.profiles
+  add column if not exists studio_name text,
+  add column if not exists studio_contact_name text,
+  add column if not exists studio_phone text,
+  add column if not exists studio_address text,
+  add column if not exists default_invoice_company_name text,
+  add column if not exists default_invoice_tax_id text;
 
 drop trigger if exists trg_profiles_updated_at on public.profiles;
 create trigger trg_profiles_updated_at
@@ -175,6 +189,10 @@ create table if not exists public.orders (
   phone text,
   email text,
   note text,
+  invoice_type text check (invoice_type is null or invoice_type in ('personal', 'company')),
+  invoice_company_name text,
+  invoice_tax_id text,
+  invoice_number text,
   transfer_last5 text,
   tracking text,
   shipping_carrier text,
@@ -192,6 +210,12 @@ create table if not exists public.orders (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.orders
+  add column if not exists invoice_type text,
+  add column if not exists invoice_company_name text,
+  add column if not exists invoice_tax_id text,
+  add column if not exists invoice_number text;
 
 drop trigger if exists trg_orders_updated_at on public.orders;
 create trigger trg_orders_updated_at
@@ -337,6 +361,8 @@ create table if not exists public.professional_applications (
   address text not null,
   social_media text not null,
   certificate text not null,
+  invoice_company_name text,
+  invoice_tax_id text,
   user_id uuid references auth.users(id) on delete set null,
   user_email text,
   status text not null default 'pending'
@@ -353,6 +379,8 @@ create table if not exists public.professional_applications (
 );
 
 alter table public.professional_applications
+  add column if not exists invoice_company_name text,
+  add column if not exists invoice_tax_id text,
   add column if not exists admin_notification_sent_at timestamptz,
   add column if not exists admin_notification_attempts integer not null default 0,
   add column if not exists admin_notification_last_attempt_at timestamptz,

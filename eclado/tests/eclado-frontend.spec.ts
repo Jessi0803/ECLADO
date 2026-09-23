@@ -1145,6 +1145,91 @@ test('結帳建立付款單但不寫入真實訂單或真金流', async ({ page 
   await expect(page.getByText('請於期限前完成轉帳，逾期後訂單將自動取消。')).toBeVisible();
 });
 
+test('專業會員公司發票帶入預設值並以本次修改內容保存訂單快照', async ({ page }) => {
+  let pricingRequest: Record<string, unknown> | null = null;
+  const memberProfile = {
+    ...profile('pro', 'invoice-member@example.com'),
+    default_invoice_company_name: 'A 公司',
+    default_invoice_tax_id: '12345678',
+  };
+  await mockEcladoApis(page, {
+    authUser: authUser('invoice-member@example.com'),
+    profiles: [memberProfile],
+    onOrderPricingRequest: request => { pricingRequest = request; },
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: '+' }).click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+  await proceedToCheckout(page);
+
+  await page.getByLabel('收件人姓名（請填寫證件上的姓名）').fill('發票測試會員');
+  await page.getByLabel('手機號碼').fill('0912345678');
+  await page.getByLabel('電子信箱').fill('invoice-member@example.com');
+  await page.getByPlaceholder('縣市').fill('台北市');
+  await page.getByPlaceholder('區域').fill('大安區');
+  await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('發票路 1 號');
+  await page.getByRole('button', { name: '公司', exact: true }).click();
+  await expect(page.getByLabel('公司抬頭')).toHaveValue('A 公司');
+  await expect(page.getByLabel('統一編號')).toHaveValue('12345678');
+  await page.getByLabel('公司抬頭').fill('B 公司');
+  await page.getByLabel('統一編號').fill('87654321');
+  await page.getByRole('button', { name: /繼續確認付款/ }).click();
+  await expect(page.getByText('B 公司', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: /建立付款單/ }).click();
+
+  await expect.poll(() => pricingRequest).not.toBeNull();
+  expect(pricingRequest).toMatchObject({
+    p_invoice_type: 'company',
+    p_invoice_company_name: 'B 公司',
+    p_invoice_tax_id: '87654321',
+  });
+  expect(memberProfile.default_invoice_company_name).toBe('A 公司');
+  expect(memberProfile.default_invoice_tax_id).toBe('12345678');
+});
+
+test('一般會員公司發票不帶入會員預設值但可填寫本次訂單資料', async ({ page }) => {
+  let pricingRequest: Record<string, unknown> | null = null;
+  await mockEcladoApis(page, {
+    authUser: authUser('consumer-invoice@example.com'),
+    profiles: [{
+      ...profile('consumer', 'consumer-invoice@example.com'),
+      default_invoice_company_name: '不應帶入的公司',
+      default_invoice_tax_id: '12345678',
+    }],
+    onOrderPricingRequest: request => { pricingRequest = request; },
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+  await proceedToCheckout(page);
+
+  await page.getByLabel('收件人姓名（請填寫證件上的姓名）').fill('一般會員');
+  await page.getByLabel('手機號碼').fill('0912345678');
+  await page.getByLabel('電子信箱').fill('consumer-invoice@example.com');
+  await page.getByPlaceholder('縣市').fill('台北市');
+  await page.getByPlaceholder('區域').fill('大安區');
+  await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('發票路 2 號');
+  await page.getByRole('button', { name: '公司', exact: true }).click();
+  await expect(page.getByLabel('公司抬頭')).toHaveValue('');
+  await expect(page.getByLabel('統一編號')).toHaveValue('');
+  await page.getByLabel('公司抬頭').fill('本次訂單公司');
+  await page.getByLabel('統一編號').fill('87654321');
+  await page.getByRole('button', { name: /繼續確認付款/ }).click();
+  await page.getByRole('button', { name: /建立付款單/ }).click();
+
+  await expect.poll(() => pricingRequest).not.toBeNull();
+  expect(pricingRequest).toMatchObject({
+    p_invoice_type: 'company',
+    p_invoice_company_name: '本次訂單公司',
+    p_invoice_tax_id: '87654321',
+  });
+});
+
 test('付款單訂單明細優先顯示 product_images 的 Storage 首圖', async ({ page }) => {
   const storagePath = 'products/product-2/storage-primary.webp';
   await mockEcladoApis(page, {

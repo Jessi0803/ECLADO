@@ -656,6 +656,41 @@ test('訂單詳情顯示優惠券名稱與遮罩代碼', async ({ page }) => {
   await expect(page.getByText('優惠券折抵（新客複合券 · WEL****）')).toBeVisible();
 });
 
+test('訂單詳情顯示發票快照並可獨立儲存人工發票號碼', async ({ page }) => {
+  const invoiceSaves: Array<{ orderId: string; invoiceNumber: string | null }> = [];
+  await mockAdminApis(page, {
+    orders: [{
+      ...adminOrderRows[0],
+      id: 'E2E-INVOICE-ORDER',
+      invoice_type: 'company',
+      invoice_company_name: '測試美容有限公司',
+      invoice_tax_id: '12345678',
+      invoice_number: null,
+    }],
+    onInvoiceNumberSave: (orderId, invoiceNumber) => invoiceSaves.push({ orderId, invoiceNumber }),
+  });
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByText('E2E-INVOICE-ORDER').click();
+  const panel = page.getByRole('dialog', { name: '訂單詳情' });
+  await expect(panel.getByText('公司', { exact: true })).toBeVisible();
+  await expect(panel.getByText('測試美容有限公司')).toBeVisible();
+  await expect(panel.getByText('12345678', { exact:true })).toBeVisible();
+  await panel.getByLabel('發票號碼').fill('ab12345678');
+  await panel.getByRole('button', { name: '儲存', exact: true }).click();
+  await expect(panel.getByRole('status')).toHaveText('發票號碼已儲存。');
+  expect(invoiceSaves).toEqual([{ orderId:'E2E-INVOICE-ORDER', invoiceNumber:'AB12345678' }]);
+});
+
+test('舊訂單沒有發票欄位時仍可開啟並顯示未記錄', async ({ page }) => {
+  await mockAdminApis(page, { orders: [adminOrderRows[0]] });
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByText('E2E-ORDER-001').click();
+  const panel = page.getByRole('dialog', { name: '訂單詳情' });
+  await expect(panel.getByText('未記錄', { exact: true })).toBeVisible();
+});
+
 test('訂單管理可依狀態與待補庫存篩選', async ({ page }) => {
   await mockAdminApis(page, {
     orders: [
@@ -1745,7 +1780,10 @@ test('後台核准美容師申請會同步 application status 與 profiles.role'
   await openAdminSection(page, /會員管理/);
   await page.getByRole('button', { name: /待審核申請/ }).click();
   await page.getByText('審核中會員').click();
-  await expect(page.getByRole('dialog', { name:'會員詳情' }).getByText('審核中工作室')).toBeVisible();
+  const memberDialog = page.getByRole('dialog', { name:'會員詳情' });
+  await expect(memberDialog.getByText('審核中工作室')).toBeVisible();
+  await expect(memberDialog.getByText('審核中美容有限公司')).toBeVisible();
+  await expect(memberDialog.getByText('12345678')).toBeVisible();
   await page.getByRole('button', { name: '核准' }).click();
 
   await expect.poll(() => applicationUpdates.some(update => update.status === 'approved')).toBe(true);

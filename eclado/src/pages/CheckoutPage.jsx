@@ -4,6 +4,7 @@ import CheckoutOrderSummary from '../components/checkout/CheckoutOrderSummary.js
 import CheckoutSteps from '../components/checkout/CheckoutSteps.jsx';
 import PaymentInfo from '../components/checkout/PaymentInfo.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
+import { isProfessionalMember } from '../domain/catalog.jsx';
 import { calculateDiscount } from '../domain/promotions.js';
 import {
   areAllCustomOrderItems,
@@ -42,6 +43,14 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     address: '',
     note: '',
   });
+  const [invoiceType, setInvoiceType] = useState('personal');
+  const [invoiceCompanyName, setInvoiceCompanyName] = useState(
+    isProfessionalMember(user) ? (user?.defaultInvoiceCompanyName || '') : '',
+  );
+  const [invoiceTaxId, setInvoiceTaxId] = useState(
+    isProfessionalMember(user) ? (user?.defaultInvoiceTaxId || '') : '',
+  );
+  const [invoiceError, setInvoiceError] = useState('');
   const [orderNo, setOrderNo] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('atm');
   const [fulfillmentMethod, setFulfillmentMethod] = useState(FULFILLMENT_DELIVERY);
@@ -58,6 +67,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   const [couponQuote, setCouponQuote] = useState(null);
   const [couponState, setCouponState] = useState({ loading: false, error: '' });
   const submittingRef = useRef(false);
+  const invoiceDefaultsLoadedRef = useRef(false);
   const [copiedAtmNo, setCopiedAtmNo] = useState(false);
   const isMobile = useIsMobile();
 
@@ -144,6 +154,14 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   }, []);
 
   useEffect(() => {
+    if (!user?.uid || invoiceDefaultsLoadedRef.current) return;
+    const canUseInvoiceDefaults = isProfessionalMember(user);
+    setInvoiceCompanyName(canUseInvoiceDefaults ? (user.defaultInvoiceCompanyName || '') : '');
+    setInvoiceTaxId(canUseInvoiceDefaults ? (user.defaultInvoiceTaxId || '') : '');
+    invoiceDefaultsLoadedRef.current = true;
+  }, [user?.uid, user?.role, user?.defaultInvoiceCompanyName, user?.defaultInvoiceTaxId]);
+
+  useEffect(() => {
     if (!canPickup && fulfillmentMethod !== FULFILLMENT_DELIVERY) {
       setFulfillmentMethod(FULFILLMENT_DELIVERY);
     }
@@ -185,6 +203,9 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       total: authoritativeOrder.total,
       items,
       fulfillmentMethod: authoritativeOrder.fulfillment_method || fulfillmentMethod,
+      invoiceType: authoritativeOrder.invoice_type || invoiceType,
+      invoiceCompanyName: authoritativeOrder.invoice_company_name || '',
+      invoiceTaxId: authoritativeOrder.invoice_tax_id || '',
     };
   }
 
@@ -217,6 +238,17 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   async function handleNext(e) {
     e.preventDefault();
     if (step === 1) {
+      if (invoiceType === 'company') {
+        if (!invoiceCompanyName.trim()) {
+          setInvoiceError('請輸入公司抬頭');
+          return;
+        }
+        if (!/^\d{8}$/.test(invoiceTaxId.trim())) {
+          setInvoiceError('統一編號請輸入 8 位數字');
+          return;
+        }
+      }
+      setInvoiceError('');
       window.scrollTo(0, 0);
       setStep(2);
       return;
@@ -244,6 +276,9 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
           paymentMethod,
           fulfillmentMethod,
           couponCode: appliedCouponCode,
+          invoiceType,
+          invoiceCompanyName: invoiceCompanyName.trim(),
+          invoiceTaxId: invoiceTaxId.trim(),
         });
       const authoritativeOrderNo = authoritativeOrder.order_id;
       setOrderNo(authoritativeOrderNo);
@@ -483,6 +518,34 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                     />
                   </div>}
 
+                  <div style={{ borderTop:'1px solid var(--light)', paddingTop:20 }}>
+                    <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase', marginBottom:12 }}>發票資訊</p>
+                    <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '1fr 1fr', gap:12 }}>
+                      {[
+                        ['personal', '個人'],
+                        ['company', '公司'],
+                      ].map(([value, label]) => {
+                        const active = invoiceType === value;
+                        return (
+                          <button key={value} type="button" onClick={() => { setInvoiceType(value); setInvoiceError(''); }}
+                            style={{ background:active ? 'var(--off-white)' : 'var(--white)', border:active ? '2px solid var(--black)' : '1px solid var(--light)', padding:'14px 18px', display:'flex', alignItems:'center', gap:12, textAlign:'left', cursor:'pointer', fontFamily:'var(--font-body)' }}>
+                            <span style={{ width:18, height:18, borderRadius:'50%', border:active ? '2px solid var(--black)' : '2px solid var(--mid)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                              {active && <span style={{ width:8, height:8, borderRadius:'50%', background:'var(--black)' }} />}
+                            </span>
+                            <span style={{ fontSize:13, fontWeight:500, color:'var(--black)' }}>{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {invoiceType === 'company' && (
+                      <div style={{ display:'grid', gap:18, marginTop:18 }}>
+                        <CheckoutField label="公司抬頭" name="invoiceCompanyName" value={invoiceCompanyName} onChange={event => { setInvoiceCompanyName(event.target.value); setInvoiceError(''); }} />
+                        <CheckoutField label="統一編號" name="invoiceTaxId" type="text" inputMode="numeric" maxLength={8} value={invoiceTaxId} onChange={event => { setInvoiceTaxId(event.target.value.replace(/\D/g, '').slice(0, 8)); setInvoiceError(''); }} />
+                      </div>
+                    )}
+                    {invoiceError && <p role="alert" style={{ marginTop:10, fontSize:12, color:'#c0392b', lineHeight:1.6 }}>{invoiceError}</p>}
+                  </div>
+
                   <div>
                     <label style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:7 }}>備註（選填）</label>
                     <textarea value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} rows={3} placeholder="如有特殊需求請於此備註"
@@ -516,6 +579,23 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                           <span style={{ color:'var(--black)' }}>{v}</span>
                         </React.Fragment>
                       ))}
+                    </div>
+                  </div>
+
+                  <div style={{ border:'1px solid var(--light)', padding:'20px 24px' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+                      <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase' }}>發票資訊</p>
+                      <button type="button" onClick={() => setStep(1)} style={{ background:'none', border:'none', fontSize:11, color:'var(--dark)', cursor:'pointer', textDecoration:'underline', fontFamily:'var(--font-body)', padding:0 }}>修改</button>
+                    </div>
+                    <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'8px 20px', fontSize:13 }}>
+                      <span style={{ color:'var(--dark)', whiteSpace:'nowrap' }}>發票類型</span>
+                      <span style={{ color:'var(--black)' }}>{invoiceType === 'company' ? '公司' : '個人'}</span>
+                      {invoiceType === 'company' && <>
+                        <span style={{ color:'var(--dark)', whiteSpace:'nowrap' }}>公司抬頭</span>
+                        <span style={{ color:'var(--black)', overflowWrap:'anywhere' }}>{invoiceCompanyName.trim()}</span>
+                        <span style={{ color:'var(--dark)', whiteSpace:'nowrap' }}>統一編號</span>
+                        <span style={{ color:'var(--black)' }}>{invoiceTaxId.trim()}</span>
+                      </>}
                     </div>
                   </div>
 

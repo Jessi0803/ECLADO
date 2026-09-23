@@ -40,6 +40,12 @@ export default function useAuth(setPageState) {
       role,
       isPro: role === 'pro',
       uid: supabaseUser.id,
+      studioName: data?.studio_name || '',
+      studioContactName: data?.studio_contact_name || '',
+      studioPhone: data?.studio_phone || '',
+      studioAddress: data?.studio_address || '',
+      defaultInvoiceCompanyName: data?.default_invoice_company_name || '',
+      defaultInvoiceTaxId: data?.default_invoice_tax_id || '',
     });
 
     if (role === 'consumer') {

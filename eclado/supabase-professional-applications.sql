@@ -11,6 +11,8 @@ create table if not exists public.professional_applications (
   address text not null,
   social_media text not null,
   certificate text not null,
+  invoice_company_name text,
+  invoice_tax_id text,
   user_id uuid references auth.users(id) on delete set null,
   user_email text,
   status text not null default 'pending'
@@ -31,6 +33,8 @@ create index if not exists idx_professional_applications_status
 
 alter table public.professional_applications
   add column if not exists source text not null default 'standalone',
+  add column if not exists invoice_company_name text,
+  add column if not exists invoice_tax_id text,
   add column if not exists admin_notification_sent_at timestamptz,
   add column if not exists admin_notification_attempts integer not null default 0,
   add column if not exists admin_notification_last_attempt_at timestamptz,
