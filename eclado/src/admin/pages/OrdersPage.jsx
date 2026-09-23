@@ -518,7 +518,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
                     {getOrderInventoryState(o) === 'in_stock' && <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--green)', background: 'oklch(0.65 0.18 145 / 0.10)', padding: '3px 8px', whiteSpace: 'nowrap' }}>現貨</span>}
                   </td>
                   <td data-label="訂單狀態" style={{ padding: '13px 14px' }}>
-                    <StatusSelect status={o.status} fulfillmentMethod={o.fulfillmentMethod} onChange={ns => updateStatus(o.id, ns)} />
+                    <StatusSelect status={o.status} paymentMethod={o.paymentMethod} fulfillmentMethod={o.fulfillmentMethod} onChange={ns => updateStatus(o.id, ns)} />
                   </td>
                   <td data-label="日期" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)', whiteSpace: 'nowrap' }}>{o.date}</td>
                 </tr>
@@ -571,7 +571,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
           {/* 狀態下拉 */}
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 6 }}>訂單狀態</div>
-            <StatusSelect status={selected.status} fulfillmentMethod={selected.fulfillmentMethod} onChange={ns => updateStatus(selected.id, ns)} size="lg" />
+            <StatusSelect status={selected.status} paymentMethod={selected.paymentMethod} fulfillmentMethod={selected.fulfillmentMethod} onChange={ns => updateStatus(selected.id, ns)} size="lg" />
           </div>
 
           <div style={{ border:'1px solid var(--border)', background:'var(--off)', padding:'14px', marginBottom:20 }}>

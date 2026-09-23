@@ -636,6 +636,53 @@ test('訂單管理可查看明細並更新狀態', async ({ page }) => {
   await expect(page.getByText('已付款').first()).toBeVisible();
 });
 
+test('未付款狀態依付款方式區分信用卡與虛擬帳號匯款', async ({ page }) => {
+  await mockAdminApis(page, {
+    orders: [
+      {
+        ...adminOrderRows[0],
+        id: 'E2E-ATM-PENDING',
+        payment_method: 'atm',
+        status: 'awaiting_confirm',
+      },
+      {
+        ...adminOrderRows[1],
+        id: 'E2E-CARD-UNPAID',
+        payment_method: 'card',
+        status: 'unpaid',
+      },
+      {
+        ...adminOrderRows[1],
+        id: 'E2E-CARD-LEGACY-PENDING',
+        payment_method: 'card',
+        status: 'awaiting_confirm',
+      },
+    ],
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+
+  const cardRow = page.getByRole('row').filter({ hasText: 'E2E-CARD-UNPAID' });
+  await expect(cardRow.locator('select')).toHaveValue('unpaid');
+  await expect(cardRow.locator('option[value="awaiting_confirm"]')).toHaveCount(0);
+  await expect(cardRow.locator('select')).toHaveCSS('border-top-style', 'none');
+
+  const atmRow = page.getByRole('row').filter({ hasText: 'E2E-ATM-PENDING' });
+  await expect(atmRow.locator('select')).toHaveValue('awaiting_confirm');
+  await expect(atmRow.locator('option[value="unpaid"]')).toHaveCount(0);
+
+  await page.getByRole('button', { name: /未付款/ }).click();
+  await expect(page.getByText('E2E-CARD-UNPAID')).toBeVisible();
+  await expect(page.getByText('E2E-CARD-LEGACY-PENDING')).toBeVisible();
+  await expect(page.getByText('E2E-ATM-PENDING')).toHaveCount(0);
+
+  await page.getByRole('button', { name: /等待匯款/ }).click();
+  await expect(page.getByText('E2E-ATM-PENDING')).toBeVisible();
+  await expect(page.getByText('E2E-CARD-UNPAID')).toHaveCount(0);
+  await expect(page.getByText('E2E-CARD-LEGACY-PENDING')).toHaveCount(0);
+});
+
 test('訂單詳情顯示優惠券名稱與遮罩代碼', async ({ page }) => {
   await mockAdminApis(page, {
     orders: [{

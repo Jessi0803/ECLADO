@@ -14,8 +14,8 @@ export const STATUS_MAP = {
   cancelled: { label: '已取消', color: 'var(--mid)' },
 };
 
-export const STATUS_OPTIONS = ['awaiting_confirm', 'paid', 'preparing', 'shipped', 'delivered', 'returned'];
-export const PICKUP_STATUS_OPTIONS = ['awaiting_confirm', 'unpaid', 'paid', 'preparing', 'ready_for_pickup', 'picked_up', 'returned'];
+const DELIVERY_STATUS_OPTIONS = ['paid', 'preparing', 'shipped', 'delivered', 'returned'];
+const PICKUP_STATUS_OPTIONS = ['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'returned'];
 
 const PROMOTION_PHASES = {
   live: { label: '進行中', color: 'var(--green)' },
@@ -45,16 +45,25 @@ export function PaymentStateBadge({ state }) {
   return <span style={{ display:'inline-block', padding:'3px 8px', fontSize:10, fontWeight:500, letterSpacing:'0.05em', background:color + '18', color, borderRadius:2, whiteSpace:'nowrap' }}>{getPaymentStateLabel(state)}</span>;
 }
 
-export function StatusSelect({ status, onChange, size = 'sm', fulfillmentMethod = 'delivery' }) {
+export function StatusSelect({ status, onChange, size = 'sm', fulfillmentMethod = 'delivery', paymentMethod = '' }) {
   const item = STATUS_MAP[status] || { label:status, color:'var(--mid)' };
   if (status === 'cancelled') {
     return <Badge status="cancelled" />;
   }
   const padding = size === 'lg' ? '8px 32px 8px 12px' : '4px 24px 4px 10px';
+  const pendingStatus = paymentMethod === 'atm'
+    ? 'awaiting_confirm'
+    : ['card', 'apple', 'google'].includes(paymentMethod)
+      ? 'unpaid'
+      : ['awaiting_confirm', 'unpaid'].includes(status) ? status : 'unpaid';
+  const workflowOptions = fulfillmentMethod === 'onsite_pickup'
+    ? PICKUP_STATUS_OPTIONS
+    : DELIVERY_STATUS_OPTIONS;
+  const statusOptions = [pendingStatus, ...workflowOptions];
   return (
     <div style={{ position:'relative', display:'inline-block' }}>
-      <select value={status} onChange={event => onChange(event.target.value)} onClick={event => event.stopPropagation()} style={{ appearance:'none', WebkitAppearance:'none', MozAppearance:'none', padding, fontSize:size === 'lg' ? 13 : 11, fontWeight:500, letterSpacing:'0.06em', background:item.color + '18', color:item.color, border:`1px solid ${item.color}40`, borderRadius:2, cursor:'pointer', fontFamily:'inherit', minWidth:size === 'lg' ? 160 : 110 }}>
-        {(fulfillmentMethod === 'onsite_pickup' ? PICKUP_STATUS_OPTIONS : STATUS_OPTIONS).map(option => <option key={option} value={option} style={{ background:'#fff', color:'var(--dark)' }}>{STATUS_MAP[option].label}</option>)}
+      <select value={status} onChange={event => onChange(event.target.value)} onClick={event => event.stopPropagation()} style={{ appearance:'none', WebkitAppearance:'none', MozAppearance:'none', padding, fontSize:size === 'lg' ? 13 : 11, fontWeight:500, letterSpacing:'0.06em', background:'transparent', color:item.color, border:'none', outline:'none', boxShadow:'none', borderRadius:0, cursor:'pointer', fontFamily:'inherit', minWidth:size === 'lg' ? 160 : 110 }}>
+        {statusOptions.map(option => <option key={option} value={option} style={{ background:'#fff', color:'var(--dark)' }}>{STATUS_MAP[option].label}</option>)}
       </select>
       <span style={{ position:'absolute', right:size === 'lg' ? 12 : 8, top:'50%', transform:'translateY(-50%)', pointerEvents:'none', fontSize:9, color:item.color }}>▼</span>
     </div>

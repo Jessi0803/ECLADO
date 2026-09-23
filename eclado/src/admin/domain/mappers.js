@@ -9,6 +9,15 @@ const INVENTORY_ACTIVE_ORDER_STATUSES = new Set([
   'delivered',
 ]);
 
+const ONLINE_PAYMENT_METHODS = new Set(['card', 'apple', 'google']);
+
+export function normalizePendingOrderStatus(status, paymentMethod) {
+  if (!['awaiting_confirm', 'unpaid'].includes(status)) return status;
+  if (paymentMethod === 'atm') return 'awaiting_confirm';
+  if (ONLINE_PAYMENT_METHODS.has(paymentMethod)) return 'unpaid';
+  return status;
+}
+
 function nonNegativeInteger(value) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.max(0, Math.floor(number)) : null;
@@ -67,6 +76,8 @@ function normalizeOrderItemInventory(item, orderStatus, canonicalAllocation) {
 }
 
 export function normalizeOrder(row) {
+  const paymentMethod = row.payment_method || '';
+  const orderStatus = normalizePendingOrderStatus(row.status, paymentMethod);
   const allocationByIndex = new Map(
     (Array.isArray(row.inventory_allocations) ? row.inventory_allocations : [])
       .map(allocation => [Number(allocation.item_index), allocation]),
@@ -76,7 +87,7 @@ export function normalizeOrder(row) {
       ...item,
       inventoryAllocation: normalizeOrderItemInventory(
         item,
-        row.status,
+        orderStatus,
         allocationByIndex.get(index),
       ),
     }))
@@ -109,7 +120,7 @@ export function normalizeOrder(row) {
     type: row.type,
     items,
     total: row.total,
-    status: row.status,
+    status: orderStatus,
     paidAt: row.paid_at || null,
     date: row.date,
     createdAt: row.created_at || null,
@@ -118,7 +129,7 @@ export function normalizeOrder(row) {
     email: row.email,
     note: row.note,
     transferLast5: row.transfer_last5,
-    paymentMethod: row.payment_method || '',
+    paymentMethod,
     paymentState: row.payment_state || '',
     paymentAttemptCount: Number(row.payment_attempt_count) || 0,
     paymentAttempts: Array.isArray(row.payment_attempts) ? row.payment_attempts : [],
