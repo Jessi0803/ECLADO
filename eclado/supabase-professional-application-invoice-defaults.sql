@@ -97,11 +97,18 @@ language plpgsql
 security definer
 set search_path = public, auth
 as $$
+declare
+  should_sync boolean := false;
 begin
-  if new.status = 'approved'
-    and case when tg_op = 'INSERT' then true else old.status is distinct from 'approved' end
-    and new.user_id is not null
-  then
+  if new.status = 'approved' and new.user_id is not null then
+    if tg_op = 'INSERT' then
+      should_sync := true;
+    elsif tg_op = 'UPDATE' then
+      should_sync := old.status is distinct from 'approved';
+    end if;
+  end if;
+
+  if should_sync then
     update public.profiles profile
     set
       default_invoice_company_name = coalesce(
