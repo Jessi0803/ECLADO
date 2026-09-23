@@ -2,7 +2,7 @@ import React from 'react';
 import { getPaymentStateColor, getPaymentStateLabel } from '../../domain/payments.js';
 
 export const STATUS_MAP = {
-  awaiting_confirm: { label: '轉帳待確認', color: 'var(--red)' },
+  awaiting_confirm: { label: '等待匯款', color: 'var(--red)' },
   unpaid: { label: '未付款', color: 'oklch(0.65 0.18 50)' },
   paid: { label: '已付款', color: 'var(--blue)' },
   preparing: { label: '備貨中', color: 'var(--yellow)' },

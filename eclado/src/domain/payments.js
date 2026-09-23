@@ -32,7 +32,7 @@ export const PAYMENT_METHODS = {
 };
 
 export const ORDER_STATUS_LABELS = {
-  awaiting_confirm: '轉帳待確認',
+  awaiting_confirm: '等待匯款',
   unpaid: '未付款',
   paid: '已付款',
   preparing: '備貨中',

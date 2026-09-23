@@ -2168,7 +2168,7 @@ test('會員管理待審核數量使用與訂單待確認相同的 badge 樣式'
   });
 
   await openAdminSection(page, /訂單管理/);
-  const paymentBadge = page.getByRole('button', { name: /轉帳待確認/ }).locator('.admin-filter-count-badge');
+  const paymentBadge = page.getByRole('button', { name: /等待匯款/ }).locator('.admin-filter-count-badge');
   await expect(paymentBadge).toBeVisible();
   const paymentStyle = await paymentBadge.evaluate(element => {
     const style = getComputedStyle(element);

@@ -415,7 +415,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
           <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>訂單管理</h1>
           <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
-            {[['all','全部'], ['awaiting_confirm','轉帳待確認'], ['unpaid','未付款'], ['paid','已付款'], ['preparing','備貨中'], ['shipped','已出貨'], ['delivered','已到貨'], ['returned','退貨'], ['cancelled','已取消']].map(([val, label]) => (
+            {[['all','全部'], ['awaiting_confirm','等待匯款'], ['unpaid','未付款'], ['paid','已付款'], ['preparing','備貨中'], ['shipped','已出貨'], ['delivered','已到貨'], ['returned','退貨'], ['cancelled','已取消']].map(([val, label]) => (
               <button key={val} aria-pressed={filter === val} onClick={() => { setFilter(val); setStockFilter('all'); }} style={{
                 padding: '8px 16px', border: 'none', fontSize: 12, letterSpacing: '0.04em',
                 background: filter === val ? 'var(--dark)' : 'transparent',
@@ -472,14 +472,6 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
             );
           })}
         </div>}
-
-        {/* 轉帳待確認提示 */}
-        {filter === 'awaiting_confirm' && awaitingCount > 0 && (
-          <div style={{ background: 'oklch(0.60 0.18 25 / 0.05)', border: '1px solid oklch(0.60 0.18 25 / 0.2)', padding: '14px 20px', marginBottom: 16, fontSize: 13, color: 'var(--red)', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 16 }}>⚠</span>
-            <span>有 <strong>{awaitingCount}</strong> 筆顧客待確認付款，請對帳後點選「確認入帳」</span>
-          </div>
-        )}
 
         <div className="table-scroll" style={{ background: 'var(--white)', border: '1px solid var(--border)' }}>
           <table className="responsive-admin-table admin-orders-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
