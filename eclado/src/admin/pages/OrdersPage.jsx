@@ -4,6 +4,7 @@ import { SF_EXPRESS_TRACKING_URL } from '../../domain/shipping.js';
 import { supabase } from '../../services/supabase.js';
 import { PaymentStateBadge, StatusSelect, TypeBadge } from '../components/StatusIndicators.jsx';
 import OrderMemberAssignmentDialog from '../components/OrderMemberAssignmentDialog.jsx';
+import OrderPrintPreview from '../components/OrderPrintPreview.jsx';
 import usePanelHistory from '../hooks/usePanelHistory.js';
 
 const INVENTORY_ACTIVE_STATUSES = new Set([
@@ -123,6 +124,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
   const [lineNotice, setLineNotice] = useState('');
   const [assignmentOpen, setAssignmentOpen] = useState(false);
   const [assignmentNotice, setAssignmentNotice] = useState('');
+  const [printOrder, setPrintOrder] = useState(null);
   const focusedOrderRef = useRef('');
   const closeDetails = usePanelHistory(!!selected, () => { setSelected(null); onClearCrossLink?.(); });
 
@@ -538,8 +540,13 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
           {backToMember && selected.user_id === backToMember.id && (
             <button type="button" onClick={() => onOpenMember?.(backToMember.id, '')} style={{ background: 'none', border: 'none', padding: 0, marginBottom: 14, fontSize: 12, color: 'var(--blue)', cursor: 'pointer' }}>← 回到會員 {backToMember.name || ''}</button>
           )}
-          <div style={{ fontSize: 12, color: 'var(--mid)', marginBottom: 4 }}>訂單編號</div>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, color: 'var(--dark)' }}>{selected.id}</div>
+          <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', gap:12, marginBottom:16 }}>
+            <div style={{ minWidth:0 }}>
+              <div style={{ fontSize: 12, color: 'var(--mid)', marginBottom: 4 }}>訂單編號</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--dark)', overflowWrap:'anywhere' }}>{selected.id}</div>
+            </div>
+            <button type="button" onClick={() => setPrintOrder(selected)} style={{ flex:'0 0 auto', padding:'8px 12px', border:'1px solid var(--dark)', background:'var(--white)', color:'var(--dark)', fontSize:11, whiteSpace:'nowrap' }}>列印訂單</button>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>訂購人</div>{selected.user_id && onOpenMember && members.some(member => member.id === selected.user_id)
               ? <button type="button" onClick={() => onOpenMember(selected.user_id, selected.id)} style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, color: 'var(--blue)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', textAlign: 'left' }}>{selected.member}</button>
@@ -802,6 +809,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
         </div>
         </>
       )}
+      {printOrder && <OrderPrintPreview order={printOrder} onClose={() => setPrintOrder(null)} />}
     </div>
   );
 }

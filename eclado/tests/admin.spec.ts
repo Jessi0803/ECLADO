@@ -691,6 +691,89 @@ test('舊訂單沒有發票欄位時仍可開啟並顯示未記錄', async ({ pa
   await expect(panel.getByText('未記錄', { exact: true })).toBeVisible();
 });
 
+test('訂單列印只呈現歷史快照與顧客可見資訊', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.print = () => { document.body.dataset.printCalled = 'true'; };
+  });
+  await mockAdminApis(page, {
+    orders: [{
+      ...adminOrderRows[0],
+      id: 'E2E-PRINT-ORDER',
+      member: '列印測試顧客',
+      items: [
+        { product_id: 2, sku: 'E-3', name: '平衡爽膚水', size: '1000ml', qty: 2, unit_price: 2150, line_total: 4300 },
+        { product_id: 99, sku: 'GIFT-1', name: '試用包', size: '3ml', qty: 1, unit_price: 0, line_total: 0, is_gift: true },
+      ],
+      subtotal: 4300,
+      discount: 300,
+      total: 3900,
+      invoice_type: 'company',
+      invoice_company_name: '列印測試有限公司',
+      invoice_tax_id: '87654321',
+      invoice_number: 'AB12345678',
+      note: '請隨貨附上明細',
+      admin_note: '內部敏感備註不可外流',
+      pricing_snapshot: {
+        shipping: 0,
+        shopping_credit_discount: 100,
+        studio_name: '歷史美容院快照',
+      },
+    }],
+    memberNotes: [{
+      user_id: 'user-consumer-1',
+      note: '會員內部備註不可外流',
+      updated_by_email: 'admin@example.com',
+      updated_at: '2026-09-23T02:00:00.000Z',
+    }],
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByText('E2E-PRINT-ORDER').click();
+  await page.getByRole('dialog', { name: '訂單詳情' }).getByRole('button', { name: '列印訂單' }).click();
+
+  const preview = page.getByRole('dialog', { name: '訂單列印預覽' });
+  await expect(preview).toBeVisible();
+  await expect(preview.getByText('E2E-PRINT-ORDER')).toBeVisible();
+  await expect(preview.getByText('歷史美容院快照')).toBeVisible();
+  await expect(preview.getByText('平衡爽膚水')).toBeVisible();
+  await expect(preview.getByText('1000ml')).toBeVisible();
+  await expect(preview.getByText('購物金折抵')).toBeVisible();
+  await expect(preview.getByText('-NT$ 100')).toBeVisible();
+  await expect(preview.getByText('列印測試有限公司')).toBeVisible();
+  await expect(preview.getByText('87654321')).toBeVisible();
+  await expect(preview.getByText('AB12345678')).toBeVisible();
+  await expect(preview.getByText('請隨貨附上明細')).toBeVisible();
+  await expect(preview.getByText('會員內部備註不可外流')).toHaveCount(0);
+  await expect(preview.getByText('內部敏感備註不可外流')).toHaveCount(0);
+
+  await page.emulateMedia({ media: 'print' });
+  await page.evaluate(() => document.body.classList.add('eclado-order-printing'));
+  await expect(page.locator('#root')).toHaveCSS('display', 'none');
+  await expect(preview.locator('.order-print-actions')).toHaveCSS('display', 'none');
+  await expect(preview.locator('.order-print-document')).toBeVisible();
+  await page.evaluate(() => document.body.classList.remove('eclado-order-printing'));
+  await page.emulateMedia({ media: 'screen' });
+
+  await preview.getByRole('button', { name: '列印', exact: true }).click();
+  await expect.poll(() => page.locator('body').getAttribute('data-print-called')).toBe('true');
+  await preview.getByRole('button', { name: '關閉' }).click();
+  await expect(preview).toHaveCount(0);
+});
+
+test('舊訂單缺少新快照欄位仍可開啟列印預覽', async ({ page }) => {
+  await mockAdminApis(page, { orders: [adminOrderRows[0]] });
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByText('E2E-ORDER-001').click();
+  await page.getByRole('dialog', { name: '訂單詳情' }).getByRole('button', { name: '列印訂單' }).click();
+  const preview = page.getByRole('dialog', { name: '訂單列印預覽' });
+  await expect(preview.getByText('E2E-ORDER-001')).toBeVisible();
+  await expect(preview.getByText('胜肽修護精華液')).toBeVisible();
+  await expect(preview.getByText('購物金折抵')).toHaveCount(0);
+  await expect(preview.getByText('發票資訊')).toHaveCount(0);
+});
+
 test('訂單管理可依狀態與待補庫存篩選', async ({ page }) => {
   await mockAdminApis(page, {
     orders: [

@@ -492,6 +492,103 @@ input, select, textarea { font-family: var(--font); }
 @media (prefers-reduced-motion: reduce) {
   .detail-panel, .detail-panel-backdrop { animation: none; }
 }
+
+/* 訂單隨貨明細：以獨立 portal 預覽，列印時完全隔離後台介面。 */
+.order-print-overlay {
+  position: fixed; inset: 0; z-index: 1000; overflow: auto;
+  padding: 72px 24px 40px; background: #ececea;
+}
+.order-print-actions {
+  position: fixed; z-index: 1001; top: 0; left: 0; right: 0;
+  display: flex; justify-content: flex-end; gap: 8px; padding: 14px 24px;
+  border-bottom: 1px solid #ddd; background: rgba(255,255,255,.96);
+}
+.order-print-actions button {
+  min-width: 88px; padding: 9px 16px; border: 1px solid #1f2f5f;
+  background: #fff; color: #1f2f5f; font-size: 12px;
+}
+.order-print-actions .order-print-primary { background: #1f2f5f; color: #fff; }
+.order-print-document {
+  width: min(210mm, 100%); min-height: 297mm; margin: 0 auto; padding: 14mm 12mm 11mm;
+  background: #fff; color: #222; box-shadow: 0 18px 50px rgba(0,0,0,.12);
+  font-family: 'Open Sans', 'Noto Sans TC', sans-serif; font-size: 10px;
+}
+.order-print-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 30px; }
+.order-print-header img { width: 112px; height: auto; object-fit: contain; }
+.order-print-header > div { text-align: right; color: #1f2f5f; }
+.order-print-header h1 { margin: 0; font-size: 23px; line-height: 1.15; letter-spacing: .08em; }
+.order-print-header p { margin-top: 4px; font-size: 8px; letter-spacing: .18em; }
+.order-print-rule { height: 1px; margin: 27mm 0 12mm; background: #1f2f5f; }
+.order-print-customer-section {
+  display: grid; grid-template-columns: minmax(0, 1fr) 68mm; align-items: start; gap: 18mm;
+  min-height: 43mm; margin-bottom: 8mm;
+}
+.order-print-eyebrow { margin-bottom: 7px !important; color: #777; font-size: 9px; letter-spacing: .08em; }
+.order-print-recipient h2 { margin-bottom: 5px; color: #1f2f5f; font-size: 15px; }
+.order-print-recipient p { display: flex; gap: 7px; margin: 3px 0; line-height: 1.55; overflow-wrap: anywhere; }
+.order-print-recipient p span { flex: 0 0 12px; color: #4775a8; text-align: center; }
+.order-print-recipient .order-print-studio { display: block; margin-bottom: 6px; color: #555; font-weight: 600; }
+.order-print-order-card { overflow: hidden; border: 1px solid #d8d8d5; border-radius: 6px; }
+.order-print-order-card-title { padding: 8px 12px; background: #1f2f5f; color: #fff; font-weight: 600; letter-spacing: .06em; }
+.order-print-order-card > div:not(.order-print-order-card-title) {
+  display: grid; grid-template-columns: 24mm minmax(0, 1fr); gap: 6px; padding: 7px 10px;
+  border-bottom: 1px solid #e1e1df; background: #f7f6f3;
+}
+.order-print-order-card > div:last-child { border-bottom: 0; }
+.order-print-order-card dt { color: #777; }
+.order-print-order-card dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.order-print-items { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.order-print-items thead { display: table-header-group; }
+.order-print-items th { padding: 8px 10px; background: #1f2f5f; color: #fff; font-weight: 500; text-align: left; }
+.order-print-items th:nth-child(1) { width: 17%; }
+.order-print-items th:nth-child(2) { width: 39%; }
+.order-print-items th:nth-child(3) { width: 10%; text-align: center; }
+.order-print-items th:nth-child(4), .order-print-items th:nth-child(5) { width: 17%; text-align: right; }
+.order-print-items tbody tr { break-inside: avoid; page-break-inside: avoid; }
+.order-print-items td { padding: 8px 10px; border-bottom: 1px solid #ddd; vertical-align: top; overflow-wrap: anywhere; }
+.order-print-items td:nth-child(3) { text-align: center; }
+.order-print-items td:nth-child(4), .order-print-items td:nth-child(5) { text-align: right; white-space: nowrap; }
+.order-print-items td:nth-child(5) { font-weight: 600; }
+.order-print-items td strong { display: block; font-weight: 500; }
+.order-print-items td span { display: block; margin-top: 2px; color: #777; font-size: 9px; }
+.order-print-empty { padding: 20px !important; color: #777; text-align: center !important; }
+.order-print-summary { width: 55%; margin: 0 0 8mm auto; break-inside: avoid; page-break-inside: avoid; }
+.order-print-summary > div { display: flex; justify-content: space-between; gap: 20px; padding: 6px 10px; }
+.order-print-summary span { color: #777; }
+.order-print-summary strong { font-weight: 500; white-space: nowrap; }
+.order-print-summary .order-print-total { margin-top: 4px; border-top: 1px solid #1f2f5f; background: #f5f4f1; color: #1f2f5f; }
+.order-print-summary .order-print-total span, .order-print-summary .order-print-total strong { color: inherit; font-weight: 700; }
+.order-print-notes {
+  display: grid; gap: 8px; margin-top: 8mm; padding: 10px 14px;
+  border-left: 2px solid #1f2f5f; border-radius: 6px; background: #f7f6f3;
+  break-inside: avoid; page-break-inside: avoid;
+}
+.order-print-notes strong { color: #777; font-size: 9px; font-weight: 500; }
+.order-print-notes p { margin-top: 3px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.order-print-footer {
+  display: flex; justify-content: space-between; gap: 20px; margin-top: 15mm; padding-top: 7px;
+  border-top: 1px solid #ddd; color: #999; font-size: 8px; letter-spacing: .05em;
+}
+
+@media (max-width: 850px) {
+  .order-print-overlay { padding: 66px 0 0; background: #fff; }
+  .order-print-actions { padding: 11px 14px; }
+  .order-print-document { width: 100%; margin: 0; box-shadow: none; }
+}
+
+@media print {
+  @page { size: A4 portrait; margin: 0; }
+  body.eclado-order-printing { height: auto; overflow: visible; background: #fff; }
+  body.eclado-order-printing #root { display: none !important; }
+  body.eclado-order-printing .order-print-overlay {
+    position: static; display: block; overflow: visible; padding: 0; background: #fff;
+  }
+  body.eclado-order-printing .order-print-actions { display: none !important; }
+  body.eclado-order-printing .order-print-document {
+    width: 210mm; min-height: 297mm; margin: 0; box-shadow: none;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+}
 .assignment-modal {
   position: fixed;
   inset: 0;

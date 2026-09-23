@@ -93,6 +93,16 @@ export function normalizeOrder(row) {
     0,
     Number(row.total || 0) - (orderSubtotal - Number(row.discount || 0)),
   );
+  const pricingSnapshot = row.pricing_snapshot && typeof row.pricing_snapshot === 'object'
+    ? row.pricing_snapshot
+    : null;
+  const shoppingCreditDiscount = Number(
+    row.shopping_credit_discount
+      ?? row.store_credit_discount
+      ?? pricingSnapshot?.shopping_credit_discount
+      ?? pricingSnapshot?.store_credit_discount
+      ?? 0,
+  );
   return {
     id: row.id,
     member: row.member,
@@ -132,8 +142,16 @@ export function normalizeOrder(row) {
     invoiceCompanyName: row.invoice_company_name || '',
     invoiceTaxId: row.invoice_tax_id || '',
     invoiceNumber: row.invoice_number || '',
+    shoppingCreditDiscount: Number.isFinite(shoppingCreditDiscount)
+      ? Math.max(0, shoppingCreditDiscount)
+      : 0,
+    studioName: row.studio_name_snapshot
+      || row.studio_name
+      || pricingSnapshot?.studio_name
+      || pricingSnapshot?.studio?.name
+      || '',
     shipping: Number.isFinite(snapshotShipping) ? snapshotShipping : inferredShipping,
-    pricingSnapshot: row.pricing_snapshot || null,
+    pricingSnapshot,
     fulfillmentMethod: row.fulfillment_method || row.pricing_snapshot?.fulfillment_method || 'delivery',
   };
 }
