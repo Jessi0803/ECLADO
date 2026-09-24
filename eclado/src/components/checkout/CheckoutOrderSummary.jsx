@@ -70,10 +70,16 @@ export default function CheckoutOrderSummary({ items, summary, user, fulfillment
         <span>運費 <span style={{ fontSize:10, color:'var(--dark)' }}>（{fulfillmentMethod === 'onsite_pickup' ? '現場自取' : '宅配到府'}）</span></span>
         <span style={{ fontFamily:'var(--font-display)' }}>{summary.shipping === 0 ? <span style={{ color:'var(--accent)', fontFamily:'var(--font-body)' }}>免運</span> : `NT$ ${summary.shipping}`}</span>
       </div>
+      {Number(summary.shoppingCreditAmount || 0) > 0 && (
+        <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--dark)', marginBottom:14 }}>
+          <span>購物金支付</span>
+          <span style={{ fontFamily:'var(--font-display)' }}>−NT$ {Number(summary.shoppingCreditAmount).toLocaleString()}</span>
+        </div>
+      )}
       <div style={{ height:1, background:'var(--light)', marginBottom:14 }} />
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
-        <span style={{ fontSize:13, fontWeight:500 }}>合計</span>
-        <span style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:300 }}>NT$ {summary.total.toLocaleString()}</span>
+        <span style={{ fontSize:13, fontWeight:500 }}>{Number(summary.shoppingCreditAmount || 0) > 0 ? '尚需付款' : '合計'}</span>
+        <span style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:300 }}>NT$ {Number(summary.paymentTotal ?? summary.total).toLocaleString()}</span>
       </div>
     </div>
   );

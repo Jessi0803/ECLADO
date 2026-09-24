@@ -182,7 +182,7 @@ async function findOrderByPayToken(payToken) {
   if (!payToken) return null;
   const query = [
     `note=ilike.${encodeURIComponent(`*pay_token:${payToken}*`)}`,
-    'select=id,status,total,user_id,member,email',
+    'select=id,status,total,shopping_credit_amount,payment_amount,user_id,member,email',
     'limit=1',
   ].join('&');
   const orders = await supabaseRequest(`orders?${query}`, { method: 'GET' });
@@ -355,22 +355,28 @@ async function queryOrderPay(shopNo, payToken) {
 }
 
 function buildPaymentMessage(order) {
+  const paymentAmount = Number(order?.payment_amount ?? order?.total);
+  const shoppingCreditAmount = Number(order?.shopping_credit_amount || 0);
   return [
     '您的訂單已付款完成。',
     '',
     `訂單編號：${order.id}`,
-    Number.isFinite(Number(order.total)) ? `付款金額：NT$ ${Number(order.total).toLocaleString('zh-TW')}` : null,
+    Number.isFinite(paymentAmount) ? `付款金額：NT$ ${paymentAmount.toLocaleString('zh-TW')}` : null,
+    shoppingCreditAmount > 0 ? `購物金支付：NT$ ${shoppingCreditAmount.toLocaleString('zh-TW')}` : null,
     '',
     '我們會盡快安排備貨與出貨，感謝您的支持。',
   ].filter(line => line !== null).join('\n');
 }
 
 function buildPaymentEmail(order) {
+  const paymentAmount = Number(order?.payment_amount ?? order?.total);
+  const shoppingCreditAmount = Number(order?.shopping_credit_amount || 0);
   return [
     `${order.member || '您好'}，您的訂單已付款完成。`,
     '',
     `訂單編號：${order.id}`,
-    Number.isFinite(Number(order.total)) ? `付款金額：NT$ ${Number(order.total).toLocaleString('zh-TW')}` : null,
+    Number.isFinite(paymentAmount) ? `付款金額：NT$ ${paymentAmount.toLocaleString('zh-TW')}` : null,
+    shoppingCreditAmount > 0 ? `購物金支付：NT$ ${shoppingCreditAmount.toLocaleString('zh-TW')}` : null,
     '',
     '我們會盡快安排備貨與出貨，感謝您的支持。',
     '',
@@ -490,7 +496,7 @@ module.exports = async function handler(req, res) {
     let order = payload.__tokenOrder;
     if (!order) {
       const orders = await supabaseRequest(
-        `orders?id=eq.${encodeURIComponent(orderId)}&select=id,status,total,user_id,member,email,payment_notification_sent_at,payment_notification_next_retry_at`,
+        `orders?id=eq.${encodeURIComponent(orderId)}&select=id,status,total,shopping_credit_amount,payment_amount,user_id,member,email,payment_notification_sent_at,payment_notification_next_retry_at`,
         { method: 'GET' },
       );
       order = orders?.[0];
@@ -498,10 +504,12 @@ module.exports = async function handler(req, res) {
     if (!order) return res.status(404).json({ ok: false, error: 'order not found', orderId });
 
     const notifiedAmount = getAmount(payload);
-    if (!amountsMatch(order.total, notifiedAmount)) {
+    const expectedPaymentAmount = order.payment_amount ?? order.total;
+    if (!amountsMatch(expectedPaymentAmount, notifiedAmount)) {
       console.warn('[sinopac notify] amount mismatch', {
         orderId,
         orderTotal: order.total,
+        expectedPaymentAmount,
         notifiedAmount,
         payload: summarizePaymentPayload(payload),
       });

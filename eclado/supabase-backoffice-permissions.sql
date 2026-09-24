@@ -19,7 +19,7 @@ create table if not exists public.backoffice_role_permissions (
     'members.read', 'members.write',
     'promotions.manage', 'procurement.manage',
     'analytics.read', 'audit_logs.read', 'notifications.send',
-    'backorders.manage'
+    'backorders.manage', 'inventory_counts.manage', 'shopping_credit.manage'
   ))
 );
 
@@ -43,6 +43,16 @@ on conflict do nothing;
 
 insert into public.backoffice_role_permissions (role, permission) values
   ('super_admin', 'backorders.manage')
+on conflict do nothing;
+
+insert into public.backoffice_role_permissions (role, permission) values
+  ('super_admin', 'inventory_counts.manage'),
+  ('admin', 'inventory_counts.manage')
+on conflict do nothing;
+
+insert into public.backoffice_role_permissions (role, permission) values
+  ('super_admin', 'shopping_credit.manage'),
+  ('admin', 'shopping_credit.manage')
 on conflict do nothing;
 
 insert into public.backoffice_role_permissions (role, permission) values

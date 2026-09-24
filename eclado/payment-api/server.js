@@ -333,7 +333,7 @@ async function getSupabaseOrderPaymentState(orderNo) {
   }
   const params = new URLSearchParams({
     id: `eq.${orderNo}`,
-    select: 'id,user_id,member,email,phone,public_lookup_code,status,fulfillment_method,total,subtotal,discount,promotion_name,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
+    select: 'id,user_id,member,email,phone,public_lookup_code,status,fulfillment_method,total,shopping_credit_amount,payment_amount,subtotal,discount,promotion_name,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
     limit: '1',
   });
   const response = await fetch(`${supabaseUrl}/rest/v1/orders?${params}`, {
@@ -421,7 +421,7 @@ function verifyGuestAccessToken(token, orderNo) {
 async function getSupabaseGuestOrderByLookup(lookupCode) {
   const params = new URLSearchParams({
     public_lookup_code: `eq.${lookupCode}`,
-    select: 'id,user_id,member,email,phone,public_lookup_code,status,fulfillment_method,total,subtotal,discount,promotion_name,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
+    select: 'id,user_id,member,email,phone,public_lookup_code,status,fulfillment_method,total,shopping_credit_amount,payment_amount,subtotal,discount,promotion_name,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
     limit: '1',
   });
   const response = await fetch(`${supabaseUrl}/rest/v1/orders?${params}`, {
@@ -445,6 +445,8 @@ function toPublicOrderPaymentState(order) {
     id: order.id,
     status: order.status,
     total,
+    shopping_credit_amount: Number(order.shopping_credit_amount) || 0,
+    payment_amount: Number(order.payment_amount ?? order.total) || 0,
     subtotal,
     discount,
     shipping: Math.max(0, total - subtotal + discount),

@@ -1,14 +1,16 @@
 import React, { useMemo, useState } from 'react';
-import { buildProductMonthlySales } from '../domain/analytics.js';
+import { buildProductSalesMetrics, ECOMMERCE_LAUNCH_DATE } from '../domain/analytics.js';
 
 export default function AIReorder({ products, orders }) {
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState(null);
   const [expanded, setExpanded] = useState(null);
-  const monthlySales = useMemo(
-    () => buildProductMonthlySales(products, orders),
+  const salesMetrics = useMemo(
+    () => buildProductSalesMetrics(products, orders),
     [products, orders],
   );
+  const { monthlySales, monthlyAverage, period } = salesMetrics;
+  const periodLabel = period.startDate.slice(5).replace('-', '/');
 
   async function runAI() {
     setLoading(true);
@@ -17,14 +19,14 @@ export default function AIReorder({ products, orders }) {
     const productData = products.map(product => {
       const monthly = monthlySales[product.id] || Array(6).fill(0);
       const total = monthly.reduce((sum, qty) => sum + qty, 0);
-      const average = (total / monthly.length).toFixed(1);
+      const average = Number(monthlyAverage[product.id] || 0).toFixed(1);
       const trend = total === 0
         ? '尚無銷售紀錄'
         : monthly[monthly.length - 1] > monthly[monthly.length - 2] ? '上升' : '持平或下降';
-      return `- ${product.nameZh}（${product.size}）：庫存 ${product.stock} 件，近6月平均銷量 ${average} 件/月，趨勢${trend}`;
+      return `- ${product.nameZh}（${product.size}）：庫存 ${product.stock} 件，上線後月均銷量 ${average} 件/月，趨勢${trend}`;
     }).join('\n');
 
-    const prompt = `你是一個台灣保養品電商的庫存分析顧問。以下是 ECLADO 韓國醫美院線保養品的真實庫存與近六個月已付款訂單銷售數據：
+    const prompt = `你是一個台灣保養品電商的庫存分析顧問。ECLADO 網站於 ${ECOMMERCE_LAUNCH_DATE} 上線，以下月均與庫存可售天數只使用 ${period.startDate} 起的已付款訂單，依 ${period.dayCount} 個實際營運日換算 30 天月均：
 
 ${productData}
 
@@ -65,7 +67,7 @@ ${productData}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 28 }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400, marginBottom: 4 }}>AI 補貨建議</h1>
-          <p style={{ fontSize: 13, color: 'var(--mid)' }}>根據真實銷售趨勢與庫存數量，自動分析補貨需求</p>
+          <p style={{ fontSize: 13, color: 'var(--mid)' }}>以 2026/09/18 網站上線後的真實銷售與庫存，自動分析補貨需求</p>
         </div>
         <button onClick={runAI} disabled={loading} style={{ padding: '12px 28px', background: loading ? 'var(--mid)' : 'var(--dark)', color: '#fff', border: 'none', fontSize: 13, letterSpacing: '0.1em', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
           {loading ? 'AI 分析中...' : '✦ 開始 AI 分析'}
@@ -78,7 +80,7 @@ ${productData}
         {products.map(product => {
           const monthly = monthlySales[product.id] || Array(6).fill(0);
           const total = monthly.reduce((sum, qty) => sum + qty, 0);
-          const average = total / monthly.length;
+          const average = Number(monthlyAverage[product.id] || 0);
           const daysLeft = average > 0 ? Math.round((product.stock / average) * 30) : null;
           const maxMonthly = Math.max(0, ...monthly);
           return (
@@ -87,10 +89,10 @@ ${productData}
               <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 10 }}>{product.size}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div><div style={{ fontSize: 22, fontFamily: 'var(--font-d)', color: product.stock === 0 ? 'var(--red)' : 'var(--dark)' }}>{product.stock}</div><div style={{ fontSize: 10, color: 'var(--mid)' }}>件庫存</div></div>
-                <div style={{ textAlign: 'right' }}><div style={{ fontSize: 12, color: 'var(--dark)' }}>{average.toFixed(1)}</div><div style={{ fontSize: 10, color: 'var(--mid)' }}>件/月均</div></div>
+                <div style={{ textAlign: 'right' }}><div style={{ fontSize: 12, color: 'var(--dark)' }}>{average.toFixed(1)}</div><div style={{ fontSize: 10, color: 'var(--mid)' }}>件/月均（{periodLabel}起）</div></div>
               </div>
               <div style={{ marginTop: 10, fontSize: 11, color: daysLeft != null && daysLeft < 30 ? 'var(--red)' : 'var(--mid)' }}>
-                {daysLeft == null ? '近六個月尚無銷售紀錄' : `約剩 ${daysLeft} 天`}
+                {daysLeft == null ? `${periodLabel} 起尚無銷售紀錄` : `約剩 ${daysLeft} 天`}
               </div>
               <div style={{ display: 'flex', gap: 2, marginTop: 8, alignItems: 'flex-end', height: 24 }}>
                 {monthly.map((qty, index) => <div key={index} style={{ flex: 1, background: index === monthly.length - 1 ? 'var(--dark)' : 'var(--light)', height: maxMonthly > 0 ? Math.max(3, (qty / maxMonthly) * 24) : 3, borderRadius: 1 }} />)}

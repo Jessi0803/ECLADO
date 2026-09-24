@@ -61,6 +61,7 @@ export async function createAuthoritativeOrder({
   invoiceType = 'personal',
   invoiceCompanyName = '',
   invoiceTaxId = '',
+  shoppingCreditAmount = 0,
 }) {
   const { data, error } = await supabase.rpc('create_order_with_pricing', {
     p_items: toPricingItems(items),
@@ -75,10 +76,16 @@ export async function createAuthoritativeOrder({
     p_invoice_type: invoiceType,
     p_invoice_company_name: invoiceType === 'company' ? invoiceCompanyName : null,
     p_invoice_tax_id: invoiceType === 'company' ? invoiceTaxId : null,
+    p_shopping_credit_amount: shoppingCreditAmount,
   });
   if (error) throw error;
   if (!data?.order_id) {
     throw new Error('後端訂單報價格式不完整');
   }
-  return { ...normalizeQuote(data), paymentToken: data.payment_token || '' };
+  return {
+    ...normalizeQuote(data),
+    shopping_credit_amount: Number(data.shopping_credit_amount) || 0,
+    payment_amount: Number(data.payment_amount ?? data.total) || 0,
+    paymentToken: data.payment_token || '',
+  };
 }

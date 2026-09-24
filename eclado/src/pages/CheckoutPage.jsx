@@ -23,6 +23,7 @@ import {
 } from '../domain/payments.js';
 import { createAuthoritativeOrder, quoteAuthoritativeOrder } from '../services/orders.js';
 import { createSinopacPayment, querySinopacPayment } from '../services/paymentApi.js';
+import { getMyShoppingCredit } from '../services/shoppingCredit.js';
 import {
   clearPendingPayment,
   getPendingPayment,
@@ -66,6 +67,9 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   const [appliedCouponCode, setAppliedCouponCode] = useState('');
   const [couponQuote, setCouponQuote] = useState(null);
   const [couponState, setCouponState] = useState({ loading: false, error: '' });
+  const [shoppingCredit, setShoppingCredit] = useState({ available: 0, loading: false, error: '' });
+  const [useShoppingCredit, setUseShoppingCredit] = useState(false);
+  const [shoppingCreditAmount, setShoppingCreditAmount] = useState(0);
   const submittingRef = useRef(false);
   const invoiceDefaultsLoadedRef = useRef(false);
   const [copiedAtmNo, setCopiedAtmNo] = useState(false);
@@ -79,8 +83,27 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   const deliveryShipping = calculateShipping(cart, user, finalSubtotal);
   const shipping = calculateShipping(cart, user, finalSubtotal, fulfillmentMethod);
   const total = finalSubtotal + shipping;
-  const checkoutSummary = couponQuote || {
+  const baseCheckoutSummary = couponQuote || {
     subtotal, discount, finalSubtotal, promotion, coupon: null, shipping, total,
+  };
+  const eligibleMerchandiseAmount = Math.max(
+    0,
+    Number(baseCheckoutSummary.subtotal || 0) - Number(baseCheckoutSummary.discount || 0),
+  );
+  const maximumShoppingCredit = user?.uid
+    ? Math.max(0, Math.min(
+      Number(shoppingCredit.available || 0),
+      Math.floor(eligibleMerchandiseAmount),
+      Math.floor(Number(baseCheckoutSummary.total || 0) - 1),
+    ))
+    : 0;
+  const appliedShoppingCredit = useShoppingCredit
+    ? Math.min(Math.max(0, Math.floor(Number(shoppingCreditAmount) || 0)), maximumShoppingCredit)
+    : 0;
+  const checkoutSummary = {
+    ...baseCheckoutSummary,
+    shoppingCreditAmount: appliedShoppingCredit,
+    paymentTotal: Number(baseCheckoutSummary.total || 0) - appliedShoppingCredit,
   };
 
   const STEPS = ['收件資訊', '確認付款', '完成'];
@@ -162,6 +185,35 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   }, [user?.uid, user?.role, user?.defaultInvoiceCompanyName, user?.defaultInvoiceTaxId]);
 
   useEffect(() => {
+    let active = true;
+    setUseShoppingCredit(false);
+    setShoppingCreditAmount(0);
+    if (!user?.uid) {
+      setShoppingCredit({ available: 0, loading: false, error: '' });
+      return () => { active = false; };
+    }
+    setShoppingCredit(state => ({ ...state, loading: true, error: '' }));
+    getMyShoppingCredit().then(({ data, error }) => {
+      if (!active) return;
+      if (error) {
+        setShoppingCredit({ available: 0, loading: false, error: '購物金餘額暫時無法載入。' });
+        return;
+      }
+      setShoppingCredit({
+        available: Math.max(0, Number(data?.available_balance || 0)),
+        loading: false,
+        error: '',
+      });
+    });
+    return () => { active = false; };
+  }, [user?.uid]);
+
+  useEffect(() => {
+    if (!useShoppingCredit) return;
+    setShoppingCreditAmount(amount => Math.min(Math.max(0, Number(amount) || 0), maximumShoppingCredit));
+  }, [maximumShoppingCredit, useShoppingCredit]);
+
+  useEffect(() => {
     if (!canPickup && fulfillmentMethod !== FULFILLMENT_DELIVERY) {
       setFulfillmentMethod(FULFILLMENT_DELIVERY);
     }
@@ -206,6 +258,8 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       invoiceType: authoritativeOrder.invoice_type || invoiceType,
       invoiceCompanyName: authoritativeOrder.invoice_company_name || '',
       invoiceTaxId: authoritativeOrder.invoice_tax_id || '',
+      shoppingCreditAmount: Number(authoritativeOrder.shopping_credit_amount || 0),
+      paymentTotal: Number(authoritativeOrder.payment_amount ?? authoritativeOrder.total),
     };
   }
 
@@ -279,6 +333,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
           invoiceType,
           invoiceCompanyName: invoiceCompanyName.trim(),
           invoiceTaxId: invoiceTaxId.trim(),
+          shoppingCreditAmount: appliedShoppingCredit,
         });
       const authoritativeOrderNo = authoritativeOrder.order_id;
       setOrderNo(authoritativeOrderNo);
@@ -289,7 +344,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       const payload = {
         orderNo: authoritativeOrderNo,
         paymentToken: authoritativeOrder.paymentToken,
-        amount: authoritativeOrder.total,
+        amount: authoritativeOrder.payment_amount,
         prdtName: productNameForPayment(),
         payType: method.payType,
         returnUrl: `${SINOPAC_PAYMENT_API}/return?orderNo=${encodeURIComponent(authoritativeOrderNo)}`,
@@ -320,7 +375,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       const saved = savePendingPayment({
         orderNo: authoritativeOrderNo,
         paymentToken: authoritativeOrder.paymentToken,
-        amount: authoritativeOrder.total,
+        amount: authoritativeOrder.payment_amount,
         method: paymentMethod,
         methodLabel: method.label,
         paymentLink,
@@ -399,7 +454,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
               orderNo={orderNo}
               paymentResult={paymentResult}
               paymentState={paymentState}
-              total={paymentSummary?.total || total}
+              total={paymentSummary?.paymentTotal ?? paymentSummary?.total ?? total}
             />
 
             {paymentState === 'error' && (
@@ -629,6 +684,60 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                     )}
                     {couponState.error && <p role="alert" style={{ marginTop:9, fontSize:12, color:'#c0392b', lineHeight:1.6 }}>{couponState.error}</p>}
                   </div>
+
+                  {user?.uid && (
+                    <div style={{ border:'1px solid var(--light)', padding:'18px 20px' }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', gap:16, alignItems:'flex-start' }}>
+                        <div>
+                          <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase', marginBottom:6 }}>購物金</p>
+                          <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.6 }}>
+                            {shoppingCredit.loading
+                              ? '正在載入可用餘額…'
+                              : `可用 NT$ ${shoppingCredit.available.toLocaleString()}，本次最多可使用 NT$ ${maximumShoppingCredit.toLocaleString()}`}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={useShoppingCredit}
+                          aria-label="使用購物金"
+                          disabled={shoppingCredit.loading || maximumShoppingCredit <= 0}
+                          onClick={() => {
+                            const next = !useShoppingCredit;
+                            setUseShoppingCredit(next);
+                            setShoppingCreditAmount(next ? maximumShoppingCredit : 0);
+                          }}
+                          style={{ flexShrink:0, border:useShoppingCredit ? '1px solid var(--black)' : '1px solid var(--light)', background:useShoppingCredit ? 'var(--black)' : 'var(--white)', color:useShoppingCredit ? 'var(--white)' : 'var(--dark)', padding:'8px 12px', cursor:shoppingCredit.loading || maximumShoppingCredit <= 0 ? 'not-allowed' : 'pointer', opacity:shoppingCredit.loading || maximumShoppingCredit <= 0 ? 0.45 : 1, fontFamily:'var(--font-body)', fontSize:11 }}
+                        >
+                          {useShoppingCredit ? '已使用' : '使用'}
+                        </button>
+                      </div>
+                      {useShoppingCredit && (
+                        <label style={{ display:'grid', gap:7, marginTop:14, fontSize:11, color:'var(--dark)' }}>
+                          <span>本次使用金額</span>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min="1"
+                            max={maximumShoppingCredit}
+                            step="1"
+                            aria-label="購物金使用金額"
+                            value={shoppingCreditAmount}
+                            onChange={event => {
+                              const value = event.target.value;
+                              setShoppingCreditAmount(value === '' ? '' : Math.min(maximumShoppingCredit, Math.max(0, Math.floor(Number(value) || 0))));
+                            }}
+                            onBlur={() => {
+                              if (!Number(shoppingCreditAmount)) setShoppingCreditAmount(maximumShoppingCredit);
+                            }}
+                            style={{ width:'100%', border:'1px solid var(--light)', padding:'11px 12px', fontSize:13, fontFamily:'var(--font-body)', outline:'none', background:'var(--white)', color:'var(--black)' }}
+                          />
+                        </label>
+                      )}
+                      {shoppingCredit.error && <p role="alert" style={{ marginTop:9, fontSize:12, color:'#c0392b', lineHeight:1.6 }}>{shoppingCredit.error}</p>}
+                      <p style={{ marginTop:10, fontSize:10, color:'var(--dark)', lineHeight:1.6 }}>購物金僅支付商品金額，不影響已取得的免運資格。</p>
+                    </div>
+                  )}
 
                   <div>
                     <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase', marginBottom:14 }}>付款方式</p>

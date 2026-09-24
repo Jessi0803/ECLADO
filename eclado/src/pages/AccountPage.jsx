@@ -5,6 +5,7 @@ import {
   isProfessionalMember,
 } from '../domain/catalog.jsx';
 import QuarterlySalesPanel from '../components/account/QuarterlySalesPanel.jsx';
+import ShoppingCreditPanel from '../components/account/ShoppingCreditPanel.jsx';
 import { getOrderStatusLabel, getPaymentStateColor, getPaymentStateLabel } from '../domain/payments.js';
 import { isQuarterlySalesRole, normalizeProfessionalSales } from '../domain/professionalSales.js';
 import { SF_EXPRESS_TRACKING_URL } from '../domain/shipping.js';
@@ -463,6 +464,7 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
           </aside>
 
           <section>
+            <ShoppingCreditPanel userId={user.uid} isMobile={isMobile} />
             {isQuarterlySalesRole(getMemberRole(user)) && (
               <QuarterlySalesPanel
                 sales={professionalSales}

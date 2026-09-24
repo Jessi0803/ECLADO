@@ -108,8 +108,10 @@ export function normalizeOrder(row) {
     ? row.pricing_snapshot
     : null;
   const shoppingCreditDiscount = Number(
-    row.shopping_credit_discount
+    row.shopping_credit_amount
+      ?? row.shopping_credit_discount
       ?? row.store_credit_discount
+      ?? pricingSnapshot?.shopping_credit_amount
       ?? pricingSnapshot?.shopping_credit_discount
       ?? pricingSnapshot?.store_credit_discount
       ?? 0,
@@ -156,6 +158,7 @@ export function normalizeOrder(row) {
     shoppingCreditDiscount: Number.isFinite(shoppingCreditDiscount)
       ? Math.max(0, shoppingCreditDiscount)
       : 0,
+    paymentAmount: Number(row.payment_amount ?? (Number(row.total || 0) - shoppingCreditDiscount)),
     studioName: row.studio_name_snapshot
       || row.studio_name
       || pricingSnapshot?.studio_name

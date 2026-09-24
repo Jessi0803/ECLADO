@@ -4,6 +4,7 @@ import OrderMemberAssignmentDialog from '../components/OrderMemberAssignmentDial
 import { orderBelongsToMember } from '../domain/mappers.js';
 import usePanelHistory from '../hooks/usePanelHistory.js';
 import MemberNoteSection from '../components/MemberNoteSection.jsx';
+import MemberShoppingCreditSection from '../components/MemberShoppingCreditSection.jsx';
 import ProfessionalQuarterSection from '../components/ProfessionalQuarterSection.jsx';
 import { supabase } from '../../services/supabase.js';
 import { PROFESSIONAL_CERTIFICATE_BUCKET } from '../../services/professionalApplications.js';
@@ -112,6 +113,7 @@ export default function Members({
   applications = [], applicationsLoading = false, applicationsError = '',
   onChangeMemberRole, onChangeMembershipStart, onSaveSalesAdjustment, onUpdateApplicationStatus, onSendApplicationNotice, onDeleteMember, currentAdminUserId = '', onAssignGuestOrder, defaultFilter = 'all',
   focusMemberId = '', backToOrderId = '', onOpenOrder, onClearCrossLink, memberNotes = {}, onSaveMemberNote,
+  canManageShoppingCredit = false,
 }) {
   const [filter, setFilter] = useState(defaultFilter);
   const [searchQuery, setSearchQuery] = useState('');
@@ -428,32 +430,11 @@ export default function Members({
               <span style={{ fontWeight: 400 }}>{val}</span>
             </div>
           ))}
-          <div style={{ marginTop:16, padding:'14px', background:'var(--off)', border:'1px solid var(--border)' }}>
-            <div style={{ fontSize:11, color:'var(--mid)', marginBottom:10, letterSpacing:'0.08em' }}>目前美容院資料</div>
-            {[
-              ['美容院名稱', selected.studioName],
-              ['聯絡人', selected.studioContactName],
-              ['聯絡電話', selected.studioPhone],
-              ['地址', selected.studioAddress],
-            ].map(([label, value]) => (
-              <div key={label} style={{ display:'grid', gridTemplateColumns:'88px minmax(0, 1fr)', gap:10, marginBottom:7, fontSize:12 }}>
-                <span style={{ color:'var(--mid)' }}>{label}</span>
-                <span style={{ overflowWrap:'anywhere' }}>{value || '—'}</span>
-              </div>
-            ))}
-            <div style={{ borderTop:'1px solid var(--border)', margin:'12px 0 10px', paddingTop:12, fontSize:11, color:'var(--mid)', letterSpacing:'0.08em' }}>預設發票資料</div>
-            {[
-              ['公司抬頭', selected.defaultInvoiceCompanyName],
-              ['統一編號', selected.defaultInvoiceTaxId],
-            ].map(([label, value]) => (
-              <div key={label} style={{ display:'grid', gridTemplateColumns:'88px minmax(0, 1fr)', gap:10, marginBottom:7, fontSize:12 }}>
-                <span style={{ color:'var(--mid)' }}>{label}</span>
-                <span style={{ overflowWrap:'anywhere' }}>{value || '—'}</span>
-              </div>
-            ))}
-          </div>
           {!(typeof selected.id === 'string' && selected.id.startsWith('app:')) && (
-            <MemberNoteSection memberId={selected.id} note={memberNotes[String(selected.id)]} onSave={onSaveMemberNote} />
+            <>
+              <MemberShoppingCreditSection memberId={selected.id} canManage={canManageShoppingCredit} />
+              <MemberNoteSection memberId={selected.id} note={memberNotes[String(selected.id)]} onSave={onSaveMemberNote} />
+            </>
           )}
           {selected.professionalSales?.memberships?.length > 0 && (
             <ProfessionalQuarterSection

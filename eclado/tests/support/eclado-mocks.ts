@@ -249,6 +249,13 @@ export type MockEcladoApiOptions = {
   sidebarFavorites?: string[] | null;
   onSidebarFavoritesSave?: (favorites: string[]) => void;
   onMemberNoteSave?: (payload: Record<string, unknown>) => void;
+  shoppingCreditByMember?: Record<string, Record<string, unknown>>;
+  shoppingCreditAdjustError?: string;
+  onShoppingCreditAdjust?: (payload: Record<string, unknown>) => void;
+  inventoryCountItems?: Record<string, unknown>[];
+  inventoryCountConflictOnce?: boolean;
+  onInventoryCountUpdate?: (payload: Record<string, unknown>) => void;
+  onInventoryCountComplete?: (sessionId: string) => void;
   applications?: Record<string, unknown>[];
   auditLogs?: Record<string, unknown>[];
   procurementOrders?: Record<string, unknown>[];
@@ -283,6 +290,21 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     ...item,
     orders: Array.isArray(item.orders) ? item.orders.map(order => ({ ...order })) : [],
   }));
+  const shoppingCreditByMember = Object.fromEntries(
+    Object.entries(options.shoppingCreditByMember || {}).map(([memberId, value]) => [
+      memberId,
+      {
+        user_id: memberId,
+        available_balance: Number(value.available_balance || 0),
+        reserved_balance: Number(value.reserved_balance || 0),
+        entries: Array.isArray(value.entries) ? value.entries.map(entry => ({ ...entry })) : [],
+      },
+    ]),
+  ) as Record<string, Record<string, unknown>>;
+  const inventoryCountItems = (options.inventoryCountItems || []).map(item => ({ ...item }));
+  const inventoryCountSessions: Record<string, unknown>[] = [];
+  const inventoryCountShortages: Record<string, unknown>[] = [];
+  let inventoryCountConflictPending = options.inventoryCountConflictOnce === true;
   const authUser = options.authUser;
   const procurement = {
     product_variants: procurementProductVariants.map(item => ({ ...item })) as Record<string, unknown>[],
@@ -370,7 +392,8 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       permissions: [
         'catalog.read', 'catalog.write', 'orders.read', 'orders.write',
         'members.read', 'members.write', 'promotions.manage', 'procurement.manage',
-        'analytics.read', 'audit_logs.read', 'notifications.send',
+        'analytics.read', 'audit_logs.read', 'notifications.send', 'shopping_credit.manage',
+        'inventory_counts.manage',
       ],
     } : { role: '', permissions: [] });
   });
@@ -475,12 +498,115 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         },
       ] : [{
         order_id: order.id, attempt_no: 1, payment_method: order.payment_method,
-        payment_state: 'paid', provider_status: '1C400', provider_description: '交易成功',
+        payment_state: ['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(String(order.status)) ? 'paid' : 'pending',
+        provider_status: ['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(String(order.status)) ? '1C400' : '1C200',
+        provider_description: ['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(String(order.status)) ? '交易成功' : '等待付款',
         created_at: order.created_at, updated_at: order.created_at,
       }]),
   ));
 
   await page.route('**/rest/v1/rpc/get_admin_inventory_allocations', async route => json(route, inventoryAllocations));
+
+  await page.route('**/rest/v1/rpc/get_inventory_count_sessions', async route => {
+    const rows = inventoryCountSessions.map(session => {
+      const sessionItems = inventoryCountItems.filter(item => item.session_id === session.id);
+      return {
+        ...session,
+        total_count: sessionItems.length,
+        uncounted_count: sessionItems.filter(item => item.actual_quantity == null).length,
+        gain_count: sessionItems.filter(item => Number(item.variance) > 0).length,
+        loss_count: sessionItems.filter(item => Number(item.variance) < 0).length,
+      };
+    });
+    return json(route, rows);
+  });
+
+  await page.route('**/rest/v1/rpc/create_inventory_count', async route => {
+    const request = route.request().postDataJSON() || {};
+    const id = 'inventory-count-session-1';
+    inventoryCountSessions.push({
+      id,
+      name: request.p_name,
+      status: 'draft',
+      created_by: String((options.signInUser || authUser)?.id || ''),
+      created_by_email: String((options.signInUser || authUser)?.email || ''),
+      created_at: '2026-09-24T07:00:00.000Z',
+      completed_at: null,
+    });
+    inventoryCountItems.forEach(item => { item.session_id = id; });
+    return json(route, id);
+  });
+
+  await page.route('**/rest/v1/rpc/get_inventory_count_detail', async route => {
+    const request = route.request().postDataJSON() || {};
+    const session = inventoryCountSessions.find(item => item.id === request.p_session_id) || null;
+    return json(route, session ? {
+      session,
+      items: inventoryCountItems.filter(item => item.session_id === session.id),
+      shortages: inventoryCountShortages,
+    } : null);
+  });
+
+  await page.route('**/rest/v1/rpc/update_inventory_count_item', async route => {
+    const request = route.request().postDataJSON() || {};
+    options.onInventoryCountUpdate?.(request);
+    const item = inventoryCountItems.find(candidate => Number(candidate.id) === Number(request.p_item_id));
+    if (!item) return json(route, { message: '盤點項目不存在' }, 404);
+    if (inventoryCountConflictPending) {
+      inventoryCountConflictPending = false;
+      item.actual_quantity = Number(item.expected_physical_snapshot);
+      item.variance = 0;
+      item.version = Number(item.version || 0) + 1;
+      return json(route, { message: '盤點資料已由其他工作階段更新，請重新整理後再試' }, 409);
+    }
+    if (Number(request.p_expected_version) !== Number(item.version || 0)) {
+      return json(route, { message: '盤點資料版本已變更，請重新整理後再試' }, 409);
+    }
+    item.actual_quantity = request.p_actual_quantity;
+    item.variance = request.p_actual_quantity == null
+      ? null
+      : Number(request.p_actual_quantity) - Number(item.expected_physical_snapshot || 0);
+    item.version = Number(item.version || 0) + 1;
+    return json(route, item);
+  });
+
+  await page.route('**/rest/v1/rpc/complete_inventory_count', async route => {
+    const request = route.request().postDataJSON() || {};
+    const session = inventoryCountSessions.find(item => item.id === request.p_session_id);
+    if (!session) return json(route, { message: '盤點單不存在' }, 404);
+    if (inventoryCountItems.some(item => item.actual_quantity == null)) {
+      return json(route, { message: '仍有尚未盤點的項目，無法完成盤點' }, 400);
+    }
+    session.status = 'completed';
+    session.completed_at = '2026-09-24T08:00:00.000Z';
+    const lossItem = inventoryCountItems.find(item => item.inventory_type === 'sale' && Number(item.variance) < 0);
+    if (lossItem) {
+      inventoryCountShortages.push({
+        id: 1,
+        count_item_id: lossItem.id,
+        inventory_type: 'sale',
+        order_id: 'E2E-ORDER-RESERVED',
+        quantity: Math.abs(Number(lossItem.variance)),
+        resolved_quantity: 0,
+        status: 'pending',
+      });
+    }
+    options.onInventoryCountComplete?.(String(session.id));
+    return json(route, {
+      completed_items: inventoryCountItems.length,
+      shortage_quantity: inventoryCountShortages.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+    });
+  });
+
+  await page.route('**/rest/v1/rpc/delete_draft_inventory_count', async route => json(route, { ok: true }));
+
+  await page.route('**/rest/v1/rpc/get_inventory_count_gift_shortages', async route => json(route, []));
+
+  await page.route('**/rest/v1/rpc/allocate_inventory_count_gift_shortages', async route => json(route, {
+    allocated_qty: 0,
+    affected_orders: [],
+    remaining_gift_stock: 0,
+  }));
 
   await page.route('**/rest/v1/rpc/get_admin_professional_sales', async route => {
     return json(route, options.professionalSales || []);
@@ -514,6 +640,70 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       if (index >= 0) memberNotes[index] = row; else memberNotes.push(row);
     }
     return json(route, { user_id: request.p_user_id, note: note || null, changed: true });
+  });
+
+  await page.route('**/rest/v1/rpc/get_member_shopping_credit', async route => {
+    const request = route.request().postDataJSON() || {};
+    const memberId = String(request.p_user_id || '');
+    return json(route, shoppingCreditByMember[memberId] || {
+      user_id: memberId,
+      available_balance: 0,
+      reserved_balance: 0,
+      entries: [],
+    });
+  });
+
+  await page.route('**/rest/v1/rpc/get_my_shopping_credit', async route => {
+    const memberId = String(authUser?.id || '');
+    const account = shoppingCreditByMember[memberId];
+    return json(route, account || { available_balance: 0, entries: [] });
+  });
+
+  await page.route('**/rest/v1/rpc/adjust_member_shopping_credit', async route => {
+    const request = route.request().postDataJSON() || {};
+    options.onShoppingCreditAdjust?.(request);
+    if (options.shoppingCreditAdjustError) {
+      return json(route, { message: options.shoppingCreditAdjustError }, 400);
+    }
+    const memberId = String(request.p_user_id || '');
+    const direction = String(request.p_direction || '');
+    const amount = Number(request.p_amount || 0);
+    const current = shoppingCreditByMember[memberId] || {
+      user_id: memberId,
+      available_balance: 0,
+      reserved_balance: 0,
+      entries: [],
+    };
+    const currentAvailable = Number(current.available_balance || 0);
+    const nextAvailable = direction === 'grant' ? currentAvailable + amount : currentAvailable - amount;
+    if (nextAvailable < 0) {
+      return json(route, { message: 'Insufficient available shopping credit' }, 400);
+    }
+    const entry = {
+      id: `credit-entry-${Date.now()}`,
+      event_type: direction,
+      amount,
+      available_delta: direction === 'grant' ? amount : -amount,
+      reserved_delta: 0,
+      available_balance_after: nextAvailable,
+      reserved_balance_after: Number(current.reserved_balance || 0),
+      reason_code: request.p_reason_code,
+      internal_note: request.p_internal_note,
+      actor_email: 'baby90522@gmail.com',
+      request_id: request.p_request_id,
+      created_at: '2026-09-24T06:00:00.000Z',
+    };
+    current.available_balance = nextAvailable;
+    current.entries = [entry, ...((current.entries as Record<string, unknown>[]) || [])];
+    shoppingCreditByMember[memberId] = current;
+    return json(route, {
+      ok: true,
+      already_processed: false,
+      entry_id: entry.id,
+      user_id: memberId,
+      available_balance: nextAvailable,
+      reserved_balance: current.reserved_balance,
+    });
   });
 
   await page.route('**/rest/v1/rpc/get_my_professional_sales', async route => {
@@ -971,6 +1161,21 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       : (authoritativeItems.every(item => item.product_id === 9) ? 0 : 120);
     const orderId = `ECL-E2E-${Date.now()}`;
     const status = request.p_payment_method === 'atm' ? 'awaiting_confirm' : 'unpaid';
+    const grossTotal = subtotal - discount + shipping;
+    const requestedCredit = Math.max(0, Math.floor(Number(request.p_shopping_credit_amount) || 0));
+    const creditAccount = shoppingCreditByMember[String(authUser?.id || '')];
+    const creditAvailable = Number(creditAccount?.available_balance || 0);
+    const maximumCredit = authUser
+      ? Math.max(0, Math.min(creditAvailable, discountedSubtotal, grossTotal - 1))
+      : 0;
+    if (requestedCredit > maximumCredit) {
+      return json(route, { message: 'Shopping credit exceeds the eligible merchandise amount or minimum gateway payment' }, 400);
+    }
+    const paymentAmount = grossTotal - requestedCredit;
+    if (creditAccount && requestedCredit > 0) {
+      creditAccount.available_balance = creditAvailable - requestedCredit;
+      creditAccount.reserved_balance = Number(creditAccount.reserved_balance || 0) + requestedCredit;
+    }
     const result = {
       order_id: orderId,
       member_role: role,
@@ -978,7 +1183,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       subtotal,
       discount,
       shipping,
-      total: subtotal - discount + shipping,
+      total: grossTotal,
+      shopping_credit_amount: requestedCredit,
+      payment_amount: paymentAmount,
       status,
       fulfillment_method: fulfillmentMethod,
       promotion_id: selectedPromotion?.promotion.id || null,
@@ -999,7 +1206,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       items: authoritativeItems,
       subtotal,
       discount,
-      total: subtotal - discount + shipping,
+      total: grossTotal,
+      shopping_credit_amount: requestedCredit,
+      payment_amount: paymentAmount,
       status,
       fulfillment_method: fulfillmentMethod,
       address: request.p_address,

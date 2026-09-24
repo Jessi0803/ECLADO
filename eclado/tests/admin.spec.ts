@@ -787,8 +787,9 @@ test('訂單列印只呈現歷史快照與顧客可見資訊', async ({ page }) 
   await expect(preview.getByText('歷史美容院快照')).toBeVisible();
   await expect(preview.getByText('平衡爽膚水')).toBeVisible();
   await expect(preview.getByText('1000ml')).toBeVisible();
-  await expect(preview.getByText('購物金折抵')).toBeVisible();
+  await expect(preview.getByText('購物金支付')).toBeVisible();
   await expect(preview.getByText('-NT$ 100')).toBeVisible();
+  await expect(preview.getByText('NT$ 3,800')).toBeVisible();
   await expect(preview.getByText('列印測試有限公司')).toBeVisible();
   await expect(preview.getByText('87654321')).toBeVisible();
   await expect(preview.getByText('AB12345678')).toBeVisible();
@@ -819,7 +820,7 @@ test('舊訂單缺少新快照欄位仍可開啟列印預覽', async ({ page }) 
   const preview = page.getByRole('dialog', { name: '訂單列印預覽' });
   await expect(preview.getByText('E2E-ORDER-001')).toBeVisible();
   await expect(preview.getByText('胜肽修護精華液')).toBeVisible();
-  await expect(preview.getByText('購物金折抵')).toHaveCount(0);
+  await expect(preview.getByText('購物金支付')).toHaveCount(0);
   await expect(preview.getByText('發票資訊')).toHaveCount(0);
 });
 
@@ -865,6 +866,7 @@ test('已付款與備貨中訂單詳情顯示逐項現貨與缺少數量', async
         ...adminOrderRows[0],
         id: 'E2E-UNPAID-NO-ALLOCATION',
         status: 'unpaid',
+        payment_method: 'card',
         items: [{ name: '未付款商品', qty: 3, price: 500, stock_at_order: 1 }],
       },
     ],
@@ -1239,6 +1241,94 @@ test('贈品庫存分頁同時顯示一般商品與贈品專用商品的獨立�
   await expect(table.getByText('GIFT-TRAVEL')).toBeVisible();
   await expect(table.getByText('一般商品')).toBeVisible();
   await expect(table.getByText('贈品專用商品')).toBeVisible();
+});
+
+test('庫存盤點涵蓋一般與贈品庫存、版本衝突、完整填寫及完成後唯讀', async ({ page }) => {
+  const updates: Record<string, unknown>[] = [];
+  const completed: string[] = [];
+  await mockAdminApis(page, {
+    inventoryCountConflictOnce: true,
+    inventoryCountItems: [
+      {
+        id: 1,
+        session_id: '',
+        product_variant_id: 201,
+        product_name: '胜肽修護精華液',
+        variant_name: '30ml',
+        sku: 'SERUM-30',
+        inventory_type: 'sale',
+        system_stock_snapshot: 6,
+        onsite_allocated_snapshot: 4,
+        expected_physical_snapshot: 10,
+        actual_quantity: null,
+        variance: null,
+        version: 0,
+      },
+      {
+        id: 2,
+        session_id: '',
+        product_variant_id: 201,
+        product_name: '胜肽修護精華液',
+        variant_name: '30ml',
+        sku: 'SERUM-30',
+        inventory_type: 'gift',
+        system_stock_snapshot: 2,
+        onsite_allocated_snapshot: 0,
+        expected_physical_snapshot: 2,
+        actual_quantity: null,
+        variance: null,
+        version: 0,
+      },
+    ],
+    onInventoryCountUpdate: payload => updates.push(payload),
+    onInventoryCountComplete: sessionId => completed.push(sessionId),
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /庫存盤點/);
+  await expect(page.getByRole('heading', { name: '庫存盤點' })).toBeVisible();
+  await page.getByRole('button', { name: '建立盤點單' }).click();
+  await page.getByLabel('盤點名稱').fill('9/24 全倉盤點');
+  await page.locator('form').getByRole('button', { name: '建立盤點單' }).click();
+
+  await expect(page.getByRole('heading', { name: '9/24 全倉盤點' })).toBeVisible();
+  await expect(page.getByText('盤點單已建立，項目範圍與系統庫存已凍結。')).toBeVisible();
+  const countTable = page.getByRole('table');
+  await expect(countTable.getByText('一般庫存', { exact: true })).toBeVisible();
+  await expect(countTable.getByText('贈品庫存', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: '完成盤點' }).click();
+  await page.getByRole('dialog', { name: '完成盤點？' }).getByRole('button', { name: '確認完成盤點' }).click();
+  await expect(page.getByText('仍有 2 項尚未盤點，請全部填寫後再完成。')).toBeVisible();
+  expect(completed).toHaveLength(0);
+
+  const saleInput = page.getByLabel('胜肽修護精華液 30ml 一般庫存實際數量');
+  await saleInput.fill('8');
+  await saleInput.press('Enter');
+  await expect(page.getByText('盤點資料已由其他工作階段更新，請重新整理後再試')).toBeVisible();
+  await page.locator('.inventory-count-stats button').first().click();
+  const saleRetryInput = page.getByLabel('胜肽修護精華液 30ml 一般庫存實際數量');
+  await expect(saleRetryInput).toHaveValue('10');
+
+  await saleRetryInput.fill('8');
+  await saleRetryInput.press('Enter');
+  await expect(page.locator('tr').filter({ has: saleRetryInput }).locator('.variance-loss')).toHaveText('-2');
+
+  const giftInput = page.getByLabel('胜肽修護精華液 30ml 贈品庫存實際數量');
+  await giftInput.fill('3');
+  await giftInput.press('Enter');
+  await expect(page.locator('tr').filter({ has: giftInput }).locator('.variance-gain')).toHaveText('+1');
+
+  await page.getByRole('button', { name: '完成盤點' }).click();
+  await page.getByRole('dialog', { name: '完成盤點？' }).getByRole('button', { name: '確認完成盤點' }).click();
+  await expect(page.getByText('盤點已完成，共更新 2 項，並記錄 2 件訂單待處理短缺。')).toBeVisible();
+  await expect(page.getByText(/已完成 ·/)).toBeVisible();
+  await expect(page.locator('.inventory-count-table input')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: '盤點造成的訂單待處理' })).toBeVisible();
+  await expect(page.getByText('E2E-ORDER-RESERVED · 2 件')).toBeVisible();
+
+  expect(updates.map(update => update.p_expected_version)).toEqual([0, 1, 0]);
+  expect(completed).toEqual(['inventory-count-session-1']);
 });
 
 test('商品庫存可依庫存狀態篩選', async ({ page }) => {
@@ -2000,6 +2090,8 @@ test('會員列表提供查看詳情按鈕並開啟既有會員詳情面板', as
   const panel = page.getByRole('dialog', { name: '會員詳情' });
   await expect(panel).toBeVisible();
   await expect(panel.getByText(firstMember.name, { exact: true })).toBeVisible();
+  await expect(panel.getByText('目前美容院資料', { exact: true })).toHaveCount(0);
+  await expect(panel.getByText('預設發票資料', { exact: true })).toHaveCount(0);
 });
 
 test('會員詳細只顯示目前美容師申請的私人證照圖片與歷史筆數', async ({ page }) => {
@@ -2269,7 +2361,7 @@ test('會員管理可依會員與美容師申請資料搜尋，並與類型篩�
   await expect(professionalRow).toContainText('晴光美學工作室');
   await expect(professionalRow).toContainText('LINE 名稱：林美容師');
   await expect(professionalRow).toContainText('0977-112-233');
-  await expect(professionalRow).toContainText('美容師申請');
+  await expect(professionalRow).toContainText('美容院聯絡');
 
   await search.fill('同名美容師');
   const sameNameRow = page.getByText('同名美容師', { exact: true }).locator('xpath=ancestor::tr');
@@ -2536,6 +2628,92 @@ test('會員管理不提供刪除目前登入管理員的操作', async ({ page 
   await expect(page.getByRole('dialog', { name: '會員詳情' }).getByRole('button', { name: '刪除會員' })).toHaveCount(0);
 });
 
+test('購物金管理顯示餘額與不可刪除明細，人工發放需原因及二次確認', async ({ page }) => {
+  const adjustments: Record<string, unknown>[] = [];
+  await mockAdminApis(page, {
+    shoppingCreditByMember: {
+      'user-consumer-1': {
+        available_balance: 1000,
+        reserved_balance: 200,
+        entries: [
+          {
+            id: 'credit-existing-1',
+            event_type: 'reserve',
+            amount: 200,
+            available_delta: -200,
+            reserved_delta: 200,
+            available_balance_after: 1000,
+            reserved_balance_after: 200,
+            reason_code: 'order_checkout',
+            order_id: 'E2E-ORDER-001',
+            created_at: '2026-09-23T02:00:00.000Z',
+          },
+          ...Array.from({ length: 11 }, (_, index) => ({
+            id: `credit-history-${index + 1}`,
+            event_type: 'grant',
+            amount: 10,
+            available_delta: 10,
+            reserved_delta: 0,
+            available_balance_after: 1000,
+            reserved_balance_after: 200,
+            reason_code: 'campaign_grant',
+            created_at: `2026-09-${String(22 - index).padStart(2, '0')}T02:00:00.000Z`,
+          })),
+        ],
+      },
+    },
+    onShoppingCreditAdjust: payload => adjustments.push(payload),
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+  await page.locator('.admin-members-table td[data-label="姓名"]').filter({ hasText: /^測試會員$/ }).click();
+
+  const details = page.getByRole('dialog', { name: '會員詳情' });
+  const section = details.getByRole('region', { name: '購物金管理' });
+  await expect(section).toContainText('NT$ 1,000');
+  await expect(section).toContainText('NT$ 200');
+  await expect(section.locator('.member-credit-entry')).toHaveCount(0);
+  await section.getByRole('button', { name: /異動明細/ }).click();
+  await expect(section.locator('.member-credit-entry')).toHaveCount(10);
+  await expect(section).toContainText('訂單保留');
+  await expect(section).toContainText('E2E-ORDER-001');
+  await section.getByRole('button', { name: /載入更多/ }).click();
+  await expect(section.locator('.member-credit-entry')).toHaveCount(12);
+
+  await section.getByRole('button', { name: '發放', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: '發放購物金' });
+  await dialog.getByLabel('金額').fill('500');
+  await dialog.getByLabel('原因').selectOption('other');
+  await dialog.getByRole('button', { name: '下一步確認' }).click();
+  await expect(dialog.getByRole('alert')).toContainText('必須填寫內部說明');
+  await dialog.getByLabel('內部說明（必填）').fill('開幕活動補發');
+  await dialog.getByRole('button', { name: '下一步確認' }).click();
+  await expect(dialog).toContainText('調整後餘額');
+  await expect(dialog).toContainText('NT$ 1,500');
+  await dialog.getByRole('button', { name: '確認發放' }).click();
+
+  await expect(dialog).toHaveCount(0);
+  await expect(section).toContainText('NT$ 1,500');
+  await expect(section).toContainText('開幕活動補發');
+  expect(adjustments).toHaveLength(1);
+  expect(adjustments[0]).toMatchObject({
+    p_user_id: 'user-consumer-1',
+    p_direction: 'grant',
+    p_amount: 500,
+    p_reason_code: 'other',
+    p_internal_note: '開幕活動補發',
+  });
+  expect(String(adjustments[0].p_request_id)).toMatch(/^[0-9a-f-]{20,}$/i);
+
+  await section.getByRole('button', { name: '扣除', exact: true }).click();
+  const debitDialog = page.getByRole('dialog', { name: '扣除購物金' });
+  await debitDialog.getByLabel('金額').fill('2000');
+  await debitDialog.getByRole('button', { name: '下一步確認' }).click();
+  await expect(debitDialog.getByRole('alert')).toContainText('不可超過目前可用購物金');
+  expect(adjustments).toHaveLength(1);
+});
+
 test('只有會員寫入權限才顯示刪除會員操作', async ({ page }) => {
   await mockAdminApis(page, {
     backofficeAccess: { role: 'admin', permissions: ['members.read'] },
@@ -2544,10 +2722,13 @@ test('只有會員寫入權限才顯示刪除會員操作', async ({ page }) => 
   await page.goto('/admin');
   await openAdminSection(page, /會員管理/);
   await page.locator('.admin-members-table td[data-label="姓名"]').filter({ hasText: /^測試會員$/ }).click();
-  await expect(page.getByRole('dialog', { name: '會員詳情' }).getByRole('button', { name: '刪除會員' })).toHaveCount(0);
+  const details = page.getByRole('dialog', { name: '會員詳情' });
+  await expect(details.getByRole('button', { name: '刪除會員' })).toHaveCount(0);
+  await expect(details.getByRole('region', { name: '購物金管理' })).toHaveCount(0);
 });
 
 test('營業分析與 AI 補貨只使用真實訂單統計，不套用預設銷量', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-09-24T12:00:00+08:00') });
   await page.addInitScript(() => {
     (window as any).claude = {
       complete: async (prompt: string) => {
@@ -2558,24 +2739,39 @@ test('營業分析與 AI 補貨只使用真實訂單統計，不套用預設銷�
       },
     };
   });
-  await mockAdminApis(page);
+  await mockAdminApis(page, {
+    orders: [
+      ...adminOrderRows,
+      {
+        ...adminOrderRows[1],
+        id: 'E2E-ORDER-AFTER-LAUNCH',
+        date: '2026-09-20',
+        created_at: '2026-09-20T02:00:00.000Z',
+        items: [{ product_id: 7, name: 'NK細胞活化安瓶', qty: 7, price: 6600 }],
+        total: 46200,
+      },
+    ],
+  });
 
   await page.goto('/admin');
   await openAdminSection(page, /營業分析/);
   await expect(page.getByRole('heading', { name: '營業分析' })).toBeVisible();
   await expect(page.getByText('月營業額趨勢')).toBeVisible();
-  await expect(page.getByText('NT$ 6,600').first()).toBeVisible();
+  await expect(page.getByText('NT$ 46,200').first()).toBeVisible();
 
   await openAdminSection(page, /AI 補貨建議/);
   await expect(page.getByRole('heading', { name: 'AI 補貨建議' })).toBeVisible();
   await expect(page.getByTestId('ai-product-2')).toContainText('0.0');
-  await expect(page.getByTestId('ai-product-2')).toContainText('近六個月尚無銷售紀錄');
-  await expect(page.getByTestId('ai-product-7')).toContainText('0.2');
+  await expect(page.getByTestId('ai-product-2')).toContainText('09/18 起尚無銷售紀錄');
+  await expect(page.getByTestId('ai-product-7')).toContainText('30.0');
+  await expect(page.getByTestId('ai-product-7')).toContainText('件/月均（09/18起）');
   await page.getByRole('button', { name: /開始 AI 分析/ }).first().click();
   await expect(page.getByText('AI 分析結果')).toBeVisible();
   const prompt = await page.evaluate(() => (window as any).__lastClaudePrompt || '');
-  expect(prompt).toContain('胜肽修護精華液（30ml）：庫存 2 件，近6月平均銷量 0.0 件/月，趨勢尚無銷售紀錄');
-  expect(prompt).toContain('NK細胞活化安瓶（3.5ml×10）：庫存 0 件，近6月平均銷量 0.2 件/月');
+  expect(prompt).toContain('網站於 2026-09-18 上線');
+  expect(prompt).toContain('依 7 個實際營運日換算 30 天月均');
+  expect(prompt).toContain('胜肽修護精華液（30ml）：庫存 2 件，上線後月均銷量 0.0 件/月，趨勢尚無銷售紀錄');
+  expect(prompt).toContain('NK細胞活化安瓶（3.5ml×10）：庫存 0 件，上線後月均銷量 30.0 件/月');
 });
 
 test('操作紀錄可依資料類型篩選並查看不可竄改的前後差異', async ({ page }) => {

@@ -25,7 +25,7 @@ begin
       'members.read', 'members.write',
       'promotions.manage', 'procurement.manage',
       'analytics.read', 'audit_logs.read', 'notifications.send',
-      'backorders.manage'
+      'backorders.manage', 'inventory_counts.manage', 'shopping_credit.manage'
     ));
 end;
 $$;

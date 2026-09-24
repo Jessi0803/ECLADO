@@ -305,6 +305,64 @@ input, select, textarea { font-family: var(--font); }
 .backorders-empty { display:flex; min-height:180px; flex-direction:column; align-items:center; justify-content:center; gap:7px; border:1px solid var(--border); background:var(--white); color:var(--mid); font-size:12px; }
 .backorders-empty strong { color:var(--dark); font-size:14px; font-weight:500; }
 .backorders-footnote { margin-top:16px; padding:12px 14px; border-left:3px solid var(--gold); background:var(--white); color:var(--mid); font-size:10px; line-height:1.7; }
+.backorders-section-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin:28px 0 13px; padding-top:20px; border-top:1px solid var(--border); }
+.backorders-section-heading h2 { margin:0 0 4px; font-size:17px; font-weight:500; }
+.backorders-section-heading p { margin:0; color:var(--mid); font-size:10px; }
+.backorders-section-heading > strong { color:var(--red); font-size:18px; white-space:nowrap; }
+.inventory-counts-page { min-width:0; }
+.inventory-counts-header, .inventory-count-detail-top { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin-bottom:24px; }
+.inventory-counts-header h1, .inventory-count-detail-top h1 { margin:0 0 5px; font-family:var(--font-d); font-size:28px; font-weight:400; }
+.inventory-counts-header p, .inventory-count-detail-top p { margin:0; color:var(--mid); font-size:11px; line-height:1.6; }
+.inventory-count-detail-top { align-items:center; }
+.inventory-count-detail-top > div { flex:1; }
+.inventory-count-actions { display:flex; justify-content:flex-end; gap:8px; }
+.inventory-count-back { width:38px; height:38px; border:1px solid var(--border); background:var(--white); color:var(--dark); cursor:pointer; font-size:18px; }
+.inventory-counts-list { display:grid; gap:10px; }
+.inventory-count-session-card { display:flex; align-items:center; justify-content:space-between; gap:20px; width:100%; padding:20px; border:1px solid var(--border); background:var(--white); color:var(--dark); text-align:left; cursor:pointer; }
+.inventory-count-session-card:hover { border-color:var(--gold); }
+.inventory-count-session-card > div:first-child strong { display:block; margin-bottom:6px; font-size:14px; }
+.inventory-count-session-card > div:first-child span { color:var(--mid); font-size:10px; }
+.inventory-count-session-summary { display:flex; align-items:center; justify-content:flex-end; gap:13px; color:var(--mid); font-size:10px; }
+.inventory-count-status { display:inline-flex; align-items:center; padding:5px 9px; border:1px solid var(--gold); color:var(--gold); font-size:10px; white-space:nowrap; }
+.inventory-count-status.completed { border-color:var(--green); color:var(--green); }
+.inventory-counts-empty { display:flex; min-height:150px; flex-direction:column; align-items:center; justify-content:center; gap:7px; border:1px solid var(--border); background:var(--white); color:var(--mid); font-size:11px; }
+.inventory-counts-empty strong { color:var(--dark); font-size:13px; }
+.inventory-count-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:16px; }
+.inventory-count-stats button { min-height:92px; padding:16px; border:1px solid var(--border); background:var(--white); cursor:pointer; }
+.inventory-count-stats button.active { border-color:var(--blue); box-shadow:inset 0 0 0 1px var(--blue); }
+.inventory-count-stats strong { display:block; margin-bottom:7px; font-size:24px; font-weight:500; }
+.inventory-count-stats span { color:var(--mid); font-size:10px; }
+.inventory-count-stats .gain, .variance-gain { color:var(--green); }
+.inventory-count-stats .loss, .variance-loss { color:var(--red); }
+.inventory-count-toolbar { display:grid; grid-template-columns:minmax(240px,1fr) 150px auto; gap:8px; margin-bottom:14px; }
+.inventory-count-toolbar input, .inventory-count-toolbar select, .inventory-count-toolbar button { min-height:40px; border:1px solid var(--border); background:var(--white); padding:0 12px; color:var(--dark); font:inherit; font-size:11px; }
+.inventory-count-toolbar button { cursor:pointer; }
+.inventory-count-toolbar button.active { border-color:var(--blue); color:var(--blue); }
+.inventory-count-table-wrap { overflow-x:auto; border:1px solid var(--border); background:var(--white); }
+.inventory-count-table-note { padding:13px 15px; border-bottom:1px solid var(--border); color:var(--mid); font-size:10px; }
+.inventory-count-table { width:100%; min-width:880px; border-collapse:collapse; }
+.inventory-count-table th { padding:11px 13px; border-bottom:1px solid var(--border); background:var(--off); color:var(--mid); font-size:10px; font-weight:500; text-align:left; white-space:nowrap; }
+.inventory-count-table td { padding:10px 13px; border-bottom:1px solid var(--border); font-size:11px; vertical-align:middle; }
+.inventory-count-table tbody tr:last-child td { border-bottom:0; }
+.inventory-count-table td:first-child strong { display:block; margin-bottom:3px; font-size:11px; }
+.inventory-count-table td:first-child span { color:var(--mid); font-size:9px; }
+.inventory-count-table input { width:92px; height:34px; border:1px solid var(--border); padding:0 9px; font:inherit; text-align:right; }
+.inventory-count-table input:focus { border-color:var(--blue); outline:none; box-shadow:0 0 0 1px var(--blue); }
+.inventory-kind { display:inline-flex; padding:4px 7px; border:1px solid var(--border); color:var(--mid); font-size:9px; white-space:nowrap; }
+.inventory-kind.gift { border-color:var(--gold); color:var(--gold); }
+.inventory-count-shortages { margin-top:18px; padding:18px; border:1px solid var(--border); background:var(--white); }
+.inventory-count-shortages h2 { margin:0 0 5px; font-size:15px; font-weight:500; }
+.inventory-count-shortages > p { margin:0 0 14px; color:var(--mid); font-size:10px; }
+.inventory-count-shortages > div { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-top:1px solid var(--border); font-size:10px; }
+.inventory-count-shortages > div span { color:var(--red); }
+.inventory-count-modal { position:fixed; inset:0; z-index:1200; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(0,0,0,.42); }
+.inventory-count-modal-card { width:min(460px,100%); padding:24px; border:1px solid var(--border); background:var(--white); box-shadow:0 18px 50px rgba(0,0,0,.18); }
+.inventory-count-modal-card h2 { margin:0 0 7px; font-size:19px; font-weight:500; }
+.inventory-count-modal-card p { margin:0 0 20px; color:var(--mid); font-size:10px; line-height:1.7; }
+.inventory-count-modal-card label { display:block; margin-bottom:7px; color:var(--mid); font-size:10px; }
+.inventory-count-modal-card input { width:100%; height:42px; padding:0 12px; border:1px solid var(--border); font:inherit; font-size:12px; }
+.inventory-count-modal-card input:focus { border-color:var(--blue); outline:none; box-shadow:0 0 0 1px var(--blue); }
+.inventory-count-modal-card > div { display:flex; justify-content:flex-end; gap:8px; margin-top:20px; }
 .procurement-loading { padding: 60px; text-align: center; color: var(--mid); font-size: 13px; }
 .procurement-error { margin-bottom: 18px; padding: 11px 14px; border: 1px solid oklch(0.60 0.18 25 / 0.3); background: oklch(0.60 0.18 25 / 0.08); color: var(--red); font-size: 12px; }
 .procurement-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 26px; }
@@ -788,3 +846,333 @@ input, select, textarea { font-family: var(--font); }
 .sidebar-star:hover { color: var(--gold); }
 .sidebar-star.is-starred { color: var(--gold); opacity: 1; }
 @media (hover: none) { .sidebar-star { opacity: 0.6; } }
+
+@media (max-width: 700px) {
+  .inventory-counts-header { align-items:stretch; flex-direction:column; }
+  .inventory-counts-header > button { width:100%; }
+  .inventory-count-detail-top { display:grid; grid-template-columns:auto 1fr; }
+  .inventory-count-detail-top > .inventory-count-actions, .inventory-count-detail-top > .inventory-count-status { grid-column:1 / -1; width:100%; justify-content:center; }
+  .inventory-count-actions > button { flex:1; }
+  .inventory-count-stats { grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+  .inventory-count-stats button { min-height:76px; padding:12px; }
+  .inventory-count-stats strong { font-size:20px; }
+  .inventory-count-toolbar { grid-template-columns:1fr 1fr; }
+  .inventory-count-toolbar input { grid-column:1 / -1; }
+  .inventory-count-session-card { align-items:flex-start; flex-direction:column; padding:16px; }
+  .inventory-count-session-summary { flex-wrap:wrap; justify-content:flex-start; }
+}
+.member-credit-section {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--off);
+}
+
+.member-credit-heading,
+.member-credit-balances,
+.member-credit-actions,
+.member-credit-modal-actions,
+.member-credit-balance-preview {
+  display: flex;
+  align-items: center;
+}
+
+.member-credit-heading {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.member-credit-eyebrow,
+.member-credit-history-title {
+  margin-bottom: 8px;
+  color: var(--mid);
+  font-size: 11px;
+  letter-spacing: .08em;
+}
+
+.member-credit-balances {
+  align-items: flex-start;
+  gap: 20px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.member-credit-balances span {
+  display: grid;
+  gap: 3px;
+}
+
+.member-credit-balances small {
+  color: var(--mid);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.member-credit-actions {
+  gap: 6px;
+}
+
+.member-credit-actions button,
+.member-credit-modal-actions button {
+  border: 1px solid var(--dark);
+  background: var(--dark);
+  color: #fff;
+  padding: 9px 14px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.member-credit-actions button:last-child {
+  background: var(--white);
+  color: var(--dark);
+}
+
+.member-credit-actions button:disabled,
+.member-credit-modal-actions button:disabled {
+  cursor: wait;
+  opacity: .45;
+}
+
+.member-credit-notice,
+.member-credit-error {
+  margin-top: 12px;
+  color: var(--red);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.member-credit-history {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.member-credit-history-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--dark);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+}
+
+.member-credit-history-toggle span:last-child {
+  color: var(--mid);
+  font-size: 11px;
+}
+
+.member-credit-history-content {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.member-credit-load-more {
+  width: 100%;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  padding: 9px 12px;
+  color: var(--dark);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.member-credit-history-count {
+  margin-top: 8px;
+  color: var(--mid);
+  font-size: 10px;
+  text-align: center;
+}
+
+.member-credit-empty {
+  color: var(--mid);
+  font-size: 11px;
+}
+
+.member-credit-entry {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.member-credit-entry:first-of-type {
+  border-top: 0;
+}
+
+.member-credit-entry > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.member-credit-entry span,
+.member-credit-entry time {
+  color: var(--mid);
+  overflow-wrap: anywhere;
+}
+
+.member-credit-entry-value {
+  flex: 0 0 126px;
+  text-align: right;
+}
+
+.member-credit-modal-backdrop {
+  position: fixed;
+  z-index: 1200;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(0 0 0 / .45);
+}
+
+.member-credit-modal {
+  width: min(460px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  background: var(--white);
+  padding: 22px;
+  box-shadow: 0 24px 70px rgb(0 0 0 / .18);
+}
+
+.member-credit-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.member-credit-modal-header h3 {
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.member-credit-modal-header button {
+  border: 0;
+  background: transparent;
+  color: var(--mid);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.member-credit-field {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 15px;
+  color: var(--mid);
+  font-size: 11px;
+}
+
+.member-credit-field input,
+.member-credit-field select,
+.member-credit-field textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--white);
+  padding: 11px 12px;
+  color: var(--dark);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.member-credit-field textarea {
+  resize: vertical;
+}
+
+.member-credit-field input:focus,
+.member-credit-field select:focus,
+.member-credit-field textarea:focus {
+  border-color: var(--dark);
+}
+
+.member-credit-balance-preview {
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  background: var(--off);
+  font-size: 12px;
+}
+
+.member-credit-modal-actions {
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.member-credit-modal-actions button {
+  min-width: 110px;
+}
+
+.member-credit-modal-actions .secondary {
+  border-color: var(--border);
+  background: var(--white);
+  color: var(--dark);
+}
+
+.member-credit-confirmation > p {
+  margin-bottom: 14px;
+  color: var(--red);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.member-credit-confirmation dl {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--border);
+}
+
+.member-credit-confirmation dl > div {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.member-credit-confirmation dl > div:last-child {
+  border-bottom: 0;
+}
+
+.member-credit-confirmation dt {
+  color: var(--mid);
+}
+
+.member-credit-confirmation dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+@media (max-width: 520px) {
+  .member-credit-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .member-credit-actions,
+  .member-credit-actions button {
+    width: 100%;
+  }
+
+  .member-credit-entry {
+    flex-direction: column;
+  }
+
+  .member-credit-entry-value {
+    flex-basis: auto;
+    text-align: left;
+  }
+}

@@ -159,8 +159,8 @@ export default function OrderPrintPreview({ order, onClose }) {
           <div><span>小計</span><strong>{money(subtotal)}</strong></div>
           <div><span>運費</span><strong>{shipping === 0 ? '—' : money(shipping)}</strong></div>
           {discount > 0 && <div><span>{order.couponName ? '優惠券折抵' : '優惠折抵'}</span><strong>{negativeMoney(discount)}</strong></div>}
-          {shoppingCreditDiscount > 0 && <div><span>購物金折抵</span><strong>{negativeMoney(shoppingCreditDiscount)}</strong></div>}
-          <div className="order-print-total"><span>應付總計</span><strong>{money(order.total)}</strong></div>
+          {shoppingCreditDiscount > 0 && <div><span>購物金支付</span><strong>{negativeMoney(shoppingCreditDiscount)}</strong></div>}
+          <div className="order-print-total"><span>應付總計</span><strong>{money(order.paymentAmount ?? order.total)}</strong></div>
         </section>
 
         {(order.invoiceType || order.invoiceNumber || order.note) && (

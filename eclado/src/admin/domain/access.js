@@ -11,6 +11,8 @@ export const BACKOFFICE_PERMISSIONS = Object.freeze({
   AUDIT_LOGS_READ: 'audit_logs.read',
   NOTIFICATIONS_SEND: 'notifications.send',
   BACKORDERS_MANAGE: 'backorders.manage',
+  INVENTORY_COUNTS_MANAGE: 'inventory_counts.manage',
+  SHOPPING_CREDIT_MANAGE: 'shopping_credit.manage',
 });
 
 export const BACKOFFICE_ROLE_LABELS = Object.freeze({
@@ -26,6 +28,7 @@ export const PAGE_PERMISSIONS = Object.freeze({
   products: BACKOFFICE_PERMISSIONS.CATALOG_READ,
   inventory: BACKOFFICE_PERMISSIONS.CATALOG_READ,
   backorders: BACKOFFICE_PERMISSIONS.BACKORDERS_MANAGE,
+  inventory_counts: BACKOFFICE_PERMISSIONS.INVENTORY_COUNTS_MANAGE,
   procurement: BACKOFFICE_PERMISSIONS.PROCUREMENT_MANAGE,
   promotions: BACKOFFICE_PERMISSIONS.PROMOTIONS_MANAGE,
   ai: BACKOFFICE_PERMISSIONS.PROCUREMENT_MANAGE,

@@ -1429,6 +1429,58 @@ test('登入會員結帳會寫入訂單 payload 與 user_id，付款前不扣庫
   expect(orderEmails).toEqual([]);
 });
 
+test('登入會員可選擇購物金支付商品金額並保留至少一元外部付款', async ({ page }) => {
+  let pricingRequest: Record<string, unknown> | null = null;
+  let capturedOrder: Record<string, unknown> | null = null;
+  const paymentRequests: Record<string, unknown>[] = [];
+  await mockEcladoApis(page, {
+    authUser: authUser('credit-checkout@example.com'),
+    profiles: [profile('consumer', 'credit-checkout@example.com')],
+    shoppingCreditByMember: {
+      [TEST_USER_ID]: { available_balance: 1000, reserved_balance: 0, entries: [] },
+    },
+    onOrderPricingRequest: request => { pricingRequest = request; },
+    onOrderInsert: order => { capturedOrder = order; },
+    onPaymentRequest: request => paymentRequests.push(request),
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await openCart(page);
+  await proceedToCheckout(page);
+
+  await page.getByLabel('收件人姓名（請填寫證件上的姓名）').fill('購物金會員');
+  await page.getByLabel('手機號碼').fill('0912345678');
+  await page.getByLabel('電子信箱').fill('credit-checkout@example.com');
+  await page.getByPlaceholder('縣市').fill('台北市');
+  await page.getByPlaceholder('區域').fill('信義區');
+  await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('購物金路 1 號');
+  await page.getByRole('button', { name: /繼續確認付款/ }).click();
+
+  const creditSwitch = page.getByRole('switch', { name: '使用購物金' });
+  await expect(creditSwitch).toHaveAttribute('aria-checked', 'false');
+  await expect(page.getByText('本次最多可使用 NT$ 1,000')).toBeVisible();
+  await creditSwitch.click();
+  await expect(page.getByLabel('購物金使用金額')).toHaveValue('1000');
+  await page.getByLabel('購物金使用金額').fill('500');
+  await expect(page.getByText('購物金支付', { exact: true })).toBeVisible();
+  await expect(page.getByText('−NT$ 500', { exact: true })).toBeVisible();
+  await expect(page.getByText('尚需付款', { exact: true })).toBeVisible();
+  await expect(page.getByText('NT$ 3,202', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: /^建立付款單$/ }).click();
+  await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
+  expect(pricingRequest).toMatchObject({ p_shopping_credit_amount: 500 });
+  expect(capturedOrder).toMatchObject({
+    total: 3702,
+    shopping_credit_amount: 500,
+    payment_amount: 3202,
+  });
+  expect(paymentRequests).toHaveLength(1);
+  expect(paymentRequests[0].amount).toBe(3202);
+});
+
 test('全部為客訂規格時可選現場自取且後端訂單運費為零', async ({ page }) => {
   let capturedOrder: Record<string, unknown> | null = null;
   await mockEcladoApis(page, {
@@ -2005,6 +2057,47 @@ test('會員專區顯示自己的訂單與托運單號', async ({ page }) => {
     'href',
     'https://htm.sf-express.com/tw/tc/',
   );
+});
+
+test('會員專區顯示可用購物金並以收合明細呈現公開異動原因', async ({ page }) => {
+  const entries = Array.from({ length: 12 }, (_, index) => ({
+    id: `member-credit-${index + 1}`,
+    event_type: index === 0 ? 'grant' : 'reserve',
+    amount: index === 0 ? 500 : 10,
+    available_delta: index === 0 ? 500 : -10,
+    reserved_delta: index === 0 ? 0 : 10,
+    available_balance_after: 500 - index * 10,
+    reason_code: index === 0 ? 'campaign_grant' : 'order_checkout',
+    order_id: index === 0 ? null : `ECL-CREDIT-${index}`,
+    created_at: `2026-09-${String(24 - index).padStart(2, '0')}T06:00:00.000Z`,
+  }));
+  await mockEcladoApis(page, {
+    authUser: authUser('member@example.com'),
+    profiles: [profile('consumer')],
+    shoppingCreditByMember: {
+      [TEST_USER_ID]: {
+        available_balance: 390,
+        reserved_balance: 110,
+        entries,
+      },
+    },
+  });
+
+  await page.goto('/account');
+  const panel = page.getByRole('region', { name: '購物金' });
+  await expect(panel.getByText('NT$ 390')).toBeVisible();
+  await expect(panel.getByText('訂單保留')).toHaveCount(0);
+  await expect(panel.getByText(/訂單保留餘額/)).toHaveCount(0);
+
+  await panel.getByRole('button', { name: '查看異動明細（12）' }).click();
+  await expect(panel.getByText('購物金入帳')).toBeVisible();
+  await expect(panel.getByText('原因：活動贈送')).toBeVisible();
+  await expect(panel.getByText('訂單保留')).toHaveCount(9);
+  await expect(panel.getByRole('button', { name: '載入更多' })).toBeVisible();
+
+  await panel.getByRole('button', { name: '載入更多' }).click();
+  await expect(panel.getByText('訂單保留')).toHaveCount(11);
+  await expect(panel.getByRole('button', { name: '載入更多' })).toHaveCount(0);
 });
 
 test('師資會員專區顯示依資格起算日計算的季度採購統計', async ({ page }) => {

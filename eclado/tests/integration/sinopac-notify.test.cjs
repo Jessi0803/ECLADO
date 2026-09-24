@@ -72,6 +72,8 @@ test('Sinopac notify marks order paid and sends LINE payment notice', async () =
         id: 'ORDER-PAID-001',
         status: 'awaiting_confirm',
         total: 4130,
+        shopping_credit_amount: 1000,
+        payment_amount: 3130,
         user_id: 'user-001',
         member: '測試會員',
       }]);
@@ -86,6 +88,8 @@ test('Sinopac notify marks order paid and sends LINE payment notice', async () =
         id: 'ORDER-PAID-001',
         status: 'paid',
         total: 4130,
+        shopping_credit_amount: 1000,
+        payment_amount: 3130,
         user_id: 'user-001',
         member: '測試會員',
       }]);
@@ -103,7 +107,8 @@ test('Sinopac notify marks order paid and sends LINE payment notice', async () =
       assert.equal(body.to, 'U1234567890');
       assert.match(body.messages[0].text, /訂單已付款完成/);
       assert.match(body.messages[0].text, /訂單編號：ORDER-PAID-001/);
-      assert.match(body.messages[0].text, /付款金額：NT\$ 4,130/);
+      assert.match(body.messages[0].text, /付款金額：NT\$ 3,130/);
+      assert.match(body.messages[0].text, /購物金支付：NT\$ 1,000/);
       return jsonResponse(200, { ok: true });
     }
 
@@ -115,7 +120,7 @@ test('Sinopac notify marks order paid and sends LINE payment notice', async () =
   try {
     await sinopacNotify({
       method: 'POST',
-      body: { OrderNo: 'ORDER-PAID-001', Status: 'S', Amount: 4130 },
+      body: { OrderNo: 'ORDER-PAID-001', Status: 'S', Amount: 3130 },
     }, res);
   } finally {
     global.fetch = originalFetch;

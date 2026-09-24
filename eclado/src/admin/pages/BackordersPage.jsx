@@ -23,20 +23,28 @@ function formatTime(value) {
 
 export default function BackordersPage({ onInventoryChanged }) {
   const [items, setItems] = useState([]);
+  const [giftItems, setGiftItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [allocatingId, setAllocatingId] = useState(null);
+  const [allocatingGiftId, setAllocatingGiftId] = useState(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
   async function load() {
     setLoading(true);
-    const { data, error: loadError } = await supabase.rpc('get_backorder_management_data');
-    if (loadError) {
-      setError('無法載入待補商品：' + (loadError.message || '請確認庫存配置 migration 已套用'));
+    const [merchandiseResult, giftResult] = await Promise.all([
+      supabase.rpc('get_backorder_management_data'),
+      supabase.rpc('get_inventory_count_gift_shortages'),
+    ]);
+    if (merchandiseResult.error || giftResult.error) {
+      const loadError = merchandiseResult.error || giftResult.error;
+      setError('無法載入待補商品：' + (loadError.message || '請確認庫存配置與盤點 SQL 已套用'));
       setItems([]);
+      setGiftItems([]);
     } else {
       setError('');
-      setItems(Array.isArray(data) ? data : []);
+      setItems(Array.isArray(merchandiseResult.data) ? merchandiseResult.data : []);
+      setGiftItems(Array.isArray(giftResult.data) ? giftResult.data : []);
     }
     setLoading(false);
   }
@@ -71,8 +79,36 @@ export default function BackordersPage({ onInventoryChanged }) {
     setAllocatingId(null);
   }
 
+  async function allocateGift(item) {
+    const stock = number(item.available_stock);
+    if (stock <= 0) return;
+    const confirmed = window.confirm(
+      `確定將「${item.sku} · ${item.product_name} · ${item.variant_name}」目前可用的 ${stock} 件贈品庫存，依付款時間 FIFO 補回受影響訂單嗎？`,
+    );
+    if (!confirmed) return;
+    setAllocatingGiftId(String(item.variant_id));
+    setNotice('');
+    setError('');
+    const { data, error: allocationError } = await supabase.rpc('allocate_inventory_count_gift_shortages', {
+      p_variant_id: Number(item.variant_id),
+    });
+    if (allocationError) {
+      setError('贈品 FIFO 分配失敗：' + (allocationError.message || '請稍後再試'));
+    } else {
+      const allocated = number(data?.allocated_qty);
+      const affected = Array.isArray(data?.affected_orders) ? data.affected_orders.length : 0;
+      setNotice(allocated > 0
+        ? `已補回 ${allocated} 件贈品，共更新 ${affected} 張訂單。`
+        : '目前沒有可分配的贈品庫存，待處理數量未變更。');
+      await load();
+      await onInventoryChanged?.();
+    }
+    setAllocatingGiftId(null);
+  }
+
   const totalMissing = items.reduce((sum, item) => sum + number(item.total_backorder_qty), 0);
   const affectedOrders = new Set(items.flatMap(item => (item.orders || []).map(order => order.order_id))).size;
+  const totalGiftMissing = giftItems.reduce((sum, item) => sum + number(item.total_shortage_qty), 0);
 
   return (
     <div className="backorders-page">
@@ -95,9 +131,9 @@ export default function BackordersPage({ onInventoryChanged }) {
 
       {loading ? (
         <div className="backorders-empty">待補庫存載入中...</div>
-      ) : items.length === 0 ? (
+      ) : items.length === 0 && giftItems.length === 0 ? (
         <div className="backorders-empty"><strong>目前沒有待補商品</strong><span>已付款訂單的庫存皆已配置完成。</span></div>
-      ) : (
+      ) : items.length > 0 ? (
         <div className="backorders-list">
           {items.map(item => {
             const stock = number(item.available_stock);
@@ -144,7 +180,33 @@ export default function BackordersPage({ onInventoryChanged }) {
             );
           })}
         </div>
-      )}
+      ) : null}
+
+      {!loading && giftItems.length > 0 && <>
+        <div className="backorders-section-heading">
+          <div><h2>贈品待處理</h2><p>盤點發現的贈品短缺；補入贈品庫存後，依原付款順位補回訂單。</p></div>
+          <strong>{totalGiftMissing} 件</strong>
+        </div>
+        <div className="backorders-list">
+          {giftItems.map(item => {
+            const stock = number(item.available_stock);
+            const missing = number(item.total_shortage_qty);
+            const running = allocatingGiftId === String(item.variant_id);
+            return <section className="backorder-card" key={`gift-${item.variant_id}`}>
+              <div className="backorder-card-summary">
+                <div className="backorder-product"><strong>{item.sku} · {item.product_name} · {item.variant_name}</strong><span>{item.order_count} 張訂單等待補回贈品</span></div>
+                <div className="backorder-quantity"><span>贈品庫存</span><strong>{stock}</strong></div>
+                <div className="backorder-quantity missing"><span>待處理</span><strong>{missing}</strong></div>
+                <button type="button" className="admin-primary-btn" disabled={stock <= 0 || running} onClick={() => allocateGift(item)}>{running ? '分配中...' : stock > 0 ? '依 FIFO 補回' : '目前無庫存'}</button>
+              </div>
+              <div className="table-scroll backorder-orders-wrap"><table className="responsive-admin-table backorder-orders-table">
+                <thead><tr>{['順位', '訂單編號', '狀態', '付款／配置時間', '缺少贈品'].map(label => <th key={label}>{label}</th>)}</tr></thead>
+                <tbody>{(item.orders || []).map((order, index) => <tr key={order.shortage_id || `${order.order_id}-${index}`}><td data-label="順位">{index + 1}</td><td data-label="訂單編號"><strong>{order.order_id}</strong></td><td data-label="狀態"><Badge status={order.order_status} /></td><td data-label="付款／配置時間">{formatTime(order.priority_at)}</td><td data-label="缺少贈品"><strong className="backorder-missing-number">{number(order.shortage_qty)}</strong></td></tr>)}</tbody>
+              </table></div>
+            </section>;
+          })}
+        </div>
+      </>}
 
       <div className="backorders-footnote">
         叫貨單標記「已到貨」仍只更新叫貨狀態與到貨時間，不會自動增加規格庫存；請先於「商品 &amp; 庫存」確認實際入庫數量，再回到此頁分配。

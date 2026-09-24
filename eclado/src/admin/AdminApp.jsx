@@ -15,6 +15,7 @@ import Analytics from './pages/AnalyticsPage.jsx';
 import AuditLogsPage from './pages/AuditLogsPage.jsx';
 import Catalog from './pages/CatalogPage.jsx';
 import BackordersPage from './pages/BackordersPage.jsx';
+import InventoryCountsPage from './pages/InventoryCountsPage.jsx';
 import Dashboard from './pages/DashboardPage.jsx';
 import Members from './pages/MembersPage.jsx';
 import Orders from './pages/OrdersPage.jsx';
@@ -77,6 +78,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
   const canWriteMembers = hasPermission(BACKOFFICE_PERMISSIONS.MEMBERS_WRITE);
   const canReadCatalog = hasPermission(BACKOFFICE_PERMISSIONS.CATALOG_READ);
   const canManageProcurementCost = hasPermission(BACKOFFICE_PERMISSIONS.PROCUREMENT_MANAGE);
+  const canManageShoppingCredit = hasPermission(BACKOFFICE_PERMISSIONS.SHOPPING_CREDIT_MANAGE);
 
   async function sendApplicationNotice(id) {
     try {
@@ -615,13 +617,14 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
       case 'audit': return <AuditLogsPage />;
       case 'catalog': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'backorders': return <BackordersPage onInventoryChanged={fetchAll} />;
+      case 'inventory_counts': return <InventoryCountsPage adminUserId={adminUserId} isSuperAdmin={backofficeAccess?.role === 'super_admin'} onInventoryChanged={fetchAll} />;
       // 舊路徑相容，避免有人記住 /admin#products 之類的
       case 'products':
       case 'inventory': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'promotions': return <Promotions products={products} />;
       case 'procurement': return <ProcurementPage />;
-      case 'members': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={membersDefaultFilter} memberNotes={memberNotes} onSaveMemberNote={canWriteMembers ? saveMemberNote : null} focusMemberId={crossLink?.memberId || ''} backToOrderId={crossLink?.backOrderId || ''} onOpenOrder={canReadOrders ? openOrderFromMember : null} onClearCrossLink={() => setCrossLink(null)} />;
-      case 'applications': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter="app_pending" />;
+      case 'members': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={membersDefaultFilter} memberNotes={memberNotes} onSaveMemberNote={canWriteMembers ? saveMemberNote : null} focusMemberId={crossLink?.memberId || ''} backToOrderId={crossLink?.backOrderId || ''} onOpenOrder={canReadOrders ? openOrderFromMember : null} onClearCrossLink={() => setCrossLink(null)} canManageShoppingCredit={canManageShoppingCredit} />;
+      case 'applications': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter="app_pending" canManageShoppingCredit={canManageShoppingCredit} />;
       case 'analytics': return <Analytics orders={orders} />;
       case 'ai': return <AIReorder products={activeProducts} orders={orders} />;
       default: return null;
