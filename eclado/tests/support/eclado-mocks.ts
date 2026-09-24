@@ -35,7 +35,7 @@ export const adminOrderRows = [
     id: 'E2E-ORDER-001',
     member: '測試會員',
     type: 'consumer',
-    items: [{ name: '胜肽修護精華液', qty: 1, price: 3980 }],
+    items: [{ name: '胜肽修護精華液', size: '30ml', qty: 1, price: 3980 }],
     total: 3980,
     status: 'awaiting_confirm',
     date: '2026-05-21',

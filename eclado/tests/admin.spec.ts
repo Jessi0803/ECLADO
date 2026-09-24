@@ -623,7 +623,9 @@ test('訂單管理可查看明細並更新狀態', async ({ page }) => {
   await expect(page.getByText('付款碼')).toHaveCount(0);
   await expect(page.getByText('E2E-ORDER-001').first()).toBeVisible();
   await page.getByText('E2E-ORDER-001').click();
-  await expect(page.getByText('訂單詳情')).toBeVisible();
+  const detailPanel = page.getByRole('dialog', { name: '訂單詳情' });
+  await expect(detailPanel).toBeVisible();
+  await expect(detailPanel.getByText('30ml', { exact: true })).toBeVisible();
   await expect(page.getByText('付款嘗試：2 次')).toBeVisible();
   await expect(page.getByText('金流狀態：1C500').first()).toBeVisible();
   await expect(page.getByText('金流說明：授權未完成').first()).toBeVisible();

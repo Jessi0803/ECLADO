@@ -27,6 +27,16 @@ function getOrderDisplayType(order) {
   return order?.user_id ? order.type : 'guest';
 }
 
+function getOrderItemSpecification(item) {
+  return [
+    item?.size,
+    item?.variant_name,
+    item?.variantName,
+    item?.variant_size,
+    item?.specification,
+  ].map(value => String(value ?? '').trim()).find(Boolean) || '';
+}
+
 function getStatusFilter(status) {
   if (status === 'ready_for_pickup') return 'shipped';
   if (status === 'picked_up') return 'delivered';
@@ -729,24 +739,28 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
                 <div style={{ fontSize:10, color:'var(--mid)' }}>庫存配置</div>
               )}
             </div>
-            {selected.items.map((item, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems:'flex-start', gap:12, marginBottom: 10, fontSize: 12 }}>
-                <div style={{ minWidth:0 }}>
-                  <span>{(item.is_gift || item.line_type === 'gift') && <strong style={{ color:'var(--gold)', marginRight:6, fontSize:10 }}>贈品</strong>}{item.name} × {item.qty}</span>
-                  {INVENTORY_ACTIVE_STATUSES.has(selected.status) && (
-                    item.inventoryAllocation?.allocatedQty == null
-                      ? <div data-testid="order-item-inventory-unavailable" style={{ marginTop:4, fontSize:10, color:'var(--mid)' }}>尚無庫存配置紀錄</div>
-                      : (
-                        <div data-testid="order-item-inventory-allocation" style={{ display:'flex', gap:10, flexWrap:'wrap', marginTop:4, fontSize:10 }}>
-                          <span style={{ color:'var(--green)' }}>現貨 {item.inventoryAllocation.allocatedQty}</span>
-                          <span style={{ color:item.inventoryAllocation.backorderQty > 0 ? 'var(--red)' : 'var(--mid)' }}>缺少 {item.inventoryAllocation.backorderQty}</span>
-                        </div>
-                      )
-                  )}
+            {selected.items.map((item, i) => {
+              const specification = getOrderItemSpecification(item);
+              return (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems:'flex-start', gap:12, marginBottom: 10, fontSize: 12 }}>
+                  <div style={{ minWidth:0 }}>
+                    <div>{(item.is_gift || item.line_type === 'gift') && <strong style={{ color:'var(--gold)', marginRight:6, fontSize:10 }}>贈品</strong>}{item.name} × {item.qty}</div>
+                    {specification && <div style={{ marginTop:3, fontSize:10, color:'var(--mid)' }}>{specification}</div>}
+                    {INVENTORY_ACTIVE_STATUSES.has(selected.status) && (
+                      item.inventoryAllocation?.allocatedQty == null
+                        ? <div data-testid="order-item-inventory-unavailable" style={{ marginTop:4, fontSize:10, color:'var(--mid)' }}>尚無庫存配置紀錄</div>
+                        : (
+                          <div data-testid="order-item-inventory-allocation" style={{ display:'flex', gap:10, flexWrap:'wrap', marginTop:4, fontSize:10 }}>
+                            <span style={{ color:'var(--green)' }}>現貨 {item.inventoryAllocation.allocatedQty}</span>
+                            <span style={{ color:item.inventoryAllocation.backorderQty > 0 ? 'var(--red)' : 'var(--mid)' }}>缺少 {item.inventoryAllocation.backorderQty}</span>
+                          </div>
+                        )
+                    )}
+                  </div>
+                  <span style={{ fontWeight: 500, color:(item.is_gift || item.line_type === 'gift') ? 'var(--gold)' : undefined }}>{(item.is_gift || item.line_type === 'gift') ? '免費' : `NT$ ${(item.price * item.qty).toLocaleString()}`}</span>
                 </div>
-                <span style={{ fontWeight: 500, color:(item.is_gift || item.line_type === 'gift') ? 'var(--gold)' : undefined }}>{(item.is_gift || item.line_type === 'gift') ? '免費' : `NT$ ${(item.price * item.qty).toLocaleString()}`}</span>
-              </div>
-            ))}
+              );
+            })}
             {selected.subtotal != null && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 8, color: 'var(--mid)' }}>
                 <span>商品小計</span><span>NT$ {Number(selected.subtotal).toLocaleString()}</span>
