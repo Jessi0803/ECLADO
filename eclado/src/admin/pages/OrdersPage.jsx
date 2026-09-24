@@ -779,9 +779,23 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
               <span>運費</span>
               <span>{selected.shipping === 0 ? '免運' : `NT$ ${Number(selected.shipping).toLocaleString()}`}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, marginTop: 8, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-              <span>合計</span><span>NT$ {selected.total.toLocaleString()}</span>
-            </div>
+            {selected.shoppingCreditDiscount > 0 ? (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 8, borderTop: '1px solid var(--border)', paddingTop: 10, color: 'var(--mid)' }}>
+                  <span>訂單總額</span><span>NT$ {Number(selected.total).toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 6, color: 'var(--red)' }}>
+                  <span>購物金支付</span><span>−NT$ {Number(selected.shoppingCreditDiscount).toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, marginTop: 8, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+                  <span>尚需付款</span><span>NT$ {Number(selected.paymentAmount).toLocaleString()}</span>
+                </div>
+              </>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, marginTop: 8, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+                <span>合計</span><span>NT$ {Number(selected.total).toLocaleString()}</span>
+              </div>
+            )}
           </div>
           {selected.status !== 'cancelled' && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

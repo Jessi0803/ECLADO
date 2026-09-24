@@ -705,6 +705,32 @@ test('訂單詳情顯示優惠券名稱與遮罩代碼', async ({ page }) => {
   await expect(page.getByText('優惠券折抵（新客複合券 · WEL****）')).toBeVisible();
 });
 
+test('訂單詳情分開顯示訂單總額、購物金支付與尚需付款', async ({ page }) => {
+  await mockAdminApis(page, {
+    orders: [{
+      ...adminOrderRows[0],
+      id: 'E2E-SHOPPING-CREDIT-ORDER',
+      subtotal: 5500,
+      discount: 0,
+      total: 5620,
+      shopping_credit_amount: 300,
+      payment_amount: 5320,
+      pricing_snapshot: { shipping: 120, shopping_credit_amount: 300, payment_amount: 5320 },
+    }],
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByText('E2E-SHOPPING-CREDIT-ORDER').click();
+  const detailPanel = page.getByRole('dialog', { name: '訂單詳情' });
+  await expect(detailPanel.getByText('訂單總額')).toBeVisible();
+  await expect(detailPanel.getByText('NT$ 5,620')).toBeVisible();
+  await expect(detailPanel.getByText('購物金支付')).toBeVisible();
+  await expect(detailPanel.getByText('−NT$ 300')).toBeVisible();
+  await expect(detailPanel.getByText('尚需付款')).toBeVisible();
+  await expect(detailPanel.getByText('NT$ 5,320')).toBeVisible();
+});
+
 test('訂單詳情顯示發票快照並可獨立儲存人工發票號碼', async ({ page }) => {
   const invoiceSaves: Array<{ orderId: string; invoiceNumber: string | null }> = [];
   await mockAdminApis(page, {

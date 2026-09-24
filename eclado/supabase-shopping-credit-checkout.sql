@@ -24,10 +24,50 @@ returns trigger
 language plpgsql
 set search_path = ''
 as $$
+declare
+  requested_credit_text text;
+  requested_credit bigint := 0;
+  merchandise_total numeric;
+  maximum_credit bigint;
 begin
-  if new.payment_amount is null then
-    new.payment_amount := new.total - coalesce(new.shopping_credit_amount, 0);
+  requested_credit_text := current_setting(
+    'app.eclado_order_shopping_credit_amount',
+    true
+  );
+  if nullif(requested_credit_text, '') is not null then
+    requested_credit := requested_credit_text::bigint;
   end if;
+
+  if requested_credit < 0 then
+    raise exception 'Shopping credit amount cannot be negative' using errcode = '22023';
+  end if;
+
+  merchandise_total := greatest(
+    0,
+    coalesce(new.subtotal, 0) - coalesce(new.discount, 0)
+  );
+  maximum_credit := greatest(
+    0,
+    least(floor(merchandise_total), floor(new.total - 1))::bigint
+  );
+  if requested_credit > maximum_credit then
+    raise exception 'Shopping credit exceeds the eligible merchandise amount or minimum gateway payment'
+      using errcode = '22003';
+  end if;
+
+  new.shopping_credit_amount := requested_credit;
+  new.payment_amount := new.total - requested_credit;
+  new.pricing_snapshot := jsonb_set(
+    jsonb_set(
+      coalesce(new.pricing_snapshot, '{}'::jsonb),
+      '{shopping_credit_amount}',
+      to_jsonb(requested_credit),
+      true
+    ),
+    '{payment_amount}',
+    to_jsonb(new.payment_amount),
+    true
+  );
   return new;
 end;
 $$;
@@ -58,6 +98,36 @@ comment on column public.orders.shopping_credit_amount is
 comment on column public.orders.payment_amount is
   'Amount the external payment gateway must collect after shopping credit; at least NT$1 for new orders.';
 
+-- These values are part of the order's historical price/payment snapshot.
+-- They are written by the BEFORE INSERT trigger above and cannot be patched
+-- after the immutable order has been created.
+create or replace function public.protect_order_pricing_snapshot()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.items is distinct from old.items
+    or new.total is distinct from old.total
+    or new.subtotal is distinct from old.subtotal
+    or new.discount is distinct from old.discount
+    or new.type is distinct from old.type
+    or new.promotion_id is distinct from old.promotion_id
+    or new.promotion_name is distinct from old.promotion_name
+    or new.coupon_campaign_id is distinct from old.coupon_campaign_id
+    or new.coupon_name is distinct from old.coupon_name
+    or new.coupon_code_mask is distinct from old.coupon_code_mask
+    or new.shopping_credit_amount is distinct from old.shopping_credit_amount
+    or new.payment_amount is distinct from old.payment_amount
+    or new.pricing_snapshot is distinct from old.pricing_snapshot
+  then
+    raise exception 'Order pricing snapshot is immutable'
+      using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+
 -- The existing 12-argument invoice wrapper remains intact. This overload adds
 -- shopping credit in the same transaction, so a failed reservation rolls back
 -- the order, coupon quota and gift reservation together.
@@ -77,9 +147,6 @@ declare
   created_order_id text;
   current_user_id uuid := auth.uid();
   requested_credit bigint := coalesce(p_shopping_credit_amount, 0);
-  merchandise_total numeric;
-  gross_total numeric;
-  maximum_credit bigint;
   gateway_payment numeric;
   next_snapshot jsonb;
 begin
@@ -90,32 +157,20 @@ begin
     raise exception 'Sign in is required to use shopping credit' using errcode = '42501';
   end if;
 
+  -- Pass the requested tender to the BEFORE INSERT trigger so the immutable
+  -- order row and pricing snapshot are complete on their first write.
+  perform set_config(
+    'app.eclado_order_shopping_credit_amount',
+    requested_credit::text,
+    true
+  );
   result := public.create_order_with_pricing(
     p_items, p_member, p_address, p_phone, p_email, p_note,
     p_payment_method, p_fulfillment_method, p_coupon_code,
     p_invoice_type, p_invoice_company_name, p_invoice_tax_id
   );
+  perform set_config('app.eclado_order_shopping_credit_amount', '0', true);
   created_order_id := result ->> 'order_id';
-  gross_total := (result ->> 'total')::numeric;
-  merchandise_total := greatest(
-    0,
-    (result ->> 'subtotal')::numeric - (result ->> 'discount')::numeric
-  );
-  maximum_credit := greatest(
-    0,
-    least(floor(merchandise_total), floor(gross_total - 1))::bigint
-  );
-
-  if requested_credit > maximum_credit then
-    raise exception 'Shopping credit exceeds the eligible merchandise amount or minimum gateway payment'
-      using errcode = '22003';
-  end if;
-
-  gateway_payment := gross_total - requested_credit;
-  if gateway_payment < 1 then
-    raise exception 'External payment amount must remain at least NT$1'
-      using errcode = '22003';
-  end if;
 
   if requested_credit > 0 then
     perform public.reserve_order_shopping_credit(
@@ -125,18 +180,11 @@ begin
     );
   end if;
 
-  select coalesce(target.pricing_snapshot, '{}'::jsonb)
-  into next_snapshot
+  select target.payment_amount,
+         coalesce(target.pricing_snapshot, '{}'::jsonb)
+  into gateway_payment, next_snapshot
   from public.orders target
   where target.id = created_order_id;
-  next_snapshot := jsonb_set(next_snapshot, '{shopping_credit_amount}', to_jsonb(requested_credit), true);
-  next_snapshot := jsonb_set(next_snapshot, '{payment_amount}', to_jsonb(gateway_payment), true);
-
-  update public.orders
-  set shopping_credit_amount = requested_credit,
-      payment_amount = gateway_payment,
-      pricing_snapshot = next_snapshot
-  where id = created_order_id;
 
   return result || jsonb_build_object(
     'shopping_credit_amount', requested_credit,
