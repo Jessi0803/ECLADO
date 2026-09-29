@@ -143,7 +143,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
     setApplicationsLoading(canReadMembers);
     try {
       const emptyResult = () => Promise.resolve({ data: [], error: null });
-      const [ordersRes, profilesRes, catalogRes, applicationsRes, paymentMethodsRes, paymentDetailsRes, inventoryAllocationsRes, professionalSalesRes, memberNotesRes, orderNotesRes] = await Promise.all([
+      const [ordersRes, profilesRes, catalogRes, applicationsRes, paymentMethodsRes, paymentDetailsRes, inventoryAllocationsRes, professionalSalesRes, memberNotesRes, shippingGroupsRes, orderNotesRes] = await Promise.all([
         canReadOrders ? supabase.from('orders').select('*').order('created_at', { ascending: false }) : emptyResult(),
         canReadMembers ? supabase.from('profiles').select('*').order('created_at', { ascending: false }) : emptyResult(),
         canReadCatalog ? supabase.rpc('get_admin_catalog') : Promise.resolve({ data: { products: [], variants: [], images: [] }, error: null }),
@@ -153,6 +153,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
         canReadOrders ? supabase.rpc('get_admin_inventory_allocations') : emptyResult(),
         canReadMembers ? supabase.rpc('get_admin_professional_sales') : emptyResult(),
         canReadMembers || canReadOrders ? supabase.rpc('get_admin_member_notes') : emptyResult(),
+        canReadOrders ? supabase.rpc('get_admin_shipping_groups') : emptyResult(),
         canReadOrders ? supabase.rpc('get_admin_order_notes') : emptyResult(),
       ]);
       if (ordersRes.error) throw ordersRes.error;
@@ -175,6 +176,11 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
           map.get(orderId).push(allocation);
           return map;
         }, new Map());
+      const shippingGroupByOrder = new Map(
+        (shippingGroupsRes.error ? [] : (shippingGroupsRes.data || []))
+          .map(row => [String(row.order_id), row.shipping_group]),
+      );
+      if (shippingGroupsRes.error) console.error('shipping groups fetch failed', shippingGroupsRes.error);
       const orderNoteByOrder = new Map(
         (orderNotesRes.error ? [] : (orderNotesRes.data || []))
           .map(row => [String(row.order_id), row.note || '']),
@@ -184,6 +190,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
         ...row,
         admin_note: orderNoteByOrder.get(String(row.id)) || '',
         inventory_allocations: inventoryAllocationsByOrder.get(String(row.id)) || [],
+        shipping_group: shippingGroupByOrder.get(String(row.id)) || null,
         ...(() => {
           const attempts = (paymentDetailsByOrder.get(String(row.id)) || [])
             .sort((a, b) => Number(a.attempt_no || 0) - Number(b.attempt_no || 0));

@@ -638,6 +638,42 @@ test('訂單管理可查看明細並更新狀態', async ({ page }) => {
   await expect(page.getByText('已付款').first()).toBeVisible();
 });
 
+test('訂單詳情顯示合併出貨批次、未付款提醒與人工處理警示', async ({ page }) => {
+  const groupId = '11111111-2222-4333-8444-555555555555';
+  await mockAdminApis(page, {
+    shippingGroups: [{
+      order_id: 'E2E-ORDER-002',
+      shipping_group: {
+        id: groupId,
+        status: 'locked',
+        original_order_id: 'E2E-ORDER-002',
+        original_shipping_amount: 120,
+        effective_total: 4000,
+        valid_order_count: 1,
+        pending_order_count: 1,
+        free_shipping: false,
+        shipping_refunded: true,
+        requires_manual_review: true,
+        below_minimum_warning: true,
+        orders: [
+          { id:'E2E-ORDER-002', status:'paid', effective_amount:4000, is_valid:true },
+          { id:'E2E-ORDER-PENDING', status:'unpaid', effective_amount:2000, is_valid:false },
+        ],
+      },
+    }],
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByText('E2E-ORDER-002').first().click();
+  const section = page.getByTestId('admin-combined-shipping');
+  await expect(section).toContainText('合併出貨');
+  await expect(section).toContainText('已鎖定');
+  await expect(section).toContainText('仍有 1 張未付款訂單');
+  await expect(section).toContainText('曾達免運並退回購物金');
+  await expect(section).toContainText('E2E-ORDER-PENDING');
+});
+
 test('未付款狀態依付款方式區分信用卡與虛擬帳號匯款', async ({ page }) => {
   await mockAdminApis(page, {
     orders: [

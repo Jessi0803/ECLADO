@@ -8,9 +8,31 @@ export function hasProfessionalOrderRules(user) {
   return PROFESSIONAL_ORDER_ROLES.has(getMemberRole(user));
 }
 
-export function getProfessionalOrderProgress(amount, user) {
+export function getProfessionalOrderProgress(amount, user, shippingGroup = null) {
   if (!hasProfessionalOrderRules(user)) return null;
   const merchandiseAmount = Math.max(0, Number(amount) || 0);
+  if (shippingGroup?.id) {
+    const currentAmount = Math.max(
+      0,
+      Number(shippingGroup.effectiveTotal ?? shippingGroup.effective_total) || 0,
+    );
+    const projectedAmount = currentAmount + merchandiseAmount;
+    const freeShipping = projectedAmount >= PROFESSIONAL_FREE_SHIPPING_THRESHOLD;
+    return {
+      eligible: true,
+      additionalOrder: true,
+      freeShipping,
+      currentAmount,
+      merchandiseAmount,
+      projectedAmount,
+      remaining: Math.max(0, PROFESSIONAL_FREE_SHIPPING_THRESHOLD - projectedAmount),
+      message: freeShipping
+        ? shippingGroup.shippingRefunded || shippingGroup.shipping_refunded
+          ? '此批訂單已達免運門檻，本次商品將與原訂單一起出貨。'
+          : `本次追加後將達 NT$${PROFESSIONAL_FREE_SHIPPING_THRESHOLD.toLocaleString()} 免運門檻；原訂單已付運費會在本次訂單付款成功後退回購物金。`
+        : `本次可合併出貨，追加後累積 NT$${projectedAmount.toLocaleString()}，距離免運尚差 NT$${Math.max(0, PROFESSIONAL_FREE_SHIPPING_THRESHOLD - projectedAmount).toLocaleString()}。`,
+    };
+  }
   if (merchandiseAmount < PROFESSIONAL_ORDER_MINIMUM) {
     return {
       eligible: false,

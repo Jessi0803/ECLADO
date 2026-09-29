@@ -68,7 +68,7 @@ export default function CheckoutOrderSummary({ items, summary, user, fulfillment
       )}
       <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--dark)', marginBottom:14, alignItems:'center' }}>
         <span>運費 <span style={{ fontSize:10, color:'var(--dark)' }}>（{fulfillmentMethod === 'onsite_pickup' ? '現場自取' : '宅配到府'}）</span></span>
-        <span style={{ fontFamily:'var(--font-display)' }}>{summary.shipping === 0 ? <span style={{ color:'var(--accent)', fontFamily:'var(--font-body)' }}>免運</span> : `NT$ ${summary.shipping}`}</span>
+        <span style={{ fontFamily:'var(--font-display)' }}>{summary.shipping === 0 ? <span style={{ color:'var(--accent)', fontFamily:'var(--font-body)' }}>{summary.isAdditionalOrder && !summary.shippingGroup?.free_shipping ? '合併出貨免收' : '免運'}</span> : `NT$ ${summary.shipping}`}</span>
       </div>
       {Number(summary.shoppingCreditAmount || 0) > 0 && (
         <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--dark)', marginBottom:14 }}>

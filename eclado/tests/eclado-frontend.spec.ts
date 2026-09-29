@@ -668,8 +668,49 @@ test('專業會員購物車即時提示最低訂購與免運門檻', async ({ pa
   await increaseQuantity.click();
   await increaseQuantity.click();
   await expect(cartDrawer.getByRole('status')).toHaveText('✓ 已享免運優惠。');
-  await expect(cartDrawer.getByText('免運', { exact: true })).toBeVisible();
+  await expect(cartDrawer.getByText('合併出貨免收', { exact: true })).toBeVisible();
   await expect(cartDrawer.getByRole('button', { name: '前往結帳' })).toBeEnabled();
+});
+
+test('專業會員有已付款可追加批次時低於五千仍可結帳且不重複收運費', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: authUser('pro-additional@example.com'),
+    profiles: [profile('pro', 'pro-additional@example.com')],
+    promotions: [],
+    myAppendableShippingGroup: {
+      id: '11111111-2222-4333-8444-555555555555',
+      status: 'open',
+      original_order_id: 'ECL-PAID-ORIGINAL',
+      original_shipping_amount: 120,
+      effective_total: 8000,
+      valid_order_count: 1,
+      pending_order_count: 0,
+      free_shipping: false,
+      shipping_refunded: false,
+    },
+  });
+
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  const cartDrawer = await openCart(page);
+  await expect(cartDrawer.getByRole('button', { name: '前往結帳' })).toBeEnabled();
+  await expect(cartDrawer.getByText(/本次可合併出貨/)).toBeVisible();
+  await expect(cartDrawer.getByText('合併出貨免收', { exact: true })).toBeVisible();
+  await cartDrawer.getByRole('button', { name: '前往結帳' }).click();
+
+  await page.getByLabel('收件人姓名（請填寫證件上的姓名）').fill('追加測試');
+  await page.getByLabel('手機號碼').fill('0912345678');
+  await page.getByLabel('電子信箱').fill('pro-additional@example.com');
+  await page.getByPlaceholder('縣市').fill('台北市');
+  await page.getByPlaceholder('區域').fill('大安區');
+  await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('追加路 1 號');
+  await page.getByRole('button', { name: /繼續確認付款/ }).click();
+
+  const combinedSummary = page.getByTestId('combined-shipping-summary');
+  await expect(combinedSummary).toContainText('目前待出貨 NT$ 8,000');
+  await expect(combinedSummary).toContainText('本次追加 NT$ 2,980');
+  await expect(combinedSummary).toContainText('追加後 NT$ 10,980');
 });
 
 test('DB 的 is_pro_only=true 會讓原本公開商品變院線限定', async ({ page }) => {

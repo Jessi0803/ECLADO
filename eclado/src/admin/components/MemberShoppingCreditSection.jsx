@@ -42,6 +42,7 @@ const REASON_LABELS = Object.freeze({
   order_expired: '訂單逾期',
   payment_failed: '付款失敗',
   paid_order_cancelled: '已付款訂單取消',
+  shipping_refund: '合併出貨免運退回',
 });
 
 function formatMoney(value) {
@@ -218,7 +219,7 @@ export default function MemberShoppingCreditSection({ memberId, canManage }) {
               ) : credit.entries.slice(0, visibleEntryCount).map(entry => (
                 <div className="member-credit-entry" key={entry.id || entry.request_id}>
                   <div>
-                    <strong>{EVENT_LABELS[entry.event_type] || entry.event_type}</strong>
+                    <strong>{entry.reason_code === 'shipping_refund' ? '運費退回購物金' : (EVENT_LABELS[entry.event_type] || entry.event_type)}</strong>
                     <span>{REASON_LABELS[entry.reason_code] || entry.reason_code || '—'}</span>
                     {entry.order_id && <span>訂單 {entry.order_id}</span>}
                     {entry.internal_note && <span>內部說明：{entry.internal_note}</span>}

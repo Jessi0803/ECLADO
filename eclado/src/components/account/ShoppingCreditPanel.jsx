@@ -23,6 +23,7 @@ const REASON_LABELS = Object.freeze({
   order_expired: '訂單逾期',
   payment_failed: '付款失敗',
   paid_order_cancelled: '已付款訂單取消',
+  shipping_refund: '合併出貨免運退回',
 });
 
 function money(value) {
@@ -111,7 +112,7 @@ export default function ShoppingCreditPanel({ userId, isMobile }) {
           {visibleEntries.map(entry => (
             <div key={entry.id} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '1fr auto', gap:8, padding:'14px 0', borderBottom:'1px solid var(--light)' }}>
               <div>
-                <div style={{ fontSize:13, color:'var(--black)', fontWeight:500 }}>{EVENT_LABELS[entry.event_type] || '購物金異動'}</div>
+                <div style={{ fontSize:13, color:'var(--black)', fontWeight:500 }}>{entry.reason_code === 'shipping_refund' ? '運費退回購物金' : (EVENT_LABELS[entry.event_type] || '購物金異動')}</div>
                 <div style={{ fontSize:11, color:'var(--dark)', marginTop:4 }}>
                   原因：{REASON_LABELS[entry.reason_code] || entry.reason_code || '—'}
                   {entry.order_id ? ` · 訂單 ${entry.order_id}` : ''}

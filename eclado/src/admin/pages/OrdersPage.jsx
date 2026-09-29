@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { getPaymentStateLabel, PAYMENT_METHODS } from '../../domain/payments.js';
 import { SF_EXPRESS_TRACKING_URL } from '../../domain/shipping.js';
 import { supabase } from '../../services/supabase.js';
-import { PaymentStateBadge, StatusSelect, TypeBadge } from '../components/StatusIndicators.jsx';
+import { PaymentStateBadge, STATUS_MAP, StatusSelect, TypeBadge } from '../components/StatusIndicators.jsx';
 import OrderMemberAssignmentDialog from '../components/OrderMemberAssignmentDialog.jsx';
 import OrderPrintPreview from '../components/OrderPrintPreview.jsx';
 import usePanelHistory from '../hooks/usePanelHistory.js';
@@ -668,6 +668,46 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
               </div>
             )}
           </div>}
+          {selected.shippingGroup && (
+            <div data-testid="admin-combined-shipping" style={{ border:'1px solid var(--border)', background:'var(--off)', padding:'14px', marginBottom:16 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start', marginBottom:10 }}>
+                <div>
+                  <div style={{ fontSize:11, color:'var(--mid)', letterSpacing:'0.08em' }}>合併出貨</div>
+                  <div style={{ marginTop:4, fontSize:12, fontWeight:600 }}>批次 #{String(selected.shippingGroup.id).slice(0, 8).toUpperCase()}</div>
+                </div>
+                <span style={{ fontSize:10, color:selected.shippingGroup.status === 'open' ? 'var(--green)' : 'var(--mid)' }}>
+                  {selected.shippingGroup.status === 'open' ? '可追加' : '已鎖定'}
+                </span>
+              </div>
+              {selected.shippingGroup.pendingOrderCount > 0 && (
+                <div role="alert" style={{ border:'1px solid var(--gold)', color:'var(--gold)', padding:'8px 10px', marginBottom:10, fontSize:11, lineHeight:1.6 }}>
+                  此批次仍有 {selected.shippingGroup.pendingOrderCount} 張未付款訂單；可繼續備貨，但請留意後續付款結果。
+                </div>
+              )}
+              {(selected.shippingGroup.requires_manual_review || selected.shippingGroup.below_minimum_warning) && (
+                <div role="alert" style={{ border:'1px solid var(--red)', color:'var(--red)', padding:'8px 10px', marginBottom:10, fontSize:11, lineHeight:1.6 }}>
+                  {selected.shippingGroup.requires_manual_review
+                    ? `此批次曾達免運並退回購物金，目前取消後有效商品金額為 NT$ ${selected.shippingGroup.effectiveTotal.toLocaleString()}，已低於免運門檻，請人工確認。`
+                    : `此批次取消後有效商品金額為 NT$ ${selected.shippingGroup.effectiveTotal.toLocaleString()}，低於最低出貨門檻，請人工確認。`}
+                </div>
+              )}
+              <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'6px 12px', fontSize:11, marginBottom:10 }}>
+                <span style={{ color:'var(--mid)' }}>本單類型</span><strong>{selected.id === selected.shippingGroup.original_order_id ? '首張訂單' : '追加訂單'}</strong>
+                <span style={{ color:'var(--mid)' }}>累積商品金額</span><strong>NT$ {selected.shippingGroup.effectiveTotal.toLocaleString()}</strong>
+                <span style={{ color:'var(--mid)' }}>免運</span><span>{selected.shippingGroup.free_shipping ? '已達成' : '尚未達成'}</span>
+                <span style={{ color:'var(--mid)' }}>原運費</span><span>NT$ {selected.shippingGroup.originalShippingAmount.toLocaleString()}</span>
+                <span style={{ color:'var(--mid)' }}>運費退回</span><span>{selected.shippingGroup.shipping_refunded ? `已退購物金 NT$ ${selected.shippingGroup.originalShippingAmount.toLocaleString()}` : '尚未退回'}</span>
+              </div>
+              <div style={{ borderTop:'1px solid var(--border)', paddingTop:8, display:'grid', gap:5 }}>
+                {selected.shippingGroup.orders.map(groupOrder => (
+                  <div key={groupOrder.id} style={{ display:'flex', justifyContent:'space-between', gap:10, fontSize:10 }}>
+                    <span style={{ overflowWrap:'anywhere' }}>{groupOrder.id}{groupOrder.id === selected.shippingGroup.original_order_id ? '（首單）' : groupOrder.id === selected.id ? '（本單）' : ''}</span>
+                    <span style={{ color:'var(--mid)', whiteSpace:'nowrap' }}>NT$ {Number(groupOrder.effective_amount || 0).toLocaleString()} · {STATUS_MAP[groupOrder.status]?.label || groupOrder.status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {lineNotice && (
             <div style={{
               border: '1px solid var(--border)',

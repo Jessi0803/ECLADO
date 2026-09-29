@@ -12,6 +12,13 @@ function normalizeQuote(data) {
   if (!data || !Number.isFinite(Number(data.total))) {
     throw new Error('後端訂單報價格式不完整');
   }
+  const shippingGroup = data.shipping_group?.id ? {
+    ...data.shipping_group,
+    effectiveTotal: Math.max(0, Number(data.shipping_group.effective_total || 0)),
+    originalShippingAmount: Math.max(0, Number(data.shipping_group.original_shipping_amount || 0)),
+    pendingOrderCount: Math.max(0, Number(data.shipping_group.pending_order_count || 0)),
+    shippingRefunded: data.shipping_group.shipping_refunded === true,
+  } : null;
   return {
     ...data,
     subtotal: Number(data.subtotal) || 0,
@@ -29,6 +36,8 @@ function normalizeQuote(data) {
       codeMask: data.coupon_code_mask || '',
     } : null,
     adjustments: Array.isArray(data.adjustments) ? data.adjustments : [],
+    shippingGroup,
+    isAdditionalOrder: data.is_additional_order === true,
   };
 }
 

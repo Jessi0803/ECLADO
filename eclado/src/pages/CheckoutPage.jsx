@@ -5,6 +5,7 @@ import CheckoutSteps from '../components/checkout/CheckoutSteps.jsx';
 import PaymentInfo from '../components/checkout/PaymentInfo.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
 import { isProfessionalMember } from '../domain/catalog.jsx';
+import { getProfessionalOrderProgress, hasProfessionalOrderRules } from '../domain/memberShopping.js';
 import { calculateDiscount } from '../domain/promotions.js';
 import {
   areAllCustomOrderItems,
@@ -24,6 +25,7 @@ import {
 import { createAuthoritativeOrder, quoteAuthoritativeOrder } from '../services/orders.js';
 import { createSinopacPayment, querySinopacPayment } from '../services/paymentApi.js';
 import { getMyShoppingCredit } from '../services/shoppingCredit.js';
+import { getMyAppendableShippingGroup } from '../services/shippingGroups.js';
 import {
   clearPendingPayment,
   getPendingPayment,
@@ -70,6 +72,8 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   const [shoppingCredit, setShoppingCredit] = useState({ available: 0, loading: false, error: '' });
   const [useShoppingCredit, setUseShoppingCredit] = useState(false);
   const [shoppingCreditAmount, setShoppingCreditAmount] = useState(0);
+  const [shippingGroup, setShippingGroup] = useState(null);
+  const [shippingGroupError, setShippingGroupError] = useState('');
   const submittingRef = useRef(false);
   const invoiceDefaultsLoadedRef = useRef(false);
   const [copiedAtmNo, setCopiedAtmNo] = useState(false);
@@ -80,11 +84,19 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   const { subtotal, discount, finalSubtotal, promotion } =
     calculateDiscount(cart, promotions, user);
   const canPickup = areAllCustomOrderItems(cart);
-  const deliveryShipping = calculateShipping(cart, user, finalSubtotal);
-  const shipping = calculateShipping(cart, user, finalSubtotal, fulfillmentMethod);
+  const deliveryShipping = calculateShipping(cart, user, finalSubtotal, FULFILLMENT_DELIVERY, shippingGroup);
+  const shipping = calculateShipping(
+    cart,
+    user,
+    finalSubtotal,
+    fulfillmentMethod,
+    fulfillmentMethod === FULFILLMENT_DELIVERY ? shippingGroup : null,
+  );
   const total = finalSubtotal + shipping;
   const baseCheckoutSummary = couponQuote || {
     subtotal, discount, finalSubtotal, promotion, coupon: null, shipping, total,
+    shippingGroup: fulfillmentMethod === FULFILLMENT_DELIVERY ? shippingGroup : null,
+    isAdditionalOrder: fulfillmentMethod === FULFILLMENT_DELIVERY && Boolean(shippingGroup?.id),
   };
   const eligibleMerchandiseAmount = Math.max(
     0,
@@ -105,6 +117,14 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     shoppingCreditAmount: appliedShoppingCredit,
     paymentTotal: Number(baseCheckoutSummary.total || 0) - appliedShoppingCredit,
   };
+  const activeShippingGroup = baseCheckoutSummary.shippingGroup || (
+    fulfillmentMethod === FULFILLMENT_DELIVERY ? shippingGroup : null
+  );
+  const additionalOrderProgress = getProfessionalOrderProgress(
+    eligibleMerchandiseAmount,
+    user,
+    activeShippingGroup,
+  );
 
   const STEPS = ['收件資訊', '確認付款', '完成'];
 
@@ -209,6 +229,20 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   }, [user?.uid]);
 
   useEffect(() => {
+    let active = true;
+    setShippingGroup(null);
+    setShippingGroupError('');
+    if (!user?.uid || !hasProfessionalOrderRules(user)) return () => { active = false; };
+    getMyAppendableShippingGroup()
+      .then(group => { if (active) setShippingGroup(group); })
+      .catch(error => {
+        if (!active) return;
+        setShippingGroupError(error?.message || '暫時無法確認合併出貨資格');
+      });
+    return () => { active = false; };
+  }, [user?.uid, user?.role]);
+
+  useEffect(() => {
     if (!useShoppingCredit) return;
     setShoppingCreditAmount(amount => Math.min(Math.max(0, Number(amount) || 0), maximumShoppingCredit));
   }, [maximumShoppingCredit, useShoppingCredit]);
@@ -260,6 +294,8 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       invoiceTaxId: authoritativeOrder.invoice_tax_id || '',
       shoppingCreditAmount: Number(authoritativeOrder.shopping_credit_amount || 0),
       paymentTotal: Number(authoritativeOrder.payment_amount ?? authoritativeOrder.total),
+      shippingGroup: authoritativeOrder.shippingGroup,
+      isAdditionalOrder: authoritativeOrder.isAdditionalOrder,
     };
   }
 
@@ -532,7 +568,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                     <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase', marginBottom:12 }}>取貨方式</p>
                     <div style={{ display:'grid', gridTemplateColumns: canPickup && !isMobile ? '1fr 1fr' : '1fr', gap:12 }}>
                       {[
-                        [FULFILLMENT_DELIVERY, '宅配到府', '順豐物流 · ' + (deliveryShipping === 0 ? '免運' : `NT$ ${deliveryShipping}`)],
+                        [FULFILLMENT_DELIVERY, '宅配到府', shippingGroup?.id ? '順豐物流 · 合併出貨免收運費' : '順豐物流 · ' + (deliveryShipping === 0 ? '免運' : `NT$ ${deliveryShipping}`)],
                         ...(canPickup ? [[FULFILLMENT_ONSITE_PICKUP, '現場自取', '客訂商品現場取貨 · 免運']] : []),
                       ].map(([value, label, description]) => {
                         const active = fulfillmentMethod === value;
@@ -653,6 +689,22 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                       </>}
                     </div>
                   </div>
+
+                  {additionalOrderProgress?.additionalOrder && fulfillmentMethod === FULFILLMENT_DELIVERY && (
+                    <div data-testid="combined-shipping-summary" style={{ border:'1px solid var(--accent)', borderLeft:'4px solid var(--accent)', background:'var(--accent-tint)', padding:'16px 18px', fontSize:12, color:'var(--dark)', lineHeight:1.75 }}>
+                      <strong style={{ display:'block', color:'var(--accent)', marginBottom:4 }}>追加訂單／合併出貨</strong>
+                      <div>您目前有尚未進入備貨的訂單，本次商品將與原訂單一起出貨，不重複收取運費。</div>
+                      <div style={{ marginTop:7 }}>
+                        目前待出貨 NT$ {additionalOrderProgress.currentAmount.toLocaleString()} · 本次追加 NT$ {additionalOrderProgress.merchandiseAmount.toLocaleString()} · 追加後 NT$ {additionalOrderProgress.projectedAmount.toLocaleString()}
+                      </div>
+                      <div style={{ color:'var(--accent)', fontWeight:500 }}>{additionalOrderProgress.message}</div>
+                    </div>
+                  )}
+                  {shippingGroupError && fulfillmentMethod === FULFILLMENT_DELIVERY && (
+                    <div role="alert" style={{ border:'1px solid #b87855', color:'#8a4c2d', padding:'12px 14px', fontSize:12, lineHeight:1.6 }}>
+                      無法確認追加訂單資格：{shippingGroupError}
+                    </div>
+                  )}
 
                   <div style={{ border:'1px solid var(--light)', padding:'18px 20px' }}>
                     <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase', marginBottom:12 }}>優惠碼</p>

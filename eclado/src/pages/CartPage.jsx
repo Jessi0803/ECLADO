@@ -11,17 +11,34 @@ import {
   calculateDiscount,
   isPromotionLive,
 } from '../domain/promotions.js';
-import { getProfessionalOrderProgress } from '../domain/memberShopping.js';
+import { getProfessionalOrderProgress, hasProfessionalOrderRules } from '../domain/memberShopping.js';
 import { calculateShipping } from '../domain/shipping.js';
+import { getMyAppendableShippingGroup } from '../services/shippingGroups.js';
 
 // ─── CART PAGE ────────────────────────────────────────────────────────────────
 export default function CartPage({ cart, setCart, setPage, user, promotions = [], drawer = false, onClose }) {
   const isMobile = useIsMobile();
   const [showCheckoutChoice, setShowCheckoutChoice] = useState(false);
   const [itemsScrolling, setItemsScrolling] = useState(false);
+  const [shippingGroup, setShippingGroup] = useState(null);
+  const [shippingGroupError, setShippingGroupError] = useState('');
   const scrollStopTimer = useRef(null);
 
   useEffect(() => () => clearTimeout(scrollStopTimer.current), []);
+
+  useEffect(() => {
+    let active = true;
+    setShippingGroup(null);
+    setShippingGroupError('');
+    if (!user?.uid || !hasProfessionalOrderRules(user)) return () => { active = false; };
+    getMyAppendableShippingGroup()
+      .then(group => { if (active) setShippingGroup(group); })
+      .catch(error => {
+        if (!active) return;
+        setShippingGroupError(error?.message || '暫時無法確認合併出貨資格');
+      });
+    return () => { active = false; };
+  }, [user?.uid, user?.role]);
 
   function handleItemsScroll() {
     setItemsScrolling(true);
@@ -52,8 +69,8 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
     setPage('checkout');
   }
   const { subtotal, discount, finalSubtotal, promotion } = calculateDiscount(pricedCart, promotions, user);
-  const professionalProgress = getProfessionalOrderProgress(finalSubtotal, user);
-  const shipping = calculateShipping(pricedCart, user, finalSubtotal);
+  const professionalProgress = getProfessionalOrderProgress(finalSubtotal, user, shippingGroup);
+  const shipping = calculateShipping(pricedCart, user, finalSubtotal, undefined, shippingGroup);
   const grandTotal = finalSubtotal + shipping;
   const professionalProgressNotice = professionalProgress ? (
     <div
@@ -77,6 +94,11 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
       }}
     >
       {professionalProgress.message}
+      {professionalProgress.additionalOrder && (
+        <span style={{ display:'block', marginTop:4, fontSize:drawer ? 9 : 11, fontWeight:400 }}>
+          目前待出貨 NT${professionalProgress.currentAmount.toLocaleString()} · 本次 NT${professionalProgress.merchandiseAmount.toLocaleString()} · 追加後 NT${professionalProgress.projectedAmount.toLocaleString()}
+        </span>
+      )}
     </div>
   ) : null;
 
@@ -136,6 +158,11 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
                 {drawer && professionalProgressNotice}
               </div>
               {!drawer && professionalProgressNotice}
+              {shippingGroupError && (
+                <div role="alert" style={{ border:'1px solid #b87855', color:'#8a4c2d', padding:drawer ? '7px 9px' : '10px 12px', marginBottom:drawer ? 10 : 18, fontSize:drawer ? 10 : 12, lineHeight:1.6 }}>
+                  無法確認追加訂單資格：{shippingGroupError}
+                </div>
+              )}
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13 }}><span>小計</span><span style={{ fontFamily:'var(--font-display)' }}>NT$ {subtotal.toLocaleString()}</span></div>
               {discount > 0 && promotion && (
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13, color:'var(--accent)' }}>
@@ -145,7 +172,7 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
               )}
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13 }}>
                 <span>運費</span>
-                <span style={{ fontFamily:'var(--font-display)' }}>{shipping === 0 ? <span style={{ color:'var(--accent)', fontFamily:'var(--font-body)' }}>免運</span> : `NT$ ${shipping}`}</span>
+                <span style={{ fontFamily:'var(--font-display)' }}>{shipping === 0 ? <span style={{ color:'var(--accent)', fontFamily:'var(--font-body)' }}>{professionalProgress?.additionalOrder && !professionalProgress.freeShipping ? '合併出貨免收' : '免運'}</span> : `NT$ ${shipping}`}</span>
               </div>
               <div style={{ height:1, background:'var(--light)', margin:drawer ? '8px 0' : '16px 0' }} />
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 10 : 24, fontWeight:500 }}>

@@ -243,6 +243,8 @@ export type MockEcladoApiOptions = {
   couponPromotions?: Record<string, unknown>[];
   couponCampaignMembers?: Record<string, unknown>[];
   orders?: Record<string, unknown>[];
+  shippingGroups?: Record<string, unknown>[];
+  myAppendableShippingGroup?: Record<string, unknown> | null;
   profiles?: Record<string, unknown>[];
   professionalSales?: Record<string, unknown>[];
   memberNotes?: Record<string, unknown>[];
@@ -509,6 +511,11 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       }]),
   ));
 
+  await page.route('**/rest/v1/rpc/get_admin_shipping_groups', async route => json(
+    route,
+    options.shippingGroups || [],
+  ));
+
   await page.route('**/rest/v1/rpc/get_admin_order_notes', async route => json(route, orderNotes));
 
   await page.route('**/rest/v1/rpc/get_admin_inventory_allocations', async route => json(route, inventoryAllocations));
@@ -664,6 +671,11 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     const account = shoppingCreditByMember[memberId];
     return json(route, account || { available_balance: 0, entries: [] });
   });
+
+  await page.route('**/rest/v1/rpc/get_my_appendable_shipping_group', async route => json(
+    route,
+    options.myAppendableShippingGroup ?? null,
+  ));
 
   await page.route('**/rest/v1/rpc/adjust_member_shopping_credit', async route => {
     const request = route.request().postDataJSON() || {};
@@ -1212,7 +1224,12 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       return json(route, { message: 'Onsite pickup is available only for custom-order variants' }, 403);
     }
     const professionalRole = ['pro', 'instructor', 'distributor'].includes(role);
+    const appendableShippingGroup = fulfillmentMethod === 'delivery' && professionalRole
+      ? (options.myAppendableShippingGroup ?? null)
+      : null;
     const shipping = fulfillmentMethod === 'onsite_pickup'
+      ? 0
+      : appendableShippingGroup?.id
       ? 0
       : professionalRole && discountedSubtotal >= 15000
       ? 0
@@ -1246,6 +1263,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       payment_amount: paymentAmount,
       status,
       fulfillment_method: fulfillmentMethod,
+      shipping_group_id: appendableShippingGroup?.id || null,
+      shipping_group: appendableShippingGroup,
+      is_additional_order: Boolean(appendableShippingGroup?.id),
       promotion_id: selectedPromotion?.promotion.id || null,
       promotion_name: selectedPromotion?.promotion.name || null,
       coupon_campaign_id: couponApplied ? 'coupon-e2e-1' : null,
@@ -1269,6 +1289,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       payment_amount: paymentAmount,
       status,
       fulfillment_method: fulfillmentMethod,
+      shipping_group_id: appendableShippingGroup?.id || null,
       address: request.p_address,
       phone: request.p_phone,
       email: request.p_email,
@@ -1294,7 +1315,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       return { id:Number(requested.product_id), product_id:Number(requested.product_id), variant_id:requested.variant_id || null, nameZh:product.name_zh || product.name || '商品', size:product.size || '', qty:Number(requested.qty), unit_price:price, line_total:price * Number(requested.qty), stock_at_order:Number(product.stock || 0), fulfillment_type:'in_stock', shipping_time:'出貨時間為 5 個工作天內，每週二出貨' };
     });
     const subtotal = items.reduce((sum, item) => sum + item.line_total, 0);
-    return json(route, { member_role:'consumer', items, subtotal, discount:100, shipping:120, total:subtotal + 20, fulfillment_method:request.p_fulfillment_method || 'delivery', promotion_id:null, promotion_name:null, coupon_campaign_id:'coupon-e2e-1', coupon_name:'E2E 優惠券', coupon_code_mask:'E2***', adjustments:[{ promotion_id:'coupon-benefit-1', coupon_campaign_id:'coupon-e2e-1', adjustment_type:'fixed_discount', name:'E2E 折抵', amount:100, sort_order:1 }] });
+    const appendableShippingGroup = options.myAppendableShippingGroup ?? null;
+    const shipping = appendableShippingGroup?.id ? 0 : 120;
+    return json(route, { member_role:'consumer', items, subtotal, discount:100, shipping, total:subtotal - 100 + shipping, fulfillment_method:request.p_fulfillment_method || 'delivery', shipping_group_id:appendableShippingGroup?.id || null, shipping_group:appendableShippingGroup, is_additional_order:Boolean(appendableShippingGroup?.id), promotion_id:null, promotion_name:null, coupon_campaign_id:'coupon-e2e-1', coupon_name:'E2E 優惠券', coupon_code_mask:'E2***', adjustments:[{ promotion_id:'coupon-benefit-1', coupon_campaign_id:'coupon-e2e-1', adjustment_type:'fixed_discount', name:'E2E 折抵', amount:100, sort_order:1 }] });
   });
 
   await page.route('**/rest/v1/rpc/get_public_sales_stats', async route => {

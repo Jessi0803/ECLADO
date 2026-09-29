@@ -167,6 +167,16 @@ export function normalizeOrder(row) {
     shipping: Number.isFinite(snapshotShipping) ? snapshotShipping : inferredShipping,
     pricingSnapshot,
     fulfillmentMethod: row.fulfillment_method || row.pricing_snapshot?.fulfillment_method || 'delivery',
+    shippingGroup: row.shipping_group && typeof row.shipping_group === 'object'
+      ? {
+        ...row.shipping_group,
+        effectiveTotal: Math.max(0, Number(row.shipping_group.effective_total || 0)),
+        originalShippingAmount: Math.max(0, Number(row.shipping_group.original_shipping_amount || 0)),
+        pendingOrderCount: Math.max(0, Number(row.shipping_group.pending_order_count || 0)),
+        validOrderCount: Math.max(0, Number(row.shipping_group.valid_order_count || 0)),
+        orders: Array.isArray(row.shipping_group.orders) ? row.shipping_group.orders : [],
+      }
+      : null,
     orderSource: row.order_source || 'online',
     transactionDate: row.transaction_date || row.date || null,
     adminNote: row.admin_note || '',

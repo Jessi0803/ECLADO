@@ -12,10 +12,11 @@ export function areAllCustomOrderItems(items) {
 }
 
 // Frontend preview only. The database RPC remains authoritative at checkout.
-export function calculateShipping(items, user, merchandiseAmount = 0, fulfillmentMethod = FULFILLMENT_DELIVERY) {
+export function calculateShipping(items, user, merchandiseAmount = 0, fulfillmentMethod = FULFILLMENT_DELIVERY, shippingGroup = null) {
   if (!Array.isArray(items) || items.length === 0) return 0;
   if (fulfillmentMethod === FULFILLMENT_ONSITE_PICKUP) return 0;
-  if (getProfessionalOrderProgress(merchandiseAmount, user)?.freeShipping) return 0;
+  const professionalProgress = getProfessionalOrderProgress(merchandiseAmount, user, shippingGroup);
+  if (professionalProgress?.additionalOrder || professionalProgress?.freeShipping) return 0;
   return items.every(item => Number(item.id ?? item.product_id) === FREE_SHIPPING_PRODUCT_ID)
     ? 0
     : STANDARD_SHIPPING_FEE;

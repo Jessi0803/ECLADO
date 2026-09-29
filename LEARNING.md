@@ -130,10 +130,10 @@ This file tracks demonstrated engineering capability, not exposure to explanatio
 
 #### Order State Design
 
-- Level: Unassessed
-- Last reviewed: Never
-- Evidence: None yet.
-- Notes: Assess through state transitions, invariants, recovery, and operational exceptions.
+- Level: L1 Seen
+- Last reviewed: 2026-09-29
+- Evidence: Distinguished the shipping group's open/locked lifecycle from each order's payment and fulfillment status, correctly kept an existing unpaid addition payable after the group was locked, and recognized that a post-refund cancellation should create an administrative review rather than an automatic clawback.
+- Notes: Continue practicing transition invariants, especially which events close eligibility, which already-created operations remain valid, and how exceptional recovery differs from automatic state reversal.
 
 #### Inventory Consistency
 
@@ -153,7 +153,7 @@ This file tracks demonstrated engineering capability, not exposure to explanatio
 
 - Database Transactions — atomic shopping-credit reservation and ledger updates
 - Idempotency — duplicate order creation and payment-callback protection
-- Promotion / Coupon Architecture — separating discounts from payment instruments
+- Order State Design — separating shipping-group eligibility from individual order progress
 
 ## Learning History
 
@@ -174,6 +174,15 @@ This file tracks demonstrated engineering capability, not exposure to explanatio
 - Final understanding: Shopping credit moves through available, reserved, consumed, released, and refunded events. Account summaries and immutable ledger entries update together in one transaction. Duplicate consume events are prevented at the database level and repeated callbacks do not create another deduction. Shopping credit is a payment instrument applied after promotions, coupons, and shipping qualification, so spending it does not revoke earned free shipping.
 - Evidence of understanding: Correctly derived that a second checkout sees zero after the balance is reserved, that cancellation returns the reservation to available balance, that ledger records must not be edited or deleted, that a rejected duplicate write rolls back, and independently explained why free shipping remains valid after shopping-credit payment.
 - Level change: `Unassessed → L1 Seen` for Database Transactions, Idempotency, and Promotion / Coupon Architecture.
+
+### 2026-09-29 — Order State Design — Professional combined shipping
+
+- Problem: Define when a professional order becomes eligible for additions, when the combined-shipping group closes, and what happens to already-created unpaid additions and later cancellations.
+- My initial reasoning: Required the first order to enter the paid flow before additions count, kept an existing unpaid addition payable after preparation begins, and identified payment and fulfillment status as important when orders are combined.
+- What I missed: The group lifecycle and individual order lifecycle serve different purposes. A cancellation below the refund threshold does not always require a clawback; the system cannot infer the business responsibility and should surface an operational review instead.
+- Final understanding: The group becomes locked when fulfillment starts and rejects new additions, while each existing order keeps its own payment and fulfillment status. An unpaid addition created before locking remains payable. If a later cancellation drops the group below the refund threshold, the system warns an administrator, who reviews the reason and decides whether to deduct the previously refunded shopping credit.
+- Evidence of understanding: Correctly derived the locked group state, retained preparing and unpaid states on the individual orders, preserved payment eligibility for the existing addition, and selected review-based rather than automatic refund recovery after a focused follow-up.
+- Level change: `Unassessed → L1 Seen` for Order State Design.
 
 When a future interaction provides valid evidence, append an entry in this format:
 
