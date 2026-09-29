@@ -94,3 +94,18 @@ test('PL/pgSQL 變數不使用保留字，避免身分判斷讀到連線角色',
   expect(roleFix).toContain('create or replace function public.get_my_appendable_shipping_group()');
   expect(roleFix).toContain('grant execute on function public.get_my_appendable_shipping_group() to authenticated;');
 });
+
+test('舊版底層報價的最低金額檢查改為追加單例外，且不改寫整支函式', () => {
+  const legacyFix = fs.readFileSync(
+    path.resolve(process.cwd(), 'supabase-professional-shipping-groups-legacy-quote-fix.sql'),
+    'utf8',
+  );
+  expect(legacyFix).toContain('pg_get_functiondef');
+  expect(legacyFix).toContain('找不到預期的最低金額檢查片段，未修改 %');
+  expect(legacyFix).toContain("appendable_group.status = 'open'");
+  expect(legacyFix).toContain("Professional member order minimum is TWD 5000");
+  // 報價路徑只做唯讀判斷，不呼叫會補建群組、會丟例外的查詢函式
+  expect(legacyFix).not.toContain('public.get_my_appendable_shipping_group()');
+  expect(legacyFix).not.toContain('create or replace function public.quote_order_pricing_internal_20260916');
+  expect(legacyFix).toContain('revoke all on function public.quote_order_pricing_internal_20260916(jsonb, text)');
+});

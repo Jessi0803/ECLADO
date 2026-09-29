@@ -17,6 +17,14 @@
 
 Migration：`supabase-professional-shipping-groups.sql`
 
+上線後補的兩支修正（皆已於正式資料庫執行，重建環境時要接在主 migration 之後）：
+
+1. `supabase-professional-shipping-groups-role-fix.sql`：`get_my_appendable_shipping_group`
+   內的變數名稱與保留字 `current_role` 相撞，導致身分檢查永遠不成立、一律回傳 null。
+2. `supabase-professional-shipping-groups-legacy-quote-fix.sql`：底層
+   `quote_order_pricing_internal_20260916` 仍有舊的專業會員最低金額檢查，會在 v2
+   判斷追加單資格前就擋下建單。改為會員有可追加批次時豁免。
+
 ## 歷史訂單補登
 
 目前狀態：程式與 migration 已完成；正式資料庫 SQL 已由管理者執行。
