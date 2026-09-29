@@ -81,3 +81,16 @@ test('群組資料不直接開放資料表，前後台透過受限 RPC', () => {
   expect(sql).toContain('grant execute on function public.get_my_appendable_shipping_group() to authenticated');
   expect(sql).toContain('trg_protect_order_shipping_group_relationship');
 });
+
+test('PL/pgSQL 變數不使用保留字，避免身分判斷讀到連線角色', () => {
+  const roleFix = fs.readFileSync(
+    path.resolve(process.cwd(), 'supabase-professional-shipping-groups-role-fix.sql'),
+    'utf8',
+  );
+  for (const source of [sql, roleFix]) {
+    expect(source).not.toMatch(/^\s+current_role\s+text;/m);
+    expect(source).toContain('if not public.is_professional_shipping_role(member_role) then');
+  }
+  expect(roleFix).toContain('create or replace function public.get_my_appendable_shipping_group()');
+  expect(roleFix).toContain('grant execute on function public.get_my_appendable_shipping_group() to authenticated;');
+});

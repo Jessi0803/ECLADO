@@ -115,7 +115,7 @@ set search_path = public, auth
 as $$
 declare
   current_user_id uuid := auth.uid();
-  current_role text;
+  member_role text;
   group_count integer;
   target_group public.shipping_groups%rowtype;
   effective_total numeric;
@@ -130,11 +130,11 @@ begin
     return null;
   end if;
 
-  select profile.role into current_role
+  select profile.role into member_role
   from public.profiles profile
   where profile.id = current_user_id;
 
-  if not public.is_professional_shipping_role(current_role) then
+  if not public.is_professional_shipping_role(member_role) then
     return null;
   end if;
 
