@@ -2092,6 +2092,33 @@ test('會員專區安全顯示歷史補登且不偽造付款物流或內部備�
   await expect(page.getByText(/托運單號/)).toHaveCount(0);
 });
 
+test('會員專區隱藏後台已作廢的歷史補登但保留一般取消訂單', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: authUser('member@example.com'),
+    profiles: [profile('consumer')],
+    orders: [
+      {
+        id: 'ECL-HISTORICAL-CANCELLED', user_id: TEST_USER_ID, member: 'E2E 會員',
+        items: [{ name: '錯誤補登商品', qty: 1, price: 900 }], total: 900,
+        status: 'cancelled', order_source: 'historical_manual', transaction_date: '2025-11-20',
+        date: '2025-11-20', created_at: '2026-09-29T00:00:00.000Z',
+      },
+      {
+        id: 'ECL-ONLINE-CANCELLED', user_id: TEST_USER_ID, member: 'E2E 會員',
+        items: [{ name: '一般取消商品', qty: 1, price: 1200 }], total: 1200,
+        status: 'cancelled', order_source: 'online', date: '2026-09-20',
+        created_at: '2026-09-20T00:00:00.000Z',
+      },
+    ],
+  });
+
+  await page.goto('/account');
+  await expect(page.getByText('ECL-HISTORICAL-CANCELLED')).toHaveCount(0);
+  await expect(page.getByText('錯誤補登商品')).toHaveCount(0);
+  await expect(page.getByText('ECL-ONLINE-CANCELLED')).toBeVisible();
+  await expect(page.getByText('一般取消商品 × 1')).toBeVisible();
+});
+
 test('會員專區顯示可用購物金並以收合明細呈現公開異動原因', async ({ page }) => {
   const entries = Array.from({ length: 12 }, (_, index) => ({
     id: `member-credit-${index + 1}`,

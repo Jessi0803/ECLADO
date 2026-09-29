@@ -2274,6 +2274,45 @@ test('會員詳情可由訪客訂單按鈕右側補登歷史訂單', async ({ pa
   await expect(details.getByText('歷史補登 · 已完成')).toBeVisible();
 });
 
+test('後台可單向取消歷史補登並保留不可刪除提示', async ({ page }) => {
+  const cancelled: string[] = [];
+  const historicalOrder = {
+    id: 'ECL-HISTORICAL-CANCEL-1',
+    member: adminProfileRows[0].name,
+    type: adminProfileRows[0].role,
+    items: [{ name: '深層清潔泡沫洗面乳', size: '200ml', qty: 1, price: 900 }],
+    total: 900,
+    subtotal: 900,
+    discount: 0,
+    status: 'delivered',
+    date: '2025-11-20',
+    transaction_date: '2025-11-20',
+    order_source: 'historical_manual',
+    user_id: adminProfileRows[0].id,
+    address: '',
+    phone: adminProfileRows[0].phone,
+    email: adminProfileRows[0].email,
+    created_at: '2026-09-29T00:00:00.000Z',
+  };
+  await mockAdminApis(page, {
+    orders: [historicalOrder],
+    onHistoricalOrderCancel: orderId => cancelled.push(orderId),
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByText(historicalOrder.id, { exact: true }).click();
+  const details = page.getByRole('dialog', { name: '訂單詳情' });
+  await expect(details.getByText('已完成', { exact: true })).toBeVisible();
+  page.once('dialog', dialog => dialog.accept());
+  await details.getByRole('button', { name: '取消訂單' }).click();
+
+  await expect.poll(() => cancelled).toEqual([historicalOrder.id]);
+  await expect(details.getByText('已取消', { exact: true })).toBeVisible();
+  await expect(details.getByText(/原始商品、金額與交易日期仍保留/)).toBeVisible();
+  await expect(details.getByRole('button', { name: '永久刪除' })).toHaveCount(0);
+});
+
 test('手機會員小卡的查看詳情按鈕與會員類型選單並列且可開啟詳情', async ({ page }) => {
   await page.setViewportSize({ width: 430, height: 932 });
   await mockAdminApis(page);

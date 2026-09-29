@@ -679,6 +679,11 @@ input, select, textarea { font-family: var(--font); }
   padding: 22px;
 }
 
+.historical-order-modal-card {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .historical-order-product-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);

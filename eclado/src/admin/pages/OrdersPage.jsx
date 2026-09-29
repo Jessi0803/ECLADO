@@ -122,7 +122,7 @@ function NoteBox({ kind, text }) {
   );
 }
 
-export default function Orders({ orders, members = [], persistOrderPatch, onSaveInvoiceNumber, onDeleteCancelledOrder, onAssignGuestOrder, defaultFilter = 'all', memberNotes = {}, focusOrderId = '', backToMember = null, onOpenMember, onClearCrossLink }) {
+export default function Orders({ orders, members = [], persistOrderPatch, onSaveInvoiceNumber, onDeleteCancelledOrder, onCancelHistoricalOrder, onAssignGuestOrder, defaultFilter = 'all', memberNotes = {}, focusOrderId = '', backToMember = null, onOpenMember, onClearCrossLink }) {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState(defaultFilter);
   const [stockFilter, setStockFilter] = useState('all');
@@ -339,7 +339,12 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
       return;
     }
     try {
-      await persistOrderPatch(id, patch);
+      if (order?.orderSource === 'historical_manual' && status === 'cancelled') {
+        if (!onCancelHistoricalOrder) throw new Error('歷史訂單取消功能尚未啟用');
+        await onCancelHistoricalOrder(id);
+      } else {
+        await persistOrderPatch(id, patch);
+      }
       if (selected?.id === id) setSelected(s => ({ ...s, ...patch }));
       setStockFilter('all');
       setFilter(getStatusFilter(status));
@@ -356,7 +361,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
   }
 
   async function permanentlyDeleteCancelledOrder() {
-    if (!selected || selected.status !== 'cancelled' || selectedHasPaidRecord || deletingOrder) return;
+    if (!selected || selected.orderSource === 'historical_manual' || selected.status !== 'cancelled' || selectedHasPaidRecord || deletingOrder) return;
     const confirmed = confirm(
       `確定要永久刪除訂單「${selected.id}」嗎？\n\n訂單、付款嘗試與庫存配置等關聯紀錄會一併刪除，且無法復原。`,
     );
@@ -533,7 +538,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
                   </td>
                   <td data-label="訂單狀態" style={{ padding: '13px 14px' }}>
                     {o.orderSource === 'historical_manual'
-                      ? <span style={{ fontSize:11, color:'var(--green)', fontWeight:500 }}>已完成</span>
+                      ? <span style={{ fontSize:11, color:o.status === 'cancelled' ? 'var(--mid)' : 'var(--green)', fontWeight:500 }}>{o.status === 'cancelled' ? '已取消' : '已完成'}</span>
                       : <StatusSelect status={o.status} paymentMethod={o.paymentMethod} fulfillmentMethod={o.fulfillmentMethod} onChange={ns => updateStatus(o.id, ns)} />}
                   </td>
                   <td data-label="日期" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)', whiteSpace: 'nowrap' }}>{o.date}</td>
@@ -594,7 +599,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 6 }}>訂單狀態</div>
             {selected.orderSource === 'historical_manual'
-              ? <span style={{ display:'inline-block', padding:'7px 12px', color:'var(--green)', border:'1px solid var(--border)', fontSize:12 }}>已完成</span>
+              ? <span style={{ display:'inline-block', padding:'7px 12px', color:selected.status === 'cancelled' ? 'var(--mid)' : 'var(--green)', border:'1px solid var(--border)', fontSize:12 }}>{selected.status === 'cancelled' ? '已取消' : '已完成'}</span>
               : <StatusSelect status={selected.status} paymentMethod={selected.paymentMethod} fulfillmentMethod={selected.fulfillmentMethod} onChange={ns => updateStatus(selected.id, ns)} size="lg" />}
           </div>
 
@@ -814,14 +819,18 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
           {selected.status !== 'cancelled' && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button
-                onClick={() => { if (confirm('確認要取消此訂單嗎？')) updateStatus(selected.id, 'cancelled'); }}
+                onClick={() => { if (confirm(selected.orderSource === 'historical_manual' ? '確認要作廢此筆歷史補登嗎？作廢後無法恢復。' : '確認要取消此訂單嗎？')) updateStatus(selected.id, 'cancelled'); }}
                 style={{ flex: 1, padding: '10px', background: 'none', color: 'var(--mid)', border: '1px solid var(--border)', fontSize: 12, letterSpacing: '0.1em', cursor: 'pointer' }}
               >取消訂單</button>
             </div>
           )}
           {selected.status === 'cancelled' && (
             <div>
-              {selectedHasPaidRecord ? (
+              {selected.orderSource === 'historical_manual' ? (
+                <div style={{ padding: '10px 12px', border: '1px solid var(--border)', color: 'var(--mid)', fontSize: 11, lineHeight: 1.7 }}>
+                  此歷史補登已作廢；原始商品、金額與交易日期仍保留，且不可永久刪除。
+                </div>
+              ) : selectedHasPaidRecord ? (
                 <div style={{ padding: '10px 12px', border: '1px solid var(--border)', color: 'var(--mid)', fontSize: 11, lineHeight: 1.7 }}>
                   此訂單曾付款，為保留帳務與稽核紀錄不可永久刪除。
                 </div>

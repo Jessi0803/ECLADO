@@ -551,7 +551,7 @@ export default function Members({
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                       <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--dark)' }}>{o.id}</span>
                       {o.orderSource === 'historical_manual'
-                        ? <span style={{ padding: '3px 9px', fontSize: 10, color: 'var(--green)', background: 'oklch(0.65 0.18 145 / 0.10)' }}>歷史補登 · 已完成</span>
+                        ? <span style={{ padding: '3px 9px', fontSize: 10, color:o.status === 'cancelled' ? 'var(--mid)' : 'var(--green)', background:o.status === 'cancelled' ? 'var(--off)' : 'oklch(0.65 0.18 145 / 0.10)' }}>{o.status === 'cancelled' ? '歷史補登 · 已取消' : '歷史補登 · 已完成'}</span>
                         : <Badge status={o.status} />}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--mid)' }}>

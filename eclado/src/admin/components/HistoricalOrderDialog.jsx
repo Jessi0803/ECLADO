@@ -98,7 +98,7 @@ export default function HistoricalOrderDialog({ member, products = [], onCreate,
   return (
     <div className="assignment-modal" role="dialog" aria-modal="true" aria-label="補登歷史訂單">
       <button type="button" className="assignment-modal-backdrop" aria-label="關閉歷史訂單視窗" onClick={() => !submitting && onClose()} />
-      <div className="assignment-modal-card" style={{ maxWidth: 760 }}>
+      <div className="assignment-modal-card historical-order-modal-card" style={{ maxWidth: 760 }}>
         <div className="assignment-modal-header">
           <div>
             <h3>補登歷史訂單</h3>

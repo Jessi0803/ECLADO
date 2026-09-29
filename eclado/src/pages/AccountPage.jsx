@@ -281,7 +281,9 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
         setError('訂單資料無法載入，請稍後再試。');
         setOrders([]);
       } else {
-        setOrders(data || []);
+        setOrders((data || []).filter(order => !(
+          order.order_source === 'historical_manual' && order.status === 'cancelled'
+        )));
         setPaymentSummaries(Object.fromEntries(summaries.map(summary => [summary.order_id, summary])));
       }
       setLoading(false);

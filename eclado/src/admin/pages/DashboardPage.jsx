@@ -110,7 +110,7 @@ export default function Dashboard({ orders, products, members, applications = []
                 <td style={{ padding: '12px', fontSize: 13 }}>{o.member}</td>
                 <td style={{ padding: '12px', fontSize: 13, fontWeight: 500 }}>NT$ {o.total.toLocaleString()}</td>
                 <td style={{ padding: '12px' }}>{historical ? <span style={{ fontSize:11, color:'var(--mid)' }}>不適用</span> : <PaymentStateBadge state={o.paymentState} />}</td>
-                <td style={{ padding: '12px' }}>{historical ? <span style={{ fontSize:11, color:'var(--green)' }}>已完成</span> : <Badge status={o.status} />}</td>
+                <td style={{ padding: '12px' }}>{historical ? <span style={{ fontSize:11, color:o.status === 'cancelled' ? 'var(--mid)' : 'var(--green)' }}>{o.status === 'cancelled' ? '已取消' : '已完成'}</span> : <Badge status={o.status} />}</td>
                 <td style={{ padding: '12px', fontSize: 12, color: 'var(--mid)' }}>{o.transactionDate || o.date}</td>
               </tr>
               );

@@ -360,6 +360,17 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
     return data;
   }
 
+  async function cancelHistoricalOrder(id) {
+    const { data, error } = await supabase.rpc('cancel_historical_order', {
+      p_order_id: id,
+    });
+    if (error) throw error;
+    setOrders(prev => prev.map(order => order.id === id
+      ? { ...order, status: 'cancelled' }
+      : order));
+    return data;
+  }
+
   async function assignGuestOrderToMember(orderId, memberId) {
     const { data, error } = await supabase.rpc('assign_guest_order_to_member', {
       p_order_id: orderId,
@@ -635,7 +646,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
     }
     switch (page) {
       case 'dashboard': return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;
-      case 'orders': return <Orders orders={orders} members={members} persistOrderPatch={persistOrderPatch} onSaveInvoiceNumber={saveOrderInvoiceNumber} onDeleteCancelledOrder={deleteCancelledOrder} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={ordersDefaultFilter} memberNotes={memberNotes} focusOrderId={crossLink?.orderId || ''} backToMember={crossLink?.backMemberId ? { id: crossLink.backMemberId, name: crossLink.backMemberName } : null} onOpenMember={canReadMembers ? openMemberFromOrder : null} onClearCrossLink={() => setCrossLink(null)} />;
+      case 'orders': return <Orders orders={orders} members={members} persistOrderPatch={persistOrderPatch} onSaveInvoiceNumber={saveOrderInvoiceNumber} onDeleteCancelledOrder={deleteCancelledOrder} onCancelHistoricalOrder={cancelHistoricalOrder} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={ordersDefaultFilter} memberNotes={memberNotes} focusOrderId={crossLink?.orderId || ''} backToMember={crossLink?.backMemberId ? { id: crossLink.backMemberId, name: crossLink.backMemberName } : null} onOpenMember={canReadMembers ? openMemberFromOrder : null} onClearCrossLink={() => setCrossLink(null)} />;
       case 'audit': return <AuditLogsPage />;
       case 'catalog': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'backorders': return <BackordersPage onInventoryChanged={fetchAll} />;

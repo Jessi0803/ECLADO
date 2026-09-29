@@ -265,6 +265,7 @@ export type MockEcladoApiOptions = {
   onBackorderAllocate?: (variantId: number) => void;
   onOrderMemberAssign?: (orderId: string, memberId: string) => void;
   onHistoricalOrderCreate?: (payload: Record<string, unknown>) => void;
+  onHistoricalOrderCancel?: (orderId: string) => void;
   orderAssignmentError?: string;
 };
 
@@ -848,6 +849,27 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     orders.unshift(order);
     if (request.p_admin_note) orderNotes.push({ order_id: id, note: request.p_admin_note, created_at: order.created_at });
     return json(route, { ...order, admin_note: request.p_admin_note || null });
+  });
+
+  await page.route('**/rest/v1/rpc/cancel_historical_order', async route => {
+    const orderId = String(route.request().postDataJSON()?.p_order_id || '');
+    const order = orders.find(candidate => String(candidate.id) === orderId);
+    if (!order) return json(route, { message: 'Order not found' }, 404);
+    if (String(order.order_source) !== 'historical_manual') {
+      return json(route, { message: 'Only historical orders can use this cancellation workflow' }, 400);
+    }
+    if (String(order.status) !== 'delivered' && String(order.status) !== 'cancelled') {
+      return json(route, { message: 'Only completed historical orders can be cancelled' }, 400);
+    }
+    const alreadyCancelled = String(order.status) === 'cancelled';
+    order.status = 'cancelled';
+    options.onHistoricalOrderCancel?.(orderId);
+    return json(route, {
+      order_id: orderId,
+      status: 'cancelled',
+      cancelled: true,
+      already_cancelled: alreadyCancelled,
+    });
   });
 
   await page.route('**/rest/v1/rpc/delete_cancelled_order', async route => {

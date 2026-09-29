@@ -47,6 +47,16 @@ test('歷史訂單快照與來源不可被後續改寫', () => {
   expect(sql).toContain("app.eclado_historical_order_write");
 });
 
+test('歷史補登只能透過管理員 RPC 單向作廢且不可永久刪除', () => {
+  expect(sql).toContain('create or replace function public.cancel_historical_order');
+  expect(sql).toContain("public.has_backoffice_permission('orders.write')");
+  expect(sql).toContain("old.status = 'delivered'");
+  expect(sql).toContain("new.status = 'cancelled'");
+  expect(sql).toContain("app.eclado_historical_order_cancel");
+  expect(sql).toContain('Historical orders cannot be permanently deleted');
+  expect(sql).toContain('before insert or update or delete on public.orders');
+});
+
 test('熱門商品統計排除歷史補登', () => {
   expect(sql).toContain("orders.order_source <> 'historical_manual'");
   expect(sql).toContain('create or replace function public.get_public_sales_stats()');

@@ -50,6 +50,13 @@ language plpgsql
 set search_path = ''
 as $$
 begin
+  if tg_op = 'DELETE' then
+    if old.order_source = 'historical_manual' then
+      raise exception 'Historical orders cannot be permanently deleted' using errcode = '55000';
+    end if;
+    return old;
+  end if;
+
   if tg_op = 'INSERT' then
     if new.order_source = 'historical_manual'
       and coalesce(current_setting('app.eclado_historical_order_write', true), '0') <> '1'
@@ -64,9 +71,20 @@ begin
     raise exception 'Order source is immutable' using errcode = '55000';
   end if;
 
+  if old.order_source = 'historical_manual'
+    and new.status is distinct from old.status
+    and not (
+      old.status = 'delivered'
+      and new.status = 'cancelled'
+      and coalesce(current_setting('app.eclado_historical_order_cancel', true), '0') = '1'
+    )
+  then
+    raise exception 'Historical order status is immutable outside the cancellation workflow'
+      using errcode = '55000';
+  end if;
+
   if old.order_source = 'historical_manual' and (
-    new.status is distinct from old.status
-    or new.items is distinct from old.items
+    new.items is distinct from old.items
     or new.total is distinct from old.total
     or new.subtotal is distinct from old.subtotal
     or new.discount is distinct from old.discount
@@ -99,7 +117,7 @@ $$;
 revoke all on function public.protect_historical_order_identity() from public, anon, authenticated;
 drop trigger if exists trg_protect_historical_order_identity on public.orders;
 create trigger trg_protect_historical_order_identity
-  before insert or update on public.orders
+  before insert or update or delete on public.orders
   for each row execute function public.protect_historical_order_identity();
 
 -- A delivered online order consumes stock. A historical record must not.
@@ -304,6 +322,65 @@ $$;
 
 revoke all on function public.create_historical_order(uuid, date, jsonb, text) from public, anon;
 grant execute on function public.create_historical_order(uuid, date, jsonb, text) to authenticated;
+
+create or replace function public.cancel_historical_order(p_order_id text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  target_order public.orders%rowtype;
+begin
+  if auth.uid() is null or not public.has_backoffice_permission('orders.write') then
+    raise exception 'Order write access required' using errcode = '42501';
+  end if;
+
+  select * into target_order
+  from public.orders target
+  where target.id = p_order_id
+  for update;
+
+  if not found then
+    raise exception 'Order not found' using errcode = 'P0002';
+  end if;
+  if target_order.order_source <> 'historical_manual' then
+    raise exception 'Only historical orders can use this cancellation workflow'
+      using errcode = '22023';
+  end if;
+  if target_order.status = 'cancelled' then
+    return jsonb_build_object(
+      'order_id', target_order.id,
+      'status', target_order.status,
+      'cancelled', true,
+      'already_cancelled', true
+    );
+  end if;
+  if target_order.status <> 'delivered' then
+    raise exception 'Only completed historical orders can be cancelled'
+      using errcode = '22023';
+  end if;
+
+  perform set_config('app.eclado_historical_order_cancel', '1', true);
+  update public.orders
+  set status = 'cancelled'
+  where id = target_order.id;
+  perform set_config('app.eclado_historical_order_cancel', '0', true);
+
+  return jsonb_build_object(
+    'order_id', target_order.id,
+    'status', 'cancelled',
+    'cancelled', true,
+    'already_cancelled', false
+  );
+end;
+$$;
+
+revoke all on function public.cancel_historical_order(text) from public, anon;
+grant execute on function public.cancel_historical_order(text) to authenticated;
+
+comment on function public.cancel_historical_order(text) is
+  'Voids one completed historical order while preserving its immutable snapshot and audit trail.';
 
 create or replace function public.get_admin_order_notes()
 returns table(order_id text, note text, created_at timestamptz)
