@@ -14,6 +14,15 @@ test('客訂規格銷量不計入熱門商品統計', () => {
   expect(stats.byId[2]).toBe(3);
 });
 
+test('歷史補登商品不計入熱門商品統計', () => {
+  const stats = buildSalesStats([
+    { status: 'delivered', orderSource: 'historical_manual', items: [{ product_id: 1, qty: 100 }] },
+    { status: 'delivered', orderSource: 'online', items: [{ product_id: 2, qty: 3 }] },
+  ]);
+  expect(stats.byId[1]).toBeUndefined();
+  expect(stats.byId[2]).toBe(3);
+});
+
 test('只有客訂規格的商品不會被熱門商品 fallback 補入', () => {
   const products = [
     { id: 1, nameZh: '客訂商品', active: true, variants: [{ active: true, isCustomOrder: true }] },

@@ -2230,6 +2230,50 @@ test('會員詳細可一次匯入一張訪客訂單並更新歷史訂單', async
   await expect(memberDetails.getByText('歷史訂單（1）')).toBeVisible();
 });
 
+test('會員詳情可由訪客訂單按鈕右側補登歷史訂單', async ({ page }) => {
+  const requests: Record<string, unknown>[] = [];
+  await mockAdminApis(page, {
+    orders: [],
+    productVariants: adminProductVariants,
+    onHistoricalOrderCreate: payload => requests.push(payload),
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /會員管理/);
+  await page.getByRole('button', { name: `查看${adminProfileRows[0].name}詳情` }).click();
+
+  const details = page.getByRole('dialog', { name: '會員詳情' });
+  const importButton = details.getByRole('button', { name: '匯入訪客訂單' });
+  const historyButton = details.getByRole('button', { name: '補登歷史訂單' });
+  await expect(importButton).toBeVisible();
+  await expect(historyButton).toBeVisible();
+  const importBox = await importButton.boundingBox();
+  const historyBox = await historyButton.boundingBox();
+  expect(importBox && historyBox && Math.abs(importBox.y - historyBox.y) < 3).toBeTruthy();
+  expect(importBox && historyBox && historyBox.x > importBox.x).toBeTruthy();
+
+  await historyButton.click();
+  const modal = page.getByRole('dialog', { name: '補登歷史訂單' });
+  await modal.getByLabel('歷史交易日期').fill('2025-11-20');
+  await modal.getByLabel('歷史商品 1').selectOption('1');
+  await modal.getByLabel('歷史規格 1').selectOption('101');
+  await modal.getByLabel('歷史數量 1').fill('2');
+  await modal.getByLabel('歷史單價 1').fill('900');
+  await modal.getByLabel('歷史訂單內部備註').fill('官網上線前 LINE 訂購紀錄補登');
+  await expect(modal.getByText('總額 NT$ 1,800')).toBeVisible();
+  await modal.getByRole('button', { name: '確認補登' }).click();
+
+  await expect.poll(() => requests.length).toBe(1);
+  expect(requests[0]).toMatchObject({
+    p_member_id: adminProfileRows[0].id,
+    p_transaction_date: '2025-11-20',
+    p_items: [{ variant_id: 101, qty: 2, unit_price: 900 }],
+    p_admin_note: '官網上線前 LINE 訂購紀錄補登',
+  });
+  await expect(details.getByText(/已補登歷史訂單 ECL-HISTORICAL-1/)).toBeVisible();
+  await expect(details.getByText('歷史補登 · 已完成')).toBeVisible();
+});
+
 test('手機會員小卡的查看詳情按鈕與會員類型選單並列且可開啟詳情', async ({ page }) => {
   await page.setViewportSize({ width: 430, height: 932 });
   await mockAdminApis(page);

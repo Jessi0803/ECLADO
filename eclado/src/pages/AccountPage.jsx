@@ -490,6 +490,7 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
             <div style={{ display:'grid', gap:14 }}>
               {orders.map(order => {
                 const items = Array.isArray(order.items) ? order.items : [];
+                const isHistorical = order.order_source === 'historical_manual';
                 const paymentDueTime = new Date(order.payment_due_at || '').getTime();
                 const paymentExpired = Number.isFinite(paymentDueTime) && paymentDueTime <= Date.now();
                 const paymentSummary = paymentSummaries[order.id];
@@ -511,8 +512,8 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
                         <div style={{ fontSize:14, color:'var(--black)', fontWeight:500, wordBreak:'break-all' }}>{order.id}</div>
                       </div>
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap', justifyContent:'flex-end' }}>
-                        {paymentState && <span style={{ flexShrink:0, fontSize:10, letterSpacing:'0.06em', border:`1px solid ${getPaymentStateColor(paymentState)}`, color:getPaymentStateColor(paymentState), padding:'5px 8px' }}>{getPaymentStateLabel(paymentState)}</span>}
-                        <span style={{ flexShrink:0, fontSize:11, letterSpacing:'0.08em', border:'1px solid var(--accent)', background:'var(--accent-tint)', color:'var(--black)', padding:'5px 9px' }}>{getOrderStatusLabel(order.status)}</span>
+                        {!isHistorical && paymentState && <span style={{ flexShrink:0, fontSize:10, letterSpacing:'0.06em', border:`1px solid ${getPaymentStateColor(paymentState)}`, color:getPaymentStateColor(paymentState), padding:'5px 8px' }}>{getPaymentStateLabel(paymentState)}</span>}
+                        <span style={{ flexShrink:0, fontSize:11, letterSpacing:'0.08em', border:'1px solid var(--accent)', background:'var(--accent-tint)', color:'var(--black)', padding:'5px 9px' }}>{isHistorical ? '歷史訂單 · 已完成' : getOrderStatusLabel(order.status)}</span>
                       </div>
                     </div>
                     <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '1fr auto', gap:isMobile ? 12 : 24, borderTop:'1px solid var(--light)', paddingTop:14 }}>
@@ -521,9 +522,10 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
                           <div key={`${order.id}-${idx}`} style={{ display:'flex', justifyContent:'space-between', gap:12, fontSize:13, color:'var(--dark)', lineHeight:1.6 }}>
                             <span>
                               {item.name || item.nameZh || '商品'} × {item.qty || 1}
-                              {item.fulfillment && (
+                              {!isHistorical && item.fulfillment && (
                                 <span style={{ display:'block', fontSize:12, color: item.fulfillment_type === 'preorder' ? 'var(--accent)' : 'var(--dark)' }}>{item.fulfillment_type === 'loading' ? '庫存資料載入中' : `${item.fulfillment} · ${item.shipping_time || ''}`}</span>
                               )}
+                              {isHistorical && item.size && <span style={{ display:'block', fontSize:12, color:'var(--dark)' }}>{item.size}</span>}
                             </span>
                             {item.price != null && <span>NT$ {Number(item.price).toLocaleString()}</span>}
                           </div>
@@ -552,7 +554,7 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
                         )}
                       </div>
                       <div style={{ textAlign:isMobile ? 'left' : 'right' }}>
-                        <div style={{ fontSize:12, color:'var(--dark)', marginBottom:5 }}>{order.date || order.created_at?.slice(0, 10) || ''}</div>
+                        <div style={{ fontSize:12, color:'var(--dark)', marginBottom:5 }}>{order.transaction_date || order.date || order.created_at?.slice(0, 10) || ''}</div>
                         <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'var(--black)' }}>NT$ {Number(order.total || 0).toLocaleString()}</div>
                         {(canResumePayment || canRetryPayment) && (
                           <button

@@ -1,6 +1,10 @@
 export const SALES_COUNTED_STATUSES = new Set(['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered']);
 export const DEFAULT_POPULAR_PRODUCT_LIMIT = 8;
 
+export function isHistoricalOrder(order) {
+  return (order?.orderSource ?? order?.order_source) === 'historical_manual';
+}
+
 export function normalizeSalesName(value) {
   return String(value || '').replace(/\s+/g, '').toLowerCase();
 }
@@ -20,7 +24,7 @@ export function buildSalesStats(orders) {
       if (!Number.isNaN(productId) && productId > 0) byId[productId] = soldQty;
       return;
     }
-    if (!SALES_COUNTED_STATUSES.has(order?.status)) return;
+    if (!SALES_COUNTED_STATUSES.has(order?.status) || isHistoricalOrder(order)) return;
     const items = Array.isArray(order.items) ? order.items : [];
     items.forEach(item => {
       if (item?.is_custom_order === true || item?.isCustomOrder === true) return;

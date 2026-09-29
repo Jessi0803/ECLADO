@@ -2,6 +2,7 @@ import React from 'react';
 import { Badge, PaymentStateBadge } from '../components/StatusIndicators.jsx';
 import { MiniBarChart, StatCard } from '../components/DashboardWidgets.jsx';
 import { buildMonthlyRevenue, revenueGrowth } from '../domain/analytics.js';
+import { isHistoricalOrder } from '../../domain/sales.js';
 
 export default function Dashboard({ orders, products, members, applications = [], adminEmail, onGoToPendingMembers, onGoToOrders }) {
   const today = new Date();
@@ -98,16 +99,22 @@ export default function Dashboard({ orders, products, members, applications = []
             </tr>
           </thead>
           <tbody>
-            {orders.slice(0, 5).map(o => (
+            {orders.slice(0, 5).map(o => {
+              const historical = isHistoricalOrder(o);
+              return (
               <tr key={o.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td style={{ padding: '12px', fontSize: 12, color: 'var(--dark)', fontWeight: 500 }}>{o.id}</td>
+                <td style={{ padding: '12px', fontSize: 12, color: 'var(--dark)', fontWeight: 500 }}>
+                  {o.id}
+                  {historical && <span style={{ display:'block', marginTop:3, fontSize:9, color:'var(--green)', fontWeight:400 }}>歷史補登</span>}
+                </td>
                 <td style={{ padding: '12px', fontSize: 13 }}>{o.member}</td>
                 <td style={{ padding: '12px', fontSize: 13, fontWeight: 500 }}>NT$ {o.total.toLocaleString()}</td>
-                <td style={{ padding: '12px' }}><PaymentStateBadge state={o.paymentState} /></td>
-                <td style={{ padding: '12px' }}><Badge status={o.status} /></td>
-                <td style={{ padding: '12px', fontSize: 12, color: 'var(--mid)' }}>{o.date}</td>
+                <td style={{ padding: '12px' }}>{historical ? <span style={{ fontSize:11, color:'var(--mid)' }}>不適用</span> : <PaymentStateBadge state={o.paymentState} />}</td>
+                <td style={{ padding: '12px' }}>{historical ? <span style={{ fontSize:11, color:'var(--green)' }}>已完成</span> : <Badge status={o.status} />}</td>
+                <td style={{ padding: '12px', fontSize: 12, color: 'var(--mid)' }}>{o.transactionDate || o.date}</td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
         </div>

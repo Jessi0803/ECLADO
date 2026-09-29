@@ -1,6 +1,18 @@
 import { expect, test } from '@playwright/test';
 import { normalizeMember, orderBelongsToMember } from '../src/admin/domain/mappers.js';
 
+test('歷史補登顯示於會員訂單數但不計入累計消費', () => {
+  const member = normalizeMember(
+    { id: 'm-history', email: 'history@example.com', name: '歷史會員', role: 'consumer' },
+    [
+      { id: 'online', user_id: 'm-history', status: 'delivered', total: 3000, orderSource: 'online' },
+      { id: 'history', user_id: 'm-history', status: 'delivered', total: 8000, orderSource: 'historical_manual' },
+    ],
+  );
+  expect(member.orders).toBe(2);
+  expect(member.total).toBe(3000);
+});
+
 test('會員消費總額只計入已付款及後續履約狀態', () => {
   const member = normalizeMember(
     {

@@ -3,6 +3,7 @@ import { supabase } from '../services/supabase.js';
 import { withProductImagePublicUrl } from '../services/catalogData.js';
 import { normalizeMember, normalizeOrder, normalizeProduct } from './domain/mappers.js';
 import { normalizeProfessionalSales } from '../domain/professionalSales.js';
+import { createHistoricalOrder } from '../services/historicalOrders.js';
 import { fetchSidebarFavorites, saveSidebarFavorites } from '../services/adminPreferences.js';
 import {
   saveProfessionalSalesAdjustment,
@@ -74,6 +75,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
   const [loadError, setLoadError] = useState('');
   const hasPermission = permission => hasBackofficePermission(backofficeAccess, permission);
   const canReadOrders = hasPermission(BACKOFFICE_PERMISSIONS.ORDERS_READ);
+  const canWriteOrders = hasPermission(BACKOFFICE_PERMISSIONS.ORDERS_WRITE);
   const canReadMembers = hasPermission(BACKOFFICE_PERMISSIONS.MEMBERS_READ);
   const canWriteMembers = hasPermission(BACKOFFICE_PERMISSIONS.MEMBERS_WRITE);
   const canReadCatalog = hasPermission(BACKOFFICE_PERMISSIONS.CATALOG_READ);
@@ -141,7 +143,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
     setApplicationsLoading(canReadMembers);
     try {
       const emptyResult = () => Promise.resolve({ data: [], error: null });
-      const [ordersRes, profilesRes, catalogRes, applicationsRes, paymentMethodsRes, paymentDetailsRes, inventoryAllocationsRes, professionalSalesRes, memberNotesRes] = await Promise.all([
+      const [ordersRes, profilesRes, catalogRes, applicationsRes, paymentMethodsRes, paymentDetailsRes, inventoryAllocationsRes, professionalSalesRes, memberNotesRes, orderNotesRes] = await Promise.all([
         canReadOrders ? supabase.from('orders').select('*').order('created_at', { ascending: false }) : emptyResult(),
         canReadMembers ? supabase.from('profiles').select('*').order('created_at', { ascending: false }) : emptyResult(),
         canReadCatalog ? supabase.rpc('get_admin_catalog') : Promise.resolve({ data: { products: [], variants: [], images: [] }, error: null }),
@@ -151,6 +153,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
         canReadOrders ? supabase.rpc('get_admin_inventory_allocations') : emptyResult(),
         canReadMembers ? supabase.rpc('get_admin_professional_sales') : emptyResult(),
         canReadMembers || canReadOrders ? supabase.rpc('get_admin_member_notes') : emptyResult(),
+        canReadOrders ? supabase.rpc('get_admin_order_notes') : emptyResult(),
       ]);
       if (ordersRes.error) throw ordersRes.error;
       if (profilesRes.error) throw profilesRes.error;
@@ -172,8 +175,14 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
           map.get(orderId).push(allocation);
           return map;
         }, new Map());
+      const orderNoteByOrder = new Map(
+        (orderNotesRes.error ? [] : (orderNotesRes.data || []))
+          .map(row => [String(row.order_id), row.note || '']),
+      );
+      if (orderNotesRes.error) console.error('order admin notes fetch failed', orderNotesRes.error);
       const realOrders = (ordersRes.data || []).map(row => normalizeOrder({
         ...row,
+        admin_note: orderNoteByOrder.get(String(row.id)) || '',
         inventory_allocations: inventoryAllocationsByOrder.get(String(row.id)) || [],
         ...(() => {
           const attempts = (paymentDetailsByOrder.get(String(row.id)) || [])
@@ -368,6 +377,19 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
     }
     await fetchAll();
     return { ok: true, ...(data || {}), order_id: data?.order_id || orderId, member_id: data?.member_id || memberId };
+  }
+
+  async function createMemberHistoricalOrder(payload) {
+    const { data, error } = await createHistoricalOrder(payload);
+    if (error) {
+      const message = error.message || '請稍後再試';
+      if (/permission|access required|42501/i.test(message)) {
+        return { ok: false, message: '目前帳號沒有補登歷史訂單的權限。' };
+      }
+      return { ok: false, message: `歷史訂單補登失敗：${message}` };
+    }
+    await fetchAll();
+    return { ok: true, orderId: data?.id || '' };
   }
 
   async function saveProductWithVariants(product) {
@@ -623,8 +645,8 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
       case 'inventory': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'promotions': return <Promotions products={products} />;
       case 'procurement': return <ProcurementPage />;
-      case 'members': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={membersDefaultFilter} memberNotes={memberNotes} onSaveMemberNote={canWriteMembers ? saveMemberNote : null} focusMemberId={crossLink?.memberId || ''} backToOrderId={crossLink?.backOrderId || ''} onOpenOrder={canReadOrders ? openOrderFromMember : null} onClearCrossLink={() => setCrossLink(null)} canManageShoppingCredit={canManageShoppingCredit} />;
-      case 'applications': return <Members members={members} orders={orders} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter="app_pending" canManageShoppingCredit={canManageShoppingCredit} />;
+      case 'members': return <Members members={members} orders={orders} products={products} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} onCreateHistoricalOrder={canWriteOrders ? createMemberHistoricalOrder : null} defaultFilter={membersDefaultFilter} memberNotes={memberNotes} onSaveMemberNote={canWriteMembers ? saveMemberNote : null} focusMemberId={crossLink?.memberId || ''} backToOrderId={crossLink?.backOrderId || ''} onOpenOrder={canReadOrders ? openOrderFromMember : null} onClearCrossLink={() => setCrossLink(null)} canManageShoppingCredit={canManageShoppingCredit} />;
+      case 'applications': return <Members members={members} orders={orders} products={products} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} onCreateHistoricalOrder={canWriteOrders ? createMemberHistoricalOrder : null} defaultFilter="app_pending" canManageShoppingCredit={canManageShoppingCredit} />;
       case 'analytics': return <Analytics orders={orders} />;
       case 'ai': return <AIReorder products={activeProducts} orders={orders} />;
       default: return null;

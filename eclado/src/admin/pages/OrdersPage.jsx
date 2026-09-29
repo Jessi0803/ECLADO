@@ -12,6 +12,7 @@ const INVENTORY_ACTIVE_STATUSES = new Set([
 ]);
 
 function getOrderInventoryState(order) {
+  if (order?.orderSource === 'historical_manual') return null;
   if (!INVENTORY_ACTIVE_STATUSES.has(order?.status)) return null;
   if (!Array.isArray(order.items) || order.items.length === 0) return null;
   if (order.items.some(item => Number(item.inventoryAllocation?.backorderQty) > 0)) return 'backordered';
@@ -181,7 +182,9 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
   }, [focusOrderId, orders]);
 
   const byStatus = orders.filter(order => matchesStatusFilter(order, filter));
-  const showInventoryFilters = byStatus.some(order => INVENTORY_ACTIVE_STATUSES.has(order.status));
+  const showInventoryFilters = byStatus.some(order => (
+    order.orderSource !== 'historical_manual' && INVENTORY_ACTIVE_STATUSES.has(order.status)
+  ));
   const filtered = stockFilter === 'all' || !showInventoryFilters ? byStatus
     : byStatus.filter(order => getOrderInventoryState(order) === stockFilter);
   const awaitingCount = orders.filter(o => o.status === 'awaiting_confirm').length;
@@ -515,20 +518,23 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
                   <td data-label="類型" style={{ padding: '13px 14px' }}>
                     <div style={{ display:'inline-flex', flexDirection:'column', alignItems:'flex-start' }}>
                       <TypeBadge type={getOrderDisplayType(o)} />
+                      {o.orderSource === 'historical_manual' && <span style={{ marginTop:5, marginLeft:10, fontSize:10, color:'var(--green)', whiteSpace:'nowrap' }}>歷史補登</span>}
                       {o.fulfillmentMethod === 'onsite_pickup' && <span className="order-pickup-label" style={{ marginTop:5, marginLeft:10, fontSize:10, color:'var(--gold)', whiteSpace:'nowrap' }}>客訂自取</span>}
                     </div>
                   </td>
                   <td data-label="金額" style={{ padding: '13px 14px', fontSize: 13, fontWeight: 500 }}>NT$ {o.total.toLocaleString()}</td>
                   <td data-label="付款方式" style={{ padding: '13px 14px', fontSize: 12, color: o.paymentMethod ? 'var(--dark)' : 'var(--light)', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                    {getPaymentMethodLabel(o.paymentMethod)}
+                    {o.orderSource === 'historical_manual' ? '不適用' : getPaymentMethodLabel(o.paymentMethod)}
                   </td>
-                  <td data-label="付款狀態" style={{ padding: '13px 14px' }}><PaymentStateBadge state={o.paymentState} /></td>
+                  <td data-label="付款狀態" style={{ padding: '13px 14px' }}>{o.orderSource === 'historical_manual' ? <span style={{ fontSize:11, color:'var(--mid)' }}>不適用</span> : <PaymentStateBadge state={o.paymentState} />}</td>
                   <td data-label="庫存" style={{ padding: '13px 14px' }}>
                     {getOrderInventoryState(o) === 'backordered' && <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--gold)', background: 'oklch(0.82 0.12 80 / 0.12)', padding: '3px 8px', whiteSpace: 'nowrap' }}>含待補</span>}
                     {getOrderInventoryState(o) === 'in_stock' && <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--green)', background: 'oklch(0.65 0.18 145 / 0.10)', padding: '3px 8px', whiteSpace: 'nowrap' }}>現貨</span>}
                   </td>
                   <td data-label="訂單狀態" style={{ padding: '13px 14px' }}>
-                    <StatusSelect status={o.status} paymentMethod={o.paymentMethod} fulfillmentMethod={o.fulfillmentMethod} onChange={ns => updateStatus(o.id, ns)} />
+                    {o.orderSource === 'historical_manual'
+                      ? <span style={{ fontSize:11, color:'var(--green)', fontWeight:500 }}>已完成</span>
+                      : <StatusSelect status={o.status} paymentMethod={o.paymentMethod} fulfillmentMethod={o.fulfillmentMethod} onChange={ns => updateStatus(o.id, ns)} />}
                   </td>
                   <td data-label="日期" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)', whiteSpace: 'nowrap' }}>{o.date}</td>
                 </tr>
@@ -561,15 +567,21 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>訂購人</div>{selected.user_id && onOpenMember && members.some(member => member.id === selected.user_id)
               ? <button type="button" onClick={() => onOpenMember(selected.user_id, selected.id)} style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, color: 'var(--blue)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', textAlign: 'left' }}>{selected.member}</button>
               : <div style={{ fontSize: 13 }}>{selected.member}</div>}</div>
-            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>日期</div><div style={{ fontSize: 13 }}>{selected.date}</div></div>
+            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>{selected.orderSource === 'historical_manual' ? '歷史交易日期' : '日期'}</div><div style={{ fontSize: 13 }}>{selected.transactionDate || selected.date}</div></div>
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>類型</div><TypeBadge type={getOrderDisplayType(selected)} /></div>
-            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>付款方式</div><div style={{ fontSize: 13 }}>{getPaymentMethodLabel(selected.paymentMethod)}</div></div>
+            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>來源</div><div style={{ fontSize: 13 }}>{selected.orderSource === 'historical_manual' ? '歷史補登' : '網站訂單'}</div></div>
           </div>
 
           {selected.user_id && memberNotes[String(selected.user_id)]?.note && (
             <NoteBox kind="member" text={memberNotes[String(selected.user_id)].note} />
           )}
           {selected.note && <NoteBox kind="customer" text={selected.note} />}
+          {selected.orderSource === 'historical_manual' && selected.adminNote && (
+            <div style={{ marginBottom:12, padding:'10px 12px', border:'1px solid var(--border)', borderLeft:'3px solid var(--green)', background:'var(--off)' }}>
+              <div style={{ fontSize:11, color:'var(--green)', marginBottom:4 }}>歷史補登內部備註（僅後台可見）</div>
+              <div style={{ fontSize:12, lineHeight:1.7, whiteSpace:'pre-wrap', overflowWrap:'anywhere' }}>{selected.adminNote}</div>
+            </div>
+          )}
           {!selected.user_id && onAssignGuestOrder && (
             <div style={{ marginBottom: 20, padding: '12px', border: '1px solid var(--border)', background: 'var(--off)' }}>
               <div style={{ fontSize: 11, color: 'var(--mid)', lineHeight: 1.6, marginBottom: 9 }}>此訂單尚未綁定會員。確認訂購人身分後，可將訂單歸戶至既有會員。</div>
@@ -581,10 +593,12 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
           {/* 狀態下拉 */}
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 6 }}>訂單狀態</div>
-            <StatusSelect status={selected.status} paymentMethod={selected.paymentMethod} fulfillmentMethod={selected.fulfillmentMethod} onChange={ns => updateStatus(selected.id, ns)} size="lg" />
+            {selected.orderSource === 'historical_manual'
+              ? <span style={{ display:'inline-block', padding:'7px 12px', color:'var(--green)', border:'1px solid var(--border)', fontSize:12 }}>已完成</span>
+              : <StatusSelect status={selected.status} paymentMethod={selected.paymentMethod} fulfillmentMethod={selected.fulfillmentMethod} onChange={ns => updateStatus(selected.id, ns)} size="lg" />}
           </div>
 
-          <div style={{ border:'1px solid var(--border)', background:'var(--off)', padding:'14px', marginBottom:20 }}>
+          {selected.orderSource !== 'historical_manual' && <div style={{ border:'1px solid var(--border)', background:'var(--off)', padding:'14px', marginBottom:20 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:10 }}>
               <div style={{ fontSize:11, color:'var(--mid)' }}>付款狀態</div>
               <PaymentStateBadge state={selected.paymentState} />
@@ -614,7 +628,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
                 </div>
               </details>
             )}
-          </div>
+          </div>}
 
           {selected.phone && (
             <div style={{ marginBottom: 12 }}>
@@ -622,7 +636,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
               <div style={{ fontSize: 13, color: 'var(--dark)' }}>{selected.phone}</div>
             </div>
           )}
-          <div style={{ border:'1px solid var(--border)', background:'var(--off)', padding:'14px', marginBottom:16 }}>
+          {selected.orderSource !== 'historical_manual' && <div style={{ border:'1px solid var(--border)', background:'var(--off)', padding:'14px', marginBottom:16 }}>
             <div style={{ fontSize:11, color:'var(--mid)', letterSpacing:'0.08em', marginBottom:10 }}>發票資訊</div>
             <div style={{ display:'grid', gridTemplateColumns:'82px minmax(0, 1fr)', gap:'7px 10px', fontSize:12, marginBottom:12 }}>
               <span style={{ color:'var(--mid)' }}>發票類型</span>
@@ -648,7 +662,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
                 {invoiceNotice && <div role="status" style={{ marginTop:7, fontSize:11, lineHeight:1.6, color:invoiceNotice.includes('失敗') || invoiceNotice.includes('沒有') ? 'var(--red)' : 'var(--green)' }}>{invoiceNotice}</div>}
               </div>
             )}
-          </div>
+          </div>}
           {lineNotice && (
             <div style={{
               border: '1px solid var(--border)',
@@ -662,14 +676,14 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
               {lineNotice}
             </div>
           )}
-          {selected.fulfillmentMethod === 'onsite_pickup' ? (
+          {selected.orderSource !== 'historical_manual' && (selected.fulfillmentMethod === 'onsite_pickup' ? (
             <div style={{ border:'1px solid var(--gold)', background:'oklch(0.82 0.12 80 / 0.08)', color:'var(--gold)', padding:'10px 12px', marginBottom:20, fontSize:12, fontWeight:500 }}>客訂自取 · 不需收件地址與托運單號</div>
           ) : <>
             <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 8 }}>收件地址</div>
             <div style={{ fontSize: 12, lineHeight: 1.7, marginBottom: 20, color: 'var(--dark)' }}>{selected.address}</div>
-          </>}
+          </>)}
           {/* 托運/出貨區塊 */}
-          {selected.fulfillmentMethod !== 'onsite_pickup' && !['cancelled', 'returned'].includes(selected.status) && (
+          {selected.orderSource !== 'historical_manual' && selected.fulfillmentMethod !== 'onsite_pickup' && !['cancelled', 'returned'].includes(selected.status) && (
             <div style={{ marginBottom: 20 }}>
               {['paid', 'preparing', 'shipped'].includes(selected.status) ? (
                 <>
@@ -735,7 +749,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginBottom: 16 }}>
             <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'center', marginBottom:12 }}>
               <div style={{ fontSize: 11, color: 'var(--mid)' }}>商品明細</div>
-              {INVENTORY_ACTIVE_STATUSES.has(selected.status) && (
+              {selected.orderSource !== 'historical_manual' && INVENTORY_ACTIVE_STATUSES.has(selected.status) && (
                 <div style={{ fontSize:10, color:'var(--mid)' }}>庫存配置</div>
               )}
             </div>
@@ -746,7 +760,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
                   <div style={{ minWidth:0 }}>
                     <div>{(item.is_gift || item.line_type === 'gift') && <strong style={{ color:'var(--gold)', marginRight:6, fontSize:10 }}>贈品</strong>}{item.name} × {item.qty}</div>
                     {specification && <div style={{ marginTop:3, fontSize:10, color:'var(--mid)' }}>{specification}</div>}
-                    {INVENTORY_ACTIVE_STATUSES.has(selected.status) && (
+                    {selected.orderSource !== 'historical_manual' && INVENTORY_ACTIVE_STATUSES.has(selected.status) && (
                       item.inventoryAllocation?.allocatedQty == null
                         ? <div data-testid="order-item-inventory-unavailable" style={{ marginTop:4, fontSize:10, color:'var(--mid)' }}>尚無庫存配置紀錄</div>
                         : (

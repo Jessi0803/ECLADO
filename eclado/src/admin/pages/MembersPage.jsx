@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, TypeBadge } from '../components/StatusIndicators.jsx';
 import OrderMemberAssignmentDialog from '../components/OrderMemberAssignmentDialog.jsx';
+import HistoricalOrderDialog from '../components/HistoricalOrderDialog.jsx';
 import { orderBelongsToMember } from '../domain/mappers.js';
 import usePanelHistory from '../hooks/usePanelHistory.js';
 import MemberNoteSection from '../components/MemberNoteSection.jsx';
@@ -109,11 +110,11 @@ function applicationsForMember(applications, member) {
 }
 
 export default function Members({
-  members, orders = [],
+  members, orders = [], products = [],
   applications = [], applicationsLoading = false, applicationsError = '',
   onChangeMemberRole, onChangeMembershipStart, onSaveSalesAdjustment, onUpdateApplicationStatus, onSendApplicationNotice, onDeleteMember, currentAdminUserId = '', onAssignGuestOrder, defaultFilter = 'all',
   focusMemberId = '', backToOrderId = '', onOpenOrder, onClearCrossLink, memberNotes = {}, onSaveMemberNote,
-  canManageShoppingCredit = false,
+  canManageShoppingCredit = false, onCreateHistoricalOrder,
 }) {
   const [filter, setFilter] = useState(defaultFilter);
   const [searchQuery, setSearchQuery] = useState('');
@@ -124,6 +125,7 @@ export default function Members({
   const [reviewingId, setReviewingId] = useState('');
   const [applicationNotice, setApplicationNotice] = useState(null);
   const [assignmentOpen, setAssignmentOpen] = useState(false);
+  const [historicalOrderOpen, setHistoricalOrderOpen] = useState(false);
   const [assignmentNotice, setAssignmentNotice] = useState('');
   const [savingTypeId, setSavingTypeId] = useState('');
   const focusedMemberRef = useRef('');
@@ -191,6 +193,7 @@ export default function Members({
     setDeleteNotice('');
     setApplicationNotice(null);
     setAssignmentOpen(false);
+    setHistoricalOrderOpen(false);
     setAssignmentNotice('');
   }
 
@@ -450,9 +453,12 @@ export default function Members({
             </div>
           )}
 
-          {onAssignGuestOrder && !(typeof selected.id === 'string' && selected.id.startsWith('app:')) && (
+          {(onAssignGuestOrder || onCreateHistoricalOrder) && !(typeof selected.id === 'string' && selected.id.startsWith('app:')) && (
             <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
-              <button type="button" onClick={() => setAssignmentOpen(true)} style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--dark)', background: 'var(--white)', color: 'var(--dark)', cursor: 'pointer', fontSize: 12 }}>匯入訪客訂單</button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {onAssignGuestOrder && <button type="button" onClick={() => setAssignmentOpen(true)} style={{ flex: 1, minWidth: 0, padding: '10px 8px', border: '1px solid var(--dark)', background: 'var(--white)', color: 'var(--dark)', cursor: 'pointer', fontSize: 12 }}>匯入訪客訂單</button>}
+                {onCreateHistoricalOrder && <button type="button" onClick={() => setHistoricalOrderOpen(true)} style={{ flex: 1, minWidth: 0, padding: '10px 8px', border: '1px solid var(--dark)', background: 'var(--dark)', color: 'var(--white)', cursor: 'pointer', fontSize: 12 }}>補登歷史訂單</button>}
+              </div>
               {assignmentNotice && <div style={{ marginTop: 10, padding: '9px 10px', background: 'var(--off)', color: 'var(--green)', fontSize: 11 }}>{assignmentNotice}</div>}
             </div>
           )}
@@ -544,7 +550,9 @@ export default function Members({
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                       <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--dark)' }}>{o.id}</span>
-                      <Badge status={o.status} />
+                      {o.orderSource === 'historical_manual'
+                        ? <span style={{ padding: '3px 9px', fontSize: 10, color: 'var(--green)', background: 'oklch(0.65 0.18 145 / 0.10)' }}>歷史補登 · 已完成</span>
+                        : <Badge status={o.status} />}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--mid)' }}>
                       <span>{o.date}</span>
@@ -581,6 +589,17 @@ export default function Members({
               onClose={result => {
                 setAssignmentOpen(false);
                 if (result?.ok) setAssignmentNotice(`已匯入訂單 ${result.order_id}。`);
+              }}
+            />
+          )}
+          {historicalOrderOpen && (
+            <HistoricalOrderDialog
+              member={selected}
+              products={products}
+              onCreate={onCreateHistoricalOrder}
+              onClose={result => {
+                setHistoricalOrderOpen(false);
+                if (result?.ok) setAssignmentNotice(`已補登歷史訂單 ${result.orderId}。`);
               }}
             />
           )}

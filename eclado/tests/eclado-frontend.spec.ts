@@ -2059,6 +2059,39 @@ test('會員專區顯示自己的訂單與托運單號', async ({ page }) => {
   );
 });
 
+test('會員專區安全顯示歷史補登且不偽造付款物流或內部備註', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: authUser('member@example.com'),
+    profiles: [profile('consumer')],
+    orders: [{
+      id: 'ECL-HISTORICAL-ACCOUNT-1',
+      user_id: TEST_USER_ID,
+      member: 'E2E 會員',
+      items: [{ name: '呼吸安瓶', size: '10ml', qty: 2, price: 900 }],
+      total: 1800,
+      subtotal: 1800,
+      discount: 0,
+      status: 'delivered',
+      order_source: 'historical_manual',
+      transaction_date: '2025-11-20',
+      date: '2025-11-20',
+      note: '',
+      admin_note: '會員不可看到的內部補登說明',
+      created_at: '2026-09-29T00:00:00.000Z',
+    }],
+  });
+
+  await page.goto('/account');
+  await expect(page.getByText('ECL-HISTORICAL-ACCOUNT-1')).toBeVisible();
+  await expect(page.getByText('歷史訂單 · 已完成')).toBeVisible();
+  await expect(page.getByText('2025-11-20')).toBeVisible();
+  await expect(page.getByText('呼吸安瓶 × 2')).toBeVisible();
+  await expect(page.getByText('10ml')).toBeVisible();
+  await expect(page.getByText('會員不可看到的內部補登說明')).toHaveCount(0);
+  await expect(page.getByText('付款成功')).toHaveCount(0);
+  await expect(page.getByText(/托運單號/)).toHaveCount(0);
+});
+
 test('會員專區顯示可用購物金並以收合明細呈現公開異動原因', async ({ page }) => {
   const entries = Array.from({ length: 12 }, (_, index) => ({
     id: `member-credit-${index + 1}`,

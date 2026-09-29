@@ -246,6 +246,7 @@ export type MockEcladoApiOptions = {
   profiles?: Record<string, unknown>[];
   professionalSales?: Record<string, unknown>[];
   memberNotes?: Record<string, unknown>[];
+  orderNotes?: Record<string, unknown>[];
   sidebarFavorites?: string[] | null;
   onSidebarFavoritesSave?: (favorites: string[]) => void;
   onMemberNoteSave?: (payload: Record<string, unknown>) => void;
@@ -263,6 +264,7 @@ export type MockEcladoApiOptions = {
   backorders?: Record<string, unknown>[];
   onBackorderAllocate?: (variantId: number) => void;
   onOrderMemberAssign?: (orderId: string, memberId: string) => void;
+  onHistoricalOrderCreate?: (payload: Record<string, unknown>) => void;
   orderAssignmentError?: string;
 };
 
@@ -286,6 +288,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   const applications = (options.applications || []).map(application => ({ ...application }));
   const auditLogs = options.auditLogs || [];
   const inventoryAllocations = options.inventoryAllocations || [];
+  const orderNotes = (options.orderNotes || []).map(note => ({ ...note }));
   const backorders = (options.backorders || []).map(item => ({
     ...item,
     orders: Array.isArray(item.orders) ? item.orders.map(order => ({ ...order })) : [],
@@ -504,6 +507,8 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         created_at: order.created_at, updated_at: order.created_at,
       }]),
   ));
+
+  await page.route('**/rest/v1/rpc/get_admin_order_notes', async route => json(route, orderNotes));
 
   await page.route('**/rest/v1/rpc/get_admin_inventory_allocations', async route => json(route, inventoryAllocations));
 
@@ -812,6 +817,37 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       member_name: member.name || '',
       member_email: member.email || '',
     });
+  });
+
+  await page.route('**/rest/v1/rpc/create_historical_order', async route => {
+    const request = route.request().postDataJSON() || {};
+    options.onHistoricalOrderCreate?.(request);
+    const member = profiles.find(candidate => String(candidate.id) === String(request.p_member_id));
+    if (!member) return json(route, { message: 'Member not found' }, 404);
+    const items = (Array.isArray(request.p_items) ? request.p_items : []).map((requested, index) => {
+      const variant = productVariants().find(candidate => Number(candidate.id) === Number(requested.variant_id));
+      const product = products().find(candidate => Number(candidate.id) === Number(variant?.product_id));
+      return {
+        id: Number(product?.id || index + 1), product_id: Number(product?.id || index + 1),
+        variant_id: Number(requested.variant_id), sku: variant?.sku || '',
+        name: product?.name_zh || product?.name || '歷史商品', nameZh: product?.name_zh || product?.name || '歷史商品',
+        size: variant?.size || '', qty: Number(requested.qty),
+        price: Number(requested.unit_price), unit_price: Number(requested.unit_price),
+        line_total: Number(requested.unit_price) * Number(requested.qty), historical_manual: true,
+      };
+    });
+    const total = items.reduce((sum, item) => sum + Number(item.line_total), 0);
+    const id = `ECL-HISTORICAL-${orders.length + 1}`;
+    const order = {
+      id, member: member.name || member.email, type: member.role || 'consumer', items,
+      total, subtotal: total, discount: 0, status: 'delivered', date: request.p_transaction_date,
+      transaction_date: request.p_transaction_date, order_source: 'historical_manual', user_id: member.id,
+      address: '', phone: member.phone || '', email: member.email || '', note: '',
+      created_at: '2026-09-29T02:00:00.000Z', payment_amount: total, shopping_credit_amount: 0,
+    };
+    orders.unshift(order);
+    if (request.p_admin_note) orderNotes.push({ order_id: id, note: request.p_admin_note, created_at: order.created_at });
+    return json(route, { ...order, admin_note: request.p_admin_note || null });
   });
 
   await page.route('**/rest/v1/rpc/delete_cancelled_order', async route => {

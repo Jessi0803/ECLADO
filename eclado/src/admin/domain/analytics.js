@@ -1,4 +1,4 @@
-import { normalizeSalesName, SALES_COUNTED_STATUSES } from '../../domain/sales.js';
+import { isHistoricalOrder, normalizeSalesName, SALES_COUNTED_STATUSES } from '../../domain/sales.js';
 
 const PROFESSIONAL_ROLES = new Set(['pro', 'instructor', 'distributor']);
 export const ECOMMERCE_LAUNCH_DATE = '2026-09-18';
@@ -77,7 +77,7 @@ export function buildMonthlyRevenue(orders, now = new Date(), monthCount = 6) {
 
   const byMonth = new Map(months.map(month => [month.key, month]));
   (orders || []).forEach(order => {
-    if (!SALES_COUNTED_STATUSES.has(order?.status)) return;
+    if (!SALES_COUNTED_STATUSES.has(order?.status) || isHistoricalOrder(order)) return;
     const month = byMonth.get(orderMonth(order));
     if (!month) return;
     const total = Number(order.total) || 0;
@@ -118,7 +118,7 @@ export function buildProductMonthlySales(products, orders, now = new Date(), mon
   });
 
   (orders || []).forEach(order => {
-    if (!SALES_COUNTED_STATUSES.has(order?.status)) return;
+    if (!SALES_COUNTED_STATUSES.has(order?.status) || isHistoricalOrder(order)) return;
     if (startDate) {
       const orderDay = dayNumber(order?.date || order?.createdAt || order?.created_at);
       const startDay = dayNumber(startDate);

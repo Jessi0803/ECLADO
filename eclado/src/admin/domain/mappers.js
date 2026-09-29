@@ -1,4 +1,4 @@
-import { SALES_COUNTED_STATUSES } from '../../domain/sales.js';
+import { isHistoricalOrder, SALES_COUNTED_STATUSES } from '../../domain/sales.js';
 
 const INVENTORY_ACTIVE_ORDER_STATUSES = new Set([
   'paid',
@@ -167,6 +167,9 @@ export function normalizeOrder(row) {
     shipping: Number.isFinite(snapshotShipping) ? snapshotShipping : inferredShipping,
     pricingSnapshot,
     fulfillmentMethod: row.fulfillment_method || row.pricing_snapshot?.fulfillment_method || 'delivery',
+    orderSource: row.order_source || 'online',
+    transactionDate: row.transaction_date || row.date || null,
+    adminNote: row.admin_note || '',
   };
 }
 
@@ -276,7 +279,9 @@ export function orderBelongsToMember(order, memberId) {
 
 export function normalizeMember(row, allOrders, professionalSales = null) {
   const memberOrders = allOrders.filter(order => orderBelongsToMember(order, row.id));
-  const completedSales = memberOrders.filter(order => SALES_COUNTED_STATUSES.has(order.status));
+  const completedSales = memberOrders.filter(order => (
+    SALES_COUNTED_STATUSES.has(order.status) && !isHistoricalOrder(order)
+  ));
   return {
     id: row.id,
     name: row.name || (row.email ? row.email.split('@')[0] : '未命名'),

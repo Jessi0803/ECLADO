@@ -679,6 +679,20 @@ input, select, textarea { font-family: var(--font); }
   padding: 22px;
 }
 
+.historical-order-product-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.historical-order-price-grid {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.7fr) minmax(120px, 1fr) minmax(120px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 10px;
+}
+
 .assignment-modal-header {
   display: flex;
   justify-content: space-between;
@@ -848,6 +862,11 @@ input, select, textarea { font-family: var(--font); }
 @media (hover: none) { .sidebar-star { opacity: 0.6; } }
 
 @media (max-width: 700px) {
+  .historical-order-product-grid,
+  .historical-order-price-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .inventory-counts-header { align-items:stretch; flex-direction:column; }
   .inventory-counts-header > button { width:100%; }
   .inventory-count-detail-top { display:grid; grid-template-columns:auto 1fr; }
