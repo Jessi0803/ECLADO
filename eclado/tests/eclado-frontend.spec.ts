@@ -668,7 +668,7 @@ test('專業會員購物車即時提示最低訂購與免運門檻', async ({ pa
   await increaseQuantity.click();
   await increaseQuantity.click();
   await expect(cartDrawer.getByRole('status')).toHaveText('✓ 已享免運優惠。');
-  await expect(cartDrawer.getByText('合併出貨免收', { exact: true })).toBeVisible();
+  await expect(cartDrawer.getByText('免運', { exact: true })).toBeVisible();
   await expect(cartDrawer.getByRole('button', { name: '前往結帳' })).toBeEnabled();
 });
 

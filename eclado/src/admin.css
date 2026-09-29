@@ -628,6 +628,11 @@ input, select, textarea { font-family: var(--font); }
   border-top: 1px solid #ddd; color: #999; font-size: 8px; letter-spacing: .05em;
 }
 
+/* 只影響螢幕預覽：A4 寬度也小於 850px，若不限定 screen 會連列印版面一起改掉 */
+@media screen and (max-width: 640px) {
+  .order-print-customer-section { grid-template-columns: minmax(0, 1fr); gap: 8mm; min-height: 0; }
+}
+
 @media (max-width: 850px) {
   .order-print-overlay { padding: 66px 0 0; background: #fff; }
   .order-print-actions { padding: 11px 14px; }

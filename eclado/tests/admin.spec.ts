@@ -1167,7 +1167,7 @@ test('已取消且未付款的訂單可經二次確認後永久刪除', async ({
 
 test('曾付款後取消的訂單保留帳務紀錄且不可永久刪除', async ({ page }) => {
   await mockAdminApis(page, {
-    orders: [{ ...adminOrderRows[1], status: 'cancelled', paid_at: null }],
+    orders: [{ ...adminOrderRows[1], status: 'cancelled', paid_at: '2026-05-21T02:00:00.000Z' }],
   });
 
   await page.goto('/admin');
