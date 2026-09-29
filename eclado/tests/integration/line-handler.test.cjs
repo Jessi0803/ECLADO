@@ -468,3 +468,44 @@ function restoreEnv(values) {
     }
   }
 }
+
+test('LINE push 不會通知歷史補登訂單', async () => {
+  const calls = [];
+  const originalFetch = global.fetch;
+  const originalEnv = {
+    LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    INTERNAL_API_KEY: process.env.INTERNAL_API_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+  process.env.LINE_CHANNEL_ACCESS_TOKEN = 'test-line-token';
+  process.env.INTERNAL_API_KEY = 'test-internal-key';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-key';
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    if (String(url).includes('/rest/v1/orders?id=eq.')) {
+      return jsonResponse(200, [{ order_source: 'historical_manual' }]);
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  const res = createRes();
+  try {
+    await linePush({
+      method: 'POST',
+      headers: { 'x-internal-api-key': 'test-internal-key' },
+      body: {
+        type: 'payment_paid',
+        lineUserId: 'U1234567890',
+        orderId: 'ECL-HISTORICAL-001',
+        total: 1000,
+      },
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.jsonBody, { ok: true, skipped: true, reason: 'historical order' });
+  assert.equal(calls.filter(url => url.includes('api.line.me')).length, 0);
+});

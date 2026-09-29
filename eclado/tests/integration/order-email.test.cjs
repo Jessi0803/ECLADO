@@ -308,3 +308,42 @@ function restoreEnv(originalEnv) {
     else process.env[key] = value;
   }
 }
+
+test('order email skips historical manual orders', async () => {
+  const calls = [];
+  const originalFetch = global.fetch;
+  const originalEnv = {
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    INTERNAL_API_KEY: process.env.INTERNAL_API_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+  process.env.RESEND_API_KEY = 'test-resend-key';
+  process.env.INTERNAL_API_KEY = 'test-internal-key';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-key';
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    if (String(url).includes('/rest/v1/orders?id=eq.')) {
+      return new Response(JSON.stringify([{ order_source: 'historical_manual' }]), { status: 200 });
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  const res = createRes();
+  try {
+    await orderEmail({
+      method: 'POST',
+      headers: { 'x-internal-api-key': 'test-internal-key' },
+      body: { type: 'payment_paid', email: 'buyer@example.com', orderId: 'ECL-HISTORICAL-001', total: 1000 },
+    }, res);
+  } finally {
+    global.fetch = originalFetch;
+    Object.entries(originalEnv).forEach(([key, value]) => {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    });
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.jsonBody, { status: 'skipped', reason: 'historical order' });
+  assert.equal(calls.filter(url => url === 'https://api.resend.com/emails').length, 0);
+});

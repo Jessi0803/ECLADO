@@ -1,3 +1,4 @@
+const { isHistoricalOrder } = require('./_historical-order.js');
 const { requireNotificationAuthorization } = require('./_notification-auth.js');
 
 // 批次出貨會帶 orderIds：一則通知涵蓋同批次的多張訂單。
@@ -53,6 +54,10 @@ module.exports = async function handler(req, res) {
   if (!token) return res.status(500).json({ error: 'LINE_CHANNEL_ACCESS_TOKEN not set' });
   if (!lineUserId) return res.status(400).json({ error: 'lineUserId required' });
   if (!orderId) return res.status(400).json({ error: 'orderId required' });
+
+  if (await isHistoricalOrder(orderId)) {
+    return res.status(200).json({ ok: true, skipped: true, reason: 'historical order' });
+  }
 
   const text = buildMessage({ type, orderId, orderIds, tracking, total });
 

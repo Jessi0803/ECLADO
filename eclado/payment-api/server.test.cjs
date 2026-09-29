@@ -177,6 +177,7 @@ test('付款通知補償工作只重送已到重試時間且尚未送達的訂�
       const query = new URL(target).searchParams;
       assert.equal(query.get('status'), 'in.(paid,preparing,ready_for_pickup,picked_up,shipped,delivered)');
       assert.equal(query.get('payment_notification_sent_at'), 'is.null');
+      assert.equal(query.get('order_source'), 'neq.historical_manual');
       assert.match(query.get('or'), /payment_notification_next_retry_at/);
       return new Response(JSON.stringify([
         { id: 'ECL-RETRY-001' },

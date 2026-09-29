@@ -1,3 +1,4 @@
+const { isHistoricalOrder } = require('./_historical-order.js');
 const DEFAULT_FROM = 'ECLADO <service@ecladotaiwan.com>';
 const { requireNotificationAuthorization } = require('./_notification-auth.js');
 const { buildBrandedEmailHtml } = require('./_email-template.js');
@@ -114,6 +115,10 @@ module.exports = async function handler(req, res) {
   if (!apiKey) return res.status(500).json({ error: 'RESEND_API_KEY not set' });
   if (!email) return res.status(400).json({ error: 'email required' });
   if (!orderId) return res.status(400).json({ error: 'orderId required' });
+
+  if (await isHistoricalOrder(orderId)) {
+    return res.status(200).json({ status: 'skipped', reason: 'historical order' });
+  }
 
   const message = buildEmail({ type, orderId, orderIds, total, tracking, memberName, lookupCode, lookupUrl, paymentDueAt });
   const response = await fetch('https://api.resend.com/emails', {
