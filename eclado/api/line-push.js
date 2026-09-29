@@ -1,6 +1,13 @@
 const { requireNotificationAuthorization } = require('./_notification-auth.js');
 
-function buildMessage({ type = 'shipment', orderId, tracking, total }) {
+// 批次出貨會帶 orderIds：一則通知涵蓋同批次的多張訂單。
+function formatOrderIds(orderId, orderIds) {
+  const list = Array.isArray(orderIds) ? orderIds.filter(id => typeof id === 'string' && id.trim()) : [];
+  if (list.length > 1) return list.join('\n　　　　');
+  return list[0] || orderId;
+}
+
+function buildMessage({ type = 'shipment', orderId, orderIds, tracking, total }) {
   if (type === 'payment_paid') {
     return [
       '您的訂單已付款完成。',
@@ -19,7 +26,7 @@ function buildMessage({ type = 'shipment', orderId, tracking, total }) {
   return [
     '您的訂單已出貨。',
     '',
-    `訂單編號：${orderId}`,
+    `訂單編號：${formatOrderIds(orderId, orderIds)}`,
     '物流公司：順豐速運',
     tracking ? `托運單號：${tracking}` : null,
     '',
@@ -40,14 +47,14 @@ module.exports = async function handler(req, res) {
     return res.status(authorization.status).json({ error: authorization.error });
   }
 
-  const { lineUserId, orderId, tracking, type, total } = req.body || {};
+  const { lineUserId, orderId, orderIds, tracking, type, total } = req.body || {};
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 
   if (!token) return res.status(500).json({ error: 'LINE_CHANNEL_ACCESS_TOKEN not set' });
   if (!lineUserId) return res.status(400).json({ error: 'lineUserId required' });
   if (!orderId) return res.status(400).json({ error: 'orderId required' });
 
-  const text = buildMessage({ type, orderId, tracking, total });
+  const text = buildMessage({ type, orderId, orderIds, tracking, total });
 
   const response = await fetch('https://api.line.me/v2/bot/message/push', {
     method: 'POST',

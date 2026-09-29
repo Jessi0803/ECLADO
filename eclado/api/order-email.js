@@ -49,7 +49,13 @@ function textForPaymentPaid({ orderId, total, memberName }) {
   ].filter(line => line !== null).join('\n');
 }
 
-function textForShipment({ orderId, tracking, memberName }) {
+function formatOrderIds(orderId, orderIds) {
+  const list = Array.isArray(orderIds) ? orderIds.filter(id => typeof id === 'string' && id.trim()) : [];
+  if (list.length > 1) return list.join('、');
+  return list[0] || orderId;
+}
+
+function textForShipment({ orderId, orderIds, tracking, memberName }) {
   const trackingUrl = tracking
     ? 'https://htm.sf-express.com/tw/tc/'
     : '';
@@ -57,7 +63,7 @@ function textForShipment({ orderId, tracking, memberName }) {
   return [
     `${memberName || '您好'}，您的訂單已出貨。`,
     '',
-    `訂單編號：${orderId}`,
+    `訂單編號：${formatOrderIds(orderId, orderIds)}`,
     '物流公司：順豐速運',
     tracking ? `托運單號：${tracking}` : null,
     '',
@@ -72,11 +78,13 @@ function textForShipment({ orderId, tracking, memberName }) {
   ].filter(line => line !== null).join('\n');
 }
 
-function buildEmail({ type = 'order_placed', orderId, total, tracking, memberName, lookupCode, lookupUrl, paymentDueAt }) {
+function buildEmail({ type = 'order_placed', orderId, orderIds, total, tracking, memberName, lookupCode, lookupUrl, paymentDueAt }) {
   if (type === 'shipment') {
     return {
-      subject: `ECLADO 訂單已出貨｜${orderId}`,
-      text: textForShipment({ orderId, tracking, memberName }),
+      subject: Array.isArray(orderIds) && orderIds.length > 1
+        ? `ECLADO 訂單已出貨｜${orderIds.length} 張訂單`
+        : `ECLADO 訂單已出貨｜${orderId}`,
+      text: textForShipment({ orderId, orderIds, tracking, memberName }),
     };
   }
   if (type === 'payment_paid') {
@@ -99,7 +107,7 @@ module.exports = async function handler(req, res) {
     return res.status(authorization.status).json({ error: authorization.error });
   }
 
-  const { email, orderId, type, total, tracking, memberName, lookupCode, lookupUrl, paymentDueAt } = req.body || {};
+  const { email, orderId, orderIds, type, total, tracking, memberName, lookupCode, lookupUrl, paymentDueAt } = req.body || {};
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.ORDER_EMAIL_FROM || DEFAULT_FROM;
 
@@ -107,7 +115,7 @@ module.exports = async function handler(req, res) {
   if (!email) return res.status(400).json({ error: 'email required' });
   if (!orderId) return res.status(400).json({ error: 'orderId required' });
 
-  const message = buildEmail({ type, orderId, total, tracking, memberName, lookupCode, lookupUrl, paymentDueAt });
+  const message = buildEmail({ type, orderId, orderIds, total, tracking, memberName, lookupCode, lookupUrl, paymentDueAt });
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {

@@ -674,6 +674,64 @@ test('訂單詳情顯示合併出貨批次、未付款提醒與人工處理警�
   await expect(section).toContainText('E2E-ORDER-PENDING');
 });
 
+test('批次出貨在有未付款訂單時被擋下，付款後一次出貨並只發一則通知', async ({ page }) => {
+  const groupId = '22222222-3333-4444-8555-666666666666';
+  const shipCalls: Record<string, unknown>[] = [];
+  const notices: Record<string, unknown>[] = [];
+  const orderPatches: Array<{ id: string; patch: Record<string, unknown> }> = [];
+  const groupOrders = [
+    { id:'E2E-ORDER-001', status:'preparing', effective_amount:11730, is_valid:true },
+    { id:'E2E-ORDER-002', status:'unpaid', effective_amount:2200, is_valid:false },
+    { id:'E2E-ORDER-SHIPPED', status:'shipped', effective_amount:1500, is_valid:true },
+  ];
+  await mockAdminApis(page, {
+    profiles: adminProfileRows,
+    shippingGroups: [{
+      order_id: 'E2E-ORDER-001',
+      shipping_group: {
+        id: groupId, status:'locked', original_order_id:'E2E-ORDER-001',
+        original_shipping_amount:120, effective_total:13930, valid_order_count:2,
+        pending_order_count:1, free_shipping:false, shipping_refunded:false,
+        requires_manual_review:false, below_minimum_warning:false,
+        orders: groupOrders,
+      },
+    }],
+    onShipShippingGroup: payload => shipCalls.push(payload),
+    onLinePush: payload => notices.push(payload),
+    onOrderEmail: payload => notices.push(payload),
+    onOrderUpdate: (patch, url) => orderPatches.push({
+      id: decodeURIComponent(new URL(url).searchParams.get('id') || '').replace(/^eq\./, ''),
+      patch,
+    }),
+  });
+
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByText('E2E-ORDER-001').first().click();
+  const section = page.getByTestId('admin-combined-shipping');
+  await expect(section).toContainText('此批次已有 1 張單獨出貨');
+  await expect(section).toContainText('此批次還有 1 張未付款訂單');
+  await expect(section.getByRole('button', { name: '批次出貨' })).toBeDisabled();
+
+  groupOrders[1].status = 'paid';
+  await page.reload();
+  await openAdminSection(page, /訂單管理/);
+  await page.getByText('E2E-ORDER-001').first().click();
+  await section.getByLabel('批次順豐托運單號').fill('SF-BATCH-001');
+  await section.getByRole('button', { name: '批次出貨' }).click();
+
+  await expect(section).toContainText('已批次出貨 2 張訂單');
+  await expect(section).toContainText('跳過已出貨 1 張');
+  expect(shipCalls).toHaveLength(1);
+  expect(shipCalls[0]).toMatchObject({ p_group_id: groupId, p_tracking: 'SF-BATCH-001' });
+  // 不論走 LINE 或 Email 備援，整批只發一則
+  expect(notices).toHaveLength(1);
+  expect(notices[0]).toMatchObject({ type: 'shipment', tracking: 'SF-BATCH-001' });
+  expect(notices[0].orderIds).toEqual(['E2E-ORDER-001', 'E2E-ORDER-002']);
+  const notified = orderPatches.filter(entry => entry.patch.shipment_notification_sent_at);
+  expect(notified.map(entry => entry.id).sort()).toEqual(['E2E-ORDER-001', 'E2E-ORDER-002']);
+});
+
 test('未付款狀態依付款方式區分信用卡與虛擬帳號匯款', async ({ page }) => {
   await mockAdminApis(page, {
     orders: [

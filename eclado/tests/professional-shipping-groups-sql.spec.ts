@@ -109,3 +109,20 @@ test('舊版底層報價的最低金額檢查改為追加單例外，且不改�
   expect(legacyFix).not.toContain('create or replace function public.quote_order_pricing_internal_20260916');
   expect(legacyFix).toContain('revoke all on function public.quote_order_pricing_internal_20260916(jsonb, text)');
 });
+
+test('批次出貨在一次交易內完成，未付款擋下、已出貨跳過', () => {
+  const batchShip = fs.readFileSync(
+    path.resolve(process.cwd(), 'supabase-professional-shipping-group-batch-ship.sql'),
+    'utf8',
+  );
+  expect(batchShip).toContain('create or replace function public.ship_shipping_group(');
+  expect(batchShip).toContain("public.has_backoffice_permission('orders.write')");
+  expect(batchShip).toContain('for update');
+  expect(batchShip).toContain("target_order.status in ('awaiting_confirm', 'unpaid')");
+  expect(batchShip).toContain("target_order.status in ('paid', 'preparing')");
+  expect(batchShip).toContain("target_order.status in ('shipped', 'delivered', 'picked_up', 'ready_for_pickup')");
+  expect(batchShip).toContain('張未付款訂單，請先確認付款或取消後再出貨');
+  expect(batchShip).toContain('此批次沒有可出貨的訂單');
+  expect(batchShip).toContain('grant execute on function public.ship_shipping_group(uuid, text) to authenticated');
+  expect(batchShip).not.toContain('to anon');
+});

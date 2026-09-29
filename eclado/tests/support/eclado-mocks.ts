@@ -244,6 +244,7 @@ export type MockEcladoApiOptions = {
   couponCampaignMembers?: Record<string, unknown>[];
   orders?: Record<string, unknown>[];
   shippingGroups?: Record<string, unknown>[];
+  onShipShippingGroup?: (payload: Record<string, unknown>) => void;
   myAppendableShippingGroup?: Record<string, unknown> | null;
   profiles?: Record<string, unknown>[];
   professionalSales?: Record<string, unknown>[];
@@ -510,6 +511,27 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         created_at: order.created_at, updated_at: order.created_at,
       }]),
   ));
+
+  await page.route('**/rest/v1/rpc/ship_shipping_group', async route => {
+    const request = route.request().postDataJSON() || {};
+    const group = (options.shippingGroups || []).map(row => (row as Record<string, any>).shipping_group)
+      .find(item => item?.id === request.p_group_id);
+    const rows: Array<Record<string, any>> = group?.orders || [];
+    const unpaid = rows.filter(row => ['awaiting_confirm', 'unpaid'].includes(row.status));
+    if (unpaid.length > 0) {
+      return json(route, { message: `此批次還有 ${unpaid.length} 張未付款訂單，請先確認付款或取消後再出貨` }, 400);
+    }
+    const shipped = rows.filter(row => ['paid', 'preparing'].includes(row.status)).map(row => row.id);
+    const skipped = rows.filter(row => ['shipped', 'delivered', 'picked_up', 'ready_for_pickup'].includes(row.status)).map(row => row.id);
+    if (shipped.length === 0) return json(route, { message: '此批次沒有可出貨的訂單' }, 400);
+    options.onShipShippingGroup?.({ ...request, shipped, skipped });
+    return json(route, {
+      group_id: request.p_group_id,
+      tracking: request.p_tracking,
+      shipped_order_ids: shipped,
+      skipped_order_ids: skipped,
+    });
+  });
 
   await page.route('**/rest/v1/rpc/get_admin_shipping_groups', async route => json(
     route,

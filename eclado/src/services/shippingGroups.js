@@ -19,3 +19,17 @@ export async function getMyAppendableShippingGroup() {
   return normalizeShippingGroup(data);
 }
 
+
+export async function shipShippingGroup(groupId, tracking) {
+  const { data, error } = await supabase.rpc('ship_shipping_group', {
+    p_group_id: groupId,
+    p_tracking: tracking,
+  });
+  if (error) throw error;
+  return {
+    groupId: data?.group_id || groupId,
+    tracking: data?.tracking || tracking,
+    shippedOrderIds: Array.isArray(data?.shipped_order_ids) ? data.shipped_order_ids : [],
+    skippedOrderIds: Array.isArray(data?.skipped_order_ids) ? data.skipped_order_ids : [],
+  };
+}

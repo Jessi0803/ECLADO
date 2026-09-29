@@ -6,6 +6,7 @@ import { PaymentStateBadge, STATUS_MAP, StatusSelect, TypeBadge } from '../compo
 import OrderMemberAssignmentDialog from '../components/OrderMemberAssignmentDialog.jsx';
 import OrderPrintPreview from '../components/OrderPrintPreview.jsx';
 import usePanelHistory from '../hooks/usePanelHistory.js';
+import { shipShippingGroup } from '../../services/shippingGroups.js';
 
 const INVENTORY_ACTIVE_STATUSES = new Set([
   'paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered',
@@ -127,6 +128,9 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
   const [filter, setFilter] = useState(defaultFilter);
   const [stockFilter, setStockFilter] = useState('all');
   const [trackingInput, setTrackingInput] = useState('');
+  const [batchTrackingInput, setBatchTrackingInput] = useState('');
+  const [batchNotice, setBatchNotice] = useState('');
+  const [batchShipping, setBatchShipping] = useState(false);
   const [invoiceNumberInput, setInvoiceNumberInput] = useState('');
   const [savingInvoiceNumber, setSavingInvoiceNumber] = useState(false);
   const [invoiceNotice, setInvoiceNotice] = useState('');
@@ -141,6 +145,8 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
 
   useEffect(() => {
     setTrackingInput(selected?.tracking || '');
+    setBatchTrackingInput('');
+    setBatchNotice('');
     setInvoiceNumberInput(selected?.invoiceNumber || '');
     setInvoiceNotice('');
     setAssignmentOpen(false);
@@ -387,6 +393,66 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
       }
     } finally {
       setDeletingOrder(false);
+    }
+  }
+
+  const batchShippableOrders = (selected?.shippingGroup?.orders || []).filter(
+    groupOrder => ['paid', 'preparing'].includes(groupOrder.status),
+  );
+  const batchAlreadyShipped = (selected?.shippingGroup?.orders || []).filter(
+    groupOrder => ['shipped', 'delivered', 'picked_up', 'ready_for_pickup'].includes(groupOrder.status),
+  );
+  const batchUnpaidCount = (selected?.shippingGroup?.orders || []).filter(
+    groupOrder => ['awaiting_confirm', 'unpaid'].includes(groupOrder.status),
+  ).length;
+
+  async function shipBatch() {
+    const groupId = selected?.shippingGroup?.id;
+    const tracking = batchTrackingInput.trim();
+    if (!groupId) return;
+    if (!tracking) {
+      setBatchNotice('請輸入順豐托運單號，再執行批次出貨。');
+      return;
+    }
+    setBatchShipping(true);
+    setBatchNotice('');
+    try {
+      const result = await shipShippingGroup(groupId, tracking);
+      const shippedOrders = result.shippedOrderIds
+        .map(id => orders.find(order => order.id === id))
+        .filter(Boolean);
+      const noticeTarget = shippedOrders.find(order => order.user_id) || shippedOrders[0];
+      let noticeResult = { ok: false, channel: '', error: '找不到可通知的訂單' };
+      if (noticeTarget) {
+        // 一則通知涵蓋這次出貨的所有訂單
+        noticeResult = await pushLineOrderNotice(
+          { ...noticeTarget, tracking: result.tracking },
+          'shipment',
+          { tracking: result.tracking, orderIds: result.shippedOrderIds },
+        );
+      }
+      const notifiedAt = new Date().toISOString();
+      await Promise.all(result.shippedOrderIds.map(id => persistOrderPatch(
+        id,
+        noticeResult.ok
+          ? {
+              shipment_notification_sent_at: notifiedAt,
+              shipment_notification_channel: noticeResult.channel,
+              shipment_notification_error: null,
+            }
+          : { shipment_notification_error: noticeResult.error || '批次出貨通知發送失敗' },
+      ).catch(() => null)));
+      setBatchTrackingInput('');
+      setStockFilter('all');
+      setBatchNotice([
+        `已批次出貨 ${result.shippedOrderIds.length} 張訂單`,
+        result.skippedOrderIds.length ? `，跳過已出貨 ${result.skippedOrderIds.length} 張` : '',
+        noticeResult.ok ? '，出貨通知已送出一則。' : `，但出貨通知發送失敗：${noticeResult.error || '請用重新發送補寄'}`,
+      ].join(''));
+    } catch (error) {
+      setBatchNotice(error?.message || '批次出貨失敗，請稍後再試。');
+    } finally {
+      setBatchShipping(false);
     }
   }
 
@@ -697,6 +763,39 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
                 <span style={{ color:'var(--mid)' }}>免運</span><span>{selected.shippingGroup.free_shipping ? '已達成' : '尚未達成'}</span>
                 <span style={{ color:'var(--mid)' }}>原運費</span><span>NT$ {selected.shippingGroup.originalShippingAmount.toLocaleString()}</span>
                 <span style={{ color:'var(--mid)' }}>運費退回</span><span>{selected.shippingGroup.shipping_refunded ? `已退購物金 NT$ ${selected.shippingGroup.originalShippingAmount.toLocaleString()}` : '尚未退回'}</span>
+              </div>
+              {batchAlreadyShipped.length > 0 && (
+                <div style={{ fontSize:10, color:'var(--mid)', marginBottom:8, lineHeight:1.6 }}>
+                  此批次已有 {batchAlreadyShipped.length} 張單獨出貨，批次出貨只會處理剩下的訂單。
+                </div>
+              )}
+              <div style={{ borderTop:'1px solid var(--border)', paddingTop:10, marginBottom:10 }}>
+                <div style={{ fontSize:11, color:'var(--mid)', marginBottom:6 }}>批次出貨（{batchShippableOrders.length} 張可出貨）</div>
+                <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                  <input
+                    aria-label="批次順豐托運單號"
+                    value={batchTrackingInput}
+                    onChange={event => { setBatchTrackingInput(event.target.value); if (batchNotice) setBatchNotice(''); }}
+                    placeholder="順豐托運單號"
+                    disabled={batchShipping}
+                    style={{ flex:'1 1 160px', minWidth:0, border:'1px solid var(--border)', padding:'7px 9px', fontSize:12, background:'#fff' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={shipBatch}
+                    disabled={batchShipping || batchShippableOrders.length === 0 || batchUnpaidCount > 0}
+                    title={batchUnpaidCount > 0 ? '此批次還有未付款訂單' : ''}
+                    style={{ background:'var(--dark)', color:'#fff', border:'none', padding:'7px 16px', fontSize:12, cursor: batchShipping || batchShippableOrders.length === 0 || batchUnpaidCount > 0 ? 'not-allowed' : 'pointer', opacity: batchShippableOrders.length === 0 || batchUnpaidCount > 0 ? 0.5 : 1 }}
+                  >{batchShipping ? '出貨中…' : '批次出貨'}</button>
+                </div>
+                {batchUnpaidCount > 0 && (
+                  <div style={{ fontSize:10, color:'var(--gold)', marginTop:6, lineHeight:1.6 }}>
+                    此批次還有 {batchUnpaidCount} 張未付款訂單，請先確認付款或取消後再批次出貨。
+                  </div>
+                )}
+                {batchNotice && (
+                  <div role="status" style={{ fontSize:11, marginTop:7, lineHeight:1.6, color: batchNotice.includes('失敗') || batchNotice.includes('請') ? 'var(--red)' : 'var(--green)' }}>{batchNotice}</div>
+                )}
               </div>
               <div style={{ borderTop:'1px solid var(--border)', paddingTop:8, display:'grid', gap:5 }}>
                 {selected.shippingGroup.orders.map(groupOrder => (
