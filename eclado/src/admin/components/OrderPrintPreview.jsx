@@ -141,8 +141,10 @@ export default function OrderPrintPreview({ order, onClose }) {
                 <tr key={`${itemCode(item)}-${index}`}>
                   <td>{itemCode(item)}</td>
                   <td>
-                    <strong>{itemName(item)}</strong>
-                    {itemSize(item) && <span>{itemSize(item)}</span>}
+                    <strong>
+                      {itemName(item)}
+                      {itemSize(item) && <span className="order-print-item-size"> {itemSize(item)}</span>}
+                    </strong>
                     {gift && <span>贈品</span>}
                   </td>
                   <td>{numberValue(item.qty)}</td>
