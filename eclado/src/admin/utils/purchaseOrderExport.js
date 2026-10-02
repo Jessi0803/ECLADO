@@ -147,6 +147,96 @@ export async function exportPurchaseOrderPng(order, element) {
   downloadBlob(blob, `${safeFilename(order.po_number)}.png`);
 }
 
+function canvasRangeForElement(sourceCanvas, sourceElement, targetElement) {
+  const sourceRect = sourceElement.getBoundingClientRect();
+  const targetRect = targetElement.getBoundingClientRect();
+  const scaleY = sourceCanvas.height / sourceRect.height;
+  const top = Math.max(0, Math.floor((targetRect.top - sourceRect.top) * scaleY));
+  const bottom = Math.min(
+    sourceCanvas.height,
+    Math.ceil((targetRect.bottom - sourceRect.top) * scaleY),
+  );
+  return { top, height: Math.max(0, bottom - top) };
+}
+
+function buildPdfPageSlices(sourceCanvas, sourceElement, maxPageHeight) {
+  const table = sourceElement.querySelector('table');
+  const tableHead = table?.querySelector('thead');
+  const rows = Array.from(table?.querySelectorAll('tbody tr') || []);
+
+  if (!table || !tableHead || rows.length === 0) {
+    const pages = [];
+    for (let top = 0; top < sourceCanvas.height; top += maxPageHeight) {
+      pages.push([{ top, height: Math.min(maxPageHeight, sourceCanvas.height - top) }]);
+    }
+    return pages;
+  }
+
+  const head = canvasRangeForElement(sourceCanvas, sourceElement, tableHead);
+  const rowSlices = rows.map(row => canvasRangeForElement(sourceCanvas, sourceElement, row));
+  const tableRange = canvasRangeForElement(sourceCanvas, sourceElement, table);
+  const preamble = { top: 0, height: rowSlices[0].top };
+  const tailTop = tableRange.top + tableRange.height;
+  const tail = { top: tailTop, height: Math.max(0, sourceCanvas.height - tailTop) };
+  const pages = [];
+  let current = [];
+  let usedHeight = 0;
+
+  const finishPage = () => {
+    if (current.length > 0) pages.push(current);
+    current = [];
+    usedHeight = 0;
+  };
+
+  const addSlice = (slice) => {
+    if (!slice || slice.height <= 0) return;
+    current.push(slice);
+    usedHeight += slice.height;
+  };
+
+  addSlice(preamble);
+  rowSlices.forEach((row) => {
+    if (usedHeight + row.height > maxPageHeight && current.length > 0) {
+      finishPage();
+      addSlice(head);
+    }
+    addSlice(row);
+  });
+
+  if (tail.height > 0) {
+    if (usedHeight + tail.height > maxPageHeight && current.length > 0) finishPage();
+    addSlice(tail);
+  }
+  finishPage();
+  return pages;
+}
+
+function composeCanvasPage(sourceCanvas, slices) {
+  const pageHeight = slices.reduce((sum, slice) => sum + slice.height, 0);
+  const pageCanvas = document.createElement('canvas');
+  pageCanvas.width = sourceCanvas.width;
+  pageCanvas.height = Math.max(1, pageHeight);
+  const context = pageCanvas.getContext('2d');
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+  let destinationY = 0;
+  slices.forEach((slice) => {
+    context.drawImage(
+      sourceCanvas,
+      0,
+      slice.top,
+      sourceCanvas.width,
+      slice.height,
+      0,
+      destinationY,
+      sourceCanvas.width,
+      slice.height,
+    );
+    destinationY += slice.height;
+  });
+  return pageCanvas;
+}
+
 export async function exportPurchaseOrderPdf(order, element) {
   const canvas = await renderDocument(element);
   const { jsPDF } = await import('jspdf');
@@ -154,17 +244,23 @@ export async function exportPurchaseOrderPdf(order, element) {
   const margin = 10;
   const pageWidth = pdf.internal.pageSize.getWidth() - margin * 2;
   const pageHeight = pdf.internal.pageSize.getHeight() - margin * 2;
-  const imageHeight = canvas.height * pageWidth / canvas.width;
-  const image = canvas.toDataURL('image/png');
-  let remaining = imageHeight;
-  let offset = 0;
-  pdf.addImage(image, 'PNG', margin, margin, pageWidth, imageHeight, undefined, 'FAST');
-  remaining -= pageHeight;
-  while (remaining > 0) {
-    offset += pageHeight;
-    pdf.addPage('a4', 'landscape');
-    pdf.addImage(image, 'PNG', margin, margin - offset, pageWidth, imageHeight, undefined, 'FAST');
-    remaining -= pageHeight;
-  }
+  const maxCanvasPageHeight = Math.floor(canvas.width * pageHeight / pageWidth);
+  const pages = buildPdfPageSlices(canvas, element, maxCanvasPageHeight);
+
+  pages.forEach((slices, index) => {
+    if (index > 0) pdf.addPage('a4', 'landscape');
+    const pageCanvas = composeCanvasPage(canvas, slices);
+    const renderedHeight = pageCanvas.height * pageWidth / pageCanvas.width;
+    pdf.addImage(
+      pageCanvas.toDataURL('image/png'),
+      'PNG',
+      margin,
+      margin,
+      pageWidth,
+      renderedHeight,
+      undefined,
+      'FAST',
+    );
+  });
   pdf.save(`${safeFilename(order.po_number)}.pdf`);
 }
