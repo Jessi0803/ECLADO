@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  isProfessionalMember,
+  canAccessProfessionalCatalog,
 } from '../../domain/catalog.jsx';
 import { normProductIds } from '../../domain/promotions.js';
 import ProductCard from './ProductCard.jsx';
@@ -10,7 +10,7 @@ export default function PromoSection({ promo, user, addToCart, onSelect, isMobil
   const items = ids
     .map(id => products.find(p => p.id === id))
     .filter(Boolean)
-    .filter(p => !p.isProOnly || isProfessionalMember(user));
+    .filter(p => !p.isProOnly || canAccessProfessionalCatalog(user));
   if (items.length === 0) {
     return (
       <section style={{ background:'var(--white)', padding: isMobile ? '48px 0' : '72px 0', borderTop:'1px solid var(--light)', borderBottom:'1px solid var(--light)' }}>

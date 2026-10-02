@@ -11,4 +11,4 @@ where name_zh in ('金箔片', '金箔貼片')
    or slug = 'gold-patch';
 
 comment on column public.products.apply_tier_multiplier is
-  'When false, pro/instructor/distributor all pay the configured professional price without role multipliers.';
+  'When false, pro/instructor/distributor/staff all pay the configured professional price without role multipliers.';

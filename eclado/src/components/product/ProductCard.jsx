@@ -3,7 +3,7 @@ import {
   getMemberPrice,
   getMemberTier,
   getProductImage,
-  isProfessionalMember,
+  canAccessProfessionalCatalog,
 } from '../../domain/catalog.jsx';
 import {
   getPromoDisplayPrice,
@@ -15,10 +15,10 @@ import { getProductSlug } from '../../app/routes.js';
 
 export default function ProductCard({ product, user, onAdd, onSelect, promotions = [], routeBase = '/products' }) {
   const [hovered, setHovered] = useState(false);
-  const canPurchase = !product.isProOnly || isProfessionalMember(user);
+  const canPurchase = !product.isProOnly || canAccessProfessionalCatalog(user);
   const showPrice = getMemberPrice(product, user);
   const priceTier = getMemberTier(user);
-  const hasTierPrice = isProfessionalMember(user) && showPrice !== product.price;
+  const hasTierPrice = canAccessProfessionalCatalog(user) && showPrice !== product.price;
   const priceLabel = product.applyTierMultiplier === false ? '固定專業價' : priceTier.priceLabel;
   const onPromo = promotions.some(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));
   const promoDisplay = getPromoDisplayPrice(product, user, promotions);

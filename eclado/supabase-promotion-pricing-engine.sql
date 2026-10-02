@@ -20,7 +20,7 @@ where (name_zh in ('金箔片', '金箔貼片') or slug = 'gold-patch')
   and apply_tier_multiplier is distinct from false;
 
 comment on column public.products.apply_tier_multiplier is
-  'When false, pro/instructor/distributor all pay the configured professional price without role multipliers.';
+  'When false, pro/instructor/distributor/staff all pay the configured professional price without role multipliers.';
 
 create or replace function public.quote_order_pricing(
   p_items jsonb,
@@ -295,6 +295,8 @@ begin
 
   if normalized_fulfillment_method = 'onsite_pickup' then
     shipping_amount := 0;
+  elsif member_role = 'staff' then
+    shipping_amount := 0;
   elsif member_role in ('pro', 'instructor', 'distributor')
     and subtotal_amount - discount_amount >= 15000
   then
@@ -332,6 +334,7 @@ begin
       'version', 2,
       'code', case
         when normalized_fulfillment_method = 'onsite_pickup' then 'onsite-pickup'
+        when member_role = 'staff' then 'staff-free-shipping'
         when member_role in ('pro', 'instructor', 'distributor') then 'professional-threshold'
         else 'standard'
       end,

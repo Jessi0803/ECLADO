@@ -412,7 +412,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     const role = String(
       profiles.find(profile => String(profile.id) === String(authUser?.id))?.role || 'consumer',
     );
-    const canViewProfessionalPrice = ['pro', 'instructor', 'distributor'].includes(role);
+    const canViewProfessionalPrice = ['pro', 'instructor', 'distributor', 'staff'].includes(role);
     const publicProducts = products()
       .filter(product => product.active !== false && (product.publication_status || 'active') === 'active')
       .map(product => ({
@@ -444,7 +444,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     const role = String(
       profiles.find(profile => String(profile.id) === String(authUser?.id))?.role || 'consumer',
     );
-    const canViewProfessionalPrice = ['pro', 'instructor', 'distributor'].includes(role);
+    const canViewProfessionalPrice = ['pro', 'instructor', 'distributor', 'staff'].includes(role);
     const eventRows = products().filter(product => product.publication_status === 'event_only');
     const eventProductIds = new Set(eventRows.map(product => Number(product.id)));
     return json(route, {
@@ -1154,8 +1154,8 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     const role = String(
       profiles.find(profile => String(profile.id) === String(authUser?.id))?.role || 'consumer',
     );
-    const multiplier = role === 'pro' ? 1 : role === 'instructor' ? 0.7 : role === 'distributor' ? 0.65 : null;
-    const canBuyPro = ['pro', 'instructor', 'distributor'].includes(role);
+    const multiplier = role === 'pro' ? 1 : role === 'instructor' ? 0.7 : role === 'distributor' ? 0.65 : role === 'staff' ? 0.5 : null;
+    const canBuyPro = ['pro', 'instructor', 'distributor', 'staff'].includes(role);
     const requestedItems = Array.isArray(request.p_items) ? request.p_items : [];
     const authoritativeItems = requestedItems.map((requested: Record<string, unknown>, index: number) => {
       const product = products().find(row => Number(row.id) === Number(requested.product_id));
@@ -1252,6 +1252,8 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     const shipping = fulfillmentMethod === 'onsite_pickup'
       ? 0
       : appendableShippingGroup?.id
+      ? 0
+      : role === 'staff'
       ? 0
       : professionalRole && discountedSubtotal >= 15000
       ? 0

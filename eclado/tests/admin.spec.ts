@@ -1951,9 +1951,12 @@ test('優惠券方案可打包多個優惠券專用活動', async ({ page }) => 
   await page.getByRole('button', { name:'將「再折百元」上移' }).click();
   await expect(orderedActivities.locator(':scope > div').nth(0)).toContainText('再折百元');
   await expect(orderedActivities.locator(':scope > div').nth(1)).toContainText('九折');
+  await expect(page.getByLabel('內部人員')).not.toBeChecked();
+  await page.getByLabel('內部人員').check();
   await page.getByRole('button', { name:'建立優惠券' }).click();
   await expect.poll(() => couponSaves.length).toBe(1);
   expect(couponSaves[0]).toMatchObject({ name:'新客複合券', code:'WELCOME', promotion_ids:['coupon-fixed','coupon-pct'], allow_guest:true });
+  expect(couponSaves[0].audience_roles).toContain('staff');
 });
 
 test('編輯優惠券會依後端排序還原活動執行順序', async ({ page }) => {
@@ -2618,9 +2621,10 @@ test('會員管理可手動切換會員類型並同步 profile role', async ({ p
   await page.goto('/admin');
   await openAdminSection(page, /會員管理/);
   await page.getByText('測試會員').click();
-  await page.getByRole('button', { name: '經銷商' }).last().click();
+  await page.getByRole('button', { name: '內部人員' }).last().click();
 
-  await expect.poll(() => roleChanges.some(change => change.role === 'distributor')).toBe(true);
+  await expect.poll(() => roleChanges.some(change => change.role === 'staff')).toBe(true);
+  await expect(page.getByText('內部人員', { exact: true }).first()).toBeVisible();
 });
 
 test('會員管理只在會員詳細顯示師資目前季度採購額與資格歷程', async ({ page }) => {

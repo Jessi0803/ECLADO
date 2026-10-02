@@ -6,7 +6,7 @@ import {
   getVariantForCartItem,
   groupProductImages,
   groupProductVariants,
-  isProfessionalMember,
+  canAccessProfessionalCatalog,
   mergeProductsWithStock,
 } from '../domain/catalog.jsx';
 import { fetchProductRows } from '../services/catalogData.js';
@@ -84,7 +84,7 @@ export default function useProducts(user, setCart, authReady = true, includeEven
           Number(current.id) === Number(item.id)
         ));
         if (!product && eventError && item.publicationStatus === 'event_only') return item;
-        if (!product || (product.isProOnly && !isProfessionalMember(user))) {
+        if (!product || (product.isProOnly && !canAccessProfessionalCatalog(user))) {
           return null;
         }
         const variants = getProductVariants(product);

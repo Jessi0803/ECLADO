@@ -56,7 +56,7 @@ begin
     from public.profiles profile
     where profile.id = auth.uid();
   end if;
-  can_view_professional_price := viewer_role in ('pro', 'instructor', 'distributor');
+  can_view_professional_price := viewer_role in ('pro', 'instructor', 'distributor', 'staff');
 
   select jsonb_build_object(
     'products', coalesce((

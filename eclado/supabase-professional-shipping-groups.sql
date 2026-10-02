@@ -610,6 +610,8 @@ begin
     shipping_amount := 0;
   elsif is_additional_order then
     shipping_amount := 0;
+  elsif member_role = 'staff' then
+    shipping_amount := 0;
   elsif member_role in ('pro', 'instructor', 'distributor')
     and effective_merchandise_amount >= 15000
   then

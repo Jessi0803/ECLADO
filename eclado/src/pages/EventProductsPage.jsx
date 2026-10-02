@@ -2,7 +2,7 @@ import React from 'react';
 import ProductCard from '../components/product/ProductCard.jsx';
 import {
   getCartKey,
-  isProfessionalMember,
+  canAccessProfessionalCatalog,
 } from '../domain/catalog.jsx';
 import useDocumentMeta from '../hooks/useDocumentMeta.js';
 import useIsMobile from '../hooks/useIsMobile.js';
@@ -25,7 +25,7 @@ export default function EventProductsPage({
   });
 
   function addToCart(product) {
-    if (product.isProOnly && !isProfessionalMember(user)) return;
+    if (product.isProOnly && !canAccessProfessionalCatalog(user)) return;
     setCart(previous => {
       const cartKey = getCartKey(product);
       const existing = previous.find(item => getCartKey(item) === cartKey);

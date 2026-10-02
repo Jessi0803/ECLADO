@@ -75,6 +75,7 @@ export function TypeBadge({ type }) {
     pro: { label:'美容師', color:'var(--dark)' },
     instructor: { label:'師資', color:'var(--gold)' },
     distributor: { label:'經銷商', color:'var(--green)' },
+    staff: { label:'內部人員', color:'var(--blue)' },
     consumer: { label:'一般會員', color:'var(--mid)' },
     guest: { label:'訪客', color:'var(--mid)' },
     pending: { label:'審核中', color:'var(--yellow)' },

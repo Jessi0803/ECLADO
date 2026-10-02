@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   getMemberRole,
   getMemberTier,
+  canAccessProfessionalCatalog,
   isProfessionalMember,
 } from '../domain/catalog.jsx';
 import QuarterlySalesPanel from '../components/account/QuarterlySalesPanel.jsx';
@@ -261,7 +262,7 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
   }
 
   useEffect(() => {
-    if (!user?.uid || isProfessionalMember(user)) return;
+    if (!user?.uid || canAccessProfessionalCatalog(user)) return;
     fetchProfessionalApplicationStatus(user.uid)
       .then(({ data }) => { if (data) setProAppStatus(data.status); });
   }, [user?.uid]);
@@ -436,7 +437,7 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
                 )}
                 </div>
               )}
-              {!isProfessionalMember(user) && (
+              {!canAccessProfessionalCatalog(user) && (
                 <div style={{ marginTop:4, padding:'16px', background:'var(--accent-tint)', borderLeft:'2px solid var(--accent)' }}>
                   {proAppStatus === 'pending' ? (
                     <>

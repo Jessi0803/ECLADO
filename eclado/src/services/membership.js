@@ -93,7 +93,7 @@ export async function goProfessionalApply(user, setPage) {
     return;
   }
   const role = getMemberRole(user);
-  if (['pro', 'instructor', 'distributor'].includes(role)) {
+  if (['pro', 'instructor', 'distributor', 'staff'].includes(role)) {
     setPage('account');
     return;
   }

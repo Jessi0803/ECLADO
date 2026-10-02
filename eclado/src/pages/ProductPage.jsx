@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import ProductDetail from '../components/product/ProductDetail.jsx';
 import {
   getCartKey,
-  isProfessionalMember,
+  canAccessProfessionalCatalog,
 } from '../domain/catalog.jsx';
 import { getProductSlug } from '../app/routes.js';
 import useNoIndex from '../hooks/useNoIndex.js';
@@ -78,7 +78,7 @@ export default function ProductPage({
   }, [product, routeBase]);
 
   function addToCart(selectedProduct) {
-    if (selectedProduct.isProOnly && !isProfessionalMember(user)) return;
+    if (selectedProduct.isProOnly && !canAccessProfessionalCatalog(user)) return;
     setCart(previous => {
       const cartKey = getCartKey(selectedProduct);
       const existing = previous.find(item => getCartKey(item) === cartKey);

@@ -420,6 +420,8 @@ begin
 
   if normalized_fulfillment = 'onsite_pickup' then
     shipping_amount := 0;
+  elsif member_role = 'staff' then
+    shipping_amount := 0;
   elsif member_role in ('pro', 'instructor', 'distributor')
     and subtotal_amount - total_discount >= 15000
   then

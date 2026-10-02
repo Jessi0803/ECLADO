@@ -10,7 +10,7 @@ import { HERO_SLIDES } from '../data/homeContent.js';
 import { getJournalArticle } from '../data/journalArticles.js';
 import {
   getCartKey,
-  isProfessionalMember,
+  canAccessProfessionalCatalog,
 } from '../domain/catalog.jsx';
 import { emptySalesStats, getPopularProducts } from '../domain/sales.js';
 import { isPromotionLive } from '../domain/promotions.js';
@@ -44,7 +44,7 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
   }, []);
 
   function addToCart(product) {
-    if (product.isProOnly && !isProfessionalMember(user)) return;
+    if (product.isProOnly && !canAccessProfessionalCatalog(user)) return;
     setCart(prev => {
       const cartKey = getCartKey(product);
       const ex = prev.find(i => getCartKey(i) === cartKey);

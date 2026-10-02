@@ -17,7 +17,7 @@ alter table public.coupon_campaigns
     (
       audience_mode = 'roles'
       and cardinality(audience_roles) > 0
-      and audience_roles <@ array['consumer', 'pro', 'instructor', 'distributor']::text[]
+      and audience_roles <@ array['consumer', 'pro', 'instructor', 'distributor', 'staff']::text[]
     )
     or (
       audience_mode = 'members'

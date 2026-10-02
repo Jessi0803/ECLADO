@@ -91,7 +91,7 @@ export default function ProfessionalApplicationPage({ setPage, user, authReady, 
         return;
       }
       const role = getMemberRole(user);
-      if (['pro', 'instructor', 'distributor'].includes(role)) {
+      if (['pro', 'instructor', 'distributor', 'staff'].includes(role)) {
         if (alive) { setBlocked('pro'); setGateLoading(false); }
         return;
       }

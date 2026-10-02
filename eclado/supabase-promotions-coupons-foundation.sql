@@ -218,7 +218,7 @@ create table if not exists public.coupon_campaigns (
   constraint coupon_campaigns_audience_check check (
     (audience_mode = 'roles'
       and cardinality(audience_roles) > 0
-      and audience_roles <@ array['consumer', 'pro', 'instructor', 'distributor']::text[])
+      and audience_roles <@ array['consumer', 'pro', 'instructor', 'distributor', 'staff']::text[])
     or (audience_mode = 'members'
       and cardinality(audience_roles) = 0
       and allow_guest is false)
@@ -275,7 +275,7 @@ alter table public.coupon_campaigns
   add constraint coupon_campaigns_audience_mode_check check (
     (audience_mode = 'roles'
       and cardinality(audience_roles) > 0
-      and audience_roles <@ array['consumer', 'pro', 'instructor', 'distributor']::text[])
+      and audience_roles <@ array['consumer', 'pro', 'instructor', 'distributor', 'staff']::text[])
     or (audience_mode = 'members'
       and cardinality(audience_roles) = 0
       and allow_guest is false)

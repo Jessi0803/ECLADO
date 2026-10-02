@@ -3,6 +3,7 @@ export const MEMBER_TIERS = {
   pro:         { label:'美容師', badge:'PRO', priceLabel:'專業價', multiplier:1 },
   instructor:  { label:'師資', badge:'師資', priceLabel:'師資價・專業價7折', multiplier:0.7 },
   distributor: { label:'經銷商', badge:'經銷', priceLabel:'經銷價・專業價65折', multiplier:0.65 },
+  staff:       { label:'內部人員', badge:'內部', priceLabel:'內部價・專業價5折', multiplier:0.5 },
   pending:     { label:'審核中', badge:'審核中', priceLabel:'一般價', multiplier:null },
 };
 
@@ -12,6 +13,10 @@ export function getMemberRole(user) {
 
 export function isProfessionalMember(user) {
   return ['pro', 'instructor', 'distributor'].includes(getMemberRole(user));
+}
+
+export function canAccessProfessionalCatalog(user) {
+  return ['pro', 'instructor', 'distributor', 'staff'].includes(getMemberRole(user));
 }
 
 export function getMemberTier(user) {

@@ -1,4 +1,5 @@
 import { getProfessionalOrderProgress } from './memberShopping.js';
+import { getMemberRole } from './catalog.jsx';
 
 export const STANDARD_SHIPPING_FEE = 120;
 export const FREE_SHIPPING_PRODUCT_ID = 9;
@@ -15,6 +16,7 @@ export function areAllCustomOrderItems(items) {
 export function calculateShipping(items, user, merchandiseAmount = 0, fulfillmentMethod = FULFILLMENT_DELIVERY, shippingGroup = null) {
   if (!Array.isArray(items) || items.length === 0) return 0;
   if (fulfillmentMethod === FULFILLMENT_ONSITE_PICKUP) return 0;
+  if (getMemberRole(user) === 'staff') return 0;
   const professionalProgress = getProfessionalOrderProgress(merchandiseAmount, user, shippingGroup);
   if (professionalProgress?.additionalOrder || professionalProgress?.freeShipping) return 0;
   return items.every(item => Number(item.id ?? item.product_id) === FREE_SHIPPING_PRODUCT_ID)

@@ -92,7 +92,7 @@ orders
 | `total_usage_limit` | `integer` | 否 | 全部使用上限；空值表示不限。保留中的訂單也占用額度。 |
 | `per_member_limit` | `integer` | 否 | 每位會員／訪客身份可使用次數；空值表示不限。 |
 | `audience_mode` | `text` | 是 | `roles` 依會員身分判斷；`members` 只允許明確指定的登入會員。 |
-| `audience_roles` | `text[]` | 是 | 可使用的會員類型，例如 consumer、pro、instructor、distributor。訪客依 consumer 規則處理。 |
+| `audience_roles` | `text[]` | 是 | 可使用的會員類型，例如 consumer、pro、instructor、distributor、staff。訪客依 consumer 規則處理；staff 必須由管理員明確選取。 |
 | `allow_guest` | `boolean` | 是 | 是否允許未登入訪客使用。 |
 | `stacking_policy` | `text` | 是 | `coupon_only`、`allow_auto_gifts` 或 `allow_all`。預設 `allow_auto_gifts`。 |
 | `created_by` | `uuid` | 否 | 建立管理員，對應 Auth user。 |

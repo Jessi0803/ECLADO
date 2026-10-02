@@ -263,7 +263,7 @@ export default function Members({
             )}
           </div>
           <div className="members-filter-tabs" style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
-            {[['all','全部'], ['app_pending','待審核申請'], ['consumer','一般'], ['pro','美容師'], ['instructor','師資'], ['distributor','經銷商']].map(([val, label]) => (
+            {[['all','全部'], ['app_pending','待審核申請'], ['consumer','一般'], ['pro','美容師'], ['instructor','師資'], ['distributor','經銷商'], ['staff','內部人員']].map(([val, label]) => (
               <button className="members-filter-tab" key={val} onClick={() => setFilter(val)} style={{
                 padding: '8px 16px', border: 'none', fontSize: 12, letterSpacing: '0.04em',
                 background: filter === val ? 'var(--dark)' : 'transparent',
@@ -386,6 +386,7 @@ export default function Members({
                         <option value="pro" disabled={memberHasPendingApp(applications, m.id)}>美容師{memberHasPendingApp(applications, m.id) ? '（請先審核）' : ''}</option>
                         <option value="instructor">師資</option>
                         <option value="distributor">經銷商</option>
+                        <option value="staff">內部人員</option>
                         <option value="pending">審核中</option>
                       </select>
                       <button
@@ -528,6 +529,7 @@ export default function Members({
               <button onClick={() => changeType(selected.id, 'pro')} disabled={selectedPending || savingTypeId === selected.id} title={selectedPending ? '請在上方申請區塊核准' : ''} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'pro' ? 'var(--dark)' : 'none', color: selected.type === 'pro' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: selectedPending ? 'not-allowed' : savingTypeId === selected.id ? 'wait' : 'pointer', opacity: selectedPending ? 0.45 : 1 }}>美容師</button>
               <button disabled={savingTypeId === selected.id} onClick={() => changeType(selected.id, 'instructor')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'instructor' ? 'var(--dark)' : 'none', color: selected.type === 'instructor' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: savingTypeId === selected.id ? 'wait' : 'pointer' }}>師資</button>
               <button disabled={savingTypeId === selected.id} onClick={() => changeType(selected.id, 'distributor')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'distributor' ? 'var(--dark)' : 'none', color: selected.type === 'distributor' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: savingTypeId === selected.id ? 'wait' : 'pointer' }}>經銷商</button>
+              <button disabled={savingTypeId === selected.id} onClick={() => changeType(selected.id, 'staff')} style={{ flex: 1, padding: '9px', fontSize: 11, background: selected.type === 'staff' ? 'var(--dark)' : 'none', color: selected.type === 'staff' ? '#fff' : 'var(--dark)', border: '1px solid var(--border)', cursor: savingTypeId === selected.id ? 'wait' : 'pointer' }}>內部人員</button>
             </div>
           </div>
 

@@ -42,7 +42,7 @@ create table if not exists public.profiles (
   default_invoice_company_name text,
   default_invoice_tax_id text,
   role text not null default 'consumer'
-    check (role in ('consumer', 'pro', 'instructor', 'distributor', 'pending')),
+    check (role in ('consumer', 'pro', 'instructor', 'distributor', 'staff', 'pending')),
   cert text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -177,7 +177,7 @@ create table if not exists public.orders (
   id text primary key,
   member text,
   type text not null default 'consumer'
-    check (type in ('consumer', 'pro', 'instructor', 'distributor', 'pending')),
+    check (type in ('consumer', 'pro', 'instructor', 'distributor', 'staff', 'pending')),
   items jsonb not null default '[]'::jsonb,
   total numeric not null default 0,
   subtotal numeric,

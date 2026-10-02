@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../services/supabase.js';
 import { getPromotionPhase, PromoBadge } from '../components/StatusIndicators.jsx';
 
-const ROLES = [['consumer', '一般會員'], ['pro', '美容師'], ['instructor', '師資'], ['distributor', '經銷商']];
+const ROLES = [['consumer', '一般會員'], ['pro', '美容師'], ['instructor', '師資'], ['distributor', '經銷商'], ['staff', '內部人員']];
+const DEFAULT_AUDIENCE_ROLES = ROLES.filter(([role]) => role !== 'staff').map(([role]) => role);
 const inputStyle = { width:'100%', border:'none', borderBottom:'1px solid var(--border)', padding:'10px 0', fontSize:14, outline:'none', background:'none', boxSizing:'border-box' };
 const labelStyle = { fontSize:11, letterSpacing:'0.12em', color:'var(--mid)', display:'block', marginBottom:8 };
 const panelStyle = { background:'var(--white)', border:'1px solid var(--border)', padding:'clamp(20px, 4vw, 32px)', maxWidth:920 };
@@ -144,7 +145,7 @@ function DiscountPromotionForm({ promo, products, scopes, onClose }) {
 }
 
 function CouponForm({ coupon, promotions, linkedIds, linkedMemberIds, onClose }) {
-  const [form,setForm] = useState({ name:coupon?.name || '', code:coupon?.code || '', description:coupon?.description || '', promotion_ids:[...new Set(linkedIds)], audience_mode:coupon?.audience_mode || 'roles', member_ids:[...new Set(linkedMemberIds)], start_at:toLocalInput(coupon?.start_at), end_at:toLocalInput(coupon?.end_at), total_usage_limit:coupon?.total_usage_limit || '', per_member_limit:coupon?.per_member_limit || '', audience_roles:new Set(coupon?.audience_roles || ROLES.map(([role]) => role)), allow_guest:coupon?.allow_guest ?? true, stacking_policy:coupon?.stacking_policy || 'allow_auto_gifts', active:coupon?.active ?? true });
+  const [form,setForm] = useState({ name:coupon?.name || '', code:coupon?.code || '', description:coupon?.description || '', promotion_ids:[...new Set(linkedIds)], audience_mode:coupon?.audience_mode || 'roles', member_ids:[...new Set(linkedMemberIds)], start_at:toLocalInput(coupon?.start_at), end_at:toLocalInput(coupon?.end_at), total_usage_limit:coupon?.total_usage_limit || '', per_member_limit:coupon?.per_member_limit || '', audience_roles:new Set(coupon?.audience_roles || DEFAULT_AUDIENCE_ROLES), allow_guest:coupon?.allow_guest ?? true, stacking_policy:coupon?.stacking_policy || 'allow_auto_gifts', active:coupon?.active ?? true });
   const [saving,setSaving] = useState(false); const [error,setError] = useState('');
   const [memberQuery,setMemberQuery] = useState(''); const [memberResults,setMemberResults] = useState([]);
   const [selectedMembers,setSelectedMembers] = useState([]); const [memberSearchLoading,setMemberSearchLoading] = useState(false);

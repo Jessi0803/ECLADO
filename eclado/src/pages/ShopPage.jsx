@@ -11,7 +11,7 @@ import PromoSection from '../components/product/PromoSection.jsx';
 import {
   getCartKey,
   getMemberTier,
-  isProfessionalMember,
+  canAccessProfessionalCatalog,
 } from '../domain/catalog.jsx';
 import {
   isPromotionLive,
@@ -114,7 +114,7 @@ export default function ShopPage({
   }
 
   function addToCart(product) {
-    if (product.isProOnly && !isProfessionalMember(user)) return;
+    if (product.isProOnly && !canAccessProfessionalCatalog(user)) return;
     setCart(prev => {
       const cartKey = getCartKey(product);
       const ex = prev.find(i => getCartKey(i) === cartKey);
@@ -174,7 +174,7 @@ export default function ShopPage({
             </div>
             <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 28 : 42, fontWeight:500, color:'var(--white)', lineHeight:1.1, margin:0 }}>{filterTitle}</h1>
           </div>
-          {isProfessionalMember(user) && (
+          {canAccessProfessionalCatalog(user) && (
             <div style={{ display:'flex', alignItems:'center', gap:8, paddingBottom:4 }}>
               <span style={{ fontSize:10, background:'var(--accent)', color:'var(--white)', padding:'3px 8px', letterSpacing:'0.12em', fontWeight:600 }}>{getMemberTier(user).badge}</span>
               <span style={{ fontSize:12, color:'var(--dark)', letterSpacing:'0.04em' }}>{getMemberTier(user).priceLabel}已啟用</span>

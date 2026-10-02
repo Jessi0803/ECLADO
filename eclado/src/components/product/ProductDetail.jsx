@@ -9,7 +9,7 @@ import {
   getProductImage,
   getProductImages,
   getProductVariants,
-  isProfessionalMember,
+  canAccessProfessionalCatalog,
 } from '../../domain/catalog.jsx';
 import {
   getPromoDisplayPrice,
@@ -29,7 +29,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
   const displayProduct = applyVariantToProduct(product, selectedVariant);
   const showPrice = getMemberPrice(displayProduct, user);
   const priceTier = getMemberTier(user);
-  const hasTierPrice = isProfessionalMember(user) && showPrice !== displayProduct.price;
+  const hasTierPrice = canAccessProfessionalCatalog(user) && showPrice !== displayProduct.price;
   const priceLabel = displayProduct.applyTierMultiplier === false ? '固定專業價' : priceTier.priceLabel;
   const fulfillment = getFulfillmentInfo(displayProduct);
 
@@ -38,7 +38,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
   const promoDisplay = getPromoDisplayPrice(displayProduct, user, promotions);
 
   function handleAdd() {
-    if (displayProduct.isProOnly && !isProfessionalMember(user)) return;
+    if (displayProduct.isProOnly && !canAccessProfessionalCatalog(user)) return;
     const cartProduct = { ...displayProduct, cartKey: getCartKey(displayProduct) };
     for (let i = 0; i < qty; i++) onAdd(cartProduct);
     setAdded(true);
@@ -130,7 +130,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
             )}
 
             {/* 價格 or 購買資格 */}
-            {displayProduct.isProOnly && !isProfessionalMember(user) ? (
+            {displayProduct.isProOnly && !canAccessProfessionalCatalog(user) ? (
               <div style={{ borderTop:'1px solid var(--light)', borderBottom:'1px solid var(--light)', padding:'24px 0', marginBottom:28 }}>
                 <p style={{ fontSize:10, letterSpacing:'0.22em', color:'var(--accent)', textTransform:'uppercase', marginBottom:12 }}>院線專業商品</p>
                 <p style={{ fontSize:14, color:'var(--dark)', lineHeight:1.85, marginBottom:20 }}>
@@ -170,7 +170,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
             </div>
 
             {/* 數量 + 加入購物車 — 僅限可購買商品 */}
-            {!(displayProduct.isProOnly && !isProfessionalMember(user)) && (
+            {!(displayProduct.isProOnly && !canAccessProfessionalCatalog(user)) && (
               <div style={{ display:'flex', gap:12, alignItems:'center', marginBottom:14, flexWrap:'wrap' }}>
                 <div style={{ display:'flex', alignItems:'center', border:'1px solid var(--light)' }}>
                   <button onClick={() => setQty(q => Math.max(1, q-1))} style={{ width:40, height:48, background:'none', border:'none', cursor:'pointer', fontSize:16, color:'var(--dark)', fontFamily:'var(--font-body)' }}>−</button>

@@ -88,7 +88,8 @@ values
   ('pending', '審核中', null, false, true),
   ('pro', '美容師', 1.00, true, true),
   ('instructor', '師資', 0.70, true, true),
-  ('distributor', '經銷商', 0.65, true, true)
+  ('distributor', '經銷商', 0.65, true, true),
+  ('staff', '內部人員', 0.50, true, true)
 on conflict (role) do update set
   label = excluded.label,
   professional_price_multiplier = excluded.professional_price_multiplier,
@@ -387,6 +388,8 @@ begin
 
   if normalized_fulfillment_method = 'onsite_pickup' then
     shipping_amount := 0;
+  elsif member_role = 'staff' then
+    shipping_amount := 0;
   elsif member_role in ('pro', 'instructor', 'distributor')
     and subtotal_amount - discount_amount >= 15000
   then
@@ -423,6 +426,7 @@ begin
       'version', 2,
       'code', case
         when normalized_fulfillment_method = 'onsite_pickup' then 'onsite-pickup'
+        when member_role = 'staff' then 'staff-free-shipping'
         when member_role in ('pro', 'instructor', 'distributor') then 'professional-threshold'
         else 'standard'
       end,

@@ -594,7 +594,28 @@ for (const scenario of [
   });
 }
 
-for (const role of ['instructor', 'distributor']) {
+test('內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: authUser('staff@example.com'),
+    profiles: [profile('staff', 'staff@example.com')],
+  });
+
+  await page.goto('/shop');
+  await expect(page.getByText('內部價・專業價5折').first()).toBeVisible();
+  await expect(page.getByText('NT$ 1,490').first()).toBeVisible();
+
+  await page.getByText('NK細胞活化安瓶').first().click();
+  await expect(page.getByRole('button', { name: /加入購物車/ })).toBeVisible();
+  await page.getByRole('button', { name: /加入購物車/ }).click();
+  await page.goto('/cart');
+  await expect(page.getByText('免運', { exact: true })).toBeVisible();
+  await expect(page.getByRole('status')).toHaveCount(0);
+
+  await page.goto('/info');
+  await expect(page.getByRole('button', { name: '會員購物須知', exact: true })).toHaveCount(0);
+});
+
+for (const role of ['instructor', 'distributor', 'staff']) {
   test(`固定專業價商品不套用 ${role} 身分倍率`, async ({ page }) => {
     const goldPatch = {
       id: 88,

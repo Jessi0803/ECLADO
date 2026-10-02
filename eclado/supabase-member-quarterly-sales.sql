@@ -305,7 +305,7 @@ begin
   if not public.has_backoffice_permission('members.write') then
     raise exception 'Member write access required' using errcode = '42501';
   end if;
-  if p_role not in ('consumer', 'pro', 'instructor', 'distributor', 'pending') then
+  if p_role not in ('consumer', 'pro', 'instructor', 'distributor', 'staff', 'pending') then
     raise exception 'Invalid member role' using errcode = '22023';
   end if;
   if effective_on > (now() at time zone 'Asia/Taipei')::date then
