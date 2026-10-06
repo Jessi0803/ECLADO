@@ -4,6 +4,7 @@ import {
   formatQuarterPeriod,
   formatTaiwanDate,
   PROFESSIONAL_ROLE_LABELS,
+  professionalQuarterKey,
   quarterTitle,
 } from '../../domain/professionalSales.js';
 
@@ -14,8 +15,6 @@ const fieldStyle = { border: '1px solid var(--border)', padding: '6px 8px', font
 function taipeiToday() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date());
 }
-
-const quarterKey = quarter => `${quarter.membership_id}-${quarter.quarter_number}`;
 
 export default function ProfessionalQuarterSection({ sales, onChangeStart, onSaveAdjustment }) {
   const [editingStart, setEditingStart] = useState(false);
@@ -47,7 +46,7 @@ export default function ProfessionalQuarterSection({ sales, onChangeStart, onSav
   }
 
   function openAdjustment(quarter) {
-    setEditingKey(quarterKey(quarter));
+    setEditingKey(professionalQuarterKey(quarter));
     setAmountDraft(quarter.offline_sales_amount ? String(quarter.offline_sales_amount) : '');
     setNoteDraft(quarter.offline_note || '');
     setNotice(null);
@@ -60,7 +59,7 @@ export default function ProfessionalQuarterSection({ sales, onChangeStart, onSav
       return setNotice({ ok: false, text: '請輸入 0 以上的整數金額' });
     }
     setSaving(true);
-    const result = await onSaveAdjustment?.(quarter.membership_id, quarter.quarter_number, amount, noteDraft.trim());
+    const result = await onSaveAdjustment?.(quarter.membership_id, quarter.quarter_start, amount, noteDraft.trim());
     setSaving(false);
     setNotice(result?.message ? { ok: result.ok, text: result.message } : null);
     if (result?.ok) setEditingKey('');
@@ -95,7 +94,7 @@ export default function ProfessionalQuarterSection({ sales, onChangeStart, onSav
       {current && (
         <div style={{ padding: '14px', background: 'var(--off)', borderLeft: '3px solid var(--gold)', marginBottom: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 7 }}>
-            <strong style={{ fontSize: 12, fontWeight: 500 }}>{quarterTitle(current)}</strong>
+            <strong style={{ fontSize: 12, fontWeight: 500 }}>{quarterTitle(current)}{current.is_partial ? '（部分季度）' : ''}</strong>
             <span style={{ fontSize: 11, color: 'var(--mid)' }}>{PROFESSIONAL_ROLE_LABELS[current.role] || current.role}</span>
           </div>
           <div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 10 }}>{formatQuarterPeriod(current)}</div>
@@ -120,7 +119,7 @@ export default function ProfessionalQuarterSection({ sales, onChangeStart, onSav
           </thead>
           <tbody>
             {sales.quarters.map(quarter => {
-              const key = quarterKey(quarter);
+              const key = professionalQuarterKey(quarter);
               const editing = editingKey === key;
               return (
                 <React.Fragment key={key}>
@@ -166,7 +165,7 @@ export default function ProfessionalQuarterSection({ sales, onChangeStart, onSav
         資格歷程：{sales.memberships.map(item => `${PROFESSIONAL_ROLE_LABELS[item.role] || item.role} ${formatTaiwanDate(item.started_on)} 起${item.ended_on ? `，${formatTaiwanDate(item.ended_on)} 結束` : ''}`).join('；')}
       </div>
       <div style={{ marginTop: 4, fontSize: 10, color: 'var(--mid)', lineHeight: 1.7 }}>
-        先確認資格起始日再補登：線下補登跟著「第幾季」走，修改起始日後季度期間會重新切分。
+        線下補登依自然季保存；資格於季中生效或結束時，該季只統計有效資格期間。
       </div>
     </div>
   );

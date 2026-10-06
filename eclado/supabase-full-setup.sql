@@ -685,4 +685,7 @@ create trigger trg_orders_inventory_sync
 -- 執行完成後，請到 Table Editor 確認 profiles / products / orders / promotions 已建立。
 -- 師資／經銷季度統計 RPC 與既有資料回填請接著執行：
 -- supabase-member-quarterly-sales.sql
+-- supabase-professional-sales-opening-balance.sql
+-- supabase-professional-memberships-empty-periods.sql
+-- supabase-professional-sales-calendar-quarters.sql
 -- ============================================================================

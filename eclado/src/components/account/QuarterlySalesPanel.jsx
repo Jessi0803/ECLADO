@@ -3,6 +3,7 @@ import {
   formatMoney,
   formatQuarterPeriod,
   PROFESSIONAL_ROLE_LABELS,
+  professionalQuarterKey,
   quarterTitle,
 } from '../../domain/professionalSales.js';
 
@@ -38,7 +39,7 @@ export default function QuarterlySalesPanel({ sales, loading = false, error = ''
       <div style={{ border:'1px solid var(--light)', background:'var(--off-white)', padding:isMobile ? 18 : 24, marginBottom:12 }}>
         <div style={{ display:'flex', justifyContent:'space-between', gap:18, alignItems:'flex-start', flexWrap:'wrap' }}>
           <div>
-            <div style={{ fontSize:12, color:'var(--dark)', marginBottom:6 }}>{quarterTitle(current)}</div>
+            <div style={{ fontSize:12, color:'var(--dark)', marginBottom:6 }}>{quarterTitle(current)}{current.is_partial ? '（部分季度）' : ''}</div>
             <div style={{ fontSize:11, color:'var(--dark)' }}>{formatQuarterPeriod(current)}</div>
           </div>
           <div style={{ textAlign:isMobile ? 'left' : 'right' }}>
@@ -52,8 +53,8 @@ export default function QuarterlySalesPanel({ sales, loading = false, error = ''
       {recent.length > 1 && (
         <div style={{ borderTop:'1px solid var(--light)' }}>
           {recent.slice(1).map(quarter => (
-            <div key={`${quarter.membership_id}-${quarter.quarter_number}`} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr auto' : '150px 1fr auto', gap:12, padding:'13px 2px', borderBottom:'1px solid var(--light)', alignItems:'center' }}>
-              <span style={{ fontSize:12, color:'var(--black)' }}>{quarterTitle(quarter)}{quarter.is_partial ? '（身分變更）' : ''}</span>
+            <div key={professionalQuarterKey(quarter)} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr auto' : '150px 1fr auto', gap:12, padding:'13px 2px', borderBottom:'1px solid var(--light)', alignItems:'center' }}>
+              <span style={{ fontSize:12, color:'var(--black)' }}>{quarterTitle(quarter)}{quarter.is_partial ? '（部分季度）' : ''}</span>
               {!isMobile && <span style={{ fontSize:11, color:'var(--dark)' }}>{formatQuarterPeriod(quarter)}</span>}
               <span style={{ fontSize:13, color:'var(--black)', textAlign:'right' }}>{formatMoney(quarter.sales_amount)}</span>
             </div>

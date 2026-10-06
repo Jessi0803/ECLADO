@@ -6,6 +6,10 @@ const sql = fs.readFileSync(
   path.resolve(process.cwd(), 'supabase-professional-sales-opening-balance.sql'),
   'utf8',
 );
+const calendarSql = fs.readFileSync(
+  path.resolve(process.cwd(), 'supabase-professional-sales-calendar-quarters.sql'),
+  'utf8',
+);
 
 test('線下補登以資格季度為單位保存並只能透過 RPC 存取', () => {
   expect(sql).toContain('create table if not exists public.professional_sales_adjustments');
@@ -13,6 +17,13 @@ test('線下補登以資格季度為單位保存並只能透過 RPC 存取', () 
   expect(sql).toContain('amount numeric(12, 0) not null check (amount >= 0)');
   expect(sql).toContain('revoke all on table public.professional_sales_adjustments from anon, authenticated');
   expect(sql).not.toContain('grant select on table public.professional_sales_adjustments');
+});
+
+test('自然季補登使用 quarter_start 且拒絕無法安全拆分的舊制總額', () => {
+  expect(calendarSql).toContain('add column if not exists quarter_start date');
+  expect(calendarSql).toContain('professional_sales_adjustments_membership_quarter_start_idx');
+  expect(calendarSql).toContain('legacy professional sales adjustment(s) cross a calendar-quarter boundary');
+  expect(calendarSql).toContain('drop constraint if exists professional_sales_adjustments_membership_id_quarter_number_key');
 });
 
 test('起始日與補登需要會員寫入權限、不可設為未來並留下操作紀錄', () => {
@@ -26,9 +37,15 @@ test('起始日與補登需要會員寫入權限、不可設為未來並留下�
 });
 
 test('季度總額合併官網訂單與線下補登', () => {
-  expect(sql).toContain('online.online_sales_amount + coalesce(adjustment.amount, 0) as sales_amount');
-  expect(sql).toContain("target_order.status in ('paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered')");
-  expect(sql).toContain('limit 40');
+  expect(calendarSql).toContain('online.online_sales_amount + coalesce(adjustment.amount, 0) as sales_amount');
+  expect(calendarSql).toContain("target_order.status in ('paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered')");
+  expect(calendarSql).toContain('limit 40');
+});
+
+test('舊補登 RPC 保持可用且修改起始日不會讓補登成為孤兒', () => {
+  expect(calendarSql).toContain('create or replace function public.save_professional_sales_adjustment(');
+  expect(calendarSql).toContain('return public.save_professional_sales_adjustment_v2(');
+  expect(calendarSql).toContain('Start date change would orphan an offline sales adjustment');
 });
 
 const emptyPeriodSql = fs.readFileSync(

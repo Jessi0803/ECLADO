@@ -596,6 +596,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
     if (error) {
       console.error('update membership start failed', error);
       const message = /overlaps/i.test(error.message || '') ? '起始日與其他資格期間重疊'
+        : /orphan an offline sales adjustment/i.test(error.message || '') ? '此日期會讓既有線下補登失去對應季度，請先調整補登資料'
         : /future|empty/i.test(error.message || '') ? '起始日不可空白或晚於今天'
         : error.message || '請稍後再試';
       return { ok: false, message: `資格起始日更新失敗：${message}` };
@@ -604,8 +605,8 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
     return { ok: true, message: '資格起始日已更新，季度已重新計算。' };
   }
 
-  async function saveSalesAdjustment(membershipId, quarterNumber, amount, note) {
-    const { error } = await saveProfessionalSalesAdjustment(membershipId, quarterNumber, amount, note);
+  async function saveSalesAdjustment(membershipId, quarterStart, amount, note) {
+    const { error } = await saveProfessionalSalesAdjustment(membershipId, quarterStart, amount, note);
     if (error) {
       console.error('save sales adjustment failed', error);
       return { ok: false, message: `線下採購補登失敗：${error.message || '請稍後再試'}` };

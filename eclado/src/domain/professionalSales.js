@@ -18,6 +18,9 @@ export function normalizeProfessionalSales(value) {
     .map(quarter => ({
       ...quarter,
       quarter_number: Math.max(1, Number(quarter.quarter_number) || 1),
+      quarter_start: quarter.quarter_start || '',
+      calendar_year: Number(quarter.calendar_year) || null,
+      calendar_quarter: Number(quarter.calendar_quarter) || null,
       sales_amount: Math.max(0, Number(quarter.sales_amount) || 0),
       online_sales_amount: Math.max(0, Number(quarter.online_sales_amount ?? quarter.sales_amount) || 0),
       offline_sales_amount: Math.max(0, Number(quarter.offline_sales_amount) || 0),
@@ -61,5 +64,12 @@ export function formatQuarterPeriod(quarter) {
 
 export function quarterTitle(quarter) {
   if (!quarter) return '資格季度';
+  if (quarter.calendar_year && quarter.calendar_quarter) {
+    return `${quarter.calendar_year} Q${quarter.calendar_quarter}`;
+  }
   return `資格第 ${quarter.quarter_number} 季`;
+}
+
+export function professionalQuarterKey(quarter) {
+  return `${quarter?.membership_id || ''}-${quarter?.quarter_start || quarter?.quarter_number || ''}`;
 }

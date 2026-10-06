@@ -54,3 +54,24 @@ test('專業資格歷程忽略同日開始又結束的空紀錄', async () => {
   });
   expect(sales.memberships.map(item => item.id)).toEqual(['real']);
 });
+
+test('自然季使用年份與季度顯示並以 quarter_start 產生穩定識別', async () => {
+  const { normalizeProfessionalSales, professionalQuarterKey, quarterTitle } = await import('../src/domain/professionalSales.js');
+  const sales = normalizeProfessionalSales({
+    member_id: 'm1',
+    memberships: [{ id: 'membership-1', role: 'instructor', started_on: '2026-09-07', ended_on: null }],
+    quarters: [{
+      membership_id: 'membership-1',
+      quarter_number: 1,
+      quarter_start: '2026-07-01',
+      calendar_year: 2026,
+      calendar_quarter: 3,
+      period_start: '2026-09-07',
+      period_end_exclusive: '2026-10-01',
+      is_current: true,
+      is_partial: true,
+    }],
+  });
+  expect(quarterTitle(sales.currentQuarter)).toBe('2026 Q3');
+  expect(professionalQuarterKey(sales.currentQuarter)).toBe('membership-1-2026-07-01');
+});

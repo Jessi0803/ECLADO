@@ -765,11 +765,16 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     }
     return json(route, { membership_id: request.p_membership_id, started_on: request.p_started_on, changed: true });
   });
-  await page.route('**/rest/v1/rpc/save_professional_sales_adjustment', async route => {
+  const handleProfessionalSalesAdjustment = async (route: Route) => {
     const request = route.request().postDataJSON() || {};
     options.onSalesAdjustmentSave?.(request);
     for (const payload of professionalSales) {
-      const quarter = payload.quarters?.find(item => item.membership_id === request.p_membership_id && Number(item.quarter_number) === Number(request.p_quarter_number));
+      const quarter = payload.quarters?.find(item => (
+        item.membership_id === request.p_membership_id
+        && (request.p_quarter_start
+          ? item.quarter_start === request.p_quarter_start
+          : Number(item.quarter_number) === Number(request.p_quarter_number))
+      ));
       if (!quarter) continue;
       const online = Number(quarter.online_sales_amount ?? quarter.sales_amount ?? 0);
       quarter.online_sales_amount = online;
@@ -777,8 +782,16 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       quarter.offline_note = request.p_note || null;
       quarter.sales_amount = online + (Number(request.p_amount) || 0);
     }
-    return json(route, { membership_id: request.p_membership_id, quarter_number: request.p_quarter_number, amount: request.p_amount, note: request.p_note });
-  });
+    return json(route, {
+      membership_id: request.p_membership_id,
+      quarter_number: request.p_quarter_number,
+      quarter_start: request.p_quarter_start,
+      amount: request.p_amount,
+      note: request.p_note,
+    });
+  };
+  await page.route('**/rest/v1/rpc/save_professional_sales_adjustment', handleProfessionalSalesAdjustment);
+  await page.route('**/rest/v1/rpc/save_professional_sales_adjustment_v2', handleProfessionalSalesAdjustment);
 
   await page.route('**/rest/v1/rpc/set_member_role_with_membership', async route => {
     const request = route.request().postDataJSON() || {};

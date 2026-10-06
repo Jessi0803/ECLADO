@@ -2222,7 +2222,7 @@ test('會員專區顯示可用購物金並以收合明細呈現公開異動原�
   await expect(panel.getByRole('button', { name: '載入更多' })).toHaveCount(0);
 });
 
-test('師資會員專區顯示依資格起算日計算的季度採購統計', async ({ page }) => {
+test('師資會員專區顯示以資格期間裁切的自然季採購統計', async ({ page }) => {
   await mockEcladoApis(page, {
     authUser: authUser('instructor@example.com'),
     profiles: [profile('instructor', 'instructor@example.com')],
@@ -2233,16 +2233,17 @@ test('師資會員專區顯示依資格起算日計算的季度採購統計', as
       }],
       quarters: [{
         membership_id: 'membership-1', role: 'instructor', quarter_number: 1,
-        period_start: '2026-09-07', period_end_exclusive: '2026-12-07',
-        is_current: true, is_partial: false, sales_amount: 28600, order_count: 3,
+        quarter_start: '2026-07-01', calendar_year: 2026, calendar_quarter: 3,
+        period_start: '2026-09-07', period_end_exclusive: '2026-10-01',
+        is_current: true, is_partial: true, sales_amount: 28600, order_count: 3,
       }],
     }],
   });
 
   await page.goto('/account');
   const panel = page.getByRole('region', { name: '季度採購統計' });
-  await expect(panel.getByText('資格第 1 季')).toBeVisible();
-  await expect(panel.getByText('2026/09/07－2026/12/06')).toBeVisible();
+  await expect(panel.getByText('2026 Q3（部分季度）')).toBeVisible();
+  await expect(panel.getByText('2026/09/07－2026/09/30')).toBeVisible();
   await expect(panel.getByText('NT$ 28,600')).toBeVisible();
   await expect(panel.getByText('3 筆有效訂單')).toBeVisible();
 });
@@ -2256,8 +2257,9 @@ test('師資會員專區的季度採購包含管理員補登的線下採購', as
       memberships: [{ id: 'membership-1', role: 'instructor', started_on: '2026-09-07', ended_on: null }],
       quarters: [{
         membership_id: 'membership-1', role: 'instructor', quarter_number: 1,
-        period_start: '2026-09-07', period_end_exclusive: '2026-12-07',
-        is_current: true, is_partial: false, sales_amount: 58600, online_sales_amount: 28600,
+        quarter_start: '2026-07-01', calendar_year: 2026, calendar_quarter: 3,
+        period_start: '2026-09-07', period_end_exclusive: '2026-10-01',
+        is_current: true, is_partial: true, sales_amount: 58600, online_sales_amount: 28600,
         offline_sales_amount: 30000, order_count: 3,
       }],
     }],

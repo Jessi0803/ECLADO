@@ -15,10 +15,10 @@ export async function setProfessionalMembershipStart(membershipId, startedOn) {
   });
 }
 
-export async function saveProfessionalSalesAdjustment(membershipId, quarterNumber, amount, note = '') {
-  return supabase.rpc('save_professional_sales_adjustment', {
+export async function saveProfessionalSalesAdjustment(membershipId, quarterStart, amount, note = '') {
+  return supabase.rpc('save_professional_sales_adjustment_v2', {
     p_membership_id: membershipId,
-    p_quarter_number: quarterNumber,
+    p_quarter_start: quarterStart,
     p_amount: amount,
     p_note: note,
   });

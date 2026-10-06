@@ -2639,8 +2639,9 @@ test('會員管理只在會員詳細顯示師資目前季度採購額與資格�
       memberships: [{ id: 'membership-admin-1', role: 'instructor', started_on: '2026-09-07', ended_on: null }],
       quarters: [{
         membership_id: 'membership-admin-1', role: 'instructor', quarter_number: 1,
-        period_start: '2026-09-07', period_end_exclusive: '2026-12-07',
-        is_current: true, is_partial: false, sales_amount: 51200, order_count: 5,
+        quarter_start: '2026-07-01', calendar_year: 2026, calendar_quarter: 3,
+        period_start: '2026-09-07', period_end_exclusive: '2026-10-01',
+        is_current: true, is_partial: true, sales_amount: 51200, order_count: 5,
       }],
     }],
   });
@@ -2653,7 +2654,8 @@ test('會員管理只在會員詳細顯示師資目前季度採購額與資格�
   await row.getByRole('button', { name: '查看季度師資詳情' }).click();
   const panel = page.getByRole('dialog', { name: '會員詳情' });
   await expect(panel.getByText('專業資格季度')).toBeVisible();
-  await expect(panel.getByText('2026/09/07－2026/12/06').first()).toBeVisible();
+  await expect(panel.getByText('2026 Q3（部分季度）').first()).toBeVisible();
+  await expect(panel.getByText('2026/09/07－2026/09/30').first()).toBeVisible();
   await expect(panel.getByText(/師資 2026\/09\/07 起/)).toBeVisible();
 });
 
@@ -2769,8 +2771,8 @@ test('會員管理可回溯資格起始日並補登線下季度採購', async ({
       member_id: memberId,
       memberships: [{ id: 'membership-dist-1', role: 'distributor', started_on: '2025-03-01', ended_on: null }],
       quarters: [
-        { membership_id: 'membership-dist-1', role: 'distributor', quarter_number: 2, period_start: '2025-06-01', period_end_exclusive: '2025-09-01', is_current: true, is_partial: false, sales_amount: 3000, online_sales_amount: 3000, offline_sales_amount: 0, order_count: 1 },
-        { membership_id: 'membership-dist-1', role: 'distributor', quarter_number: 1, period_start: '2025-03-01', period_end_exclusive: '2025-06-01', is_current: false, is_partial: false, sales_amount: 0, online_sales_amount: 0, offline_sales_amount: 0, order_count: 0 },
+        { membership_id: 'membership-dist-1', role: 'distributor', quarter_number: 2, quarter_start: '2025-04-01', calendar_year: 2025, calendar_quarter: 2, period_start: '2025-04-01', period_end_exclusive: '2025-07-01', is_current: true, is_partial: false, sales_amount: 3000, online_sales_amount: 3000, offline_sales_amount: 0, order_count: 1 },
+        { membership_id: 'membership-dist-1', role: 'distributor', quarter_number: 1, quarter_start: '2025-01-01', calendar_year: 2025, calendar_quarter: 1, period_start: '2025-03-01', period_end_exclusive: '2025-04-01', is_current: false, is_partial: true, sales_amount: 0, online_sales_amount: 0, offline_sales_amount: 0, order_count: 0 },
       ],
     }],
     onMembershipStartChange: payload => startChanges.push(payload),
@@ -2788,12 +2790,12 @@ test('會員管理可回溯資格起始日並補登線下季度採購', async ({
   await expect(panel.getByText('資格起始日已更新，季度已重新計算。')).toBeVisible();
   expect(startChanges).toEqual([{ p_membership_id: 'membership-dist-1', p_started_on: '2024-12-01' }]);
 
-  await panel.getByRole('button', { name: '資格第 1 季補登線下採購' }).click();
+  await panel.getByRole('button', { name: '2025 Q1補登線下採購' }).click();
   await panel.getByLabel('線下採購金額').fill('120000');
   await panel.getByLabel('補登備註').fill('官網上線前線下採購');
   await panel.getByRole('button', { name: '儲存', exact: true }).click();
   await expect(panel.getByText('線下採購已補登。')).toBeVisible();
-  expect(adjustments).toEqual([{ p_membership_id: 'membership-dist-1', p_quarter_number: 1, p_amount: 120000, p_note: '官網上線前線下採購' }]);
+  expect(adjustments).toEqual([{ p_membership_id: 'membership-dist-1', p_quarter_start: '2025-01-01', p_amount: 120000, p_note: '官網上線前線下採購' }]);
   const table = panel.getByRole('table', { name: '資格季度採購' });
   await expect(table.getByText('NT$ 120,000')).toHaveCount(2);
   await expect(table.getByText('補登備註：官網上線前線下採購')).toBeVisible();
