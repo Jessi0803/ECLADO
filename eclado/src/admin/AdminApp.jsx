@@ -22,6 +22,7 @@ import Members from './pages/MembersPage.jsx';
 import Orders from './pages/OrdersPage.jsx';
 import ProcurementPage from './pages/ProcurementPage.jsx';
 import Promotions from './pages/PromotionsPage.jsx';
+import ProfessionalRenewalsPage from './pages/ProfessionalRenewalsPage.jsx';
 import {
   BACKOFFICE_PERMISSIONS,
   canAccessBackofficePage,
@@ -665,6 +666,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
       case 'promotions': return <Promotions products={products} />;
       case 'procurement': return <ProcurementPage />;
       case 'members': return <Members members={members} orders={orders} products={products} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} onCreateHistoricalOrder={canWriteOrders ? createMemberHistoricalOrder : null} defaultFilter={membersDefaultFilter} memberNotes={memberNotes} onSaveMemberNote={canWriteMembers ? saveMemberNote : null} focusMemberId={crossLink?.memberId || ''} backToOrderId={crossLink?.backOrderId || ''} onOpenOrder={canReadOrders ? openOrderFromMember : null} onClearCrossLink={() => setCrossLink(null)} canManageShoppingCredit={canManageShoppingCredit} />;
+      case 'renewals': return <ProfessionalRenewalsPage canWrite={canWriteMembers} />;
       case 'applications': return <Members members={members} orders={orders} products={products} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} onCreateHistoricalOrder={canWriteOrders ? createMemberHistoricalOrder : null} defaultFilter="app_pending" canManageShoppingCredit={canManageShoppingCredit} />;
       case 'analytics': return <Analytics orders={orders} />;
       case 'ai': return <AIReorder products={activeProducts} orders={orders} />;

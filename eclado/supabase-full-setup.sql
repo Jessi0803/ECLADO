@@ -688,4 +688,5 @@ create trigger trg_orders_inventory_sync
 -- supabase-professional-sales-opening-balance.sql
 -- supabase-professional-memberships-empty-periods.sql
 -- supabase-professional-sales-calendar-quarters.sql
+-- supabase-professional-renewals.sql
 -- ============================================================================

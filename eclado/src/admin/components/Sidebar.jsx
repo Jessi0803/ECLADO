@@ -27,6 +27,7 @@ const MENU_GROUPS = [
     title: '會員',
     items: [
       { id: 'members', icon: 'members', label: '會員管理' },
+      { id: 'renewals', icon: 'members', label: '專業資格續約' },
       { id: 'audit', icon: 'audit', label: '操作紀錄' },
       { id: 'analytics', icon: 'analytics', label: '營業分析' },
     ],

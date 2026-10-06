@@ -6,6 +6,7 @@ import {
   isProfessionalMember,
 } from '../domain/catalog.jsx';
 import QuarterlySalesPanel from '../components/account/QuarterlySalesPanel.jsx';
+import ProfessionalRenewalPanel from '../components/account/ProfessionalRenewalPanel.jsx';
 import ShoppingCreditPanel from '../components/account/ShoppingCreditPanel.jsx';
 import { getOrderStatusLabel, getPaymentStateColor, getPaymentStateLabel } from '../domain/payments.js';
 import { isQuarterlySalesRole, normalizeProfessionalSales } from '../domain/professionalSales.js';
@@ -26,6 +27,8 @@ import { fetchProfessionalApplicationStatus } from '../services/professionalAppl
 import { getMemberPaymentInstructions, getMemberPaymentSummaries, retrySinopacPayment } from '../services/paymentApi.js';
 import { getPendingPayment, savePendingPayment } from '../services/pendingPayment.js';
 import { fetchMyProfessionalSales } from '../services/professionalSales.js';
+import { normalizeRenewalPayload } from '../domain/professionalRenewals.js';
+import { fetchMyProfessionalRenewal } from '../services/professionalRenewals.js';
 
 export default function AccountPage({ user, setPage, onSignOut, onUserUpdated }) {
   const isMobile = useIsMobile();
@@ -41,6 +44,9 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
   const [professionalSales, setProfessionalSales] = useState(null);
   const [professionalSalesLoading, setProfessionalSalesLoading] = useState(false);
   const [professionalSalesError, setProfessionalSalesError] = useState('');
+  const [professionalRenewal, setProfessionalRenewal] = useState(null);
+  const [professionalRenewalLoading, setProfessionalRenewalLoading] = useState(false);
+  const [professionalRenewalError, setProfessionalRenewalError] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [savingName, setSavingName] = useState(false);
@@ -316,6 +322,30 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
     return () => { alive = false; };
   }, [user?.uid, user?.role]);
 
+  async function loadProfessionalRenewal() {
+    if (!user?.uid || !isQuarterlySalesRole(getMemberRole(user))) return;
+    setProfessionalRenewalLoading(true);
+    setProfessionalRenewalError('');
+    const { data, error: renewalError } = await fetchMyProfessionalRenewal();
+    if (renewalError) {
+      console.error('professional renewal fetch failed', renewalError);
+      setProfessionalRenewal(null);
+      setProfessionalRenewalError('專業資格續約資料無法載入，請稍後再試。');
+    } else {
+      setProfessionalRenewal(normalizeRenewalPayload(data));
+    }
+    setProfessionalRenewalLoading(false);
+  }
+
+  useEffect(() => {
+    if (!user?.uid || !isQuarterlySalesRole(getMemberRole(user))) {
+      setProfessionalRenewal(null);
+      setProfessionalRenewalError('');
+      return;
+    }
+    loadProfessionalRenewal();
+  }, [user?.uid, user?.role]);
+
   if (!user) {
     return (
       <div style={{ minHeight:'100vh', padding:'120px 24px 80px', background:'var(--white)' }}>
@@ -474,6 +504,16 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
                 loading={professionalSalesLoading}
                 error={professionalSalesError}
                 isMobile={isMobile}
+              />
+            )}
+            {isQuarterlySalesRole(getMemberRole(user)) && (
+              <ProfessionalRenewalPanel
+                user={user}
+                renewal={professionalRenewal}
+                loading={professionalRenewalLoading}
+                error={professionalRenewalError}
+                isMobile={isMobile}
+                onReload={loadProfessionalRenewal}
               />
             )}
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:16, marginBottom:22 }}>
