@@ -198,6 +198,7 @@ test('美容師申請發票資料可留白，填寫時需同時提供公司抬�
 });
 
 test('美容師申請可選填上傳最多三張私人證照圖片', async ({ page }) => {
+  const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+AvzvAAAAAElFTkSuQmCC', 'base64');
   const uploadedPaths: string[] = [];
   let capturedApplication: Record<string, unknown> | null = null;
   await mockEcladoApis(page, {
@@ -216,10 +217,10 @@ test('美容師申請可選填上傳最多三張私人證照圖片', async ({ pa
   await inputs.nth(3).fill('@certificate_test');
   await page.locator('form textarea').fill('美容丙級技術士證照');
   const fileInput = page.locator('input[type="file"]');
-  await fileInput.setInputFiles({ name:'certificate-front.jpg', mimeType:'image/jpeg', buffer:Buffer.from('front') });
+  await fileInput.setInputFiles({ name:'certificate-front.png', mimeType:'image/png', buffer:tinyPng });
   await expect(page.getByRole('img', { name:'待上傳證照圖片 1' })).toBeVisible();
-  await fileInput.setInputFiles({ name:'certificate-back.png', mimeType:'image/png', buffer:Buffer.from('back') });
-  await expect(page.getByText('certificate-front.jpg')).toBeVisible();
+  await fileInput.setInputFiles({ name:'certificate-back.png', mimeType:'image/png', buffer:tinyPng });
+  await expect(page.getByText('certificate-front.png')).toBeVisible();
   await expect(page.getByText('certificate-back.png')).toBeVisible();
   await expect(page.getByRole('img', { name:'待上傳證照圖片 2' })).toBeVisible();
 
@@ -231,6 +232,8 @@ test('美容師申請可選填上傳最多三張私人證照圖片', async ({ pa
   const certificates = application.professional_application_certificates as Record<string, unknown>[];
   expect(certificates).toHaveLength(2);
   expect(uploadedPaths.every(path => path.startsWith(`${FAKE_USER_ID}/${application.id}/`))).toBe(true);
+  expect(uploadedPaths.every(path => path.endsWith('.webp'))).toBe(true);
+  expect(certificates.every(certificate => certificate.mime_type === 'image/webp')).toBe(true);
 });
 
 test('審核中會員不能再次送出美容師申請', async ({ page }) => {

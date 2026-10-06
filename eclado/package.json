@@ -12,7 +12,9 @@
     "test:cron": "node --test tests/integration/cancel-expired-orders.test.cjs",
     "test:transactions": "node --test tests/integration/sinopac-notify.test.cjs tests/integration/sinopac-notify-crypto.test.cjs tests/integration/remind-unpaid-orders.test.cjs tests/integration/cancel-expired-orders.test.cjs && npm --prefix payment-api test",
     "test:notify:real": "NOTIFY_TEST_DB_MODE=supabase node scripts/real-notification-test.cjs",
-    "test:notify:real:mock": "node scripts/real-notification-test.cjs"
+    "test:notify:real:mock": "node scripts/real-notification-test.cjs",
+    "images:webp:dry-run": "node scripts/migrate-storage-product-images-to-webp.mjs",
+    "images:webp:apply": "node scripts/migrate-storage-product-images-to-webp.mjs --apply"
   },
   "dependencies": {
     "@fontsource/open-sans": "^5.3.0",
@@ -25,6 +27,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
+    "sharp": "^0.35.5",
     "vite": "^7.0.0"
   }
 }

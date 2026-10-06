@@ -11,11 +11,28 @@ export default function ProductAutoImage({ src, alt, product, mode, style }) {
   const manualScale = mode === 'list' ? normalizeProductImageScale(product?.listImageScale) : null;
   const fallbackScale = manualScale || getDefaultProductImageScale(product) * (mode === 'detail' ? 0.84 : 1);
   const [fit, setFit] = useState({ scale: fallbackScale, x: 0, y: 0 });
+  const [shouldAnalyze, setShouldAnalyze] = useState(mode !== 'list');
+
+  useEffect(() => {
+    if (mode !== 'list' || shouldAnalyze) return undefined;
+    const element = imgRef.current;
+    if (!element || typeof IntersectionObserver === 'undefined') {
+      setShouldAnalyze(true);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(entries => {
+      if (!entries.some(entry => entry.isIntersecting)) return;
+      setShouldAnalyze(true);
+      observer.disconnect();
+    }, { rootMargin: '300px' });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [mode, shouldAnalyze]);
 
   useEffect(() => {
     let cancelled = false;
     setFit({ scale: fallbackScale, x: 0, y: 0 });
-    if (manualScale) return;
+    if (manualScale || !shouldAnalyze) return undefined;
     analyzeTransparentImageBounds(src).then(bounds => {
       const el = imgRef.current;
       if (cancelled || !bounds || !el) return;
@@ -36,13 +53,15 @@ export default function ProductAutoImage({ src, alt, product, mode, style }) {
       setFit({ scale, x: frameWidth / 2 - productCenterX, y: frameHeight / 2 - productCenterY });
     });
     return () => { cancelled = true; };
-  }, [src, mode, manualScale, fallbackScale]);
+  }, [src, mode, manualScale, fallbackScale, shouldAnalyze]);
 
   return (
     <img
       ref={imgRef}
       src={src}
       alt={alt}
+      loading={mode === 'list' ? 'lazy' : undefined}
+      decoding="async"
       style={{ ...style, transform:'translate(' + fit.x + 'px, ' + fit.y + 'px) scale(' + fit.scale + ')', transformOrigin:'center center' }}
     />
   );

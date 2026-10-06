@@ -1,15 +1,10 @@
 import { supabase } from './supabase.js';
+import { optimizeDocumentImageFile } from '../utils/imageOptimization.js';
 
 export const PROFESSIONAL_CERTIFICATE_BUCKET = 'professional-certificates';
 export const PROFESSIONAL_CERTIFICATE_MAX_FILES = 3;
 export const PROFESSIONAL_CERTIFICATE_MAX_SIZE = 5 * 1024 * 1024;
 export const PROFESSIONAL_CERTIFICATE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-
-const extensionByType = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-};
 
 export function validateProfessionalCertificateFiles(files = []) {
   if (files.length > PROFESSIONAL_CERTIFICATE_MAX_FILES) {
@@ -65,13 +60,21 @@ export async function createProfessionalApplication(application, certificateFile
   const certificateMetadata = [];
 
   for (const file of certificateFiles) {
-    const extension = extensionByType[file.type];
-    const storagePath = `${userId}/${applicationId}/${crypto.randomUUID()}.${extension}`;
+    let optimizedImage;
+    try {
+      optimizedImage = await optimizeDocumentImageFile(file);
+    } catch (optimizationError) {
+      if (uploadedPaths.length) {
+        await supabase.storage.from(PROFESSIONAL_CERTIFICATE_BUCKET).remove(uploadedPaths);
+      }
+      return { data: null, error: new Error(`證照圖片轉換失敗：${optimizationError.message || '請稍後再試'}`) };
+    }
+    const storagePath = `${userId}/${applicationId}/${crypto.randomUUID()}.webp`;
     const { error: uploadError } = await supabase.storage
       .from(PROFESSIONAL_CERTIFICATE_BUCKET)
-      .upload(storagePath, file, {
+      .upload(storagePath, optimizedImage.file, {
         cacheControl: '3600',
-        contentType: file.type,
+        contentType: 'image/webp',
         upsert: false,
       });
     if (uploadError) {
@@ -84,8 +87,8 @@ export async function createProfessionalApplication(application, certificateFile
     certificateMetadata.push({
       storage_path: storagePath,
       original_name: file.name,
-      mime_type: file.type,
-      file_size: file.size,
+      mime_type: 'image/webp',
+      file_size: optimizedImage.file.size,
     });
   }
 

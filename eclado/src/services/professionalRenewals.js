@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js';
+import { optimizeDocumentImageFile } from '../utils/imageOptimization.js';
 
 export const PROFESSIONAL_RENEWAL_EVIDENCE_BUCKET = 'professional-renewal-evidence';
 export const PROFESSIONAL_RENEWAL_MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -21,10 +22,15 @@ export async function submitProfessionalRenewal() {
 
 export async function uploadProfessionalAwardEvidence(userId, values, file) {
   const evidenceId = crypto.randomUUID();
-  const extension = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-  const storagePath = `${userId}/${evidenceId}/award.${extension}`;
+  let optimizedImage;
+  try {
+    optimizedImage = await optimizeDocumentImageFile(file);
+  } catch (optimizationError) {
+    return { data: null, error: new Error(`獎狀圖片轉換失敗：${optimizationError.message || '請稍後再試'}`) };
+  }
+  const storagePath = `${userId}/${evidenceId}/award.webp`;
   const upload = await supabase.storage.from(PROFESSIONAL_RENEWAL_EVIDENCE_BUCKET)
-    .upload(storagePath, file, { contentType: file.type, upsert: false });
+    .upload(storagePath, optimizedImage.file, { contentType: 'image/webp', upsert: false });
   if (upload.error) return upload;
 
   const saved = await supabase.rpc('save_professional_award_evidence', {
@@ -34,8 +40,8 @@ export async function uploadProfessionalAwardEvidence(userId, values, file) {
     p_award_number: values.awardNumber,
     p_storage_path: storagePath,
     p_original_name: file.name,
-    p_mime_type: file.type,
-    p_file_size: file.size,
+    p_mime_type: 'image/webp',
+    p_file_size: optimizedImage.file.size,
     p_consent_acknowledged: values.consentAcknowledged,
   });
   if (saved.error) await supabase.storage.from(PROFESSIONAL_RENEWAL_EVIDENCE_BUCKET).remove([storagePath]);

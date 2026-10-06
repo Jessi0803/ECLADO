@@ -3,6 +3,7 @@ import { supabase } from '../services/supabase.js';
 import { withProductImagePublicUrl } from '../services/catalogData.js';
 import { normalizeMember, normalizeOrder, normalizeProduct } from './domain/mappers.js';
 import { normalizeProfessionalSales } from '../domain/professionalSales.js';
+import { optimizeProductImageFile } from '../utils/imageOptimization.js';
 import { createHistoricalOrder } from '../services/historicalOrders.js';
 import { fetchSidebarFavorites, saveSidebarFavorites } from '../services/adminPreferences.js';
 import {
@@ -460,15 +461,21 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
         preparedImages.push(image);
         continue;
       }
-      const extension = image.pendingFile.type === 'image/png'
-        ? 'png'
-        : image.pendingFile.type === 'image/webp' ? 'webp' : 'jpg';
-      const storagePath = `products/${product.assetKey}/${crypto.randomUUID()}.${extension}`;
+      let optimizedImage;
+      try {
+        optimizedImage = await optimizeProductImageFile(image.pendingFile);
+      } catch (optimizationError) {
+        if (uploadedPaths.length) {
+          await supabase.storage.from('product-images').remove(uploadedPaths);
+        }
+        return `圖片 ${index + 1} 轉換失敗：${optimizationError.message || '請稍後再試'}`;
+      }
+      const storagePath = `products/${product.assetKey}/${crypto.randomUUID()}.webp`;
       const { error: uploadError } = await supabase.storage
         .from('product-images')
-        .upload(storagePath, image.pendingFile, {
+        .upload(storagePath, optimizedImage.file, {
           cacheControl: '31536000',
-          contentType: image.pendingFile.type,
+          contentType: 'image/webp',
           upsert: false,
         });
       if (uploadError) {
@@ -482,8 +489,10 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
         ...image,
         storagePath,
         originalName: image.pendingFile.name,
-        mimeType: image.pendingFile.type,
-        fileSize: image.pendingFile.size,
+        mimeType: 'image/webp',
+        fileSize: optimizedImage.file.size,
+        width: optimizedImage.width,
+        height: optimizedImage.height,
       });
     }
 
