@@ -176,7 +176,10 @@ export default function ProfessionalRenewalsPage({ canWrite = false }) {
   return (
     <div>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:16, marginBottom:24 }}>
-        <div><p style={{ fontSize:11, color:'var(--gold)', letterSpacing:'0.18em', marginBottom:6 }}>PROFESSIONAL RENEWAL</p><h1 style={{ fontSize:34, fontWeight:300 }}>專業資格續約</h1></div>
+        <div style={{ flex:'1 1 480px' }}>
+          <h1 style={{ fontFamily:'var(--font-d)', fontSize:28, fontWeight:400, marginBottom:4 }}>專業資格續約</h1>
+          <p style={{ fontSize:13, color:'var(--mid)', lineHeight:1.7 }}>{renewalYear > currentYear ? `${renewalYear - 1} 年度尚未結束，不可提前結算或因未申請降級。` : '年度結算及未申請降級均由管理員逐人處理；未處理前保留原資格與優惠。'}<br/>逐人結算及未申請降級限當年度續約；歷史紀錄保留供查閱。</p>
+        </div>
         <label style={{ display:'grid', gap:6, fontSize:12 }}>續約年度
           <select aria-label="續約年度" value={renewalYear} disabled={Boolean(busy)} onChange={event => setRenewalYear(Number(event.target.value))} style={{ border:'1px solid var(--border)', background:'#fff', padding:'10px 14px' }}>
             {Array.from({ length:currentYear - 2019 }, (_, index) => currentYear + 1 - index).map(year => <option key={year} value={year}>{year} 年度續約（採計 {year - 1} 年）</option>)}
@@ -197,7 +200,6 @@ export default function ProfessionalRenewalsPage({ canWrite = false }) {
           </div>)}
         </div>
         {!migrationReady && <p role="alert" style={{ color:'#92400e', border:'1px solid var(--border)', padding:12, marginBottom:14 }}>目前為唯讀預覽：請先執行 supabase-professional-renewals-manual-processing.sql，才能使用逐人結算與未申請降級。未申請者的採購及獎狀資料將於 SQL 部署後載入。</p>}
-        <p style={{ fontSize:12, color:'var(--mid)', marginBottom:12 }}>{renewalYear > currentYear ? `${renewalYear - 1} 年度尚未結束，不可提前結算或因未申請降級。` : '年度結算及未申請降級均由管理員逐人處理；未處理前保留原資格與優惠。'} 逐人結算及未申請降級限當年度續約；歷史紀錄保留供查閱。</p>
         <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:18 }}>
           {[['all','全部名單'],['submitted','已提交'],['not_applied','未提交待處理'],['unprocessed','尚待處理'],['processed','已處理／資格已變更']].map(([value,label]) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)} style={{ padding:'8px 12px', border:'1px solid var(--border)', background:filter === value ? 'var(--dark)' : '#fff', color:filter === value ? '#fff' : 'var(--dark)' }}>{label}</button>)}
         </div>
