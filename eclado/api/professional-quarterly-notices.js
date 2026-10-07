@@ -62,8 +62,7 @@ module.exports = async function handler(req, res) {
   if (!requireCron(req, res)) return;
   const today = taipeiDateParts(); const quarterStart = quarterStartToPrepare(today);
   try {
-    let finalization = null; let prepared = null;
-    if (today.month === 1) finalization = await request('rpc/finalize_professional_renewal_year', { method:'POST', body:JSON.stringify({ p_assessment_year:today.year - 1 }) });
+    let prepared = null;
     prepared = await request('rpc/prepare_professional_quarterly_notices', { method:'POST', body:JSON.stringify({ p_quarter_start:quarterStart }) });
     const notices = await request('rpc/claim_professional_quarterly_notices', { method:'POST', body:JSON.stringify({ p_limit:100 }) });
     let sent = 0; let failed = 0;
@@ -78,7 +77,7 @@ module.exports = async function handler(req, res) {
         failed += 1;
       }
     }
-    return res.status(200).json({ ok:true, quarterStart, finalization, prepared, sent, failed });
+    return res.status(200).json({ ok:true, quarterStart, prepared, sent, failed });
   } catch (error) {
     console.error('[professional-quarterly-notices]', error);
     return res.status(500).json({ ok:false, error:error.message || String(error) });

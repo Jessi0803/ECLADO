@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js';
 import { optimizeDocumentImageFile } from '../utils/imageOptimization.js';
+import { buildRenewalRosterPreview } from '../domain/professionalRenewals.js';
 
 export const PROFESSIONAL_RENEWAL_EVIDENCE_BUCKET = 'professional-renewal-evidence';
 export const PROFESSIONAL_RENEWAL_MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -34,7 +35,7 @@ export async function uploadProfessionalAwardEvidence(userId, values, file) {
   if (upload.error) return upload;
 
   const saved = await supabase.rpc('save_professional_award_evidence', {
-    p_evidence_id: evidenceId,
+    p_evidence_id: null,
     p_student_name: values.studentName,
     p_completed_on: values.completedOn,
     p_award_number: values.awardNumber,
@@ -68,8 +69,38 @@ export async function fetchAdminProfessionalQuarterlyNotices() {
   return supabase.rpc('get_admin_professional_quarterly_notices');
 }
 
-export async function finalizeProfessionalRenewalYear(year) {
-  return supabase.rpc('finalize_professional_renewal_year', { p_assessment_year: year });
+export async function fetchAdminProfessionalRenewalRoster(renewalYear) {
+  const result = await supabase.rpc('get_admin_professional_renewal_roster', { p_renewal_year:renewalYear });
+  if (!result.error) return { ...result, data:{ ...result.data, migrationReady:true } };
+  if (!['PGRST202','42883'].includes(result.error.code)) return result;
+  // Existing RLS-protected reads only. Never silently use the old bulk writer.
+  async function readAll(table, columns) {
+    const rows = [];
+    for (let offset = 0; ; offset += 1000) {
+      const batch = await supabase.from(table).select(columns).order('id').range(offset, offset + 999);
+      if (batch.error) return batch;
+      rows.push(...(batch.data || []));
+      if ((batch.data || []).length < 1000) return { data:rows, error:null };
+    }
+  }
+  const [profiles, memberships, applications] = await Promise.all([
+    readAll('profiles', 'id,name,email,role'),
+    readAll('professional_memberships', 'id,user_id,role,started_on,ended_on'),
+    fetchAdminProfessionalRenewals(),
+  ]);
+  const error = profiles.error || memberships.error || applications.error;
+  if (error) return { data:null, error };
+  return { data:buildRenewalRosterPreview(profiles.data, memberships.data, applications.data || [], renewalYear), error:null };
+}
+
+export async function finalizeProfessionalRenewalApplication(applicationId) {
+  return supabase.rpc('finalize_professional_renewal_application', { p_application_id:applicationId });
+}
+
+export async function downgradeProfessionalRenewalNonapplicant(memberId, renewalYear, reason) {
+  return supabase.rpc('downgrade_professional_renewal_nonapplicant', {
+    p_member_id:memberId, p_renewal_year:renewalYear, p_reason:reason,
+  });
 }
 
 export async function reviewProfessionalRenewal(applicationId, decision, reason) {

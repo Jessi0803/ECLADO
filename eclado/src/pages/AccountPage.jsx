@@ -33,6 +33,9 @@ import { fetchMyProfessionalRenewal } from '../services/professionalRenewals.js'
 export default function AccountPage({ user, setPage, onSignOut, onUserUpdated }) {
   const isMobile = useIsMobile();
   const isAdmin = useAdminAccess(user?.uid);
+  const [accountTab, setAccountTab] = useState('orders');
+  const hasProfessionalTab = isQuarterlySalesRole(getMemberRole(user));
+  const showProfessionalTab = hasProfessionalTab && accountTab === 'professional';
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -497,16 +500,24 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
           </aside>
 
           <section>
-            <ShoppingCreditPanel userId={user.uid} isMobile={isMobile} />
-            {isQuarterlySalesRole(getMemberRole(user)) && (
+            {hasProfessionalTab && (
+              <div role="tablist" aria-label="會員專區內容" style={{ display:'flex', gap:isMobile ? 24 : 32, borderBottom:'1px solid var(--light)', marginBottom:28 }}>
+                {[['orders', '我的訂單'], ['professional', '專業資格']].map(([value, label]) => (
+                  <button key={value} type="button" role="tab" id={`account-tab-${value}`} aria-selected={accountTab === value} aria-controls={`account-panel-${value}`} onClick={() => setAccountTab(value)}
+                    style={{ border:'none', borderBottom:accountTab === value ? '2px solid var(--black)' : '2px solid transparent', background:'none', color:accountTab === value ? 'var(--black)' : 'var(--mid)', padding:'12px 0', fontSize:14, fontFamily:'inherit', cursor:'pointer' }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {showProfessionalTab && (
+              <div role="tabpanel" id="account-panel-professional" aria-labelledby="account-tab-professional">
               <QuarterlySalesPanel
                 sales={professionalSales}
                 loading={professionalSalesLoading}
                 error={professionalSalesError}
                 isMobile={isMobile}
               />
-            )}
-            {isQuarterlySalesRole(getMemberRole(user)) && (
               <ProfessionalRenewalPanel
                 user={user}
                 renewal={professionalRenewal}
@@ -515,7 +526,11 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
                 isMobile={isMobile}
                 onReload={loadProfessionalRenewal}
               />
+              </div>
             )}
+            {!showProfessionalTab && (
+              <div role={hasProfessionalTab ? 'tabpanel' : undefined} id="account-panel-orders" aria-labelledby={hasProfessionalTab ? 'account-tab-orders' : undefined}>
+            <ShoppingCreditPanel userId={user.uid} isMobile={isMobile} />
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:16, marginBottom:22 }}>
               <h2 style={{ fontFamily:'var(--font-display)', fontSize:isMobile ? 24 : 32, fontWeight:300, color:'var(--black)' }}>我的訂單</h2>
               <span style={{ fontSize:12, color:'var(--dark)' }}>{orders.length} 筆</span>
@@ -623,6 +638,8 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
                 );
               })}
             </div>
+              </div>
+            )}
           </section>
         </div>
       </div>

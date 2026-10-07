@@ -3,7 +3,50 @@ export const RENEWAL_STATUS_LABELS = Object.freeze({
   pending_review: '待管理員審核',
   approved: '續約通過',
   rejected: '續約未通過',
+  not_applied: '尚未提交申請',
+  overdue: '逾期未提交，待處理',
+  not_applied_downgraded: '未申請，已降回美容師',
+  qualification_changed: '資格已另行變更',
 });
+
+export function getTaipeiYear(now = new Date()) {
+  return Number(new Intl.DateTimeFormat('en', { timeZone:'Asia/Taipei', year:'numeric' }).format(now));
+}
+
+// Read-only local preview while the manual-processing migration is not deployed.
+export function buildRenewalRosterPreview(profiles, memberships, applications, renewalYear, now = new Date()) {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone:'Asia/Taipei', year:'numeric', month:'2-digit', day:'2-digit' }).format(now);
+  const boundary = `${renewalYear}-01-01`;
+  const cohort = new Map();
+  for (const membership of memberships) {
+    if (!['instructor','distributor'].includes(membership.role) || membership.started_on >= boundary || membership.started_on > today
+      || (membership.ended_on && membership.ended_on < boundary)) continue;
+    if (!cohort.has(membership.user_id) || cohort.get(membership.user_id).started_on < membership.started_on) cohort.set(membership.user_id, membership);
+  }
+  const selectedApplications = applications.filter(row => row.renewal_year === renewalYear);
+  for (const application of selectedApplications) if (!cohort.has(application.user_id)) cohort.set(application.user_id, { role:application.role });
+  const rows = Array.from(cohort, ([userId, membership]) => {
+    const application = selectedApplications.find(row => row.user_id === userId);
+    const profile = profiles.find(row => row.id === userId) || {};
+    const active = memberships.some(row => row.user_id === userId && row.role === profile.role
+      && ['instructor','distributor'].includes(row.role) && row.started_on < boundary && !row.ended_on);
+    return application ? { ...application, application_id:application.id, can_finalize:false, can_downgrade:false } : {
+      id:`${renewalYear}:${userId}`, application_id:null, user_id:userId, member_name:profile.name,
+      member_email:profile.email, member_role:profile.role, role:membership.role,
+      renewal_year:renewalYear, assessment_year:renewalYear - 1,
+      status:!active ? 'qualification_changed' : today >= boundary ? 'overdue' : 'not_applied',
+      assessment:null, evidence:[], recent_notices:[], can_finalize:false, can_downgrade:false,
+    };
+  });
+  return {
+    rows, migrationReady:false,
+    current_instructors:profiles.filter(row => row.role === 'instructor').length,
+    current_distributors:profiles.filter(row => row.role === 'distributor').length,
+    eligible_count:rows.length, submitted_count:selectedApplications.length,
+    not_submitted_count:rows.length - selectedApplications.length,
+    unprocessed_count:rows.filter(row => ['submitted','pending_review','not_applied','overdue'].includes(row.status)).length,
+  };
+}
 
 export const EVIDENCE_STATUS_LABELS = Object.freeze({
   pending: '待審核',

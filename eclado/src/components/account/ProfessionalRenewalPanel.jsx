@@ -19,6 +19,8 @@ export default function ProfessionalRenewalPanel({ user, renewal, loading, error
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState('');
   const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('success');
+  const [renewalMessage, setRenewalMessage] = useState('');
   const assessment = renewal?.assessment || {};
   const application = renewal?.currentApplication || renewal?.latestApplication;
   const evidence = renewal?.evidence || [];
@@ -30,15 +32,17 @@ export default function ProfessionalRenewalPanel({ user, renewal, loading, error
 
   async function submitRenewal() {
     if (!window.confirm(`確定送出 ${renewal.currentYear + 1} 年度續約申請？送出後不可撤回。`)) return;
-    setBusy('application'); setMessage('');
+    setBusy('application'); setRenewalMessage('');
     const { error: submitError } = await submitProfessionalRenewal();
     setBusy('');
-    setMessage(submitError ? `送出失敗：${submitError.message}` : '續約申請已送出。');
+    setRenewalMessage(submitError ? `送出失敗：${submitError.message}` : '續約申請已送出。');
     if (!submitError) await onReload();
   }
 
   async function saveEvidence(event) {
     event.preventDefault();
+    const formElement = event.currentTarget;
+    setMessageType('error');
     const fileError = validateRenewalEvidenceFile(file);
     if (!form.studentName.trim() || !form.completedOn || !form.awardNumber.trim()) return setMessage('請完整填寫學員、結業日期與獎狀編號。');
     if (!form.consentAcknowledged) return setMessage('請先確認已告知學員資料用途。');
@@ -50,10 +54,11 @@ export default function ProfessionalRenewalPanel({ user, renewal, loading, error
       awardNumber: form.awardNumber.trim(),
     }, file);
     setBusy('');
+    setMessageType(saveError ? 'error' : 'success');
     setMessage(saveError ? `儲存失敗：${saveError.message}` : '學員獎狀資料已送出，核准前僅列入暫估。');
     if (!saveError) {
       setForm(emptyForm); setFile(null);
-      event.currentTarget.reset();
+      formElement.reset();
       await onReload();
     }
   }
@@ -62,6 +67,7 @@ export default function ProfessionalRenewalPanel({ user, renewal, loading, error
     if (!window.confirm('確定刪除這筆待審核資料？')) return;
     setBusy(item.id); setMessage('');
     const { error: deleteError } = await deleteProfessionalAwardEvidence(item);
+    setMessageType(deleteError ? 'error' : 'success');
     setBusy(''); setMessage(deleteError ? `刪除失敗：${deleteError.message}` : '資料已刪除。');
     if (!deleteError) await onReload();
   }
@@ -83,8 +89,11 @@ export default function ProfessionalRenewalPanel({ user, renewal, loading, error
       </div>
 
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap', marginBottom:24 }}>
-        <div style={{ fontSize:13 }}>
-          {application ? `${application.renewal_year} 年度：${RENEWAL_STATUS_LABELS[application.status] || application.status}` : `${renewal.currentYear + 1} 年度尚未申請`}
+        <div>
+          <div style={{ fontSize:13 }}>
+            {application ? `${application.renewal_year} 年度：${RENEWAL_STATUS_LABELS[application.status] || application.status}` : `${renewal.currentYear + 1} 年度尚未申請`}
+          </div>
+          {renewalMessage && <p role="status" style={{ fontSize:12, color:renewalMessage.includes('失敗') ? '#b91c1c' : '#166534', marginTop:10 }}>{renewalMessage}</p>}
         </div>
         {!renewal.currentApplication && renewal.applicationWindowOpen && (
           <button type="button" onClick={submitRenewal} disabled={busy === 'application'} style={{ border:'none', background:'var(--black)', color:'var(--white)', padding:'11px 18px', cursor:'pointer' }}>
@@ -107,7 +116,7 @@ export default function ProfessionalRenewalPanel({ user, renewal, loading, error
         </label>
       </form>
 
-      {message && <p role="status" style={{ fontSize:12, color:message.includes('失敗') ? '#b91c1c' : '#166534', marginTop:10 }}>{message}</p>}
+      {message && <p role={messageType === 'error' ? 'alert' : 'status'} style={{ fontSize:12, color:messageType === 'error' ? '#b91c1c' : '#166534', marginTop:10 }}>{message}</p>}
       <div style={{ marginTop:14 }}>
         {evidence.length === 0 ? <p style={{ fontSize:12, color:'var(--dark)' }}>本年度尚無學員獎狀資料。</p> : evidence.map(item => (
           <div key={item.id} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr auto' : '1fr 140px 120px auto', gap:10, alignItems:'center', padding:'11px 0', borderBottom:'1px solid var(--light)', fontSize:12 }}>
