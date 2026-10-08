@@ -1,4 +1,5 @@
 import { isHistoricalOrder, SALES_COUNTED_STATUSES } from '../../domain/sales.js';
+import { pricingFieldsFromRow } from '../../domain/memberPricing.js';
 
 const INVENTORY_ACTIVE_ORDER_STATUSES = new Set([
   'paid',
@@ -265,6 +266,7 @@ export function normalizeProduct(row, variantRows = null, imageRows = []) {
     minStock: Number(row.min_stock) || 3,
     isProOnly: !!row.is_pro_only,
     applyTierMultiplier: row.apply_tier_multiplier !== false,
+    ...pricingFieldsFromRow(row),
     img: row.image_url || '',
     imageUrls: Array.isArray(row.image_urls) ? row.image_urls : [],
     desc: row.description || '',

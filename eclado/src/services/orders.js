@@ -5,6 +5,7 @@ function toPricingItems(items) {
     product_id: item.id,
     variant_id: item.variantId || item.variant_id || item.variantSize || null,
     qty: item.qty,
+    ...(item.expectedUnitPrice == null ? {} : { expected_unit_price:Number(item.expectedUnitPrice) }),
   }));
 }
 

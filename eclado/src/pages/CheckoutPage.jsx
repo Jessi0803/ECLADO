@@ -4,7 +4,7 @@ import CheckoutOrderSummary from '../components/checkout/CheckoutOrderSummary.js
 import CheckoutSteps from '../components/checkout/CheckoutSteps.jsx';
 import PaymentInfo from '../components/checkout/PaymentInfo.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
-import { isProfessionalMember } from '../domain/catalog.jsx';
+import { isProfessionalMember, getMemberPrice } from '../domain/catalog.jsx';
 import { getProfessionalOrderProgress, hasProfessionalOrderRules } from '../domain/memberShopping.js';
 import { calculateDiscount } from '../domain/promotions.js';
 import {
@@ -254,7 +254,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   }, [canPickup, fulfillmentMethod]);
 
   const cartPricingKey = cart
-    .map(item => `${item.id}:${item.variantId || item.variantSize || ''}:${item.qty}`)
+    .map(item => `${item.id}:${item.variantId || item.variantSize || ''}:${item.qty}:${getMemberPrice(item, user)}`)
     .join('|');
 
   useEffect(() => {
@@ -355,7 +355,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     setSubmitting(true);
     try {
       const authoritativeOrder = await createAuthoritativeOrder({
-          items: cart,
+          items: cart.map(item => ({ ...item, ...(item.memberPricingReady ? { expectedUnitPrice:getMemberPrice(item, user) } : {}) })),
           member: form.name || user?.name || '訪客',
           address: fulfillmentMethod === FULFILLMENT_DELIVERY
             ? `${form.city}${form.district}${form.address}`

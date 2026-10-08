@@ -1,9 +1,11 @@
+import { getProductMultiplier, formatFold, pricingFieldsFromRow, usesFixedProfessionalPrice } from './memberPricing.js';
+
 export const MEMBER_TIERS = {
   consumer:    { label:'一般會員', badge:'MEMBER', priceLabel:'一般價', multiplier:null },
   pro:         { label:'美容師', badge:'PRO', priceLabel:'專業價', multiplier:1 },
-  instructor:  { label:'師資', badge:'師資', priceLabel:'師資價・專業價7折', multiplier:0.7 },
-  distributor: { label:'經銷商', badge:'經銷', priceLabel:'經銷價・專業價65折', multiplier:0.65 },
-  staff:       { label:'內部人員', badge:'內部', priceLabel:'內部價・專業價5折', multiplier:0.5 },
+  instructor:  { label:'師資', badge:'師資', priceLabel:'師資價', multiplier:0.7 },
+  distributor: { label:'經銷商', badge:'經銷', priceLabel:'經銷價', multiplier:0.65 },
+  staff:       { label:'內部人員', badge:'內部', priceLabel:'內部價', multiplier:0.5 },
   pending:     { label:'審核中', badge:'審核中', priceLabel:'一般價', multiplier:null },
 };
 
@@ -26,8 +28,17 @@ export function getMemberTier(user) {
 export function getMemberPrice(product, user) {
   const tier = getMemberTier(user);
   if (!tier.multiplier) return product.price;
-  const multiplier = product.applyTierMultiplier === false ? 1 : tier.multiplier;
-  return Math.round(product.proPrice * multiplier);
+  const multiplier = getProductMultiplier(product, getMemberRole(user));
+  const base = usesFixedProfessionalPrice(product, getMemberRole(user))
+    ? Number(product.proPrice) : (Number(product.proPrice) || Number(product.price) || 0);
+  return Math.round(base * multiplier);
+}
+
+export function getProductPriceLabel(product, user) {
+  const multiplier = getProductMultiplier(product, getMemberRole(user));
+  if (multiplier === null) return '一般價';
+  if (multiplier === 1) return getMemberRole(user) === 'pro' ? '專業價' : '固定專業價';
+  return `${getMemberTier(user).priceLabel}・專業價${formatFold(multiplier)}折`;
 }
 
 export function normalizeJsonArray(value) {
@@ -303,6 +314,7 @@ export function mergeProductsWithStock(stockRows, variantMap, imageMap = null, o
       stock: primaryVariant?.stock != null ? primaryVariant.stock : Number(row.stock ?? 0),
       isProOnly: !!row.is_pro_only,
       applyTierMultiplier: row.apply_tier_multiplier !== false,
+      ...pricingFieldsFromRow(row),
       price: primaryVariant?.price || Number(row.price ?? 0),
       proPrice: primaryVariant?.proPrice || Number(row.pro_price ?? 0),
       img: primaryStorageImage?.url || row.image_url || imageUrls[0] || '',

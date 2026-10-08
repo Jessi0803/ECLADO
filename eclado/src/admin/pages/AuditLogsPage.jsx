@@ -10,6 +10,7 @@ const ENTITY_LABELS = {
   professional_applications: '專業申請',
   promotions: '活動',
   admin_users: '管理員',
+  membership_tiers: '會員全域定價',
 };
 
 const OPERATION_LABELS = { INSERT: '新增', UPDATE: '修改', DELETE: '刪除' };
@@ -37,6 +38,7 @@ const FIELD_LABELS = {
   is_default: '預設規格', sort_order: '排序', is_primary: '首圖', original_name: '檔名', alt_text: '替代文字',
   storage_path: 'Storage 路徑', role: '會員層級', source: '申請來源', product_ids: '適用商品',
   discount_rate: '折扣倍率', discount_amount: '折扣金額', discount_order: '折扣順序', start_at: '開始時間', end_at: '結束時間',
+  professional_price_multiplier:'全域價格倍率', instructor_price_multiplier:'師資商品倍率', distributor_price_multiplier:'經銷商商品倍率', staff_price_multiplier:'內部人員商品倍率',
 };
 
 function operationOf(log) {

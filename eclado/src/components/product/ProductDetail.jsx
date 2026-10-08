@@ -5,7 +5,7 @@ import {
   getCartKey,
   getFulfillmentInfo,
   getMemberPrice,
-  getMemberTier,
+  getProductPriceLabel,
   getProductImage,
   getProductImages,
   getProductVariants,
@@ -28,9 +28,8 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
   const selectedVariant = variants[activeVariant] || null;
   const displayProduct = applyVariantToProduct(product, selectedVariant);
   const showPrice = getMemberPrice(displayProduct, user);
-  const priceTier = getMemberTier(user);
   const hasTierPrice = canAccessProfessionalCatalog(user) && showPrice !== displayProduct.price;
-  const priceLabel = displayProduct.applyTierMultiplier === false ? '固定專業價' : priceTier.priceLabel;
+  const priceLabel = getProductPriceLabel(displayProduct, user);
   const fulfillment = getFulfillmentInfo(displayProduct);
 
   const livePromosForProduct = (promotions || []).filter(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));

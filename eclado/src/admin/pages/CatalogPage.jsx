@@ -2,12 +2,13 @@ import React, { useRef, useState } from 'react';
 import { SERIES_LINKS } from '../../app/navigation.js';
 import { normalizeProductImageScale } from '../domain/mappers.js';
 import usePanelHistory from '../hooks/usePanelHistory.js';
+import { PRICING_ROLES, PRICING_LABELS, LEGACY_PRICING_DEFAULTS, formatFold, parseFold } from '../../domain/memberPricing.js';
 
 const PRODUCT_CATEGORIES = ['清潔卸妝', '化妝水', '安瓶精華', '乳霜', '面膜', '防曬底妝', '其他', '院線課程儀器（含試用包）'];
 const MAX_PRODUCT_IMAGE_BYTES = 5 * 1024 * 1024;
 const PRODUCT_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
-export default function Catalog({ products, onSaveProduct, onArchiveProduct, onRestoreProduct, canManageProcurementCost = false }) {
+export default function Catalog({ products, memberPricing = null, onSaveProduct, onArchiveProduct, onRestoreProduct, canManageProcurementCost = false }) {
   const [editing, setEditing] = useState(null); // product being edited (draft copy)
   const [listMode, setListMode] = useState('active');
   const [stockFilter, setStockFilter] = useState('all');
@@ -72,6 +73,8 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
     setError('');
     const draft = {
       ...p,
+      expectedPricingOverrides: { ...p.pricingOverrides },
+      pricingDraft: Object.fromEntries(PRICING_ROLES.map(role => [role, p.pricingOverrides?.[role] == null ? '' : String(formatFold(p.pricingOverrides[role]))])),
       features: Array.isArray(p.features) ? [...p.features] : [],
       variants: (p.variants || []).map(variant => ({ ...variant })),
       productImages: (p.productImages || []).map(image => ({ ...image })),
@@ -92,7 +95,10 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
       series: '',
       minStock: 3,
       isProOnly: false,
-      applyTierMultiplier: true,
+      memberPricingReady: Boolean(memberPricing) || products.some(product => product.memberPricingReady),
+      pricingDefaults: memberPricing || products.find(product => product.memberPricingReady)?.pricingDefaults || LEGACY_PRICING_DEFAULTS,
+      pricingOverrides: { instructor:null, distributor:null, staff:null },
+      pricingDraft: { instructor:'', distributor:'', staff:'' },
       productImages: [],
       desc: '',
       skinType: '',
@@ -307,6 +313,12 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
 
   async function saveEdit() {
     setError('');
+    let pricingOverrides = editing.pricingOverrides;
+    if (editing.memberPricingReady) {
+      try {
+        pricingOverrides = Object.fromEntries(PRICING_ROLES.map(role => [role, parseFold(editing.pricingDraft[role], true)]));
+      } catch (err) { setError(err.message); return; }
+    }
     if (!editing.nameZh.trim() || !editing.name.trim()) {
       setError('請輸入中文名稱與英文名稱');
       return;
@@ -369,6 +381,7 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
 
     const updated = {
       ...editing,
+      pricingOverrides,
       features: (editing.features || []).map(feature => String(feature || '').trim()).filter(Boolean),
       variants: normalizedVariants,
       minStock: Math.max(0, Number(editing.minStock) || 0),
@@ -685,14 +698,16 @@ export default function Catalog({ products, onSaveProduct, onArchiveProduct, onR
                 <label htmlFor="isProOnly" style={{ fontSize: 13, color: 'var(--dark)', cursor: 'pointer' }}>院線限定（一般會員可看介紹，不顯示價格且不可購買）</label>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                <input type="checkbox" id="applyTierMultiplier" checked={editing.applyTierMultiplier !== false}
-                  onChange={e => setEditing(prev => ({ ...prev, applyTierMultiplier: e.target.checked }))}
-                  style={{ width: 15, height: 15, marginTop: 2, cursor: 'pointer' }} />
-                <label htmlFor="applyTierMultiplier" style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--dark)', cursor: 'pointer' }}>
-                  師資／經銷商套用身分倍率
-                  <span style={{ display: 'block', fontSize: 11, color: 'var(--mid)' }}>取消後，美容師、師資與經銷商皆使用規格專業價，不再折上折。</span>
-                </label>
+              <div>
+                <h4 style={{ fontSize:14, marginBottom:10 }}>會員折數設定</h4>
+                <p style={{ fontSize:11, color:'var(--mid)', marginBottom:12 }}>所有規格共用。留空沿用全域；填入折數取代全域；10 折代表不打折。</p>
+                {!editing.memberPricingReady && <p role="alert" style={{ color:'var(--red)', fontSize:12 }}>折數設定尚未就緒，請先執行 supabase-member-pricing.sql；既有定價維持不變。</p>}
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:16 }}>
+                  {PRICING_ROLES.map(role => <label key={role} style={lbl}>{PRICING_LABELS[role]}折數
+                    <input aria-label={`${PRICING_LABELS[role]}商品折數`} type="number" min="0.01" max="10" step="0.01" disabled={!editing.memberPricingReady} value={editing.pricingDraft?.[role] ?? ''} placeholder={`沿用全域 ${formatFold(editing.pricingDefaults?.[role] ?? LEGACY_PRICING_DEFAULTS[role])} 折`} onChange={e => setEditing(prev => ({ ...prev, pricingDraft:{ ...prev.pricingDraft, [role]:e.target.value } }))} style={inp}/>
+                    <span style={{ display:'block', marginTop:4, fontSize:11 }}>全域目前 {formatFold(editing.pricingDefaults?.[role] ?? LEGACY_PRICING_DEFAULTS[role])} 折</span>
+                  </label>)}
+                </div>
               </div>
 
               <div style={{ height: 1, background: 'var(--border)' }} />

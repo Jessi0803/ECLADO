@@ -570,7 +570,7 @@ test('後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序', async 
 for (const scenario of [
   { role: 'pro', noticeLabel: '美容師', label: '專業價', priceLabel: 'NT$ 2,980', proOnlyButton: true },
   { role: 'instructor', noticeLabel: '師資', label: '師資價・專業價7折', priceLabel: 'NT$ 2,086', proOnlyButton: true },
-  { role: 'distributor', noticeLabel: '經銷商', label: '經銷價・專業價65折', priceLabel: 'NT$ 1,937', proOnlyButton: true },
+  { role: 'distributor', noticeLabel: '經銷商', label: '經銷價・專業價6.5折', priceLabel: 'NT$ 1,937', proOnlyButton: true },
 ]) {
   test(`會員角色價格：${scenario.role} 看到對應價格並可購買院線商品`, async ({ page }) => {
     await mockEcladoApis(page, {

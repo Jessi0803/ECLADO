@@ -6,8 +6,19 @@ import {
 } from '../../domain/catalog.jsx';
 import { getProductImagePublicUrl } from '../../services/catalogData.js';
 
+function getSummaryFulfillment(item) {
+  if (['in_stock', 'preorder'].includes(item.fulfillment_type)) {
+    return {
+      type: item.fulfillment_type,
+      label: item.fulfillment || (item.fulfillment_type === 'preorder' ? '含預購商品' : '現貨商品'),
+      shipping: item.shipping_time || '',
+    };
+  }
+  return getFulfillmentInfo(item);
+}
+
 export default function CheckoutOrderSummary({ items, summary, user, fulfillmentMethod = 'delivery' }) {
-  const hasPreorderItem = items.some(item => !item.is_gift && item.line_type !== 'gift' && getFulfillmentInfo(item).type === 'preorder');
+  const hasPreorderItem = items.some(item => !item.is_gift && item.line_type !== 'gift' && getSummaryFulfillment(item).type === 'preorder');
 
   return (
     <div style={{ background:'var(--off-white)', padding:'28px 24px', height:'fit-content' }}>
@@ -23,7 +34,7 @@ export default function CheckoutOrderSummary({ items, summary, user, fulfillment
           const unitPrice = item.unit_price == null
             ? (isGift ? 0 : getMemberPrice(item, user))
             : Number(item.unit_price);
-          const fulfillment = isGift ? { type:'in_stock', label:'贈品已保留', shipping:'與訂單一併出貨' } : getFulfillmentInfo(item);
+          const fulfillment = isGift ? { type:'in_stock', label:'贈品已保留', shipping:'與訂單一併出貨' } : getSummaryFulfillment(item);
           const imageSrc = getProductImagePublicUrl(
             item.image_storage_path || item.imageStoragePath,
           ) || item.img || '';
@@ -36,7 +47,7 @@ export default function CheckoutOrderSummary({ items, summary, user, fulfillment
               <div style={{ flex:1, minWidth:0 }}>
                 <p style={{ fontSize:12, color:'var(--black)', marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{isGift && <span style={{ marginRight:6, color:'var(--accent)', fontSize:10 }}>贈品</span>}{item.nameZh || item.name}</p>
                 <p style={{ fontSize:11, color:'var(--dark)' }}>{item.size}</p>
-                <p style={{ fontSize:10, color: fulfillment.type === 'preorder' ? 'var(--accent)' : 'var(--dark)', marginTop:3, lineHeight:1.45 }}>{fulfillment.type === 'loading' ? '庫存資料載入中' : `${fulfillment.label} · ${fulfillment.shipping.replace('出貨時間為 ', '')}`}</p>
+                {fulfillment.type !== 'loading' && <p style={{ fontSize:10, color: fulfillment.type === 'preorder' ? 'var(--accent)' : 'var(--dark)', marginTop:3, lineHeight:1.45 }}>{fulfillment.label}{fulfillment.shipping ? ` · ${fulfillment.shipping.replace('出貨時間為 ', '')}` : ''}</p>}
               </div>
               <span style={{ fontSize:13, color:isGift ? 'var(--accent)' : 'var(--black)', flexShrink:0, fontFamily:'var(--font-display)' }}>{isGift ? '免費' : `NT$ ${(unitPrice * item.qty).toLocaleString()}`}</span>
             </div>

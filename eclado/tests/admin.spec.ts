@@ -572,6 +572,19 @@ test('儀表板顯示待處理資訊，點待審核申請可前往會員審核�
   await expect(page.getByText('審核中會員')).toBeVisible();
 });
 
+test('儀表板六個月柱狀圖皆有有效背景色，歷史月份使用透明度', async ({ page }) => {
+  await mockAdminApis(page);
+  await page.goto('/admin');
+  // Month labels identify each bar without depending on the current calendar month.
+  const months = page.getByTestId('dashboard-revenue-panel').locator('span').filter({ hasText: /^\d+月$/ });
+  await expect(months).toHaveCount(6);
+  for (let index = 0; index < 6; index += 1) {
+    const bar = months.nth(index).locator('..').locator('div').first();
+    await expect(bar).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(bar).toHaveCSS('opacity', index === 5 ? '1' : '0.25');
+  }
+});
+
 test('儀表板營業額與庫存警示固定上下排列，庫存內容獨立水平捲動', async ({ page }) => {
   const lowStockProducts = Array.from({ length: 10 }, (_, index) => ({
     ...adminProductRows[index % adminProductRows.length],
@@ -1807,10 +1820,13 @@ test('商品管理可設定固定專業價而不套用身分倍率', async ({ pa
   const row = page.getByText('金箔片').locator('xpath=ancestor::tr');
   await row.getByRole('button', { name: '編輯' }).click();
   const panel = page.locator('.detail-panel');
-  await expect(panel.getByLabel('師資／經銷商套用身分倍率')).not.toBeChecked();
+  await expect(panel.getByLabel('師資／經銷商套用身分倍率')).toHaveCount(0);
+  await expect(panel.getByLabel('師資商品折數')).toHaveValue('10');
+  await expect(panel.getByLabel('師資商品折數')).toBeDisabled();
   await panel.getByRole('button', { name: '儲存', exact: true }).click();
   await expect.poll(() => savedRequest).not.toBeNull();
-  expect(savedRequest?.p_product).toMatchObject({ apply_tier_multiplier: false });
+  expect(savedRequest?.p_product).not.toHaveProperty('apply_tier_multiplier');
+  expect(savedRequest?.p_product).not.toHaveProperty('instructor_price_multiplier');
 });
 
 test('商品下架與重新上架寫入失敗時維持原清單狀態', async ({ page }) => {

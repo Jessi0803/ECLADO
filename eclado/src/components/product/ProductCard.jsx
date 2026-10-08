@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   getMemberPrice,
-  getMemberTier,
+  getProductPriceLabel,
   getProductImage,
   canAccessProfessionalCatalog,
 } from '../../domain/catalog.jsx';
@@ -17,9 +17,8 @@ export default function ProductCard({ product, user, onAdd, onSelect, promotions
   const [hovered, setHovered] = useState(false);
   const canPurchase = !product.isProOnly || canAccessProfessionalCatalog(user);
   const showPrice = getMemberPrice(product, user);
-  const priceTier = getMemberTier(user);
   const hasTierPrice = canAccessProfessionalCatalog(user) && showPrice !== product.price;
-  const priceLabel = product.applyTierMultiplier === false ? '固定專業價' : priceTier.priceLabel;
+  const priceLabel = getProductPriceLabel(product, user);
   const onPromo = promotions.some(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));
   const promoDisplay = getPromoDisplayPrice(product, user, promotions);
   const productHref = `${routeBase}/${getProductSlug(product)}`;

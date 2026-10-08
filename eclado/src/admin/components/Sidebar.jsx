@@ -32,6 +32,10 @@ const MENU_GROUPS = [
       { id: 'analytics', icon: 'analytics', label: '營業分析' },
     ],
   },
+  {
+    title: '設定',
+    items: [{ id:'settings', icon:'catalog', label:'系統設定' }],
+  },
 ];
 
 function SidebarIcon({ name }) {

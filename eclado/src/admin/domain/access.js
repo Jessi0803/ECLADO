@@ -1,6 +1,7 @@
 export const BACKOFFICE_PERMISSIONS = Object.freeze({
   CATALOG_READ: 'catalog.read',
   CATALOG_WRITE: 'catalog.write',
+  MEMBER_PRICING_MANAGE: 'member_pricing.manage',
   ORDERS_READ: 'orders.read',
   ORDERS_WRITE: 'orders.write',
   MEMBERS_READ: 'members.read',
@@ -37,6 +38,7 @@ export const PAGE_PERMISSIONS = Object.freeze({
   renewals: BACKOFFICE_PERMISSIONS.MEMBERS_READ,
   audit: BACKOFFICE_PERMISSIONS.AUDIT_LOGS_READ,
   analytics: BACKOFFICE_PERMISSIONS.ANALYTICS_READ,
+  settings: BACKOFFICE_PERMISSIONS.MEMBER_PRICING_MANAGE,
 });
 
 export function normalizeBackofficeAccess(value) {

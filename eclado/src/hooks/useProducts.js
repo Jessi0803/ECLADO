@@ -25,8 +25,10 @@ export default function useProducts(user, setCart, authReady = true, includeEven
 
   useEffect(() => {
     let alive = true;
+    let loadSequence = 0;
 
     async function loadProducts() {
+      const sequence = ++loadSequence;
       const {
         data,
         error,
@@ -39,7 +41,7 @@ export default function useProducts(user, setCart, authReady = true, includeEven
         eventVariantRows,
         eventImageRows,
       } = await fetchProductRows({ includeEventCatalog });
-      if (!alive) return;
+      if (!alive || sequence !== loadSequence) return;
       const eventVariantMap = groupProductVariants(eventVariantRows);
       const eventImageMap = eventError ? null : groupProductImages(eventImageRows);
       const loadedEventProducts = eventError
@@ -103,15 +105,20 @@ export default function useProducts(user, setCart, authReady = true, includeEven
     try {
       channel = subscribeToTables(
         'products-realtime',
-        ['products', 'product_variants', 'product_images'],
+        ['products', 'product_variants', 'product_images', 'membership_tiers'],
         loadProducts,
       );
     } catch (error) {
       console.warn('[ECLADO] products Realtime 訂閱失敗（不影響讀取）', error);
     }
 
+    // Refresh prices after returning to the tab, even if Realtime is unavailable.
+    const refreshOnFocus = () => loadProducts();
+    window.addEventListener('focus', refreshOnFocus);
+
     return () => {
       alive = false;
+      window.removeEventListener('focus', refreshOnFocus);
       removeRealtimeChannel(channel);
     };
   }, [authReady, includeEventCatalog, user?.role, setCart]);

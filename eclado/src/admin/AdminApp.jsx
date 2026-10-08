@@ -24,6 +24,7 @@ import Orders from './pages/OrdersPage.jsx';
 import ProcurementPage from './pages/ProcurementPage.jsx';
 import Promotions from './pages/PromotionsPage.jsx';
 import ProfessionalRenewalsPage from './pages/ProfessionalRenewalsPage.jsx';
+import MemberPricingPage from './pages/MemberPricingPage.jsx';
 import {
   BACKOFFICE_PERMISSIONS,
   canAccessBackofficePage,
@@ -40,6 +41,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
   // 訂單 ↔ 會員互相跳轉：記住來源，讓詳情面板顯示返回列。
   const [crossLink, setCrossLink] = useState(null);
   const [products, setProducts] = useState([]);
+  const [memberPricing, setMemberPricing] = useState(null);
   const [members, setMembers] = useState([]);
   const [memberNotes, setMemberNotes] = useState({});
   // null = 尚未載入或資料表不存在（此時不顯示「常用」功能）
@@ -247,6 +249,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
       setMembers(allMembers);
 
       const catalog = catalogRes.data || {};
+      setMemberPricing(catalog.member_pricing_version === 1 ? catalog.pricing_defaults : null);
       const productsRes = { data: catalog.products || [], error: catalogRes.error };
       const variantsRes = { data: catalog.variants || [], error: catalogRes.error };
       const imagesRes = { data: catalog.images || [], error: catalogRes.error };
@@ -313,6 +316,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
     }
     if (canReadCatalog) {
       channel = channel
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'membership_tiers' }, () => fetchAll())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchAll())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'product_variants' }, () => fetchAll())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'product_images' }, () => fetchAll());
@@ -423,7 +427,8 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
       series: product.series || null,
       min_stock: Math.max(0, Number(product.minStock) || 0),
       is_pro_only: !!product.isProOnly,
-      apply_tier_multiplier: product.applyTierMultiplier !== false,
+      ...(product.memberPricingReady ? Object.fromEntries(['instructor','distributor','staff'].map(role => [`${role}_price_multiplier`, product.pricingOverrides?.[role] ?? null])) : {}),
+      ...(product.id && product.memberPricingReady ? { expected_pricing_overrides:product.expectedPricingOverrides } : {}),
       description: product.desc || '',
       skin_type: product.skinType || '',
       ingredients: product.ingredients || '',
@@ -666,12 +671,13 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
       case 'dashboard': return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;
       case 'orders': return <Orders orders={orders} members={members} persistOrderPatch={persistOrderPatch} onSaveInvoiceNumber={saveOrderInvoiceNumber} onDeleteCancelledOrder={deleteCancelledOrder} onCancelHistoricalOrder={cancelHistoricalOrder} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={ordersDefaultFilter} memberNotes={memberNotes} focusOrderId={crossLink?.orderId || ''} backToMember={crossLink?.backMemberId ? { id: crossLink.backMemberId, name: crossLink.backMemberName } : null} onOpenMember={canReadMembers ? openMemberFromOrder : null} onClearCrossLink={() => setCrossLink(null)} />;
       case 'audit': return <AuditLogsPage />;
-      case 'catalog': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
+      case 'settings': return <MemberPricingPage onSaved={fetchAll} />;
+      case 'catalog': return <Catalog products={products} memberPricing={memberPricing} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'backorders': return <BackordersPage onInventoryChanged={fetchAll} />;
       case 'inventory_counts': return <InventoryCountsPage adminUserId={adminUserId} isSuperAdmin={backofficeAccess?.role === 'super_admin'} onInventoryChanged={fetchAll} />;
       // 舊路徑相容，避免有人記住 /admin#products 之類的
       case 'products':
-      case 'inventory': return <Catalog products={products} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
+      case 'inventory': return <Catalog products={products} memberPricing={memberPricing} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'promotions': return <Promotions products={products} />;
       case 'procurement': return <ProcurementPage />;
       case 'members': return <Members members={members} orders={orders} products={products} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} onCreateHistoricalOrder={canWriteOrders ? createMemberHistoricalOrder : null} defaultFilter={membersDefaultFilter} memberNotes={memberNotes} onSaveMemberNote={canWriteMembers ? saveMemberNote : null} focusMemberId={crossLink?.memberId || ''} backToOrderId={crossLink?.backOrderId || ''} onOpenOrder={canReadOrders ? openOrderFromMember : null} onClearCrossLink={() => setCrossLink(null)} canManageShoppingCredit={canManageShoppingCredit} />;
