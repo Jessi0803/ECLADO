@@ -111,4 +111,30 @@ for(const [method,label] of [['apple','Apple Pay'],['google','Google Pay']]){
 test('private customer page shows saved prices/invoice/ATM, no internal stock or admin UI',async({page})=>{
   await mockEcladoApis(page);await page.route('**/api/orders/assisted-details',route=>route.fulfill({json:{ok:true,paymentMethod:'atm',order:{id:created.order_id,member:'顧客',phone:'0911111111',email:'guest@example.test',address:'台北市',invoice_type:'company',invoice_company_name:'測試公司',invoice_tax_id:'62076004',status:'awaiting_confirm',subtotal:1000,shipping:120,total:1120,payment_due_at:'2099-01-01',public_lookup_code:'ABCDE-12345',is_member:false,items:[{name:'歷史成交商品',size:'200ml',qty:1,unit_price:1000,line_total:1000}]},instruction:{atm_bank_code:'807',atm_account:'85417480000013'}}}));
   await page.goto(`/order-payment#order=${created.order_id}&token=${created.link_token}`);await expect(page.getByText('公司抬頭：測試公司')).toBeVisible();await expect(page.getByText('統一編號：62076004')).toBeVisible();await expect(page.getByText('虛擬帳號：85417480000013')).toBeVisible();await expect(page.getByText('訪客查詢碼：ABCDE-12345',{exact:false})).toBeVisible();await expect(page.locator('.app-sidebar')).toHaveCount(0);await expect(page.getByText('庫存資料載入中')).toHaveCount(0);await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content',/noindex/);
+  await expect(page.getByRole('button',{name:'重新讀取付款狀態'})).toHaveCSS('font-size','12px');
+  await expect(page.getByRole('link',{name:'會員中心',exact:true})).toHaveCSS('text-decoration-line','none');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+});
+test('customer payment error and loading states use storefront cards and styled query actions',async({page},testInfo)=>{
+  await mockEcladoApis(page);
+  let fail=true;
+  let finishLoading:()=>void=()=>{};
+  const pending=new Promise<void>(resolve=>{finishLoading=resolve;});
+  await page.route('**/api/orders/assisted-details',async route=>{
+    await pending;
+    return fail?route.fulfill({status:403,json:{ok:false,error:'連結無效或已到期，請使用會員中心／訪客訂單查詢。'}}):route.fulfill({json:{ok:true,paymentMethod:'card',order:{id:created.order_id,member:'顧客',phone:'0911111111',email:'guest@example.test',address:'台北市',invoice_type:'personal',status:'unpaid',subtotal:1000,shipping:120,total:1120,payment_due_at:'2099-01-01',is_member:true,items:[{name:'商品',size:'200ml',qty:1,unit_price:1000,line_total:1000}]}}});
+  });
+  await page.goto(`/order-payment#order=${created.order_id}&token=${created.link_token}`);
+  await expect(page.locator('.assisted-payment-page').getByRole('status')).toContainText('正在讀取訂單');
+  await expect(page.locator('.assisted-payment-header')).toHaveCSS('border-top-width','1px');
+  finishLoading();await expect(page.getByRole('alert')).toContainText('連結無效');
+  await expect(page.getByRole('link',{name:'會員中心',exact:true})).toHaveCSS('color','rgb(20, 20, 18)');
+  await expect(page.getByRole('link',{name:'會員中心',exact:true})).toHaveCSS('text-decoration-line','none');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  await page.screenshot({path:testInfo.outputPath('assisted-customer-error.png'),fullPage:true});
+  fail=false;await page.getByRole('button',{name:'重新讀取訂單'}).click();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByRole('heading',{name:'商品與金額'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'確認明細，前往信用卡付款'})).toHaveCSS('background-color','rgb(20, 20, 18)');
+  await page.screenshot({path:testInfo.outputPath('assisted-customer-details.png'),fullPage:true});
 });

@@ -1,0 +1,35 @@
+.assisted-payment-page { min-height:80vh; padding-top:68px; background:var(--off-white); }
+.assisted-payment-container { max-width:920px; margin:0 auto; padding:76px 32px 96px; display:grid; gap:18px; font-size:13px; line-height:1.8; }
+.assisted-payment-card { min-width:0; background:var(--white); border:1px solid var(--light); padding:28px 32px; overflow-wrap:anywhere; }
+.assisted-payment-header h1 { font-family:var(--font-display); font-size:34px; margin-bottom:12px; }
+.assisted-payment-header p { color:var(--dark); font-size:13px; }
+.assisted-payment-card h2 { font-size:16px; margin-bottom:20px; }
+.assisted-payment-contact p, .assisted-payment-instructions > p { margin-bottom:6px; }
+.assisted-payment-table-scroll { overflow-x:auto; }
+.assisted-payment-table-scroll table { width:100%; border-collapse:collapse; font-size:13px; }
+.assisted-payment-table-scroll th { font-size:12px; font-weight:400; color:#777773; }
+.assisted-payment-table-scroll th, .assisted-payment-table-scroll td { text-align:right; padding:12px 10px; border-bottom:1px solid var(--light); }
+.assisted-payment-table-scroll th:first-child, .assisted-payment-table-scroll td:first-child { text-align:left; padding-left:0; min-width:150px; }
+.assisted-payment-table-scroll td:not(:first-child), .assisted-payment-table-scroll th:not(:first-child) { white-space:nowrap; }
+.assisted-payment-totals { margin:20px 0 0 auto; max-width:360px; display:grid; gap:9px; }
+.assisted-payment-totals p { display:flex; justify-content:space-between; gap:20px; }
+.assisted-payment-total { border-top:1px solid var(--light); padding-top:12px; font-weight:600; }
+.assisted-payment-total span:last-child { font-family:var(--font-display); font-size:18px; }
+.assisted-payment-atm { padding:20px; background:var(--off-white); margin-top:20px; }
+.assisted-payment-account { font-size:18px; overflow-wrap:anywhere; }
+.assisted-payment-actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:6px; }
+.assisted-payment-instructions .assisted-payment-actions { margin-top:20px; }
+.assisted-payment-button, .assisted-payment-button:visited { display:inline-flex; justify-content:center; align-items:center; background:transparent; color:var(--black); border:1px solid var(--black); padding:12px 22px; font-family:var(--font-body); font-size:12px; font-weight:400; letter-spacing:.08em; line-height:1.6; text-decoration:none; cursor:pointer; }
+.assisted-payment-button.primary { background:var(--black); color:var(--white); }
+.assisted-payment-button:disabled { opacity:.65; cursor:wait; }
+.assisted-payment-button:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+.assisted-payment-hint { color:#777773; font-size:12px; margin-top:20px; }
+.assisted-payment-error { color:#991b1b; background:#fef2f2; border:1px solid #fecaca; padding:16px 20px; font-size:12px; overflow-wrap:anywhere; }
+.assisted-payment-error .assisted-payment-button { margin-top:14px; }
+@media (max-width:600px) {
+  .assisted-payment-container { padding:52px 20px 80px; }
+  .assisted-payment-card { padding:24px 20px; }
+  .assisted-payment-header h1 { font-size:26px; }
+  .assisted-payment-actions .assisted-payment-button { flex:1 1 100%; }
+  .assisted-payment-table-scroll table { font-size:12px; }
+}

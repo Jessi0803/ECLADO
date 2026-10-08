@@ -1,6 +1,8 @@
 # 代客開單：部署與驗證
 
-目前為本地實作；本次沒有執行正式 SQL、部署付款 API、commit 或 push。
+功能已於 `a8e9996` commit／push 至 main。2026/10/09 管理員回報 SQL 已執行；付款 API 已另行部署、重啟並通過正式健康檢查。未進行真實銀行付款。後續付款頁樣式整改以獨立 commit 提交，隨前端部署更新。
+
+付款 API 此次部署前的程式備份位於主機 `/opt/eclado-payment-api/backups/assisted-20261009-0155/server.js`；未更動環境變數及銀行金鑰。
 
 ## 部署順序
 
