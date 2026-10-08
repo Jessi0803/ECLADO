@@ -115,7 +115,7 @@ export default function AssistedOrderDialog({members=[],products=[],initialMembe
         <p style={{fontSize:13,marginBottom:8,overflowWrap:'anywhere'}}>訂單已成立：{result.order_id}</p><p style={{fontSize:11,color:'var(--mid)',marginBottom:14}}>商品、金額及收件資料已鎖定。修改需取消原單後重建。</p>
         <label>客戶付款連結<input aria-label="客戶付款連結" readOnly value={assistedLink(result)} style={style}/></label>
         <div className="assignment-actions" style={{flexWrap:'wrap'}}><button type="button" onClick={async()=>{try{await navigator.clipboard.writeText(assistedLink(result));setNotice('付款連結已複製。');}catch{setError('無法自動複製，請選取上方連結手動複製。');}}}>複製付款連結</button>
-        <button type="button" disabled={busy} onClick={retryPayment}>重新讀取／重試付款</button>
+        <button type="button" disabled={busy} onClick={retryPayment}>重新取得付款資訊</button>
         <button type="button" className="primary" disabled={busy} onClick={()=>{clearKey();onClose();}}>完成</button></div>
       </>:<form onSubmit={submit}>
         <fieldset disabled={locked||busy} style={{border:0,padding:0,minWidth:0}}>

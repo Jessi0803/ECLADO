@@ -1,5 +1,5 @@
 import {expect,test,type Page} from '@playwright/test';
-import {mockEcladoApis,adminProductRows,adminProfileRows} from './support/eclado-mocks';
+import {mockEcladoApis,adminProductRows,adminProfileRows,adminOrderRows} from './support/eclado-mocks';
 const user={id:'admin-assisted',email:'admin@example.test',user_metadata:{name:'管理員'},app_metadata:{provider:'email'},aud:'authenticated',role:'authenticated',created_at:'2026-05-01'};
 const created={order_id:'ECL-ASSISTED-001',link_token:'a'.repeat(64)};
 async function setup(page:Page,allowed=true){
@@ -10,6 +10,21 @@ async function setup(page:Page,allowed=true){
   await page.route('**/rest/v1/rpc/get_admin_assisted_request',route=>route.fulfill({json:null}));
 }
 async function open(page:Page){await page.goto('/admin');if((page.viewportSize()?.width||0)<=900)await page.getByRole('button',{name:'開啟選單'}).click();await page.locator('.app-sidebar button:not(.sidebar-star)').filter({hasText:'訂單管理'}).first().click();await page.getByRole('button',{name:'新增代客訂單'}).click();}
+test('assisted order detail link action uses existing outlined button and field styles',async({page})=>{
+  await setup(page);
+  await page.route('**/rest/v1/orders*',route=>route.fulfill({json:[{...adminOrderRows[0],id:created.order_id,order_source:'admin_assisted'}]}));
+  await page.route('**/rest/v1/rpc/get_admin_assisted_link',route=>route.fulfill({json:{...created,created_at:'2026-10-09T00:00:00Z',actor_user_id:user.id,pricing_context:[]}}));
+  await open(page);await page.getByRole('button',{name:'關閉代客開單',exact:true}).click();
+  await page.getByText(created.order_id,{exact:true}).first().click();
+  const panel=page.getByRole('dialog',{name:'訂單詳情',exact:true});
+  const button=panel.getByRole('button',{name:'取得客戶付款連結／開單紀錄'});
+  await expect(button).toHaveCSS('font-size','12px');await expect(button).toHaveCSS('background-color','rgb(255, 255, 255)');
+  await expect(button).toHaveCSS('border-top-width','1px');await expect(button).toHaveCSS('padding-top','9px');
+  await button.click();await expect(panel.getByLabel('客戶付款連結')).toHaveValue(/order-payment#order=/);
+  await expect(panel.getByLabel('客戶付款連結')).toHaveCSS('font-size','12px');
+  await panel.getByText('內部開單紀錄（不提供客戶）').click();await expect(panel.getByText(`建立者：${user.id}`)).toBeVisible();
+  expect(await panel.evaluate(element=>element.scrollWidth<=element.clientWidth)).toBe(true);
+});
 test('order create button stays at header right with status filters below',async({page})=>{
   await setup(page);await open(page);await page.getByRole('button',{name:'關閉代客開單',exact:true}).click();
   const title=await page.getByRole('heading',{name:'訂單管理',exact:true}).boundingBox();
@@ -85,7 +100,7 @@ test('failure after order creation stays locked and retries payment without anot
   await open(page);const dialog=page.getByRole('dialog',{name:'新增代客訂單'});await dialog.getByLabel('商品 1',{exact:true}).selectOption('1');
   for(const [label,value] of [['收件姓名','訪客'],['收件手機','0911111111'],['收件 Email','guest@example.test'],['收件地址','台北市']])await dialog.getByLabel(label).fill(value);
   page.once('dialog',dialog=>dialog.accept());await dialog.getByRole('button',{name:'建立付款單',exact:true}).click();await expect(dialog.getByLabel('客戶付款連結')).toBeVisible();
-  await dialog.getByRole('button',{name:'重新讀取／重試付款'}).click();await expect(dialog.getByRole('alert')).toContainText('原訂單保留');expect(orders).toBe(1);
+  await dialog.getByRole('button',{name:'重新取得付款資訊'}).click();await expect(dialog.getByRole('alert')).toContainText('原訂單保留');expect(orders).toBe(1);
 });
 test('read-only staff cannot see assisted create entry',async({page})=>{
   await setup(page,false);await page.goto('/admin');if((page.viewportSize()?.width||0)<=900)await page.getByRole('button',{name:'開啟選單'}).click();await page.locator('.app-sidebar button:not(.sidebar-star)').filter({hasText:'訂單管理'}).first().click();await expect(page.getByRole('button',{name:'新增代客訂單'})).toHaveCount(0);

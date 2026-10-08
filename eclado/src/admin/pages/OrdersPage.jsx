@@ -655,17 +655,17 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
           )}
           {selected.note && <NoteBox kind="customer" text={selected.note} />}
           {selected.orderSource==='admin_assisted'&&onCreateAssistedOrder&&<div style={{marginBottom:16}}>
-            <button type="button" onClick={async()=>{setAssistedUrl('');setAssistedError('');setAssistedRecord(null);try{const record=await getAssistedLink(selected.id);setAssistedUrl(assistedLink(record));setAssistedRecord(record);}catch(error){setAssistedError(error.message);}}}>取得客戶付款連結／開單紀錄</button>
-            {assistedUrl&&<input aria-label="客戶付款連結" readOnly value={assistedUrl} style={{width:'100%',padding:10,marginTop:8}}/>}
-            {assistedError&&<p role="alert">{assistedError}</p>}
-            {assistedRecord&&<details style={{fontSize:12,marginTop:10}}><summary>內部開單紀錄（不提供客戶）</summary>
+            <button type="button" style={{padding:'9px 12px',border:'1px solid var(--dark)',background:'var(--white)',color:'var(--dark)',fontSize:12,lineHeight:1.6,maxWidth:'100%',textAlign:'left',cursor:'pointer'}} onClick={async()=>{setAssistedUrl('');setAssistedError('');setAssistedRecord(null);try{const record=await getAssistedLink(selected.id);setAssistedUrl(assistedLink(record));setAssistedRecord(record);}catch(error){setAssistedError(error.message);}}}>取得客戶付款連結／開單紀錄</button>
+            {assistedUrl&&<input aria-label="客戶付款連結" readOnly value={assistedUrl} style={{width:'100%',padding:'10px 12px',marginTop:8,border:'1px solid var(--border)',background:'var(--white)',color:'var(--dark)',fontSize:12,borderRadius:0}}/>}
+            {assistedError&&<p role="alert" style={{fontSize:12,color:'var(--red)',lineHeight:1.7,marginTop:8}}>{assistedError}</p>}
+            {assistedRecord&&<details style={{fontSize:12,marginTop:10,lineHeight:1.7,overflowWrap:'anywhere'}}><summary style={{fontSize:11,color:'var(--dark)',cursor:'pointer'}}>內部開單紀錄（不提供客戶）</summary>
               <p>建立時間：{new Date(assistedRecord.created_at).toLocaleString('zh-TW')}</p>
               <p>建立者：{members.find(member=>member.id===assistedRecord.actor_user_id)?.email||assistedRecord.actor_user_id}</p>
               {assistedRecord.minimum_reason&&<p>最低訂購額例外：{assistedRecord.minimum_reason}</p>}
               {assistedRecord.shipping_reason&&<p>運費異動原因：{assistedRecord.shipping_reason}</p>}
               {assistedRecord.pricing_context?.map(line=><p key={line.variant_id}>規格 #{line.variant_id}：適用價格 NT${Number(line.suggested_unit_price).toLocaleString()} → 成交單價 NT${Number(line.final_unit_price).toLocaleString()}</p>)}
             </details>}
-            <p style={{fontSize:11,color:'var(--mid)'}}>成立後資料鎖定；需改價或改收件資訊請先確認付款結果，再取消重建。</p>
+            <p style={{fontSize:11,color:'var(--mid)',lineHeight:1.7,marginTop:8}}>成立後資料鎖定；需改價或改收件資訊請先確認付款結果，再取消重建。</p>
           </div>}
           {selected.orderSource === 'historical_manual' && selected.adminNote && (
             <div style={{ marginBottom:12, padding:'10px 12px', border:'1px solid var(--border)', borderLeft:'3px solid var(--green)', background:'var(--off)' }}>
