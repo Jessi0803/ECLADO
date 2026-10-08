@@ -26,6 +26,7 @@ import ContactPage from '../pages/ContactPage.jsx';
 import EventProductsPage from '../pages/EventProductsPage.jsx';
 import HomePage from '../pages/HomePage.jsx';
 import GuestOrderLookupPage from '../pages/GuestOrderLookupPage.jsx';
+import AssistedPaymentPage from '../pages/AssistedPaymentPage.jsx';
 import InfoPage from '../pages/InfoPage.jsx';
 import JournalArticlePage from '../pages/JournalArticlePage.jsx';
 import JournalPage from '../pages/JournalPage.jsx';
@@ -60,7 +61,7 @@ export default function App() {
     }
     return pageFromPath(window.location.pathname);
   });
-  useNoIndex(['cart', 'checkout', 'login', 'pro-login', 'reset-password', 'professional-apply', 'account', 'line-callback', 'payment-result', 'order-lookup'].includes(page));
+  useNoIndex(['cart', 'checkout', 'login', 'pro-login', 'reset-password', 'professional-apply', 'account', 'line-callback', 'payment-result', 'order-lookup','order-payment'].includes(page));
 
   function setPage(newPage) {
     if (newPage === 'about') {
@@ -215,6 +216,7 @@ export default function App() {
       case 'line-callback': return <LineCallbackPage />;
       case 'payment-result': return <PaymentResultPage setPage={setPage} />;
       case 'order-lookup': return <GuestOrderLookupPage setPage={setPage} />;
+      case 'order-payment': return <AssistedPaymentPage />;
       case 'privacy':  return <PrivacyPage />;
       case 'contact':  return <ContactPage />;
       default:         return <HomePage setPage={setPage} onSelectProduct={product => openProduct(product, 'home')} onOpenArticle={article => openJournalArticle(article, 'home')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;

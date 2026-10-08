@@ -15,7 +15,7 @@
   ],
   "headers": [
     {
-      "source": "/(cart|checkout|login|pro-login|reset-password|professional-apply|account|line-callback|payment-result|order-lookup)",
+      "source": "/(cart|checkout|login|pro-login|reset-password|professional-apply|account|line-callback|payment-result|order-lookup|order-payment)",
       "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }]
     },
     {

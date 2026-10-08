@@ -7,6 +7,7 @@ import OrderMemberAssignmentDialog from '../components/OrderMemberAssignmentDial
 import OrderPrintPreview from '../components/OrderPrintPreview.jsx';
 import usePanelHistory from '../hooks/usePanelHistory.js';
 import { shipShippingGroup } from '../../services/shippingGroups.js';
+import { getAssistedLink,assistedLink } from '../../services/assistedOrders.js';
 
 const INVENTORY_ACTIVE_STATUSES = new Set([
   'paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered',
@@ -14,7 +15,7 @@ const INVENTORY_ACTIVE_STATUSES = new Set([
 
 function getOrderInventoryState(order) {
   if (order?.orderSource === 'historical_manual') return null;
-  if (!INVENTORY_ACTIVE_STATUSES.has(order?.status)) return null;
+  if (!INVENTORY_ACTIVE_STATUSES.has(order?.status) && !(order?.orderSource==='admin_assisted'&&['unpaid','awaiting_confirm'].includes(order.status))) return null;
   if (!Array.isArray(order.items) || order.items.length === 0) return null;
   if (order.items.some(item => Number(item.inventoryAllocation?.backorderQty) > 0)) return 'backordered';
   if (order.items.every(item => item.inventoryAllocation?.allocatedQty != null)) return 'in_stock';
@@ -123,8 +124,13 @@ function NoteBox({ kind, text }) {
   );
 }
 
-export default function Orders({ orders, members = [], persistOrderPatch, onSaveInvoiceNumber, onDeleteCancelledOrder, onCancelHistoricalOrder, onAssignGuestOrder, defaultFilter = 'all', memberNotes = {}, focusOrderId = '', backToMember = null, onOpenMember, onClearCrossLink }) {
+export default function Orders({ orders, members = [], persistOrderPatch, onSaveInvoiceNumber, onDeleteCancelledOrder, onCancelHistoricalOrder, onAssignGuestOrder, defaultFilter = 'all', memberNotes = {}, focusOrderId = '', backToMember = null, onOpenMember, onClearCrossLink, onCreateAssistedOrder }) {
+  const [assistedUrl,setAssistedUrl] = useState('');
+  const [assistedRecord,setAssistedRecord] = useState(null);
+  const [assistedError,setAssistedError] = useState('');
+  useEffect(()=>{setAssistedUrl('');setAssistedError('');},[focusOrderId]);
   const [selected, setSelected] = useState(null);
+  useEffect(()=>{setAssistedUrl('');setAssistedError('');setAssistedRecord(null);},[selected?.id]);
   const [filter, setFilter] = useState(defaultFilter);
   const [stockFilter, setStockFilter] = useState('all');
   const [trackingInput, setTrackingInput] = useState('');
@@ -189,7 +195,8 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
 
   const byStatus = orders.filter(order => matchesStatusFilter(order, filter));
   const showInventoryFilters = byStatus.some(order => (
-    order.orderSource !== 'historical_manual' && INVENTORY_ACTIVE_STATUSES.has(order.status)
+    order.orderSource !== 'historical_manual' && (INVENTORY_ACTIVE_STATUSES.has(order.status)
+      || (order.orderSource==='admin_assisted'&&['unpaid','awaiting_confirm'].includes(order.status)))
   ));
   const filtered = stockFilter === 'all' || !showInventoryFilters ? byStatus
     : byStatus.filter(order => getOrderInventoryState(order) === stockFilter);
@@ -500,7 +507,9 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
           <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>訂單管理</h1>
-          <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap' }}>
+          {onCreateAssistedOrder&&<button type="button" onClick={onCreateAssistedOrder} style={{padding:'10px 24px',background:'var(--dark)',color:'var(--white)',border:'none',fontSize:12,letterSpacing:'0.1em',cursor:'pointer'}}>+ 新增代客訂單</button>}
+        </div>
+          <div aria-label="訂單狀態篩選" style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap', width:'fit-content', marginBottom:16 }}>
             {[['all','全部'], ['awaiting_confirm','等待匯款'], ['unpaid','未付款'], ['paid','已付款'], ['preparing','備貨中'], ['shipped','已出貨'], ['delivered','已到貨'], ['returned','退貨'], ['cancelled','已取消']].map(([val, label]) => (
               <button key={val} aria-pressed={filter === val} onClick={() => { setFilter(val); setStockFilter('all'); }} style={{
                 padding: '8px 16px', border: 'none', fontSize: 12, letterSpacing: '0.04em',
@@ -530,8 +539,6 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
               </button>
             ))}
           </div>
-        </div>
-
         {/* 只有已進入庫存配置流程的訂單才顯示庫存篩選。 */}
         {showInventoryFilters && <div style={{ display: 'flex', gap: 0, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{ fontSize: 11, color: 'var(--mid)', letterSpacing: '0.08em', marginRight: 10, whiteSpace: 'nowrap' }}>庫存狀態</span>
@@ -640,20 +647,33 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
               : <div style={{ fontSize: 13 }}>{selected.member}</div>}</div>
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>{selected.orderSource === 'historical_manual' ? '歷史交易日期' : '日期'}</div><div style={{ fontSize: 13 }}>{selected.transactionDate || selected.date}</div></div>
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>類型</div><TypeBadge type={getOrderDisplayType(selected)} /></div>
-            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>來源</div><div style={{ fontSize: 13 }}>{selected.orderSource === 'historical_manual' ? '歷史補登' : '網站訂單'}</div></div>
+            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>來源</div><div style={{ fontSize: 13 }}>{selected.orderSource === 'historical_manual' ? '歷史補登' : selected.orderSource === 'admin_assisted' ? '管理員代客開單' : '網站訂單'}</div></div>
           </div>
 
           {selected.user_id && memberNotes[String(selected.user_id)]?.note && (
             <NoteBox kind="member" text={memberNotes[String(selected.user_id)].note} />
           )}
           {selected.note && <NoteBox kind="customer" text={selected.note} />}
+          {selected.orderSource==='admin_assisted'&&onCreateAssistedOrder&&<div style={{marginBottom:16}}>
+            <button type="button" onClick={async()=>{setAssistedUrl('');setAssistedError('');setAssistedRecord(null);try{const record=await getAssistedLink(selected.id);setAssistedUrl(assistedLink(record));setAssistedRecord(record);}catch(error){setAssistedError(error.message);}}}>取得客戶付款連結／開單紀錄</button>
+            {assistedUrl&&<input aria-label="客戶付款連結" readOnly value={assistedUrl} style={{width:'100%',padding:10,marginTop:8}}/>}
+            {assistedError&&<p role="alert">{assistedError}</p>}
+            {assistedRecord&&<details style={{fontSize:12,marginTop:10}}><summary>內部開單紀錄（不提供客戶）</summary>
+              <p>建立時間：{new Date(assistedRecord.created_at).toLocaleString('zh-TW')}</p>
+              <p>建立者：{members.find(member=>member.id===assistedRecord.actor_user_id)?.email||assistedRecord.actor_user_id}</p>
+              {assistedRecord.minimum_reason&&<p>最低訂購額例外：{assistedRecord.minimum_reason}</p>}
+              {assistedRecord.shipping_reason&&<p>運費異動原因：{assistedRecord.shipping_reason}</p>}
+              {assistedRecord.pricing_context?.map(line=><p key={line.variant_id}>規格 #{line.variant_id}：適用價格 NT${Number(line.suggested_unit_price).toLocaleString()} → 成交單價 NT${Number(line.final_unit_price).toLocaleString()}</p>)}
+            </details>}
+            <p style={{fontSize:11,color:'var(--mid)'}}>成立後資料鎖定；需改價或改收件資訊請先確認付款結果，再取消重建。</p>
+          </div>}
           {selected.orderSource === 'historical_manual' && selected.adminNote && (
             <div style={{ marginBottom:12, padding:'10px 12px', border:'1px solid var(--border)', borderLeft:'3px solid var(--green)', background:'var(--off)' }}>
               <div style={{ fontSize:11, color:'var(--green)', marginBottom:4 }}>歷史補登內部備註（僅後台可見）</div>
               <div style={{ fontSize:12, lineHeight:1.7, whiteSpace:'pre-wrap', overflowWrap:'anywhere' }}>{selected.adminNote}</div>
             </div>
           )}
-          {!selected.user_id && onAssignGuestOrder && (
+          {!selected.user_id && selected.orderSource!=='admin_assisted' && onAssignGuestOrder && (
             <div style={{ marginBottom: 20, padding: '12px', border: '1px solid var(--border)', background: 'var(--off)' }}>
               <div style={{ fontSize: 11, color: 'var(--mid)', lineHeight: 1.6, marginBottom: 9 }}>此訂單尚未綁定會員。確認訂購人身分後，可將訂單歸戶至既有會員。</div>
               <button type="button" onClick={() => setAssignmentOpen(true)} style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--dark)', background: 'var(--white)', color: 'var(--dark)', cursor: 'pointer', fontSize: 12 }}>歸戶至會員</button>
@@ -969,6 +989,8 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
                 <div style={{ padding: '10px 12px', border: '1px solid var(--border)', color: 'var(--mid)', fontSize: 11, lineHeight: 1.7 }}>
                   此歷史補登已作廢；原始商品、金額與交易日期仍保留，且不可永久刪除。
                 </div>
+              ) : selected.orderSource==='admin_assisted' ? (
+                <p style={{fontSize:11,color:'var(--mid)'}}>代客訂單保留開單與庫存釋放紀錄，不可永久刪除。</p>
               ) : selectedHasPaidRecord ? (
                 <div style={{ padding: '10px 12px', border: '1px solid var(--border)', color: 'var(--mid)', fontSize: 11, lineHeight: 1.7 }}>
                   此訂單曾付款，為保留帳務與稽核紀錄不可永久刪除。

@@ -21,6 +21,7 @@ import InventoryCountsPage from './pages/InventoryCountsPage.jsx';
 import Dashboard from './pages/DashboardPage.jsx';
 import Members from './pages/MembersPage.jsx';
 import Orders from './pages/OrdersPage.jsx';
+import AssistedOrderDialog from './components/AssistedOrderDialog.jsx';
 import ProcurementPage from './pages/ProcurementPage.jsx';
 import Promotions from './pages/PromotionsPage.jsx';
 import ProfessionalRenewalsPage from './pages/ProfessionalRenewalsPage.jsx';
@@ -85,6 +86,10 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
   const canReadCatalog = hasPermission(BACKOFFICE_PERMISSIONS.CATALOG_READ);
   const canManageProcurementCost = hasPermission(BACKOFFICE_PERMISSIONS.PROCUREMENT_MANAGE);
   const canManageShoppingCredit = hasPermission(BACKOFFICE_PERMISSIONS.SHOPPING_CREDIT_MANAGE);
+  const [assistedOrderOpen,setAssistedOrderOpen] = useState(false);
+  const [assistedInitialMember,setAssistedInitialMember] = useState(null);
+  const canCreateAssistedOrder = canWriteOrders && canReadMembers && canReadCatalog;
+  function openAssistedOrder(member=null) { setAssistedInitialMember(member); setAssistedOrderOpen(true); }
 
   async function sendApplicationNotice(id) {
     try {
@@ -669,7 +674,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
     }
     switch (page) {
       case 'dashboard': return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;
-      case 'orders': return <Orders orders={orders} members={members} persistOrderPatch={persistOrderPatch} onSaveInvoiceNumber={saveOrderInvoiceNumber} onDeleteCancelledOrder={deleteCancelledOrder} onCancelHistoricalOrder={cancelHistoricalOrder} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={ordersDefaultFilter} memberNotes={memberNotes} focusOrderId={crossLink?.orderId || ''} backToMember={crossLink?.backMemberId ? { id: crossLink.backMemberId, name: crossLink.backMemberName } : null} onOpenMember={canReadMembers ? openMemberFromOrder : null} onClearCrossLink={() => setCrossLink(null)} />;
+      case 'orders': return <Orders orders={orders} members={members} persistOrderPatch={persistOrderPatch} onSaveInvoiceNumber={saveOrderInvoiceNumber} onDeleteCancelledOrder={deleteCancelledOrder} onCancelHistoricalOrder={cancelHistoricalOrder} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={ordersDefaultFilter} memberNotes={memberNotes} focusOrderId={crossLink?.orderId || ''} backToMember={crossLink?.backMemberId ? { id: crossLink.backMemberId, name: crossLink.backMemberName } : null} onOpenMember={canReadMembers ? openMemberFromOrder : null} onClearCrossLink={() => setCrossLink(null)} onCreateAssistedOrder={canCreateAssistedOrder ? ()=>openAssistedOrder() : null} />;
       case 'audit': return <AuditLogsPage />;
       case 'settings': return <MemberPricingPage onSaved={fetchAll} />;
       case 'catalog': return <Catalog products={products} memberPricing={memberPricing} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
@@ -680,7 +685,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
       case 'inventory': return <Catalog products={products} memberPricing={memberPricing} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'promotions': return <Promotions products={products} />;
       case 'procurement': return <ProcurementPage />;
-      case 'members': return <Members members={members} orders={orders} products={products} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} onCreateHistoricalOrder={canWriteOrders ? createMemberHistoricalOrder : null} defaultFilter={membersDefaultFilter} memberNotes={memberNotes} onSaveMemberNote={canWriteMembers ? saveMemberNote : null} focusMemberId={crossLink?.memberId || ''} backToOrderId={crossLink?.backOrderId || ''} onOpenOrder={canReadOrders ? openOrderFromMember : null} onClearCrossLink={() => setCrossLink(null)} canManageShoppingCredit={canManageShoppingCredit} />;
+      case 'members': return <Members members={members} orders={orders} products={products} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} onCreateHistoricalOrder={canWriteOrders ? createMemberHistoricalOrder : null} onCreateAssistedOrder={canCreateAssistedOrder ? openAssistedOrder : null} defaultFilter={membersDefaultFilter} memberNotes={memberNotes} onSaveMemberNote={canWriteMembers ? saveMemberNote : null} focusMemberId={crossLink?.memberId || ''} backToOrderId={crossLink?.backOrderId || ''} onOpenOrder={canReadOrders ? openOrderFromMember : null} onClearCrossLink={() => setCrossLink(null)} canManageShoppingCredit={canManageShoppingCredit} />;
       case 'renewals': return <ProfessionalRenewalsPage canWrite={canWriteMembers} />;
       case 'applications': return <Members members={members} orders={orders} products={products} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} onCreateHistoricalOrder={canWriteOrders ? createMemberHistoricalOrder : null} defaultFilter="app_pending" canManageShoppingCredit={canManageShoppingCredit} />;
       case 'analytics': return <Analytics orders={orders} />;
@@ -718,6 +723,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
           </div>
         )}
         {renderPage()}
+        {assistedOrderOpen&&canCreateAssistedOrder&&<AssistedOrderDialog members={members} products={products} initialMember={assistedInitialMember} onClose={()=>setAssistedOrderOpen(false)} onCreated={fetchAll}/>}
       </main>
     </div>
   );

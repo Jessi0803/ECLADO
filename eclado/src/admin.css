@@ -692,6 +692,13 @@ input, select, textarea { font-family: var(--font); }
   overscroll-behavior: contain;
 }
 
+.assisted-order-modal-card { width: min(760px, 100%); flex-shrink: 0; }
+.assisted-order-form label { display: grid; gap: 6px; margin-bottom: 14px; font-size: 11px; color: var(--mid); }
+.assisted-order-form h3 { font-size: 11px; font-weight: 400; color: var(--mid); }
+.assisted-order-product label { font-size: 10px; gap: 5px; margin-bottom: 0; }
+.assisted-order-form .assignment-actions { flex-wrap: wrap; }
+.assisted-order-form .assignment-error { color: var(--red); font-size: 12px; }
+
 .historical-order-product-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);

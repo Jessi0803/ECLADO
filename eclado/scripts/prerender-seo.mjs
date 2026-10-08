@@ -137,7 +137,7 @@ for (const [route, title, description, heading, content] of informationalPages) 
   await writeRoute(route, { title, description, path: route }, `<main class="seo-shell">${siteNavigation()}<h1>${heading}</h1>${content}</main>`);
 }
 
-const privateRoutes = ['/cart', '/checkout', '/login', '/pro-login', '/reset-password', '/professional-apply', '/account', '/line-callback', '/payment-result', '/order-lookup', '/events/limited'];
+const privateRoutes = ['/cart', '/checkout', '/login', '/pro-login', '/reset-password', '/professional-apply', '/account', '/line-callback', '/payment-result', '/order-lookup', '/order-payment', '/events/limited'];
 for (const route of privateRoutes) {
   await writeRoute(route, { title: 'ECLADO Taiwan', description: 'ECLADO Taiwan 會員與購物服務。', path: route, robots: 'noindex,nofollow' }, `<main class="seo-shell"><h1>ECLADO Taiwan</h1><p>此頁面需要啟用 JavaScript 才能使用。</p></main>`);
 }

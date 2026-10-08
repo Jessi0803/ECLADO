@@ -77,7 +77,7 @@ function normalizeOrderItemInventory(item, orderStatus, canonicalAllocation) {
 }
 
 export function normalizeOrder(row) {
-  const paymentMethod = row.payment_method || '';
+  const paymentMethod = row.payment_method || row.assisted_payment_method || '';
   const orderStatus = normalizePendingOrderStatus(row.status, paymentMethod);
   const allocationByIndex = new Map(
     (Array.isArray(row.inventory_allocations) ? row.inventory_allocations : [])

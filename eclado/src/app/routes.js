@@ -1,6 +1,6 @@
 // ─── HISTORY / ROUTING ────────────────────────────────────────────────────────
 export const PAGE_PATHS = {
-  home: '/', shop: '/shop', cart: '/cart', checkout: '/checkout',
+  home: '/', shop: '/shop', cart: '/cart', checkout: '/checkout', 'order-payment':'/order-payment',
   login: '/login', 'pro-login': '/pro-login', 'reset-password': '/reset-password',
   'professional-apply': '/professional-apply', account: '/account', about: '/about', info: '/info',
   journal: '/journal',

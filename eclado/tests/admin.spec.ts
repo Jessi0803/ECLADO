@@ -64,6 +64,28 @@ const adminProductVariants = [
   { id: 701, product_id: 7, sku: 'NK-10', size: '3.5ml×10', price: 8800, pro_price: 6600, stock: 0, is_default: true, sort_order: 0, active: true },
 ];
 
+test('系統設定重新載入沿用白底框線按鈕且只重新讀取設定', async ({ page }) => {
+  await mockAdminApis(page, { backofficeAccess: { role:'admin', permissions:['member_pricing.manage'] } });
+  let reads = 0; let saves = 0;
+  await page.route('**/rest/v1/rpc/get_admin_member_pricing', route => {
+    reads += 1;
+    return route.fulfill({ json:{ multipliers:{ instructor:0.7, distributor:0.65, staff:0.5 } } });
+  });
+  await page.route('**/rest/v1/rpc/save_member_pricing', route => { saves += 1; return route.fulfill({ json:{} }); });
+  await page.goto('/admin');
+  await openAdminSection(page, /系統設定/);
+  await expect(page.getByLabel('師資預設折數')).toHaveValue('7');
+  const reload = page.getByRole('button', { name:'重新載入', exact:true });
+  await expect(reload).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await expect(reload).toHaveCSS('border-top-style', 'solid');
+  await expect(reload).toHaveCSS('color', 'rgb(26, 26, 24)');
+  await page.getByLabel('師資預設折數').fill('8');
+  const previousReads = reads;
+  await reload.click();
+  await expect(page.getByLabel('師資預設折數')).toHaveValue('7');
+  expect(reads).toBe(previousReads + 1); expect(saves).toBe(0);
+});
+
 test('後台登入權限：非管理員擋下，管理員可進入', async ({ page }) => {
   await mockEcladoApis(page, {
     signInUser: normalUser(),

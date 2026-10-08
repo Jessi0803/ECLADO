@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const crypto = require('crypto');
+const { mountAssistedRoutes, isAmbiguousGatewayFailure } = require('./assisted-orders');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -333,7 +334,7 @@ async function getSupabaseOrderPaymentState(orderNo) {
   }
   const params = new URLSearchParams({
     id: `eq.${orderNo}`,
-    select: 'id,user_id,member,email,phone,public_lookup_code,status,fulfillment_method,total,shopping_credit_amount,payment_amount,subtotal,discount,promotion_name,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
+    select: 'id,user_id,member,email,phone,address,invoice_type,invoice_company_name,invoice_tax_id,order_source,public_lookup_code,status,fulfillment_method,total,shopping_credit_amount,payment_amount,subtotal,discount,promotion_name,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
     limit: '1',
   });
   const response = await fetch(`${supabaseUrl}/rest/v1/orders?${params}`, {
@@ -468,6 +469,7 @@ function toPublicGuestPaymentInstruction(instruction, paymentState) {
   const result = {
     order_id: instruction.order_id,
     payment_method: instruction.payment_method,
+    payment_state: instruction.payment_state,
     provider_status: instruction.provider_status,
     provider_description: instruction.provider_description,
     payment_due_at: instruction.payment_due_at,
@@ -1150,6 +1152,15 @@ app.get('/health', (req, res) => {
   });
 });
 
+mountAssistedRoutes(app, {
+  rpc:callSupabaseRpc, getOrder:getSupabaseOrderPaymentState,
+  getInstruction:getOptionalOrderPaymentInstruction, paymentRequest:method => method === 'atm' ? {payType:'A'} : paymentRequestFromStoredMethod(method),
+  buildCreate:buildAuthoritativeCreateBody, callBank:callOrderApi, gatewayError:getSinopacPaymentError,
+  saveInstruction:saveOrderPaymentInstruction, saveAttempt:saveOrderPaymentAttempt,
+  sendEmail:sendGuestOrderCreatedEmail, rateLimit:enforceSharedRateLimit,
+  publicInstruction:toPublicGuestPaymentInstruction, resultToken:createPaymentResultAccessToken,
+});
+
 function buildPaymentResultUrl(orderNo, result = 'pending', resultAccessToken = '') {
   const siteUrl = new URL('https://ecladotaiwan.com/payment-result');
   if (orderNo) siteUrl.searchParams.set('orderNo', String(orderNo));
@@ -1283,10 +1294,12 @@ app.post('/api/sinopac/retry-payment', async (req, res) => {
   let retry = null;
   let claimed = false;
   let gatewaySucceeded = false;
+  let assisted = false;
   try {
     if (!await enforceSharedRateLimit(req, res, 'payment:retry', 10)) return;
     if (!orderNo) throw new Error('orderNo is required');
     const order = await authorizePaymentRequest(req, orderNo, String(req.body?.paymentToken || '').trim());
+    assisted = order.order_source === 'admin_assisted';
     const instruction = await getOrderPaymentInstruction(orderNo);
     const retryBlockReason = getPaymentRetryBlockReason(order, instruction);
     if (retryBlockReason) throw new Error(retryBlockReason);
@@ -1306,6 +1319,9 @@ app.post('/api/sinopac/retry-payment', async (req, res) => {
     const inner = await buildAuthoritativeCreateBody(retryInput);
     claimed = true;
     const result = await callOrderApi('OrderCreate', inner);
+    if (assisted && (!result.data || !String(result.data.Status || '').trim() || isAmbiguousGatewayFailure(result.data))) {
+      throw new Error('銀行付款結果待確認；原訂單保留，請勿取消重建或重複開單。');
+    }
     const sinopacError = getSinopacPaymentError(result.data);
     if (sinopacError) {
       await callSupabaseRpc('complete_order_payment_claim', {
@@ -1337,7 +1353,7 @@ app.post('/api/sinopac/retry-payment', async (req, res) => {
       attemptNo: retry.attempt_no,
     });
   } catch (error) {
-    if (claimed && retry?.payment_token && !gatewaySucceeded) {
+    if (claimed && retry?.payment_token && !gatewaySucceeded && !assisted) {
       try {
         await callSupabaseRpc('complete_order_payment_claim', {
           p_order_id: orderNo,

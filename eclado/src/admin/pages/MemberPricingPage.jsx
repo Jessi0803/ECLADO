@@ -58,7 +58,7 @@ export default function MemberPricingPage({ onSaved }) {
         </div>
       </label>)}
       <p style={{ fontSize:12, color:'var(--mid)', lineHeight:1.8, marginBottom:18 }}>適用於未設定個別折數的商品。10 折代表不打折；修改不影響已成立訂單及付款單。一般會員、美容師及免運等身份待遇不變。</p>
-      <div style={{ display:'flex', gap:12 }}><button type="submit" disabled={busy || !snapshot} style={{ padding:'10px 20px', background:'var(--dark)', color:'#fff', border:0 }}>儲存全域折數</button><button type="button" disabled={busy} onClick={load}>重新載入</button></div>
+      <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}><button type="submit" disabled={busy || !snapshot} style={{ padding:'10px 20px', background:'var(--dark)', color:'#fff', border:0 }}>儲存全域折數</button><button type="button" disabled={busy} onClick={load} style={{ padding:'10px 20px', border:'1px solid var(--dark)', background:'var(--white)', color:'var(--dark)', fontSize:12, cursor:busy?'not-allowed':'pointer', opacity:busy?0.45:1 }}>重新載入</button></div>
       {error && <p role="alert" style={{ color:'var(--red)', marginTop:16 }}>{error}</p>}
       {message && <p role="status" style={{ color:'var(--green)', marginTop:16 }}>{message}</p>}
     </form>

@@ -114,7 +114,7 @@ export default function Members({
   applications = [], applicationsLoading = false, applicationsError = '',
   onChangeMemberRole, onChangeMembershipStart, onSaveSalesAdjustment, onUpdateApplicationStatus, onSendApplicationNotice, onDeleteMember, currentAdminUserId = '', onAssignGuestOrder, defaultFilter = 'all',
   focusMemberId = '', backToOrderId = '', onOpenOrder, onClearCrossLink, memberNotes = {}, onSaveMemberNote,
-  canManageShoppingCredit = false, onCreateHistoricalOrder,
+  canManageShoppingCredit = false, onCreateHistoricalOrder, onCreateAssistedOrder,
 }) {
   const [filter, setFilter] = useState(defaultFilter);
   const [searchQuery, setSearchQuery] = useState('');
@@ -454,11 +454,12 @@ export default function Members({
             </div>
           )}
 
-          {(onAssignGuestOrder || onCreateHistoricalOrder) && !(typeof selected.id === 'string' && selected.id.startsWith('app:')) && (
+          {(onAssignGuestOrder || onCreateHistoricalOrder || onCreateAssistedOrder) && !(typeof selected.id === 'string' && selected.id.startsWith('app:')) && (
             <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', gap: 8 }}>
                 {onAssignGuestOrder && <button type="button" onClick={() => setAssignmentOpen(true)} style={{ flex: 1, minWidth: 0, padding: '10px 8px', border: '1px solid var(--dark)', background: 'var(--white)', color: 'var(--dark)', cursor: 'pointer', fontSize: 12 }}>匯入訪客訂單</button>}
                 {onCreateHistoricalOrder && <button type="button" onClick={() => setHistoricalOrderOpen(true)} style={{ flex: 1, minWidth: 0, padding: '10px 8px', border: '1px solid var(--dark)', background: 'var(--dark)', color: 'var(--white)', cursor: 'pointer', fontSize: 12 }}>補登歷史訂單</button>}
+                {onCreateAssistedOrder && <button type="button" onClick={() => onCreateAssistedOrder(selected)} style={{ flex: 1, minWidth: 0, padding: '10px 8px', border: '1px solid var(--dark)', background: 'var(--dark)', color: 'var(--white)', cursor: 'pointer', fontSize: 12 }}>代客開單</button>}
               </div>
               {assignmentNotice && <div style={{ marginTop: 10, padding: '9px 10px', background: 'var(--off)', color: 'var(--green)', fontSize: 11 }}>{assignmentNotice}</div>}
             </div>
