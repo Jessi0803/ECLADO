@@ -21,6 +21,12 @@
   p, span, button, a, label, input, select, textarea { font-family: var(--font-body); }
   #root { min-height: 100vh; }
 
+  #shop-product-search:focus {
+    outline:2px solid var(--accent);
+    outline-offset:1px;
+    border-color:var(--accent) !important;
+  }
+
   /* 登入流程固定以視窗高度裁切左側視覺，避免切換表單時背景位移。 */
   .auth-page { display:flex; height:100vh; overflow:hidden; }
   @supports (height: 100dvh) {

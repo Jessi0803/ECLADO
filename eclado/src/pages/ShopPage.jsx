@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import useIsMobile from '../hooks/useIsMobile.js';
 import { PRODUCT_NAV_LINKS, PRODUCT_SERIES_LINKS } from '../app/navigation.js';
 import {
@@ -60,10 +60,26 @@ export default function ShopPage({
   productsError = '',
 }) {
   const [activeFilter, setActiveFilter] = useState(shopFilterFromLocation);
+  const [search, setSearch] = useState('');
+  const [searchWrapped, setSearchWrapped] = useState(false);
+  const searchToolbarRef = useRef(null);
+  const filterModesRef = useRef(null);
   const filterItems = activeFilter.view === 'series' ? PRODUCT_SERIES_LINKS : PRODUCT_NAV_LINKS;
   const isMobile = useIsMobile();
   const categoryTabsRef = useRef(null);
   const categoryButtonRefs = useRef(new Map());
+
+  useLayoutEffect(() => {
+    const toolbar = searchToolbarRef.current;
+    const modes = filterModesRef.current;
+    if (!toolbar || !modes) return undefined;
+    const updateLayout = () => setSearchWrapped(modes.getBoundingClientRect().width + 320 + 14 > toolbar.clientWidth);
+    const observer = new ResizeObserver(updateLayout);
+    observer.observe(toolbar);
+    observer.observe(modes);
+    updateLayout();
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const syncCategory = event => setActiveFilter(event.detail || shopFilterFromLocation());
@@ -123,9 +139,18 @@ export default function ShopPage({
     });
   }
 
-  const filtered = products.filter(product => activeFilter.view === 'series'
+  const categoryProducts = products.filter(product => activeFilter.view === 'series'
     ? isProductInSeries(product, activeFilter.value)
     : isProductInCategory(product, activeFilter.value));
+  const searchTerms = search.normalize('NFKC').trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  const filtered = categoryProducts.filter(product => {
+    const name = `${product.nameZh || ''} ${product.name || ''}`.normalize('NFKC').toLocaleLowerCase();
+    return searchTerms.every(term => name.includes(term));
+  });
+  function clearAllFilters() {
+    setSearch('');
+    selectView('category');
+  }
 
   const livePromosShop = promotions.filter(isPromotionLive);
   const filterTitle = activeFilter.view === 'series'
@@ -141,7 +166,7 @@ export default function ShopPage({
       '@context': 'https://schema.org',
       '@type': 'ItemList',
       name: filterTitle,
-      itemListElement: filtered.map((product, index) => ({
+      itemListElement: categoryProducts.map((product, index) => ({
         '@type': 'ListItem',
         position: index + 1,
         name: product.nameZh,
@@ -185,10 +210,17 @@ export default function ShopPage({
       {/* 分類篩選列 */}
       <div style={{ background:'var(--off-white)', borderBottom:'1px solid var(--light)' }}>
         <div style={{ width:'100%', maxWidth:1280, margin:'0 auto', padding: isMobile ? '0 24px' : '0 32px' }}>
-          <div style={{ display:'flex', gap:8, padding:'14px 0 0' }}>
+          <div ref={searchToolbarRef} className="shop-search-toolbar" style={{ display:'flex', flexWrap:'wrap', justifyContent:'space-between', alignItems:'center', gap:14, padding:'14px 0 0' }}>
+          <div ref={filterModesRef} className="shop-filter-modes" style={{display:'flex',gap:8,flexShrink:0,whiteSpace:'nowrap'}}>
             {[['category', '依功效分類'], ['series', '依系列分類']].map(([view, label]) => (
               <a key={view} href={shopPath(view)} aria-current={activeFilter.view === view ? 'page' : undefined} onClick={event => { event.preventDefault(); selectView(view); }} style={{ border:'1px solid var(--light)', background:activeFilter.view === view ? 'var(--black)' : 'var(--white)', color:activeFilter.view === view ? 'var(--white)' : 'var(--dark)', padding:'9px 16px', fontSize:12, cursor:'pointer', letterSpacing:'0.06em', textDecoration:'none' }}>{label}</a>
             ))}
+          </div>
+          <div role="search" style={{display:'flex',alignItems:'center',gap:8,flex:searchWrapped ? '0 0 100%' : '0 0 320px',width:searchWrapped ? '100%' : 320,maxWidth:'100%',minWidth:0,marginLeft:searchWrapped ? 0 : 'auto'}}>
+            <label htmlFor="shop-product-search" style={{position:'absolute',width:1,height:1,padding:0,overflow:'hidden',clipPath:'inset(50%)',whiteSpace:'nowrap'}}>搜尋商品</label>
+            <input id="shop-product-search" type="search" placeholder="搜尋商品名稱或關鍵字" maxLength={100} value={search} onChange={event=>setSearch(event.target.value)} style={{minWidth:0,flex:1,width:'100%',border:'1px solid var(--light)',borderRadius:0,background:'var(--white)',color:'var(--dark)',padding:'10px 12px',fontFamily:'var(--font-body)',fontSize:13,lineHeight:1.5}}/>
+            {search&&<button type="button" onClick={()=>setSearch('')} style={{flexShrink:0,border:'1px solid var(--light)',background:'var(--white)',color:'var(--dark)',padding:'10px 12px',fontSize:12,lineHeight:1.5,cursor:'pointer'}}>清除搜尋</button>}
+          </div>
           </div>
           <div ref={categoryTabsRef} className="filter-tabs">
           {filterItems.map(item => (
@@ -226,10 +258,14 @@ export default function ShopPage({
         )}
         {productsStatus === 'ready' && (
           <>
+            {searchTerms.length>0&&<p role="status" aria-live="polite" style={{fontSize:12,color:'var(--dark)',marginBottom:20,lineHeight:1.7}}>目前分類／系列內找到 {filtered.length} 項商品</p>}
             <div className="g4lg">
               {filtered.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => onSelectProduct(p)} promotions={promotions} />)}
             </div>
-            {filtered.length === 0 && <div style={{ textAlign:'center', padding:'80px 0', color:'var(--dark)', fontSize:14 }}>此分類目前無商品</div>}
+            {filtered.length === 0 && <div style={{ textAlign:'center', padding:'80px 0', color:'var(--dark)', fontSize:14,lineHeight:1.8 }}>
+              <p>{searchTerms.length>0 ? '目前分類／系列找不到符合的商品，請調整搜尋或清除篩選條件。' : '此分類目前無商品'}</p>
+              {searchTerms.length>0&&<button type="button" onClick={clearAllFilters} style={{marginTop:20,padding:'12px 22px',border:'1px solid var(--black)',background:'var(--white)',color:'var(--black)',fontSize:12,letterSpacing:'.08em',cursor:'pointer'}}>清除所有條件</button>}
+            </div>}
           </>
         )}
       </div>
