@@ -203,7 +203,7 @@ export default function App() {
       case 'event-products': return <EventProductsPage user={user} setCart={setCart} onSelectProduct={openEventProduct} products={eventProducts} productsStatus={eventStatus} productsError={eventErrorText} promotions={promotions} />;
       case 'event-product': return <ProductPage productSlug={eventProductSlugFromPath(window.location.pathname)} products={eventProducts} productsStatus={eventStatus} productsError={eventErrorText} user={user} setCart={setCart} promotions={promotions} onBack={closeEventProduct} onShop={closeEventProduct} routeBase="/events/limited" noIndex />;
       case 'cart':     return <CartPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
-      case 'checkout': return <CheckoutPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
+      case 'checkout': return <CheckoutPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} products={products} />;
       case 'login':    return <LoginPage setPage={setPage} />;
       case 'pro-login': return <LoginPage setPage={setPage} />;
       case 'reset-password': return <ResetPasswordPage setPage={setPage} />;

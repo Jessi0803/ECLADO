@@ -108,6 +108,7 @@ begin
     subtotal:=subtotal+quantity*price;
     lines:=lines||jsonb_build_array(jsonb_build_object('id',product.id,'product_id',product.id,'variant_id',variant.id,
       'sku',variant.sku,'name',product.name_zh,'nameZh',product.name_zh,'size',variant.size,'qty',quantity,
+      'image_storage_path',(select image.storage_path from public.product_images image where image.product_id=product.id and image.active is true order by image.is_primary desc,image.sort_order,image.id limit 1),
       'price',price,'unit_price',price,'line_total',price*quantity,'publication_status',product.publication_status,
       'is_custom_order',variant.is_custom_order,'stock_at_order',variant.stock,'line_type','merchandise',
       'fulfillment_type',case when variant.stock>=quantity then 'in_stock' else 'preorder' end));

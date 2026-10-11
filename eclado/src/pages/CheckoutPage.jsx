@@ -34,7 +34,7 @@ import {
 } from '../services/pendingPayment.js';
 
 // ─── CHECKOUT PAGE ────────────────────────────────────────────────────────────
-export default function CheckoutPage({ cart, setCart, setPage, user, promotions = [] }) {
+export default function CheckoutPage({ cart, setCart, setPage, user, promotions = [], products = [] }) {
   const isLineEmail = user?.email?.startsWith('line.');
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
@@ -544,6 +544,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
 
           <CheckoutOrderSummary
             items={paymentSnapshot || couponQuote?.items || cart}
+            products={products}
             summary={paymentSummary || checkoutSummary}
             user={user}
             fulfillmentMethod={paymentSummary?.fulfillmentMethod || fulfillmentMethod}
@@ -843,6 +844,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
 
             <CheckoutOrderSummary
               items={paymentSnapshot || couponQuote?.items || cart}
+              products={products}
               summary={paymentSummary || checkoutSummary}
               user={user}
               fulfillmentMethod={paymentSummary?.fulfillmentMethod || fulfillmentMethod}

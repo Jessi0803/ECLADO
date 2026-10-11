@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   getCartKey,
   getFulfillmentInfo,
@@ -17,7 +17,15 @@ function getSummaryFulfillment(item) {
   return getFulfillmentInfo(item);
 }
 
-export default function CheckoutOrderSummary({ items, summary, user, fulfillmentMethod = 'delivery' }) {
+function OrderProductImage({ source, fallback, name }) {
+  const [failed, setFailed] = useState([]);
+  const src = [source, fallback].find(url => url && !failed.includes(url));
+  return src ? <img src={src} alt={name} onError={() => setFailed(current => [...current, src])}
+    style={{ width:'100%', height:'100%', objectFit:'contain', background:'var(--off-white)', display:'block' }} />
+    : <span aria-label={`${name}：暫無圖片`} style={{ display:'flex',alignItems:'center',justifyContent:'center',height:'100%',fontSize:10,color:'var(--mid)' }}>暫無圖片</span>;
+}
+
+export default function CheckoutOrderSummary({ items, summary, user, fulfillmentMethod = 'delivery', products = [] }) {
   const hasPreorderItem = items.some(item => !item.is_gift && item.line_type !== 'gift' && getSummaryFulfillment(item).type === 'preorder');
 
   return (
@@ -38,10 +46,12 @@ export default function CheckoutOrderSummary({ items, summary, user, fulfillment
           const imageSrc = getProductImagePublicUrl(
             item.image_storage_path || item.imageStoragePath,
           ) || item.img || '';
+          const productId = item.product_id ?? item.productId ?? item.id;
+          const fallbackImage = products.find(product => String(product.id) === String(productId))?.img || '';
           return (
             <div key={isGift ? `gift:${item.promotion_id}:${item.variant_id}` : getCartKey(item)} style={{ display:'flex', gap:12, alignItems:'center' }}>
               <div style={{ width:48, height:48, flexShrink:0, position:'relative' }}>
-                <img src={imageSrc} alt={item.nameZh} style={{ width:'100%', height:'100%', objectFit:'contain', background:'var(--off-white)', display:'block' }} />
+                <OrderProductImage key={`${imageSrc}|${fallbackImage}`} source={imageSrc} fallback={fallbackImage} name={item.nameZh || item.name || '商品'} />
                 <div style={{ position:'absolute', top:-6, right:-6, width:18, height:18, borderRadius:'50%', background:'var(--dark)', color:'var(--white)', fontSize:10, display:'flex', alignItems:'center', justifyContent:'center' }}>{item.qty}</div>
               </div>
               <div style={{ flex:1, minWidth:0 }}>

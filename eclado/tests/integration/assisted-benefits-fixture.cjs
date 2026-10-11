@@ -48,11 +48,17 @@ module.exports=async function verifyBenefits({db,read,fn,base,create}){
   const migration=read('supabase-assisted-order-benefits.sql');
   const originalInventory=await one("select pg_get_functiondef('public.allocate_inventory_for_paid_order(text,jsonb)'::regprocedure) as allocate,pg_get_functiondef('public.release_inventory_for_order(text)'::regprocedure) as release");
   await db.exec(migration);await db.exec(migration);
+  const imageField="'image_storage_path',(select image.storage_path from public.product_images image where image.product_id=product.id and image.active is true order by image.is_primary desc,image.sort_order,image.id limit 1),";
+  const quoteDefinition=(await one("select pg_get_functiondef('public.quote_assisted_order(jsonb)'::regprocedure) as f")).f;
+  await db.exec(quoteDefinition.replace(imageField,''));
+  await db.exec(read('supabase-assisted-order-images.sql'));await db.exec(read('supabase-assisted-order-images.sql'));
+  await db.exec("insert into public.product_images values(1,1,'products/test-primary.webp',true,true,0),(2,1,'products/inactive.webp',false,true,-1)");
   assert.deepEqual(await one("select pg_get_functiondef('public.allocate_inventory_for_paid_order(text,jsonb)'::regprocedure) as allocate,pg_get_functiondef('public.release_inventory_for_order(text)'::regprocedure) as release"),originalInventory);
   for(const [name,value] of Object.entries(await one(read('supabase-assisted-order-benefits-verify.sql'))))assert.equal(value,true,name);
   assert.equal((await one("select pg_get_functiondef('public.quote_order_pricing_discount_v2(jsonb,text,text,text)'::regprocedure) as f")).f,discountSource);
   const p={...base,apply_automatic:true,coupon_code:'',shopping_credit_amount:300};
   const quote=payload=>db.query('select public.quote_assisted_order($1::jsonb) as q',[JSON.stringify(payload)]).then(r=>r.rows[0].q);
+  assert.equal((await quote(p)).items[0].image_storage_path,'products/test-primary.webp');
   await db.exec(`insert into public.promotions(id,name,benefit_type,activation_type,discount_rate) values
     ('10000000-0000-4000-8000-000000000001','自動九折','percentage_discount','automatic',0.9);
     insert into public.promotions(id,name,benefit_type,activation_type,threshold_value,gift_variant_id,gift_quantity) values

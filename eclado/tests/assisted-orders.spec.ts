@@ -18,6 +18,19 @@ async function setup(page:Page,allowed=true){
   });
 }
 async function open(page:Page){await page.goto('/admin');if((page.viewportSize()?.width||0)<=900)await page.getByRole('button',{name:'開啟選單'}).click();await page.locator('.app-sidebar button:not(.sidebar-star)').filter({hasText:'訂單管理'}).first().click();await page.getByRole('button',{name:'新增代客訂單'}).click();}
+test('restored checkout resolves missing or broken snapshot images without changing totals',async({page})=>{
+  await mockEcladoApis(page);
+  await page.route('https://example.com/mock-product-1.jpg',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="48" height="48" fill="navy"/></svg>'}));
+  await page.addInitScript(()=>sessionStorage.setItem('eclado_pending_payment',JSON.stringify({version:2,orderNo:'IMAGE-TEST',paymentToken:'test-token',method:'atm',amount:1120,response:{Status:'S0000',ATMParam:{AtmPayNo:'123'}},summary:{subtotal:1000,discount:0,shipping:120,total:1120,items:[{product_id:1,id:1,nameZh:'缺圖商品',qty:1,unit_price:500},{product_id:1,id:1,variant_id:2,nameZh:'壞圖商品',qty:1,unit_price:500,img:'/missing-order-image.png'}]}})));
+  await page.route('**/missing-order-image.png',route=>route.fulfill({status:404,body:''}));
+  await page.goto('/checkout');
+  for(const name of ['缺圖商品','壞圖商品']){
+    const image=page.getByRole('img',{name,exact:true});
+    await expect(image).toBeVisible();await expect(image).not.toHaveAttribute('src','/missing-order-image.png');
+    await expect.poll(()=>image.evaluate((element:HTMLImageElement)=>element.complete&&element.naturalWidth>0)).toBe(true);
+  }
+  await expect(page.getByText('NT$ 1,120',{exact:true}).first()).toBeVisible();
+});
 test('product search filters names and SKU without clearing chosen product or price',async({page})=>{
   await setup(page);await open(page);const dialog=page.getByRole('dialog',{name:'新增代客訂單'});
   const select=dialog.getByLabel('商品 1',{exact:true});const search=dialog.getByLabel('搜尋商品 1',{exact:true});
