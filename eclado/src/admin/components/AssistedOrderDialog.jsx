@@ -46,7 +46,11 @@ export default function AssistedOrderDialog({members=[],products=[],initialMembe
     shopping_credit_amount:Number(form.shopping_credit_amount),
     shipping_amount:form.shipping_mode==='custom'?Number(form.shipping_amount):null,
     items:items.map(item=>({product_id:Number(item.productId),variant_id:Number(item.variantId),qty:Number(item.qty),unit_price:Number(item.unitPrice)}))};
-  const payloadKey=JSON.stringify(payload);
+  // Explanations are submitted and audited, but do not change pricing. Keeping
+  // them out of the quote key prevents the discounted-minimum field disappearing
+  // as soon as the administrator starts entering its required explanation.
+  const {minimum_reason,shipping_reason,note,...quoteInputs}=payload;
+  const payloadKey=JSON.stringify(quoteInputs);
   const currentQuote=quote?.key===payloadKey?quote.data:null;
   const defaultShipping=currentQuote?.default_shipping??calculateShipping(chosen,user,subtotal,form.fulfillment_method);
   const shipping=form.shipping_mode==='default'?defaultShipping:form.shipping_mode==='free'?0:Number(form.shipping_amount||0);

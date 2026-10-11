@@ -157,6 +157,34 @@ test('member custom price supports coupon and credit; creation waits for custome
   await page.route('**/api/orders/assisted-details',route=>route.fulfill({json:{ok:true}}));
   await dialog.getByRole('button',{name:'重新取得付款資訊'}).click();expect(bankCalls).toBe(0);
 });
+test('discounted minimum explanation stays visible and preserves quote while typing',async({page})=>{
+  await setup(page);let saved:any;
+  await page.route('**/rest/v1/rpc/quote_assisted_order',route=>{
+    const p=route.request().postDataJSON().p_payload;
+    const subtotal=p.items.reduce((sum:number,item:any)=>sum+item.qty*item.unit_price,0);
+    const discount=p.coupon_code==='NINE'?500:0;
+    return route.fulfill({json:{subtotal,discount,shipping:120,default_shipping:120,
+      shopping_credit_amount:p.shopping_credit_amount,payment_amount:subtotal-discount+120-p.shopping_credit_amount,
+      adjustments:[{name:'叫貨9折優惠',amount:discount}],items:[]}});
+  });
+  await page.route('**/rest/v1/rpc/create_assisted_order',route=>{saved=route.request().postDataJSON().p_payload;return route.fulfill({json:{...created,shopping_credit_amount:100}});});
+  await open(page);const dialog=page.getByRole('dialog',{name:'新增代客訂單'});
+  await dialog.getByLabel('客戶類型').selectOption('member');await dialog.getByLabel('選擇會員').selectOption('user-line-1');
+  await dialog.getByLabel('商品 1',{exact:true}).selectOption('1');await dialog.getByLabel('成交單價 1').fill('5000');
+  const reason=dialog.getByLabel('低於最低訂購額原因（僅後台）');await expect(reason).toHaveCount(0);
+  await dialog.getByLabel('收件手機').fill('0911111111');await dialog.getByLabel('收件 Email').fill('member@example.test');await dialog.getByLabel('收件地址').fill('台北市');
+  await dialog.getByLabel('優惠券代碼').fill('NINE');await dialog.getByLabel('使用購物金金額').fill('100');
+  await dialog.getByRole('button',{name:'重新計算優惠與金額'}).click();
+  await expect(reason).toBeVisible();await expect(dialog.getByText('銀行付款 NT$ 4,520',{exact:true})).toBeVisible();
+  await reason.pressSequentially('優惠後低於門檻，核准例外');
+  await expect(reason).toHaveValue('優惠後低於門檻，核准例外');
+  await dialog.getByLabel('客戶訂單備註（客戶可見）').fill('測試備註');
+  await expect(dialog.getByText('銀行付款 NT$ 4,520',{exact:true})).toBeVisible();
+  await expect(dialog.getByText(/尚未計算優惠/)).toHaveCount(0);
+  page.once('dialog',dialog=>dialog.accept());await dialog.getByRole('button',{name:'建立付款單',exact:true}).click();
+  await expect(dialog.getByRole('status')).toContainText('客戶同意');
+  expect(saved.minimum_reason).toBe('優惠後低於門檻，核准例外');expect(saved.note).toBe('測試備註');
+});
 test('switching customer clears coupon and shopping credit, while guest has no wallet input',async({page})=>{
   await setup(page);await open(page);const dialog=page.getByRole('dialog',{name:'新增代客訂單'});
   await dialog.getByLabel('客戶類型').selectOption('member');await dialog.getByLabel('選擇會員').selectOption('user-line-1');
