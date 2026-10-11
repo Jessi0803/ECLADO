@@ -334,7 +334,7 @@ async function getSupabaseOrderPaymentState(orderNo) {
   }
   const params = new URLSearchParams({
     id: `eq.${orderNo}`,
-    select: 'id,user_id,member,email,phone,address,invoice_type,invoice_company_name,invoice_tax_id,order_source,public_lookup_code,status,fulfillment_method,total,shopping_credit_amount,payment_amount,subtotal,discount,promotion_name,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
+    select: 'id,user_id,member,email,phone,address,invoice_type,invoice_company_name,invoice_tax_id,order_source,public_lookup_code,status,fulfillment_method,total,shopping_credit_amount,payment_amount,subtotal,discount,promotion_name,coupon_name,coupon_code_mask,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
     limit: '1',
   });
   const response = await fetch(`${supabaseUrl}/rest/v1/orders?${params}`, {

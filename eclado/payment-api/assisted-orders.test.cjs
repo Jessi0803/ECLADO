@@ -1,18 +1,20 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');
 const {mountAssistedRoutes,publicAssistedOrder}=require('./assisted-orders');
 const {paymentRequestFromStoredMethod}=require('./server');
-function fixture({bankFailure=false,rejected=false,duplicate=false,malformed=false,persistFailure=false,paymentMethod='card'}={}){
-  const routes={};const calls=[];let claimed=false;let instruction=null;
+function fixture({bankFailure=false,rejected=false,duplicate=false,malformed=false,persistFailure=false,paymentMethod='card',credit=0}={}){
+  const routes={};const calls=[];let claimed=false;let instruction=null;let consent=false;
   const order={id:'ORDER',user_id:'member',member:'顧客',address:'地址',email:'client@example.test',phone:'0911111111',status:'unpaid',
-    subtotal:1000,total:1120,payment_due_at:new Date(Date.now()+86400000).toISOString(),invoice_type:'personal',
+    subtotal:1000,total:1120,shopping_credit_amount:credit,payment_amount:1120-credit,payment_due_at:new Date(Date.now()+86400000).toISOString(),invoice_type:'personal',
     invoice_company_name:'SECRET',note:'CUSTOMER',admin_note:'SECRET',items:[{name:'產品',size:'100ml',qty:1,unit_price:1000,stock_at_order:50,cost:20,internal_note:'SECRET'}]};
   mountAssistedRoutes({post:(path,handler)=>{routes[path]=handler;}},{
     rpc:async(name,args)=>{
       calls.push({name,args});
       if(name==='authorize_assisted_link'){
         if(args.p_link_token!=='valid')throw new Error('Invalid');
-        return {payment_token:'PRIVATE',payment_method:paymentMethod};
+        return {payment_token:'PRIVATE',payment_method:paymentMethod,credit_consent_at:consent?'2026-10-11':null};
       }
+      if(name==='confirm_assisted_credit_consent')consent=true;
+      if(name==='assert_assisted_credit_consent'&&!consent)throw new Error('Consent required');
       if(name==='resolve_assisted_payment_claim'&&args.p_outcome==='rejected')claimed=false;
     },getOrder:async()=>order,getInstruction:async()=>instruction,
     rateLimit:async()=>true,paymentRequest:method=>method==='atm'?{payType:'A'}:paymentRequestFromStoredMethod(method),
@@ -32,6 +34,26 @@ test('customer projection explicitly excludes staff notes, costs, stock and paym
   const {order}=fixture();const data=publicAssistedOrder(order);
   assert.equal(JSON.stringify(data).includes('SECRET'),false);assert.equal(data.invoice_company_name,null);
   assert.equal('stock_at_order' in data.items[0],false);assert.equal('cost' in data.items[0],false);
+});
+test('shopping credit requires explicit matching consent before any bank request; recorded consent recovers safely',async()=>{
+  const f=fixture({credit:300});
+  assert.equal((await f.request('payment')).statusCode,409);assert.equal(f.calls.some(c=>c.name==='bank'),false);
+  for(const creditConsentAmount of [1,'300',null,-300]){
+    assert.equal((await f.request('payment',{orderNo:'ORDER',linkToken:'valid',creditConsentAmount})).statusCode,400);
+  }
+  assert.equal(f.calls.some(c=>c.name==='confirm_assisted_credit_consent'),false);
+  assert.equal((await f.request('payment',{orderNo:'ORDER',linkToken:'valid',creditConsentAmount:300})).statusCode,200);
+  assert.equal((await f.request('payment')).statusCode,200);
+  assert.equal(f.calls.filter(c=>c.name==='bank').length,1);
+  const details=(await f.request('details')).data;
+  assert.equal(details.creditConsentRecorded,true);assert.equal(details.order.payment_amount,820);
+});
+test('customer amounts separate shipping, discount, credit and tender; gift rows are explicit',()=>{
+  const f=fixture({credit:300});f.order.discount=100;f.order.total=1020;f.order.payment_amount=720;
+  f.order.items.push({name:'贈品',size:'10ml',qty:1,unit_price:0,line_type:'gift'});
+  const order=publicAssistedOrder(f.order);
+  assert.equal(order.shipping,120);assert.equal(order.discount,100);assert.equal(order.shopping_credit_amount,300);
+  assert.equal(order.payment_amount,720);assert.equal(order.items[1].is_gift,true);
 });
 test('invalid link denies details and never reaches bank',async()=>{
   const f=fixture();const result=await f.request('details',{orderNo:'ORDER',linkToken:'bad'});

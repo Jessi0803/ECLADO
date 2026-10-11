@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import SearchableOrderProduct from './SearchableOrderProduct.jsx';
 
 function emptyItem() {
   return { productId: '', variantId: '', quantity: 1, unitPrice: '' };
@@ -122,13 +123,10 @@ export default function HistoricalOrderDialog({ member, products = [], onCreate,
                 const lineTotal = Math.max(0, Number(item.quantity) || 0) * Math.max(0, Number(item.unitPrice) || 0);
                 return (
                   <div key={index} style={{ border: '1px solid var(--border)', background: 'var(--off)', padding: 12 }}>
-                    <div className="historical-order-product-grid">
+                    <SearchableOrderProduct products={products} value={item.productId} onChange={value => chooseProduct(index, value)} label={`歷史商品 ${index + 1}`} style={fieldStyle}>{selector => <div className="historical-order-product-grid">
                       <label style={{ display: 'grid', gap: 5, fontSize: 10, color: 'var(--mid)' }}>
                         商品
-                        <select aria-label={`歷史商品 ${index + 1}`} value={item.productId} onChange={event => chooseProduct(index, event.target.value)} style={fieldStyle}>
-                          <option value="">請選擇商品</option>
-                          {products.map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.nameZh || candidate.name}</option>)}
-                        </select>
+                        {selector}
                       </label>
                       <label style={{ display: 'grid', gap: 5, fontSize: 10, color: 'var(--mid)' }}>
                         規格／SKU
@@ -137,7 +135,7 @@ export default function HistoricalOrderDialog({ member, products = [], onCreate,
                           {variants.map(variant => <option key={variant.id} value={variant.id}>{variant.size || '預設規格'} · {variant.sku || '無 SKU'}</option>)}
                         </select>
                       </label>
-                    </div>
+                    </div>}</SearchableOrderProduct>
                     <div className="historical-order-price-grid">
                       <label style={{ display: 'grid', gap: 5, fontSize: 10, color: 'var(--mid)' }}>
                         數量

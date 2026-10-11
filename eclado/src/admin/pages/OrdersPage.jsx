@@ -47,7 +47,7 @@ function getStatusFilter(status) {
 }
 
 function matchesStatusFilter(order, filter) {
-  if (filter === 'all') return true;
+  if (filter === 'all') return order.status !== 'cancelled';
   if (filter === 'shipped') return ['shipped', 'ready_for_pickup'].includes(order.status);
   if (filter === 'delivered') return ['delivered', 'picked_up'].includes(order.status);
   return order.status === filter;

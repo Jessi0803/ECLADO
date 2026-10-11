@@ -8,6 +8,7 @@ function readAccess(){const parameters=new URLSearchParams(window.location.hash.
 export default function AssistedPaymentPage(){
   const [access]=useState(readAccess); const [details,setDetails]=useState(null);
   const [busy,setBusy]=useState(false);const [error,setError]=useState(''); const operation=useRef(false);
+  const [creditAgreed,setCreditAgreed]=useState(false);
   useEffect(()=>{
     const meta=document.createElement('meta');meta.name='referrer';meta.content='no-referrer';document.head.appendChild(meta);
     let active=true;
@@ -16,6 +17,7 @@ export default function AssistedPaymentPage(){
   },[access]);
   async function refresh(){if(operation.current)return;operation.current=true;setBusy(true);setError('');try{setDetails(await assistedApi('details',access));}catch(err){setError(err.message);}finally{operation.current=false;setBusy(false);}}
   async function pay(){
+    if(Number(details?.order?.shopping_credit_amount)>0&&!details?.creditConsentRecorded&&!creditAgreed){setError('請先同意使用本訂單的購物金。');return;}
     if(operation.current)return;operation.current=true;setBusy(true);setError('');
     try{
       if(details?.instruction?.provider_status && details.instruction?.payment_state==='failed'){
@@ -24,7 +26,7 @@ export default function AssistedPaymentPage(){
         if(target.protocol!=='https:')throw new Error('付款連結格式錯誤');
         window.location.assign(target.href);return;
       }
-      const result=await assistedApi('payment',access);
+      const result=await assistedApi('payment',{...access,...(creditAgreed?{creditConsentAmount:Number(details?.order?.shopping_credit_amount)}:{})});
       if(['card','apple','google'].includes(details?.paymentMethod)){
         const target=new URL(result.instruction?.payment_url || '');
         if(target.protocol!=='https:')throw new Error('付款連結暫時無法取得');
@@ -53,17 +55,26 @@ export default function AssistedPaymentPage(){
       </section>
       <section className="assisted-payment-card">
       <h2>商品與金額</h2>
-      <div className="assisted-payment-table-scroll"><table><thead><tr>{['商品／規格','數量','單價','小計'].map(label=><th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{order.items.map((item,index)=><tr key={index}><td>{item.name} {item.size}{item.fulfillment_type==='preorder'&&'（含預購）'}</td><td>{item.qty}</td><td>{money(item.unit_price)}</td><td>{money(item.line_total)}</td></tr>)}</tbody></table></div>
-      <div className="assisted-payment-totals"><p><span>商品小計</span><span>{money(order.subtotal)}</span></p><p><span>運費</span><span>{money(order.shipping)}</span></p><p className="assisted-payment-total"><span>應付總額</span><span>{money(order.total)}</span></p></div>
+      <div className="assisted-payment-table-scroll"><table><thead><tr>{['商品／規格','數量','單價','小計'].map(label=><th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{order.items.map((item,index)=><tr key={index}><td>{item.is_gift&&'【贈品】'}{item.name} {item.size}{item.fulfillment_type==='preorder'&&'（含預購）'}</td><td>{item.qty}</td><td>{money(item.unit_price)}</td><td>{money(item.line_total)}</td></tr>)}</tbody></table></div>
+      <div className="assisted-payment-totals"><p><span>商品小計</span><span>{money(order.subtotal)}</span></p>
+        {Number(order.discount)>0&&<p><span>促銷／優惠券折抵{order.promotion_name?`（${order.promotion_name}）`:''}</span><span>−{money(order.discount)}</span></p>}
+        {order.coupon_name&&<p><span>優惠券</span><span>{order.coupon_name} {order.coupon_code_mask}</span></p>}
+        <p><span>運費</span><span>{money(order.shipping)}</span></p>
+        {Number(order.shopping_credit_amount)>0&&<p><span>購物金支付</span><span>−{money(order.shopping_credit_amount)}</span></p>}
+        <p className="assisted-payment-total"><span>尚需銀行付款</span><span>{money(order.payment_amount??order.total)}</span></p></div>
       </section>
       <section className="assisted-payment-card assisted-payment-instructions">
       <h2>付款資訊</h2>
       <p>付款方式：{paymentLabel}</p>
       <p>付款期限：{new Date(order.payment_due_at).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'})}</p>
       {!payable&&<p role="status" style={{marginTop:16}}>此訂單目前狀態：{({paid:'已付款',preparing:'備貨中',shipped:'已出貨',delivered:'已完成',cancelled:'已取消',returned:'已退貨',ready_for_pickup:'可取貨',picked_up:'已取貨'})[order.status]||order.status}，無需再次付款。</p>}
-      {payable&&instruction?.atm_account&&<div className="assisted-payment-atm"><p>銀行：{instruction.atm_bank_code} 永豐銀行</p><p className="assisted-payment-account">虛擬帳號：{instruction.atm_account}</p><p>匯款金額：{money(order.total)}</p></div>}
+      {Number(order.shopping_credit_amount)>0&&<div style={{marginTop:16,lineHeight:1.8}}>
+        {details.creditConsentRecorded?<p>已同意本訂單使用購物金 {money(order.shopping_credit_amount)}。</p>:payable&&<label style={{display:'flex',gap:10,alignItems:'flex-start'}}><input type="checkbox" checked={creditAgreed} onChange={event=>setCreditAgreed(event.target.checked)} style={{marginTop:7,accentColor:'var(--dark)'}}/>我已確認明細，同意本訂單使用購物金 {money(order.shopping_credit_amount)}。</label>}
+        {payable&&<p className="assisted-payment-hint">此金額已保留；同意後才建立銀行付款單。取消或到期未付款時會自動退回。</p>}
+      </div>}
+      {payable&&instruction?.atm_account&&<div className="assisted-payment-atm"><p>銀行：{instruction.atm_bank_code} 永豐銀行</p><p className="assisted-payment-account">虛擬帳號：{instruction.atm_account}</p><p>匯款金額：{money(order.payment_amount??order.total)}</p></div>}
       <div className="assisted-payment-actions">
-      {payable&&(onlinePayment||!instruction?.atm_account)&&<button className="assisted-payment-button primary" disabled={busy} type="button" onClick={pay}>{busy?'處理中…':onlinePayment?`確認明細，前往${paymentLabel}付款`:'讀取／建立虛擬帳號'}</button>}
+      {payable&&(onlinePayment||!instruction?.atm_account)&&<button className="assisted-payment-button primary" disabled={busy||(Number(order.shopping_credit_amount)>0&&!details.creditConsentRecorded&&!creditAgreed)} type="button" onClick={pay}>{busy?'處理中…':onlinePayment?`確認明細，前往${paymentLabel}付款`:'讀取／建立虛擬帳號'}</button>}
       <button className="assisted-payment-button" disabled={busy} type="button" onClick={refresh}>重新讀取付款狀態</button>
       </div>
       <p className="assisted-payment-hint">此為私人連結，請勿公開分享。連結到期不會刪除訂單。</p>

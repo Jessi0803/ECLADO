@@ -6,10 +6,33 @@ async function setup(page:Page,allowed=true){
   const products=adminProductRows.map(product=>({...product,publication_status:'active',instructor_price_multiplier:0.88,distributor_price_multiplier:null,staff_price_multiplier:null,pricing_defaults:{instructor:0.7,distributor:0.65,staff:0.5}}));
   await mockEcladoApis(page,{authUser:user,profiles:adminProfileRows.map(profile=>({...profile,role:profile.role==='pro'?'instructor':profile.role})),products,
     productVariants:[{id:101,product_id:1,sku:'A',size:'200ml',price:1280,pro_price:960,stock:48,is_default:true,sort_order:0,active:true}],
-    backofficeAccess:{role:allowed?'admin':'catalog_editor',permissions:allowed?['orders.read','orders.write','members.read','catalog.read']:['orders.read','members.read','catalog.read']}});
+    backofficeAccess:{role:allowed?'admin':'catalog_editor',permissions:allowed?['orders.read','orders.write','members.read','catalog.read','shopping_credit.manage']:['orders.read','members.read','catalog.read']}});
   await page.route('**/rest/v1/rpc/get_admin_assisted_request',route=>route.fulfill({json:null}));
+  await page.route('**/rest/v1/rpc/get_member_shopping_credit',route=>route.fulfill({json:{available_balance:500}}));
+  await page.route('**/rest/v1/rpc/quote_assisted_order',route=>{
+    const p=route.request().postDataJSON().p_payload;
+    const subtotal=p.items.reduce((sum:number,item:any)=>sum+item.qty*item.unit_price,0);
+    const shipping=p.shipping_mode==='free'?0:p.shipping_mode==='custom'?p.shipping_amount:120;
+    return route.fulfill({json:{subtotal,shipping,default_shipping:120,total:subtotal+shipping,discount:0,shopping_credit_amount:p.shopping_credit_amount,
+      payment_amount:subtotal+shipping-p.shopping_credit_amount,items:[],adjustments:[]}});
+  });
 }
 async function open(page:Page){await page.goto('/admin');if((page.viewportSize()?.width||0)<=900)await page.getByRole('button',{name:'開啟選單'}).click();await page.locator('.app-sidebar button:not(.sidebar-star)').filter({hasText:'訂單管理'}).first().click();await page.getByRole('button',{name:'新增代客訂單'}).click();}
+test('product search filters names and SKU without clearing chosen product or price',async({page})=>{
+  await setup(page);await open(page);const dialog=page.getByRole('dialog',{name:'新增代客訂單'});
+  const select=dialog.getByLabel('商品 1',{exact:true});const search=dialog.getByLabel('搜尋商品 1',{exact:true});
+  const searchBox=await search.boundingBox();const gridBox=await dialog.locator('.historical-order-product-grid').first().boundingBox();
+  expect(searchBox&&gridBox&&searchBox.y+searchBox.height<=gridBox.y).toBeTruthy();
+  expect(searchBox&&gridBox&&Math.abs(searchBox.width-gridBox.width)<2).toBeTruthy();
+  const name=await select.locator('option[value="1"]').innerText();
+  await search.fill(name);await expect(select.locator('option[value="1"]')).toHaveCount(1);
+  await search.fill('Ａ');await expect(select.locator('option[value="1"]')).toHaveCount(1);
+  await select.selectOption('1');await expect(search).toHaveValue('');
+  const price=await dialog.getByLabel('成交單價 1').inputValue();
+  await search.fill('不存在的商品zzzz');await expect(dialog.getByText('找不到符合的商品，請換個關鍵字。')).toBeVisible();
+  await expect(select).toHaveValue('1');await expect(dialog.getByLabel('成交單價 1')).toHaveValue(price);
+  await search.fill('');expect(await select.locator('option').count()).toBeGreaterThan(1);
+});
 test('assisted order detail link action uses existing outlined button and field styles',async({page})=>{
   await setup(page);
   await page.route('**/rest/v1/orders*',route=>route.fulfill({json:[{...adminOrderRows[0],id:created.order_id,order_source:'admin_assisted'}]}));
@@ -84,7 +107,7 @@ test('guest suggested retail price, manual price, snapshot and generated private
   page.once('dialog',dialog=>dialog.accept());await dialog.getByRole('button',{name:'建立付款單',exact:true}).click();
   await expect(dialog.getByLabel('客戶付款連結')).toHaveValue(/order-payment#order=ECL-ASSISTED-001&token=/);
   expect(payload.p_payload.items).toEqual([{product_id:1,variant_id:101,qty:1,unit_price:1000}]);
-  expect(payload.p_payload.customer_type).toBe('guest');expect(payload.p_payload.member_id).toBeNull();expect(payload.p_payload).not.toHaveProperty('shopping_credit_amount');expect(payload.p_request_key).toMatch(/^[0-9a-f-]{36}$/);
+  expect(payload.p_payload.customer_type).toBe('guest');expect(payload.p_payload.member_id).toBeNull();expect(payload.p_payload.shopping_credit_amount).toBe(0);expect(payload.p_payload.apply_automatic).toBe(true);expect(payload.p_request_key).toMatch(/^[0-9a-f-]{36}$/);
 });
 test('member product override suggested price; role and minimum exception are visible',async({page})=>{
   await setup(page);await open(page);const dialog=page.getByRole('dialog',{name:'新增代客訂單'});
@@ -104,6 +127,61 @@ test('failure after order creation stays locked and retries payment without anot
 });
 test('read-only staff cannot see assisted create entry',async({page})=>{
   await setup(page,false);await page.goto('/admin');if((page.viewportSize()?.width||0)<=900)await page.getByRole('button',{name:'開啟選單'}).click();await page.locator('.app-sidebar button:not(.sidebar-star)').filter({hasText:'訂單管理'}).first().click();await expect(page.getByRole('button',{name:'新增代客訂單'})).toHaveCount(0);
+});
+test('member custom price supports coupon and credit; creation waits for customer instead of calling bank',async({page})=>{
+  await setup(page);let saved:any;let bankCalls=0;
+  await page.route('**/rest/v1/rpc/create_assisted_order',route=>{saved=route.request().postDataJSON().p_payload;return route.fulfill({json:{...created,shopping_credit_amount:300}});});
+  await page.route('**/api/orders/assisted-payment',route=>{bankCalls++;return route.fulfill({json:{ok:true}});});
+  await open(page);const dialog=page.getByRole('dialog',{name:'新增代客訂單'});
+  await expect(dialog.getByRole('checkbox',{name:'套用自動促銷與贈品'})).toBeChecked();
+  await dialog.getByLabel('客戶類型').selectOption('member');await dialog.getByLabel('選擇會員').selectOption('user-line-1');
+  await expect(dialog.getByText('可用購物金：NT$ 500')).toBeVisible();
+  const creditInput=dialog.getByLabel('使用購物金金額');
+  await expect(creditInput).toHaveAttribute('min','0');
+  await expect(creditInput).toHaveAttribute('step','1');
+  await creditInput.fill('-2900');await expect(creditInput).toHaveValue('0');
+  await creditInput.fill('');await expect(creditInput).toHaveValue('');
+  await dialog.getByLabel('商品 1',{exact:true}).selectOption('1');await dialog.getByLabel('成交單價 1').fill('1000');
+  await dialog.getByLabel('收件手機').fill('0911111111');await dialog.getByLabel('收件 Email').fill('member@example.test');await dialog.getByLabel('收件地址').fill('台北市');
+  await dialog.getByLabel('低於最低訂購額原因（僅後台）').fill('管理員核准');
+  await dialog.getByLabel('優惠券代碼').fill('VIP');await dialog.getByLabel('使用購物金金額').fill('300');
+  await dialog.getByRole('checkbox',{name:'套用自動促銷與贈品'}).uncheck();
+  await dialog.getByRole('button',{name:'重新計算優惠與金額'}).click();
+  await expect(dialog.getByText('銀行付款 NT$ 820',{exact:true})).toBeVisible();
+  await dialog.getByLabel('成交單價 1').fill('1100');
+  await expect(dialog.getByText(/尚未計算優惠/)).toBeVisible();
+  page.once('dialog',dialog=>dialog.accept());await dialog.getByRole('button',{name:'建立付款單',exact:true}).click();
+  await expect(dialog.getByRole('status')).toContainText('客戶同意');
+  expect(saved.shopping_credit_amount).toBe(300);expect(saved.coupon_code).toBe('VIP');expect(saved.apply_automatic).toBe(false);
+  expect(saved.items[0].unit_price).toBe(1100);expect(bankCalls).toBe(0);
+  await page.route('**/api/orders/assisted-details',route=>route.fulfill({json:{ok:true}}));
+  await dialog.getByRole('button',{name:'重新取得付款資訊'}).click();expect(bankCalls).toBe(0);
+});
+test('switching customer clears coupon and shopping credit, while guest has no wallet input',async({page})=>{
+  await setup(page);await open(page);const dialog=page.getByRole('dialog',{name:'新增代客訂單'});
+  await dialog.getByLabel('客戶類型').selectOption('member');await dialog.getByLabel('選擇會員').selectOption('user-line-1');
+  await dialog.getByLabel('使用購物金金額').fill('300');await dialog.getByLabel('優惠券代碼').fill('MEMBER');
+  await dialog.getByLabel('客戶類型').selectOption('guest');
+  await expect(dialog.getByLabel('使用購物金金額')).toHaveCount(0);await expect(dialog.getByLabel('優惠券代碼')).toHaveValue('');
+});
+test('customer credit consent is unchecked by default, binds exact amount and shows discounts/gifts',async({page})=>{
+  await mockEcladoApis(page);let consent=false;let body:any;
+  await page.route('**/api/orders/assisted-details',route=>route.fulfill({json:{ok:true,paymentMethod:'atm',creditConsentRecorded:consent,
+    order:{id:created.order_id,member:'顧客',phone:'0911111111',email:'member@example.test',address:'台北市',invoice_type:'personal',status:'awaiting_confirm',
+      subtotal:1000,discount:100,promotion_name:'活動優惠',coupon_name:'會員券',coupon_code_mask:'VIP***',shipping:120,total:1020,
+      shopping_credit_amount:300,payment_amount:720,payment_due_at:'2099-01-01',is_member:true,
+      items:[{name:'商品',size:'200ml',qty:1,unit_price:1000,line_total:1000},{name:'小贈品',size:'10ml',qty:1,unit_price:0,line_total:0,is_gift:true}]},
+    instruction:consent?{atm_bank_code:'807',atm_account:'123456789'}:null}}));
+  await page.route('**/api/orders/assisted-payment',route=>{body=route.request().postDataJSON();consent=true;return route.fulfill({json:{ok:true,instruction:{atm_account:'123456789'}}});});
+  await page.goto(`/order-payment#order=${created.order_id}&token=${created.link_token}`);
+  const check=page.getByRole('checkbox',{name:/我已確認明細，同意本訂單使用購物金/});
+  await expect(check).not.toBeChecked();await expect(page.getByRole('button',{name:'讀取／建立虛擬帳號'})).toBeDisabled();
+  await expect(page.getByText('【贈品】小贈品 10ml')).toBeVisible();await expect(page.getByText('會員券 VIP***')).toBeVisible();
+  await expect(page.locator('.assisted-payment-total')).toContainText('720');
+  await check.check();await page.getByRole('button',{name:'讀取／建立虛擬帳號'}).click();
+  await expect(page.getByText('匯款金額：NT$ 720')).toBeVisible();expect(body.creditConsentAmount).toBe(300);
+  await expect(page.getByText('已同意本訂單使用購物金 NT$ 300。')).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
 });
 for(const [method,label] of [['apple','Apple Pay'],['google','Google Pay']]){
   test(`${label} can be selected by admin and the customer uses the saved wallet payment link`,async({page})=>{

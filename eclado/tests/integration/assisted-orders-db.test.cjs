@@ -150,5 +150,6 @@ test('assisted SQL: atomic creation/recovery, owner/roles, immutable snapshots, 
     }
     await db.exec(migration);assert.equal((await one('select stock from public.product_variants where id=1')).stock,0);
     console.log('PASS assisted order migration and real inventory lifecycle/count compatibility');
+    await require('./assisted-benefits-fixture.cjs')({db,read,fn,base,create});
   }finally{await db.close();}
 });

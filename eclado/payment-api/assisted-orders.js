@@ -7,8 +7,12 @@ function isAmbiguousGatewayFailure(response) {
 function publicAssistedOrder(order) {
   return {
     id:order.id, member:order.member, address:order.address, phone:order.phone, email:order.email,
-    status:order.status, subtotal:Number(order.subtotal), shipping:Number(order.total)-Number(order.subtotal),
-    total:Number(order.total), payment_due_at:order.payment_due_at,
+    status:order.status, subtotal:Number(order.subtotal), discount:Number(order.discount||0),
+    shipping:Number(order.total)-Number(order.subtotal)+Number(order.discount||0),
+    total:Number(order.total), shopping_credit_amount:Number(order.shopping_credit_amount||0),
+    payment_amount:Number(order.payment_amount??order.total),
+    promotion_name:order.promotion_name||null,coupon_name:order.coupon_name||null,coupon_code_mask:order.coupon_code_mask||null,
+    payment_due_at:order.payment_due_at,
     fulfillment_method:order.fulfillment_method, invoice_type:order.invoice_type,
     invoice_company_name:order.invoice_type==='company' ? order.invoice_company_name : null,
     invoice_tax_id:order.invoice_type==='company' ? order.invoice_tax_id : null,
@@ -17,7 +21,7 @@ function publicAssistedOrder(order) {
     items:(Array.isArray(order.items) ? order.items : []).map(item => ({
       name:item.name || item.nameZh, size:item.size, sku:item.sku, qty:Number(item.qty),
       unit_price:Number(item.unit_price), line_total:Number(item.unit_price)*Number(item.qty),
-      fulfillment_type:item.fulfillment_type,
+      fulfillment_type:item.fulfillment_type,is_gift:item.line_type==='gift'||item.is_gift===true,
     })),
   };
 }
@@ -41,7 +45,7 @@ function mountAssistedRoutes(app, dependencies) {
       const state = ['paid','preparing','ready_for_pickup','picked_up','shipped','delivered'].includes(order.status) ? 'paid'
         : order.status==='cancelled' ? 'cancelled' : instruction?.payment_state || 'pending';
       res.json({ ok:true, order:publicAssistedOrder(order), paymentMethod:credential.payment_method,
-        instruction:publicInstruction(instruction,state), resultAccessToken:resultToken(order.id) });
+        instruction:publicInstruction(instruction,state), creditConsentRecorded:Boolean(credential.credit_consent_at),resultAccessToken:resultToken(order.id) });
     } catch {
       res.status(403).json({ok:false,error:'連結無效或已到期，請使用會員中心／訪客訂單查詢。'});
     }
@@ -56,6 +60,18 @@ function mountAssistedRoutes(app, dependencies) {
       const order = context.order;
       if (!['unpaid','awaiting_confirm'].includes(order.status) || new Date(order.payment_due_at)<=new Date()) {
         return res.status(409).json({ok:false,error:'此訂單已付款、取消或到期，不能再建立付款。'});
+      }
+      if(Number(order.shopping_credit_amount)>0){
+        if(req.body?.creditConsentAmount!==undefined){
+          if(!Number.isSafeInteger(req.body.creditConsentAmount)||req.body.creditConsentAmount!==Number(order.shopping_credit_amount)){
+            return res.status(400).json({ok:false,error:'請確認本訂單使用的購物金金額。'});
+          }
+          await rpc('confirm_assisted_credit_consent',{p_order_id:orderNo,p_link_token:String(req.body.linkToken||''),p_amount:req.body.creditConsentAmount});
+        }
+        // Database claims and retries also enforce this, so skipping this
+        // endpoint cannot create a bank instruction without customer consent.
+        try{await rpc('assert_assisted_credit_consent',{p_order_id:orderNo});}
+        catch{return res.status(409).json({ok:false,error:'請先確認明細並勾選同意使用購物金，再進入付款。'});}
       }
       const existing = await getInstruction(orderNo);
       if (existing) {

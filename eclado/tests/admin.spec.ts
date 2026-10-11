@@ -979,6 +979,25 @@ test('舊訂單缺少新快照欄位仍可開啟列印預覽', async ({ page }) 
   await expect(preview.getByText('發票資訊')).toHaveCount(0);
 });
 
+test('訂單全部分欄排除已取消，已取消分欄仍可查閱', async ({ page }) => {
+  await mockAdminApis(page, { orders: [
+    { ...adminOrderRows[0], id: 'E2E-ACTIVE-ORDER', status: 'paid' },
+    { ...adminOrderRows[0], id: 'E2E-CANCELLED-ORDER', status: 'cancelled' },
+    { ...adminOrderRows[0], id: 'E2E-RETURNED-ORDER', status: 'returned' },
+  ] });
+  await page.goto('/admin');await openAdminSection(page, /訂單管理/);
+  const filters = page.getByLabel('訂單狀態篩選');
+  await filters.getByRole('button', { name: '全部', exact: true }).click();
+  await expect(page.getByText('E2E-ACTIVE-ORDER', { exact: true })).toBeVisible();
+  await expect(page.getByText('E2E-RETURNED-ORDER', { exact: true })).toBeVisible();
+  await expect(page.getByText('E2E-CANCELLED-ORDER', { exact: true })).toHaveCount(0);
+  await filters.getByRole('button', { name: '已取消', exact: true }).click();
+  await expect(page.getByText('E2E-CANCELLED-ORDER', { exact: true })).toBeVisible();
+  await expect(page.getByText('E2E-ACTIVE-ORDER', { exact: true })).toHaveCount(0);
+  await filters.getByRole('button', { name: '全部', exact: true }).click();
+  await expect(page.getByText('E2E-CANCELLED-ORDER', { exact: true })).toHaveCount(0);
+});
+
 test('訂單管理可依狀態與待補庫存篩選', async ({ page }) => {
   await mockAdminApis(page, {
     orders: [
@@ -2389,8 +2408,17 @@ test('會員詳情可由訪客訂單按鈕右側補登歷史訂單', async ({ pa
 
   await historyButton.click();
   const modal = page.getByRole('dialog', { name: '補登歷史訂單' });
+  const searchBox = await modal.getByLabel('搜尋歷史商品 1', { exact: true }).boundingBox();
+  const productGridBox = await modal.locator('.historical-order-product-grid').first().boundingBox();
+  expect(searchBox && productGridBox && searchBox.y + searchBox.height <= productGridBox.y).toBeTruthy();
+  expect(searchBox && productGridBox && Math.abs(searchBox.width - productGridBox.width) < 2).toBeTruthy();
   await modal.getByLabel('歷史交易日期').fill('2025-11-20');
-  await modal.getByLabel('歷史商品 1').selectOption('1');
+  const productName = await modal.getByLabel('歷史商品 1', { exact: true }).locator('option[value="1"]').innerText();
+  await modal.getByLabel('搜尋歷史商品 1', { exact: true }).fill('不存在的商品zzzz');
+  await expect(modal.getByText('找不到符合的商品，請換個關鍵字。')).toBeVisible();
+  await modal.getByLabel('搜尋歷史商品 1', { exact: true }).fill(productName);
+  await modal.getByLabel('歷史商品 1', { exact: true }).selectOption('1');
+  await expect(modal.getByLabel('搜尋歷史商品 1', { exact: true })).toHaveValue('');
   await modal.getByLabel('歷史規格 1').selectOption('101');
   await modal.getByLabel('歷史數量 1').fill('2');
   await modal.getByLabel('歷史單價 1').fill('900');
