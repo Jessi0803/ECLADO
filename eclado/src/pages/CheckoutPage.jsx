@@ -4,7 +4,7 @@ import CheckoutOrderSummary from '../components/checkout/CheckoutOrderSummary.js
 import CheckoutSteps from '../components/checkout/CheckoutSteps.jsx';
 import PaymentInfo from '../components/checkout/PaymentInfo.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
-import { isProfessionalMember, getMemberPrice } from '../domain/catalog.jsx';
+import { isProfessionalMember, getMemberPrice, getMemberRole } from '../domain/catalog.jsx';
 import { getProfessionalOrderProgress, hasProfessionalOrderRules } from '../domain/memberShopping.js';
 import { calculateDiscount } from '../domain/promotions.js';
 import {
@@ -327,6 +327,10 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
 
   async function handleNext(e) {
     e.preventDefault();
+    if (getMemberRole(user) === 'staff' && additionalOrderProgress?.eligible === false) {
+      setPaymentError('內部人員折扣後商品金額須滿 NT$ 5,000，購物金不影響此門檻。');
+      return;
+    }
     if (step === 1) {
       if (invoiceType === 'company') {
         if (!invoiceCompanyName.trim()) {

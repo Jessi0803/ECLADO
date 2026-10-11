@@ -54,7 +54,7 @@ export default function AssistedOrderDialog({members=[],products=[],initialMembe
   const currentQuote=quote?.key===payloadKey?quote.data:null;
   const defaultShipping=currentQuote?.default_shipping??calculateShipping(chosen,user,subtotal,form.fulfillment_method);
   const shipping=form.shipping_mode==='default'?defaultShipping:form.shipping_mode==='free'?0:Number(form.shipping_amount||0);
-  const needsMinimum=['pro','instructor','distributor'].includes(role) && subtotal-Number(currentQuote?.discount||0)<5000;
+  const needsMinimum=['pro','instructor','distributor','staff'].includes(role) && subtotal-Number(currentQuote?.discount||0)<5000;
   useEffect(()=>{
     let active=true;setBalance(null);setCreditError('');
     if(customerType==='member'&&memberId)getMemberShoppingCredit(memberId).then(({data,error})=>{

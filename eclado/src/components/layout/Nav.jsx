@@ -6,7 +6,7 @@ import {
   getMemberTier,
   canAccessProfessionalCatalog,
 } from '../../domain/catalog.jsx';
-import { hasProfessionalOrderRules } from '../../domain/memberShopping.js';
+import { getProfessionalShoppingNotice } from '../../domain/memberShopping.js';
 import { openAdmin } from '../../services/membership.js';
 import DesktopNavItem from './DesktopNavItem.jsx';
 import MobileNavSection from './MobileNavSection.jsx';
@@ -20,7 +20,7 @@ export default function Nav({ setPage, onOpenCart, cartCount, user, setUser, pag
   const isAdmin = useAdminAccess(user?.uid);
   const darkMode = scrolled || page !== 'home' || productDetailOpen;
   const navItems = NAV_ITEMS.map(item => (
-    item.label === '購物說明' && hasProfessionalOrderRules(user)
+    item.label === '購物說明' && getProfessionalShoppingNotice(user)
       ? { ...item, children: ['會員購物須知', ...item.children] }
       : item
   ));

@@ -9,6 +9,16 @@ export function hasProfessionalOrderRules(user) {
 }
 
 export function getProfessionalOrderProgress(amount, user, shippingGroup = null) {
+  if (getMemberRole(user) === 'staff') {
+    const merchandiseAmount = Math.max(0, Number(amount) || 0);
+    const remaining = Math.max(0, PROFESSIONAL_ORDER_MINIMUM - merchandiseAmount);
+    return {
+      eligible: remaining === 0, freeShipping: true, remaining,
+      message: remaining > 0
+        ? `尚差 NT$${remaining.toLocaleString()} 可達最低訂購門檻；內部人員固定免運。`
+        : '✓ 已達最低訂購門檻，內部人員固定免運。',
+    };
+  }
   if (!hasProfessionalOrderRules(user)) return null;
   const merchandiseAmount = Math.max(0, Number(amount) || 0);
   if (shippingGroup?.id) {
@@ -58,6 +68,10 @@ export function getProfessionalOrderProgress(amount, user, shippingGroup = null)
 }
 
 export function getProfessionalShoppingNotice(user) {
+  if (getMemberRole(user) === 'staff') return {
+    label: '內部人員', minimum: PROFESSIONAL_ORDER_MINIMUM,
+    freeShippingThreshold: 0, fixedFreeShipping: true,
+  };
   if (!hasProfessionalOrderRules(user)) return null;
   const labels = {
     pro: '美容師',

@@ -183,5 +183,45 @@ module.exports=async function verifyBenefits({db,read,fn,base,create}){
   assert.equal((await one('select gift_stock from public.product_variants where id=1')).gift_stock,giftStock-1);
   await db.query("update public.orders set status='cancelled' where id=$1",[compatible.order_id]);
   assert.equal((await one('select gift_stock from public.product_variants where id=1')).gift_stock,giftStock);
+  // Add staff minimum without touching shipping-group eligibility or old orders.
+  const priorOrders=(await db.query('select id,total,status,items from public.orders order by id')).rows;
+  const staffMinimum=read('supabase-internal-staff-order-minimum.sql');
+  await db.exec(staffMinimum);await db.exec(staffMinimum);
+  assert.deepEqual((await db.query('select id,total,status,items from public.orders order by id')).rows,priorOrders);
+  await db.exec(`update public.profiles set role='staff';update public.promotions set active=false;
+    create or replace function public.quote_order_pricing(p_items jsonb,p_fulfillment_method text) returns jsonb language sql as $$
+      select jsonb_build_object('member_role','staff','subtotal',coalesce((p_items->0->>'amount')::numeric,5000),
+        'discount',coalesce(nullif(current_setting('test.discount',true),'')::numeric,0),
+        'promotion_id','10000000-0000-4000-8000-000000000001','promotion_name','測試折扣',
+        'items',jsonb_build_array(jsonb_build_object('product_id',1,'variant_id',1,'qty',1,'line_total',coalesce((p_items->0->>'amount')::numeric,5000))))
+    $$;
+    create or replace function public.get_my_appendable_shipping_group() returns jsonb language plpgsql as $$begin raise exception 'staff must not request shipping group';end$$;
+  `);
+  for(const source of ['supabase-coupon-discount-engine.sql','supabase-professional-shipping-groups.sql']){
+    await db.exec(fn(source,'quote_order_pricing_discount_v2'));
+    await db.exec(staffMinimum);await db.exec(staffMinimum);
+    const storefront=amount=>db.query("select public.quote_order_pricing_discount_v2($1::jsonb,'delivery','','') as q",[JSON.stringify([{amount}])]).then(r=>r.rows[0].q);
+    await db.exec("select set_config('test.discount','0',false)");
+    await assert.rejects(storefront(4999),/5,000/);
+    const exact=await storefront(5000);assert.equal(exact.shipping,0);assert.equal(exact.total,5000);
+    assert.equal(exact.is_additional_order||false,false);
+    await db.exec("select set_config('test.discount','500',false)");await assert.rejects(storefront(5000),/5,000/);
+    assert.equal((await storefront(5500)).total,5000);
+  }
+  const staffPayload={...p,shopping_credit_amount:0,apply_automatic:false,minimum_reason:'',items:[{product_id:1,variant_id:1,qty:1,unit_price:4999}]};
+  await assert.rejects(create('12345678-1234-4234-8234-123456789011',staffPayload),/最低訂購額/);
+  const staffException=await create('12345678-1234-4234-8234-123456789012',{...staffPayload,minimum_reason:'管理員核准'});
+  assert.equal((await one('select total from public.orders where id=$1',[staffException.order_id])).total,'4999');
+  await db.query("update public.orders set status='cancelled' where id=$1",[staffException.order_id]);
+  const staffExact=await create('12345678-1234-4234-8234-123456789013',{...staffPayload,shopping_credit_amount:1000,items:[{product_id:1,variant_id:1,qty:1,unit_price:5000}]});
+  assert.equal((await one('select total from public.orders where id=$1',[staffExact.order_id])).total,'5000');
+  assert.equal(Number((await one('select payment_amount from public.orders where id=$1',[staffExact.order_id])).payment_amount),4000);
+  await db.query("update public.orders set status='cancelled' where id=$1",[staffExact.order_id]);
+  await db.exec("update public.promotions set active=true where id='10000000-0000-4000-8000-000000000003'");
+  const staffCoupon={...staffPayload,coupon_code:'ONLY',items:[{product_id:1,variant_id:1,qty:1,unit_price:5000}]};
+  await assert.rejects(create('12345678-1234-4234-8234-123456789014',staffCoupon),/最低訂購額/);
+  const staffCouponExact=await create('12345678-1234-4234-8234-123456789015',{...staffCoupon,items:[{product_id:1,variant_id:1,qty:1,unit_price:5050}]});
+  assert.equal((await one('select total from public.orders where id=$1',[staffCouponExact.order_id])).total,'5000');
+  await db.query("update public.orders set status='cancelled' where id=$1",[staffCouponExact.order_id]);
   console.log('PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation');
 };

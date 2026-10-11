@@ -2,9 +2,9 @@ import {expect,test,type Page} from '@playwright/test';
 import {mockEcladoApis,adminProductRows,adminProfileRows,adminOrderRows} from './support/eclado-mocks';
 const user={id:'admin-assisted',email:'admin@example.test',user_metadata:{name:'管理員'},app_metadata:{provider:'email'},aud:'authenticated',role:'authenticated',created_at:'2026-05-01'};
 const created={order_id:'ECL-ASSISTED-001',link_token:'a'.repeat(64)};
-async function setup(page:Page,allowed=true){
+async function setup(page:Page,allowed=true,memberRole='instructor'){
   const products=adminProductRows.map(product=>({...product,publication_status:'active',instructor_price_multiplier:0.88,distributor_price_multiplier:null,staff_price_multiplier:null,pricing_defaults:{instructor:0.7,distributor:0.65,staff:0.5}}));
-  await mockEcladoApis(page,{authUser:user,profiles:adminProfileRows.map(profile=>({...profile,role:profile.role==='pro'?'instructor':profile.role})),products,
+  await mockEcladoApis(page,{authUser:user,profiles:adminProfileRows.map(profile=>({...profile,role:profile.role==='pro'?memberRole:profile.role})),products,
     productVariants:[{id:101,product_id:1,sku:'A',size:'200ml',price:1280,pro_price:960,stock:48,is_default:true,sort_order:0,active:true}],
     backofficeAccess:{role:allowed?'admin':'catalog_editor',permissions:allowed?['orders.read','orders.write','members.read','catalog.read','shopping_credit.manage']:['orders.read','members.read','catalog.read']}});
   await page.route('**/rest/v1/rpc/get_admin_assisted_request',route=>route.fulfill({json:null}));
@@ -169,6 +169,16 @@ test('member custom price supports coupon and credit; creation waits for custome
   expect(saved.items[0].unit_price).toBe(1100);expect(bankCalls).toBe(0);
   await page.route('**/api/orders/assisted-details',route=>route.fulfill({json:{ok:true}}));
   await dialog.getByRole('button',{name:'重新取得付款資訊'}).click();expect(bankCalls).toBe(0);
+});
+test('staff assisted orders require minimum exception but keep fixed free shipping',async({page})=>{
+  await setup(page,true,'staff');await open(page);const dialog=page.getByRole('dialog',{name:'新增代客訂單'});
+  await dialog.getByLabel('客戶類型').selectOption('member');await dialog.getByLabel('選擇會員').selectOption('user-line-1');
+  await dialog.getByLabel('商品 1',{exact:true}).selectOption('1');await dialog.getByLabel('成交單價 1').fill('4999');
+  await expect(dialog.getByLabel('低於最低訂購額原因（僅後台）')).toBeVisible();
+  await expect(dialog.getByLabel('運費設定').locator('option[value="default"]')).toContainText('NT$0');
+  await dialog.getByLabel('成交單價 1').fill('5000');
+  await expect(dialog.getByLabel('低於最低訂購額原因（僅後台）')).toHaveCount(0);
+  await expect(dialog.getByLabel('運費設定').locator('option[value="default"]')).toContainText('NT$0');
 });
 test('discounted minimum explanation stays visible and preserves quote while typing',async({page})=>{
   await setup(page);let saved:any;

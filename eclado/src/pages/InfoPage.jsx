@@ -34,7 +34,7 @@ export default function InfoPage({ user }) {
           },
           {
             q: '免運門檻',
-            a: `單筆訂單折扣後商品小計滿 NT$${memberNotice.freeShippingThreshold.toLocaleString()} 享免運優惠。`,
+            a: memberNotice.fixedFreeShipping ? '內部人員固定免運，不適用追加訂單／合併出貨。' : `單筆訂單折扣後商品小計滿 NT$${memberNotice.freeShippingThreshold.toLocaleString()} 享免運優惠。`,
           },
           {
             q: '會員優惠',
@@ -57,7 +57,7 @@ export default function InfoPage({ user }) {
       {
         q:'運費說明',
         a: memberNotice
-          ? `${memberNotice.label}會員單筆訂單折扣後商品小計滿 NT$${memberNotice.freeShippingThreshold.toLocaleString()} 免運；未達免運門檻收取 NT$ 120。`
+          ? memberNotice.fixedFreeShipping ? '內部人員固定免運。' : `${memberNotice.label}會員單筆訂單折扣後商品小計滿 NT$${memberNotice.freeShippingThreshold.toLocaleString()} 免運；未達免運門檻收取 NT$ 120。`
           : '全站統一運費 NT$ 120（宅配到府，順豐物流）。',
       },
       { q:'出貨時間', a:'現貨商品於確認付款後 5 個工作天內出貨，每週二統一出貨。\n\n預購商品：下單後約 7-14 個工作天出貨，實際時間視備貨及運輸狀況而定。' },
