@@ -9,6 +9,7 @@ import {
   canAccessProfessionalCatalog,
   mergeProductsWithStock,
 } from '../domain/catalog.jsx';
+import { supabase } from '../services/supabase.js';
 import { fetchProductRows } from '../services/catalogData.js';
 import {
   removeRealtimeChannel,
@@ -42,11 +43,30 @@ export default function useProducts(user, setCart, authReady = true, includeEven
         eventImageRows,
       } = await fetchProductRows({ includeEventCatalog });
       if (!alive || sequence !== loadSequence) return;
+      let studentPrices = null;
+      if (authReady && user?.uid && user?.role === 'pro') {
+        const result = await supabase.rpc('get_my_student_product_prices');
+        if (!alive || sequence !== loadSequence) return;
+        // Older DB without 1C means OFF; network/authorization failures are not OFF.
+        if (result.error && !['PGRST202', '42883'].includes(result.error.code)) {
+          setErrorText('會員價格暫時無法確認，請重新整理後再結帳。');
+          setStatus('error');
+          return;
+        }
+        if (result.data?.enabled === true) studentPrices = result.data.prices;
+      }
+      const withStudentPrices = list => list.map(product => {
+        if (!studentPrices) return product;
+        const rows = studentPrices.filter(row => Number(row.product_id) === Number(product.id));
+        return { ...product, studentPriceUserId:user.uid,
+          studentDefaultVariantId:product.variants?.find(v => v.isDefault)?.id || product.variants?.[0]?.id,
+          studentUnitPrices:Object.fromEntries(rows.map(row => [String(row.variant_id), Number(row.unit_price)])) };
+      });
       const eventVariantMap = groupProductVariants(eventVariantRows);
       const eventImageMap = eventError ? null : groupProductImages(eventImageRows);
       const loadedEventProducts = eventError
         ? []
-        : mergeProductsWithStock(eventData || [], eventVariantMap, eventImageMap, { includeInactive: true });
+        : withStudentPrices(mergeProductsWithStock(eventData || [], eventVariantMap, eventImageMap, { includeInactive: true }));
       setEventProducts(loadedEventProducts);
       setEventStatus(eventError ? 'error' : 'ready');
       if (error) {
@@ -75,7 +95,7 @@ export default function useProducts(user, setCart, authReady = true, includeEven
         );
       }
       const imageMap = imageError ? null : groupProductImages(imageRows);
-      const loadedProducts = mergeProductsWithStock(data || [], variantMap, imageMap);
+      const loadedProducts = withStudentPrices(mergeProductsWithStock(data || [], variantMap, imageMap));
       hasLoadedProducts.current = true;
       setProducts(loadedProducts);
       setStatus('ready');
@@ -115,13 +135,16 @@ export default function useProducts(user, setCart, authReady = true, includeEven
     // Refresh prices after returning to the tab, even if Realtime is unavailable.
     const refreshOnFocus = () => loadProducts();
     window.addEventListener('focus', refreshOnFocus);
+    const refreshOnVisible = () => { if (document.visibilityState === 'visible') loadProducts(); };
+    document.addEventListener('visibilitychange', refreshOnVisible);
 
     return () => {
       alive = false;
       window.removeEventListener('focus', refreshOnFocus);
+      document.removeEventListener('visibilitychange', refreshOnVisible);
       removeRealtimeChannel(channel);
     };
-  }, [authReady, includeEventCatalog, user?.role, setCart]);
+  }, [authReady, includeEventCatalog, user?.uid, user?.role, setCart]);
 
   return {
     products,

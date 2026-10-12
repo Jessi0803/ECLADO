@@ -13,7 +13,7 @@ async function setup(page:Page,allowed=true,memberRole='instructor'){
     const p=route.request().postDataJSON().p_payload;
     const subtotal=p.items.reduce((sum:number,item:any)=>sum+item.qty*item.unit_price,0);
     const shipping=p.shipping_mode==='free'?0:p.shipping_mode==='custom'?p.shipping_amount:120;
-    return route.fulfill({json:{subtotal,shipping,default_shipping:120,total:subtotal+shipping,discount:0,shopping_credit_amount:p.shopping_credit_amount,
+    return route.fulfill({json:{price_modes_supported:true,subtotal,shipping,default_shipping:120,total:subtotal+shipping,discount:0,shopping_credit_amount:p.shopping_credit_amount,
       payment_amount:subtotal+shipping-p.shopping_credit_amount,items:[],adjustments:[]}});
   });
 }
@@ -119,7 +119,7 @@ test('guest suggested retail price, manual price, snapshot and generated private
   await dialog.getByLabel('成交單價 1').fill('1000');await dialog.getByLabel('收件姓名').fill('訪客');await dialog.getByLabel('收件手機').fill('0911111111');await dialog.getByLabel('收件 Email').fill('guest@example.test');await dialog.getByLabel('收件地址').fill('台北市測試路');
   page.once('dialog',dialog=>dialog.accept());await dialog.getByRole('button',{name:'建立付款單',exact:true}).click();
   await expect(dialog.getByLabel('客戶付款連結')).toHaveValue(/order-payment#order=ECL-ASSISTED-001&token=/);
-  expect(payload.p_payload.items).toEqual([{product_id:1,variant_id:101,qty:1,unit_price:1000}]);
+  expect(payload.p_payload.items).toEqual([{product_id:1,variant_id:101,qty:1,unit_price:1000,price_mode:'MANUAL'}]);
   expect(payload.p_payload.customer_type).toBe('guest');expect(payload.p_payload.member_id).toBeNull();expect(payload.p_payload.shopping_credit_amount).toBe(0);expect(payload.p_payload.apply_automatic).toBe(true);expect(payload.p_request_key).toMatch(/^[0-9a-f-]{36}$/);
 });
 test('member product override suggested price; role and minimum exception are visible',async({page})=>{
@@ -186,7 +186,7 @@ test('discounted minimum explanation stays visible and preserves quote while typ
     const p=route.request().postDataJSON().p_payload;
     const subtotal=p.items.reduce((sum:number,item:any)=>sum+item.qty*item.unit_price,0);
     const discount=p.coupon_code==='NINE'?500:0;
-    return route.fulfill({json:{subtotal,discount,shipping:120,default_shipping:120,
+    return route.fulfill({json:{price_modes_supported:true,subtotal,discount,shipping:120,default_shipping:120,
       shopping_credit_amount:p.shopping_credit_amount,payment_amount:subtotal-discount+120-p.shopping_credit_amount,
       adjustments:[{name:'叫貨9折優惠',amount:discount}],items:[]}});
   });

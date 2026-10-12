@@ -1417,7 +1417,7 @@ test('付款查詢暫時失敗時可手動清除舊紀錄', async ({ page }) => 
   expect(await page.evaluate(() => sessionStorage.getItem('eclado_pending_payment'))).toBeNull();
 });
 
-test('後端成交價與預覽不同時直接採用權威金額建立付款單', async ({ page }) => {
+test('後端成交價與預覽不同時須重新確認才建立付款單', async ({ page }) => {
   const paymentRequests: Record<string, unknown>[] = [];
   await mockEcladoApis(page, {
     authoritativePriceDelta: 100,
@@ -1439,6 +1439,14 @@ test('後端成交價與預覽不同時直接採用權威金額建立付款單',
   await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('價差路 1 號');
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
 
+  const dismissed=new Promise<void>(resolve=>page.once('dialog',async dialog=>{
+    expect(dialog.message()).toContain('商品或優惠金額已更新');await dialog.dismiss();resolve();
+  }));
+  await page.getByRole('button', { name: /^建立付款單$/ }).click();
+  await dismissed;
+  await expect(page.getByRole('button', { name: /^建立付款單$/ })).toBeEnabled();
+  expect(paymentRequests).toHaveLength(0);
+  page.once('dialog',dialog=>dialog.accept());
   await page.getByRole('button', { name: /^建立付款單$/ }).click();
   await expect(page.getByText('付款單已建立')).toBeVisible();
   await expect(page.getByText('成交金額已由後端更新')).toHaveCount(0);

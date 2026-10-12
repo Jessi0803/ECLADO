@@ -414,6 +414,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       instructor_type_set:false, student_price_type:null, student_pricing_eligible:false,
       prices_applied:false }, instructor_settings:null, students:[], history:[] });
   });
+  await page.route('**/rest/v1/rpc/get_my_student_product_prices', async route => json(route, { enabled:false, prices:[] }));
   await page.route('**/rest/v1/rpc/get_admin_student_pricing_settings', route => json(route,
     { multipliers:{ student_1:0.9, student_2:0.95 }, version:0, prices_applied:false }));
   await page.route('**/rest/v1/rpc/get_admin_student_pricing_history', route => json(route, []));
@@ -1358,6 +1359,121 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     const request = route.request().postDataJSON();
     options.onCouponQuote?.(request);
     if (options.couponQuoteError) return json(route, { message: options.couponQuoteError }, 400);
+    if (!String(request.p_coupon_code || '').trim()) {
+    const role = String(
+      profiles.find(profile => String(profile.id) === String(authUser?.id))?.role || 'consumer',
+    );
+    const multiplier = role === 'pro' ? 1 : role === 'instructor' ? 0.7 : role === 'distributor' ? 0.65 : role === 'staff' ? 0.5 : null;
+    const canBuyPro = ['pro', 'instructor', 'distributor', 'staff'].includes(role);
+    const requestedItems = Array.isArray(request.p_items) ? request.p_items : [];
+    const authoritativeItems = requestedItems.map((requested: Record<string, unknown>, index: number) => {
+      const product = products().find(row => Number(row.id) === Number(requested.product_id));
+      const publicationStatus = String(product?.publication_status || (product?.active === false ? 'archived' : 'active'));
+      if (!product || !['active', 'event_only'].includes(publicationStatus)) throw new Error('mock product not found');
+      if (product.is_pro_only && !canBuyPro) throw new Error('mock professional membership required');
+
+      const requestedVariant = requested.variant_id == null ? '' : String(requested.variant_id);
+      const variant = requestedVariant
+        ? productVariants().find(row =>
+          Number(row.product_id) === Number(product.id)
+          && [row.id, row.sku, row.size].some(value => String(value || '') === requestedVariant))
+        : null;
+      const listPrice = Number(variant?.price ?? product.price ?? 0);
+      const professionalPrice = Number(variant?.pro_price ?? product.pro_price ?? 0);
+      const calculatedUnitPrice = multiplier == null
+        ? listPrice
+        : Math.round(professionalPrice * (product.apply_tier_multiplier === false ? 1 : multiplier));
+      const unitPrice = calculatedUnitPrice + (index === 0 ? Number(options.authoritativePriceDelta || 0) : 0);
+      const qty = Number(requested.qty);
+      const stock = Number(variant?.stock ?? product.stock ?? 0);
+      const primaryImage = productImages()
+        .filter(row => Number(row.product_id) === Number(product.id) && row.active !== false)
+        .sort((a, b) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary))
+          || Number(a.sort_order || 0) - Number(b.sort_order || 0))[0];
+      return {
+        id: Number(product.id),
+        product_id: Number(product.id),
+        publication_status: publicationStatus,
+        variant_id: requested.variant_id || null,
+        name: Number(product.id) === 2 ? '胜肽修護精華液' : `商品 ${product.id}`,
+        nameZh: Number(product.id) === 2 ? '胜肽修護精華液' : `商品 ${product.id}`,
+        size: String(variant?.size || ''),
+        image_storage_path: primaryImage?.storage_path || null,
+        img: '',
+        qty,
+        list_price: listPrice,
+        member_role: role,
+        price: unitPrice,
+        unit_price: unitPrice,
+        line_total: unitPrice * qty,
+        stock_at_order: Math.max(0, stock),
+        available_qty_at_order: Math.min(qty, Math.max(0, stock)),
+        backorder_qty_at_order: Math.max(0, qty - Math.max(0, stock)),
+        is_custom_order: variant?.is_custom_order === true,
+        fulfillment_type: stock >= qty ? 'in_stock' : 'preorder',
+        fulfillment: stock >= qty ? '現貨商品' : '含預購商品',
+        shipping_time: stock >= qty ? '出貨時間為 5 個工作天內，每週二出貨' : '出貨時間為 7-14 個工作天',
+      };
+    });
+    const subtotal = authoritativeItems.reduce((sum, item) => sum + item.line_total, 0);
+    const promotionCandidates = promotions
+      .filter(promotion => {
+        const now = Date.now();
+        return promotion.active !== false
+          && (!promotion.start_at || new Date(String(promotion.start_at)).getTime() <= now)
+          && (!promotion.end_at || new Date(String(promotion.end_at)).getTime() > now);
+      })
+      .map(promotion => {
+        const productIds = new Set(((promotion.product_ids as number[]) || []).map(Number));
+        const eligibleSubtotal = authoritativeItems
+          .filter(item => item.publication_status === 'active' && productIds.has(Number(item.product_id)))
+          .reduce((sum, item) => sum + item.line_total, 0);
+        const rate = Number(promotion.discount_rate);
+        const amount = Number(promotion.discount_amount);
+        if (
+          eligibleSubtotal <= 0
+          || !Number.isFinite(rate) || rate < 0 || rate > 1
+          || !Number.isFinite(amount) || amount < 0
+        ) return null;
+        const finalSubtotal = promotion.discount_order === 'amount_then_rate'
+          ? Math.max(0, (eligibleSubtotal - amount) * rate)
+          : Math.max(0, eligibleSubtotal * rate - amount);
+        return { promotion, discount: Math.round(eligibleSubtotal - finalSubtotal) };
+      })
+      .filter((candidate): candidate is { promotion: Record<string, unknown>; discount: number } =>
+        !!candidate && candidate.discount > 0)
+      .sort((a, b) => b.discount - a.discount);
+    const selectedPromotion = promotionCandidates[0] || null;
+    const couponApplied = Boolean(String(request.p_coupon_code || '').trim());
+    const discount = (selectedPromotion?.discount || 0) + (couponApplied ? 100 : 0);
+    const discountedSubtotal = Math.max(0, subtotal - discount);
+    const fulfillmentMethod = String(request.p_fulfillment_method || 'delivery');
+    if (!['delivery', 'onsite_pickup'].includes(fulfillmentMethod)) {
+      return json(route, { message: 'Invalid fulfillment method' }, 400);
+    }
+    if (fulfillmentMethod === 'onsite_pickup' && !authoritativeItems.every(item => item.is_custom_order)) {
+      return json(route, { message: 'Onsite pickup is available only for custom-order variants' }, 403);
+    }
+    const professionalRole = ['pro', 'instructor', 'distributor'].includes(role);
+    const appendableShippingGroup = fulfillmentMethod === 'delivery' && professionalRole
+      ? (options.myAppendableShippingGroup ?? null)
+      : null;
+    const shipping = fulfillmentMethod === 'onsite_pickup'
+      ? 0
+      : appendableShippingGroup?.id
+      ? 0
+      : role === 'staff'
+      ? 0
+      : professionalRole && discountedSubtotal >= 15000
+      ? 0
+      : (authoritativeItems.every(item => item.product_id === 9) ? 0 : 120);
+
+      return json(route, { member_role:role, items:authoritativeItems, subtotal, discount, shipping,
+        total:subtotal-discount+shipping, fulfillment_method:fulfillmentMethod,
+        shipping_group:appendableShippingGroup, is_additional_order:Boolean(appendableShippingGroup?.id),
+        promotion_id:selectedPromotion?.promotion.id || null, promotion_name:selectedPromotion?.promotion.name || null,
+        adjustments:[] });
+    }
     const requestedItems = Array.isArray(request.p_items) ? request.p_items : [];
     const items = requestedItems.map((requested: Record<string, unknown>) => {
       const product = products().find(row => Number(row.id) === Number(requested.product_id)) || {};

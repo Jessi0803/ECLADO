@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   LINE_LOGIN_PENDING_KEY,
   consumeCheckoutLoginRedirectPage,
@@ -22,11 +22,14 @@ import {
 
 export default function useAuth(setPageState) {
   const [user, setUser] = useState(null);
+  const profileLoadSequence = useRef(0);
   const [authReady, setAuthReady] = useState(false);
   const [showProBanner, setShowProBanner] = useState(false);
 
   const loadUser = useCallback(async supabaseUser => {
+    const sequence = ++profileLoadSequence.current;
     const { data } = await fetchMemberProfile(supabaseUser.id);
+    if (sequence !== profileLoadSequence.current) return;
     const displayName = data?.name
       || supabaseUser.user_metadata?.full_name
       || supabaseUser.user_metadata?.name
@@ -173,7 +176,7 @@ export default function useAuth(setPageState) {
       }
 
       if (session?.user) loadUser(session.user);
-      else if (event === 'SIGNED_OUT') setUser(null);
+      else if (event === 'SIGNED_OUT') { profileLoadSequence.current++; setUser(null); }
       if (!hasAuthCallbackInUrl()) setAuthReady(true);
     });
 
@@ -183,7 +186,19 @@ export default function useAuth(setPageState) {
     };
   }, [loadUser, setPageState]);
 
+  useEffect(() => {
+    const refresh = () => { refreshUser().catch(() => {}); };
+    const visible = () => { if (document.visibilityState === 'visible') refresh(); };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', visible);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', visible);
+    };
+  }, [refreshUser]);
+
   const handleSignOut = useCallback(() => {
+    profileLoadSequence.current++;
     signOut();
     setUser(null);
   }, []);

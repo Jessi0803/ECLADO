@@ -72,8 +72,9 @@ export async function createAuthoritativeOrder({
   invoiceCompanyName = '',
   invoiceTaxId = '',
   shoppingCreditAmount = 0,
+  expectedQuote = null,
 }) {
-  const { data, error } = await supabase.rpc('create_order_with_pricing', {
+  const args = {
     p_items: toPricingItems(items),
     p_member: member,
     p_address: address,
@@ -87,7 +88,16 @@ export async function createAuthoritativeOrder({
     p_invoice_company_name: invoiceType === 'company' ? invoiceCompanyName : null,
     p_invoice_tax_id: invoiceType === 'company' ? invoiceTaxId : null,
     p_shopping_credit_amount: shoppingCreditAmount,
-  });
+    ...(expectedQuote ? {p_expected_quote:expectedQuote} : {}),
+  };
+  let { data, error } = await supabase.rpc('create_order_with_pricing', args);
+  // Pre-1C DB has no matching overload and no student-price activation.
+  if (expectedQuote && ['PGRST202','42883'].includes(error?.code)) {
+    const readiness = await supabase.rpc('get_my_student_product_prices');
+    if (!['PGRST202','42883'].includes(readiness.error?.code)) throw error;
+    const { p_expected_quote, ...legacyArgs } = args;
+    ({ data, error } = await supabase.rpc('create_order_with_pricing', legacyArgs));
+  }
   if (error) throw error;
   if (!data?.order_id) {
     throw new Error('後端訂單報價格式不完整');

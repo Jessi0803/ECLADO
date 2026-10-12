@@ -7,7 +7,7 @@ import { getMemberShoppingCredit } from '../../services/shoppingCredit.js';
 import SearchableOrderProduct from './SearchableOrderProduct.jsx';
 
 const REQUEST_KEY='eclado.assisted-order.request';
-const emptyItem=()=>({productId:'',variantId:'',qty:1,unitPrice:''});
+const emptyItem=()=>({productId:'',variantId:'',qty:1,unitPrice:'',priceMode:'AUTO'});
 const style={width:'100%',padding:'10px 11px',border:'1px solid var(--border)',background:'var(--white)',color:'var(--dark)',fontSize:12,fontFamily:'inherit'};
 const secondaryButton={padding:'9px 12px',border:'1px solid var(--dark)',background:'var(--white)',color:'var(--dark)',fontSize:11,cursor:'pointer'};
 function readKey(){ try{return sessionStorage.getItem(REQUEST_KEY)||'';}catch{return '';} }
@@ -45,7 +45,7 @@ export default function AssistedOrderDialog({members=[],products=[],initialMembe
   const payload={...form,customer_type:customerType,member_id:customerType==='member'?memberId:null,
     shopping_credit_amount:Number(form.shopping_credit_amount),
     shipping_amount:form.shipping_mode==='custom'?Number(form.shipping_amount):null,
-    items:items.map(item=>({product_id:Number(item.productId),variant_id:Number(item.variantId),qty:Number(item.qty),unit_price:Number(item.unitPrice)}))};
+    items:items.map(item=>({product_id:Number(item.productId),variant_id:Number(item.variantId),qty:Number(item.qty),unit_price:Number(item.unitPrice),price_mode:item.priceMode}))};
   // Explanations are submitted and audited, but do not change pricing. Keeping
   // them out of the quote key prevents the discounted-minimum field disappearing
   // as soon as the administrator starts entering its required explanation.
@@ -54,7 +54,7 @@ export default function AssistedOrderDialog({members=[],products=[],initialMembe
   const currentQuote=quote?.key===payloadKey?quote.data:null;
   const defaultShipping=currentQuote?.default_shipping??calculateShipping(chosen,user,subtotal,form.fulfillment_method);
   const shipping=form.shipping_mode==='default'?defaultShipping:form.shipping_mode==='free'?0:Number(form.shipping_amount||0);
-  const needsMinimum=['pro','instructor','distributor','staff'].includes(role) && subtotal-Number(currentQuote?.discount||0)<5000;
+  const needsMinimum=['pro','instructor','distributor','staff'].includes(role) && Number(currentQuote?.subtotal??subtotal)-Number(currentQuote?.discount||0)<5000;
   useEffect(()=>{
     let active=true;setBalance(null);setCreditError('');
     if(customerType==='member'&&memberId)getMemberShoppingCredit(memberId).then(({data,error})=>{
@@ -62,6 +62,17 @@ export default function AssistedOrderDialog({members=[],products=[],initialMembe
     }).catch(()=>{if(active)setCreditError('無法讀取購物金餘額。');});
     return()=>{active=false;};
   },[customerType,memberId]);
+  useEffect(()=>{
+    let active=true;
+    const refresh=()=>{
+      if(locked || busy || items.some(item=>!item.variantId) || (customerType==='member'&&!memberId)) return;
+      quoteAssistedOrder(payload).then(data=>{assertModeSupport(data);if(active)setQuote({key:payloadKey,data});})
+        .catch(err=>{if(active){setQuote(null);setError(err.message);}});
+    };
+    const timer=setTimeout(refresh,250);
+    window.addEventListener('focus',refresh);
+    return()=>{active=false;clearTimeout(timer);window.removeEventListener('focus',refresh);};
+  },[payloadKey,locked]);
   function fillMember(value){
     const selected=members.find(entry=>String(entry.id)===String(value));
     setMemberId(value); setItems([emptyItem()]);
@@ -83,16 +94,21 @@ export default function AssistedOrderDialog({members=[],products=[],initialMembe
   function selectProduct(index,value){
     const product=availableProducts.find(product=>String(product.id)===value);
     const variant=product?.variants?.find(variant=>variant.active!==false && variant.isDefault)||product?.variants?.find(variant=>variant.active!==false);
-    updateItem(index,{productId:value,variantId:variant?String(variant.id):'',unitPrice:variant?getMemberPrice({...product,...variant},user):''});
+    updateItem(index,{productId:value,variantId:variant?String(variant.id):'',unitPrice:variant?getMemberPrice({...product,...variant},user):'',priceMode:'AUTO'});
   }
   function selectVariant(index,value){
     const product=availableProducts.find(product=>String(product.id)===items[index].productId);
     const variant=product?.variants?.find(variant=>String(variant.id)===value);
-    updateItem(index,{variantId:value,unitPrice:variant?getMemberPrice({...product,...variant},user):''});
+    updateItem(index,{variantId:value,unitPrice:variant?getMemberPrice({...product,...variant},user):'',priceMode:'AUTO'});
+  }
+  function assertModeSupport(data){
+    if(items.some(item=>item.priceMode==='AUTO') && data?.price_modes_supported!==true) {
+      throw new Error('後端尚未支援 AUTO 計價；請先完成 1C 資料庫安裝，或明確選擇 MANUAL 指定單價。');
+    }
   }
   async function preview(){
     if(submitting.current)return;submitting.current=true;setBusy(true);setError('');
-    try{const data=await quoteAssistedOrder(payload);setQuote({key:payloadKey,data});}
+    try{const data=await quoteAssistedOrder(payload);assertModeSupport(data);setQuote({key:payloadKey,data});}
     catch(err){setError(err.message);}finally{submitting.current=false;setBusy(false);}
   }
   async function submit(event){
@@ -105,7 +121,7 @@ export default function AssistedOrderDialog({members=[],products=[],initialMembe
       // coupon limits and wallet balance, rather than trusting this preview.
       submitting.current=true;setBusy(true);setError('');
       let finalQuote;
-      try{finalQuote=await quoteAssistedOrder(payload);setQuote({key:payloadKey,data:finalQuote});}
+      try{finalQuote=await quoteAssistedOrder(payload);assertModeSupport(finalQuote);setQuote({key:payloadKey,data:finalQuote});}
       catch(err){setError(err.message);return;}finally{submitting.current=false;setBusy(false);}
       if(!window.confirm(`建立後資料鎖定、立即保留庫存與購物金，付款期限 48 小時。\n折抵 NT$${Number(finalQuote.discount).toLocaleString()}、購物金 NT$${Number(finalQuote.shopping_credit_amount).toLocaleString()}，銀行付款 NT$${Number(finalQuote.payment_amount).toLocaleString()}，確定建立？`))return;
       request.current.payload={...payload,expected_quote:finalQuote.confirmation};
@@ -154,14 +170,16 @@ export default function AssistedOrderDialog({members=[],products=[],initialMembe
           <label>客戶類型<select aria-label="客戶類型" value={customerType} onChange={event=>{setCustomerType(event.target.value);fillMember('');}} style={style}><option value="guest">訪客</option><option value="member">現有會員</option></select></label>
           {customerType==='member'&&<div style={{display:'grid',gap:10,marginBottom:14}}><input aria-label="搜尋會員" placeholder="搜尋姓名／Email／手機" value={search} onChange={event=>setSearch(event.target.value)} style={style}/><select aria-label="選擇會員" required value={memberId} onChange={event=>fillMember(event.target.value)} style={style}><option value="">請選擇會員</option>{members.filter(member=>!String(member.id).startsWith('app:')&&`${member.name} ${member.email} ${member.phone}`.toLowerCase().includes(search.toLowerCase())).map(member=><option key={member.id} value={member.id}>{member.name} · {MEMBER_TIERS[member.type]?.label||'一般會員'} · {member.email}</option>)}</select></div>}
           <h3 style={{margin:'20px 0 12px'}}>商品明細</h3>
-          {items.map((item,index)=>{const product=availableProducts.find(product=>String(product.id)===item.productId);return <div key={index} className="assisted-order-product" style={{border:'1px solid var(--border)',background:'var(--off)',padding:12,marginBottom:10}}>
+          {items.map((item,index)=>{const product=availableProducts.find(product=>String(product.id)===item.productId);const serverLine=currentQuote?.items?.find(line=>String(line.variant_id)===item.variantId && line.line_type!=='gift');const shownUnitPrice=item.priceMode==='AUTO'&&serverLine?serverLine.unit_price:item.unitPrice;return <div key={index} className="assisted-order-product" style={{border:'1px solid var(--border)',background:'var(--off)',padding:12,marginBottom:10}}>
             <SearchableOrderProduct products={availableProducts} value={item.productId} onChange={value=>selectProduct(index,value)} label={`商品 ${index+1}`} style={style} required>{selector=><div className="historical-order-product-grid">
             <label>商品{selector}</label>
             <label>規格／SKU<select aria-label={`規格 ${index+1}`} required value={item.variantId} onChange={event=>selectVariant(index,event.target.value)} style={style}><option value="">請選擇規格</option>{product?.variants?.filter(variant=>variant.active!==false).map(variant=><option key={variant.id} value={variant.id}>{variant.size} · {variant.sku} · 現貨 {variant.stock}{variant.isCustomOrder?'（可預購）':''}</option>)}</select></label>
             </div>}</SearchableOrderProduct>
-            <div className="historical-order-price-grid"><label>數量<input aria-label={`數量 ${index+1}`} type="number" min="1" max="9999" step="1" required value={item.qty} onChange={event=>updateItem(index,{qty:event.target.value})} style={style}/></label><label>成交單價<input aria-label={`成交單價 ${index+1}`} type="number" min="0" max="9999999" step="1" required value={item.unitPrice} onChange={event=>updateItem(index,{unitPrice:event.target.value})} style={style}/></label><div style={{paddingBottom:10}}><div style={{fontSize:10,color:'var(--mid)',marginBottom:5}}>小計</div><div style={{fontSize:13}}>NT$ {(Number(item.qty)*Number(item.unitPrice)).toLocaleString()}</div></div><button type="button" disabled={items.length===1} style={{padding:'10px 12px',border:'1px solid var(--border)',background:'var(--white)',color:'var(--red)',fontSize:11,cursor:'pointer'}} onClick={()=>setItems(items.filter((_,i)=>i!==index))}>移除</button></div>
+            <label>單價模式<select aria-label={`單價模式 ${index+1}`} value={item.priceMode} onChange={event=>updateItem(index,{priceMode:event.target.value})} style={style}><option value="AUTO">AUTO 系統計價</option><option value="MANUAL">MANUAL 指定單價</option></select></label>
+            <div className="historical-order-price-grid"><label>數量<input aria-label={`數量 ${index+1}`} type="number" min="1" max="9999" step="1" required value={item.qty} onChange={event=>updateItem(index,{qty:event.target.value})} style={style}/></label><label>成交單價<input aria-label={`成交單價 ${index+1}`} type="number" min="0" max="9999999" step="1" required value={shownUnitPrice} onChange={event=>updateItem(index,{unitPrice:event.target.value,priceMode:'MANUAL'})} style={style}/></label><div style={{paddingBottom:10}}><div style={{fontSize:10,color:'var(--mid)',marginBottom:5}}>小計</div><div style={{fontSize:13}}>NT$ {(Number(item.qty)*Number(shownUnitPrice)).toLocaleString()}</div></div><button type="button" disabled={items.length===1} style={{padding:'10px 12px',border:'1px solid var(--border)',background:'var(--white)',color:'var(--red)',fontSize:11,cursor:'pointer'}} onClick={()=>setItems(items.filter((_,i)=>i!==index))}>移除</button></div>
           </div>;})}
           <button type="button" style={secondaryButton} disabled={items.length>=100} onClick={()=>setItems([...items,emptyItem()])}>＋新增商品</button>
+          {currentQuote?.items?.filter(line=>line.line_type!=='gift').map((line,index)=><p key={line.variant_id} style={{fontSize:12}}>商品 {index+1} 後端單價：NT$ {Number(line.unit_price).toLocaleString()}</p>)}
           <h3 style={{margin:'20px 0 12px'}}>促銷、優惠券與購物金</h3>
           <label style={{display:'flex',gap:8,alignItems:'center',marginBottom:12}}><input type="checkbox" checked={form.apply_automatic} onChange={event=>setForm({...form,apply_automatic:event.target.checked})}/>套用自動促銷與贈品</label>
           {field('coupon_code','優惠券代碼')}

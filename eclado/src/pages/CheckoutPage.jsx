@@ -258,7 +258,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     .join('|');
 
   useEffect(() => {
-    if (!appliedCouponCode) return;
+    if (!appliedCouponCode) { setCouponQuote(null); return; }
     setAppliedCouponCode('');
     setCouponQuote(null);
     setCouponState({ loading: false, error: '購物內容或收件資料已變更，請重新套用優惠碼。' });
@@ -358,8 +358,28 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     setPaymentError('');
     setSubmitting(true);
     try {
+      const latestQuote = await quoteAuthoritativeOrder({
+        items:cart, fulfillmentMethod, couponCode:appliedCouponCode, email:form.email,
+      });
+      const latestSummary = toPaymentSummary(latestQuote);
+      const visible = baseCheckoutSummary;
+      const amountChanged = ['subtotal','discount','shipping','total'].some(key => Number(latestSummary[key]) !== Number(visible[key]));
+      const itemChanged = cart.some(item => {
+        const line = latestQuote.items.find(line => Number(line.product_id || line.id) === Number(item.id)
+          && (!item.variantId || String(line.variant_id) === String(item.variantId)) && line.line_type !== 'gift');
+        return !line || Number(line.unit_price) !== getMemberPrice(item,user);
+      });
+      if (amountChanged || itemChanged) {
+        setCouponQuote(latestSummary);
+        if (!window.confirm(`商品或優惠金額已更新，最新訂單總額 NT$${Number(latestQuote.total).toLocaleString()}。請確認是否使用最新報價建立訂單。`)) return;
+      }
       const authoritativeOrder = await createAuthoritativeOrder({
-          items: cart.map(item => ({ ...item, ...(item.memberPricingReady ? { expectedUnitPrice:getMemberPrice(item, user) } : {}) })),
+          items: cart.map(item => {
+            const line = latestQuote.items.find(line => Number(line.product_id || line.id) === Number(item.id)
+              && (!item.variantId || String(line.variant_id) === String(item.variantId)) && line.line_type !== 'gift');
+            if (!line) throw new Error('商品報價不完整，請重新整理。');
+            return { ...item, expectedUnitPrice:Number(line.unit_price) };
+          }),
           member: form.name || user?.name || '訪客',
           address: fulfillmentMethod === FULFILLMENT_DELIVERY
             ? `${form.city}${form.district}${form.address}`
@@ -374,6 +394,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
           invoiceCompanyName: invoiceCompanyName.trim(),
           invoiceTaxId: invoiceTaxId.trim(),
           shoppingCreditAmount: appliedShoppingCredit,
+          expectedQuote:latestQuote,
         });
       const authoritativeOrderNo = authoritativeOrder.order_id;
       setOrderNo(authoritativeOrderNo);

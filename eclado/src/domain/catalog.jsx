@@ -27,6 +27,11 @@ export function getMemberTier(user) {
 
 export function getMemberPrice(product, user) {
   const tier = getMemberTier(user);
+  if (getMemberRole(user) === 'pro' && user?.uid && product.studentPriceUserId === user.uid) {
+    const variantId = String(product.variantId || product.studentDefaultVariantId || '');
+    const price = product.studentUnitPrices?.[variantId];
+    if (Number.isFinite(price)) return price;
+  }
   if (!tier.multiplier) return product.price;
   const multiplier = getProductMultiplier(product, getMemberRole(user));
   const base = usesFixedProfessionalPrice(product, getMemberRole(user))
@@ -35,6 +40,7 @@ export function getMemberPrice(product, user) {
 }
 
 export function getProductPriceLabel(product, user) {
+  if (getMemberRole(user) === 'pro' && user?.uid && product.studentPriceUserId === user.uid) return '學生專屬價';
   const multiplier = getProductMultiplier(product, getMemberRole(user));
   if (multiplier === null) return '一般價';
   if (multiplier === 1) return getMemberRole(user) === 'pro' ? '專業價' : '固定專業價';
