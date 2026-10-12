@@ -6,6 +6,7 @@ import { orderBelongsToMember } from '../domain/mappers.js';
 import usePanelHistory from '../hooks/usePanelHistory.js';
 import MemberNoteSection from '../components/MemberNoteSection.jsx';
 import MemberShoppingCreditSection from '../components/MemberShoppingCreditSection.jsx';
+import InstructorStudentSection from '../components/InstructorStudentSection.jsx';
 import ProfessionalQuarterSection from '../components/ProfessionalQuarterSection.jsx';
 import { supabase } from '../../services/supabase.js';
 import { PROFESSIONAL_CERTIFICATE_BUCKET } from '../../services/professionalApplications.js';
@@ -114,7 +115,7 @@ export default function Members({
   applications = [], applicationsLoading = false, applicationsError = '',
   onChangeMemberRole, onChangeMembershipStart, onSaveSalesAdjustment, onUpdateApplicationStatus, onSendApplicationNotice, onDeleteMember, currentAdminUserId = '', onAssignGuestOrder, defaultFilter = 'all',
   focusMemberId = '', backToOrderId = '', onOpenOrder, onClearCrossLink, memberNotes = {}, onSaveMemberNote,
-  canManageShoppingCredit = false, onCreateHistoricalOrder, onCreateAssistedOrder,
+  canManageShoppingCredit = false, canManageInstructorStudents = false, onCreateHistoricalOrder, onCreateAssistedOrder,
 }) {
   const [filter, setFilter] = useState(defaultFilter);
   const [searchQuery, setSearchQuery] = useState('');
@@ -437,6 +438,7 @@ export default function Members({
           {!(typeof selected.id === 'string' && selected.id.startsWith('app:')) && (
             <>
               <MemberShoppingCreditSection memberId={selected.id} canManage={canManageShoppingCredit} />
+              <InstructorStudentSection key={selected.id} member={selected} members={members} canManage={canManageInstructorStudents} />
               <MemberNoteSection memberId={selected.id} note={memberNotes[String(selected.id)]} onSave={onSaveMemberNote} />
             </>
           )}

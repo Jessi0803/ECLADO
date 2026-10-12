@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { PRICING_ROLES, PRICING_LABELS, parseFold, formatFold } from '../../domain/memberPricing.js';
 import { fetchMemberPricingSettings, saveMemberPricingSettings } from '../../services/memberPricing.js';
+import StudentPricingSettingsSection from '../components/StudentPricingSettingsSection.jsx';
 
-export default function MemberPricingPage({ onSaved }) {
+export default function MemberPricingPage({ onSaved, canManageMemberPricing = true, canManageInstructorStudents = false }) {
   const [snapshot, setSnapshot] = useState(null);
   const [draft, setDraft] = useState({});
   const [busy, setBusy] = useState(false);
@@ -22,7 +23,7 @@ export default function MemberPricingPage({ onSaved }) {
       setError(`無法載入設定：${err.message}。若尚未部署，請先執行 supabase-member-pricing.sql。`);
     } finally { setBusy(false); }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { if (canManageMemberPricing) load(); }, [canManageMemberPricing]);
 
   async function save(event) {
     event.preventDefault();
@@ -48,7 +49,7 @@ export default function MemberPricingPage({ onSaved }) {
   return <div>
     <h1 style={{ fontFamily:'var(--font-d)', fontSize:28, fontWeight:400, marginBottom:4 }}>系統設定</h1>
     <p style={{ fontSize:13, color:'var(--mid)', marginBottom:28 }}>會員定價：設定師資、經銷商與內部人員的預設折數。</p>
-    <form onSubmit={save} style={{ maxWidth:720, padding:24, background:'var(--white)', border:'1px solid var(--border)' }}>
+    {canManageMemberPricing && <form onSubmit={save} style={{ maxWidth:720, padding:24, background:'var(--white)', border:'1px solid var(--border)' }}>
       <h2 style={{ fontSize:18, marginBottom:18 }}>會員定價</h2>
       {PRICING_ROLES.map(role => <label key={role} style={{ display:'block', marginBottom:16, fontSize:13 }}>
         {PRICING_LABELS[role]}預設折數
@@ -61,6 +62,7 @@ export default function MemberPricingPage({ onSaved }) {
       <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}><button type="submit" disabled={busy || !snapshot} style={{ padding:'10px 20px', background:'var(--dark)', color:'#fff', border:0 }}>儲存全域折數</button><button type="button" disabled={busy} onClick={load} style={{ padding:'10px 20px', border:'1px solid var(--dark)', background:'var(--white)', color:'var(--dark)', fontSize:12, cursor:busy?'not-allowed':'pointer', opacity:busy?0.45:1 }}>重新載入</button></div>
       {error && <p role="alert" style={{ color:'var(--red)', marginTop:16 }}>{error}</p>}
       {message && <p role="status" style={{ color:'var(--green)', marginTop:16 }}>{message}</p>}
-    </form>
+    </form>}
+    {canManageInstructorStudents && <StudentPricingSettingsSection />}
   </div>;
 }

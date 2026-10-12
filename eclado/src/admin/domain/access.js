@@ -2,6 +2,7 @@ export const BACKOFFICE_PERMISSIONS = Object.freeze({
   CATALOG_READ: 'catalog.read',
   CATALOG_WRITE: 'catalog.write',
   MEMBER_PRICING_MANAGE: 'member_pricing.manage',
+  INSTRUCTOR_STUDENTS_MANAGE: 'instructor_students.manage',
   ORDERS_READ: 'orders.read',
   ORDERS_WRITE: 'orders.write',
   MEMBERS_READ: 'members.read',
@@ -54,6 +55,7 @@ export function hasBackofficePermission(access, permission) {
 }
 
 export function canAccessBackofficePage(access, page) {
+  if (page === 'settings' && hasBackofficePermission(access, BACKOFFICE_PERMISSIONS.INSTRUCTOR_STUDENTS_MANAGE)) return true;
   const permission = PAGE_PERMISSIONS[page];
   return Boolean(permission) && hasBackofficePermission(access, permission);
 }
