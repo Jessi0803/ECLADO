@@ -2,7 +2,7 @@ import React,{useEffect,useState} from 'react';
 import {getMyInstructorRewards,getAdminInstructorRewards} from '../../services/instructorRewards.js';
 const buttonStyle={padding:'9px 14px',border:'1px solid var(--light)',background:'var(--white)',color:'var(--dark)',fontFamily:'inherit',cursor:'pointer'};
 const money=value=>`NT$ ${Number(value||0).toLocaleString('zh-TW')}`;
-const labels={pending:'待入帳',credited:'已入帳',cancelled:'已作廢',reversed:'已扣回',credit:'正式入帳',cancel:'待入帳作廢',reverse:'扣回'};
+const labels={pending:'待入帳',credited:'已入帳',cancelled:'已作廢',reversed:'已扣回',credit:'正式入帳',cancel:'待入帳作廢',reverse:'扣回',spend_reserve:'購物保留',spend_consume:'購物扣用',spend_release:'購物釋放',spend_refund:'購物返還'};
 const time=value=>new Date(value).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'});
 export default function InstructorRewardsPanel({userId,instructorId,admin=false}){
   const [report,setReport]=useState(null),[error,setError]=useState(''),[loading,setLoading]=useState(true);
@@ -27,9 +27,10 @@ export default function InstructorRewardsPanel({userId,instructorId,admin=false}
     {error&&<p role="alert">{error}</p>}
     {report&&<>
       <div style={{display:'flex',flexWrap:'wrap',gap:20,margin:'20px 0'}}>
-        {[['待入帳',report.summary.pending_balance],['累計已入帳',report.summary.credited_total],['累計扣回',report.summary.reversed_total],['帳戶餘額',report.summary.balance],['可用餘額',report.summary.available_balance]].map(([label,value])=><div key={label}><div>{label}</div><strong>{money(value)}</strong></div>)}
+        {[['購物保留',report.summary.reserved_balance||0],['待入帳',report.summary.pending_balance],['累計已入帳',report.summary.credited_total],['累計扣回',report.summary.reversed_total],['帳戶餘額',report.summary.balance],['可用餘額',report.summary.available_balance]].map(([label,value])=><div key={label}><div>{label}</div><strong>{money(value)}</strong></div>)}
       </div>
       {Number(report.summary.balance)<0&&<p>帳戶為負餘額，後續入帳將抵銷負餘額。</p>}
+      {(report.payment_exceptions||[]).map(entry=><p role="alert" key={entry.order_id}>{entry.order_id}：已收款但返饋金帳務異常，請聯繫管理員處理。</p>)}
       <h3>歷史學生訂單</h3>
       {!report.orders.length&&<p>目前沒有返饋訂單紀錄。</p>}
       {report.orders.map(order=><article key={order.order_id} style={{borderTop:'1px solid var(--light)',padding:'16px 0'}}>
@@ -43,7 +44,7 @@ export default function InstructorRewardsPanel({userId,instructorId,admin=false}
       {!report.entries.length&&<p>目前沒有帳務紀錄。</p>}
       {report.entries.map(entry=><div key={entry.id} style={{borderTop:'1px solid var(--light)',padding:'12px 0'}}>
         <div>{entry.order_id} · {labels[entry.event_type]||entry.event_type} · {money(entry.amount)}</div>
-        <div>{time(entry.created_at)} · 餘額 {money(entry.balance_after)} · 待入帳 {money(entry.pending_after)}</div>
+        <div>{time(entry.created_at)} · 餘額 {money(entry.balance_after)} · 待入帳 {money(entry.pending_after)} · 購物保留 {money(entry.reserved_after||0)}</div>
       </div>)}
       {pager(ledgerOffset,setLedgerOffset,report.ledger_count,'帳務')}
     </>}

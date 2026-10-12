@@ -19,7 +19,7 @@ export default function InstructorRewardsPage({adminUserId}){
       <div style={{display:'flex',flexWrap:'wrap',gap:12,margin:'20px 0'}}>{data.accounts.map(account=><button type="button" key={account.id} onClick={()=>setSelected(account.id)} aria-pressed={selected===account.id} style={{...buttonStyle,padding:16,maxWidth:'100%',overflowWrap:'anywhere',textAlign:'left'}}>
         <strong>{account.name||'已刪除會員'}</strong><div>{account.id}</div>
         <div>餘額 NT$ {Number(account.balance).toLocaleString('zh-TW')} · 待入帳 NT$ {Number(account.pending_balance).toLocaleString('zh-TW')}</div>
-        <div>有效綁定學生 {account.student_count} 位{account.account_status==='closed'?' · 帳戶已關閉':''}{account.inconsistent?' · 帳務需查核':''}</div>
+        <div>有效綁定學生 {account.student_count} 位{account.account_status==='closed'?' · 帳戶已關閉':''}{account.inconsistent?' · 帳務需查核':''}{Number(account.exception_count)>0?` · 付款異常 ${account.exception_count} 筆`:''}</div>
       </button>)}</div>
       <button style={buttonStyle} type="button" disabled={offset===0} onClick={()=>setOffset(Math.max(0,offset-20))}>上一頁帳戶</button>
       <button style={buttonStyle} type="button" disabled={offset+20>=data.total} onClick={()=>setOffset(offset+20)}>下一頁帳戶</button>

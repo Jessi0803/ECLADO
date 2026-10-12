@@ -415,6 +415,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       prices_applied:false }, instructor_settings:null, students:[], history:[] });
   });
   await page.route('**/rest/v1/rpc/get_my_student_product_prices', async route => json(route, { enabled:false, prices:[] }));
+  await page.route('**/rest/v1/rpc/get_my_reward_credit', r => json(r, {code:'PGRST202',message:'stage 4 not installed'},404));
   await page.route('**/rest/v1/rpc/get_my_instructor_reward_report', r => json(r, {summary:{balance:0,available_balance:0,pending_balance:0,credited_total:0,reversed_total:0},order_count:0,ledger_count:0,orders:[],entries:[]}));
   await page.route('**/rest/v1/rpc/get_admin_instructor_reward_accounts', r => json(r, {total:0,accounts:[]}));
   await page.route('**/rest/v1/rpc/get_admin_instructor_reward_report', r => json(r, {summary:{balance:0,available_balance:0,pending_balance:0,credited_total:0,reversed_total:0},order_count:0,ledger_count:0,orders:[],entries:[]}));

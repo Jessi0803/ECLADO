@@ -24,6 +24,7 @@ import {
 } from '../domain/payments.js';
 import { createAuthoritativeOrder, quoteAuthoritativeOrder } from '../services/orders.js';
 import { createSinopacPayment, querySinopacPayment } from '../services/paymentApi.js';
+import {getMyRewardCredit} from '../services/instructorRewards.js';
 import { getMyShoppingCredit } from '../services/shoppingCredit.js';
 import { getMyAppendableShippingGroup } from '../services/shippingGroups.js';
 import {
@@ -72,6 +73,10 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   const [shoppingCredit, setShoppingCredit] = useState({ available: 0, loading: false, error: '' });
   const [useShoppingCredit, setUseShoppingCredit] = useState(false);
   const [shoppingCreditAmount, setShoppingCreditAmount] = useState(0);
+  const [rewardCredit,setRewardCredit]=useState({available:0,loading:false,error:'',ready:false});
+  const [rewardCreditAmount,setRewardCreditAmount]=useState(0);
+  const [useRewardCredit,setUseRewardCredit]=useState(false);
+  const [walletRevision,setWalletRevision]=useState(0);
   const [shippingGroup, setShippingGroup] = useState(null);
   const [shippingGroupError, setShippingGroupError] = useState('');
   const submittingRef = useRef(false);
@@ -112,10 +117,13 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   const appliedShoppingCredit = useShoppingCredit
     ? Math.min(Math.max(0, Math.floor(Number(shoppingCreditAmount) || 0)), maximumShoppingCredit)
     : 0;
+  const maximumRewardCredit=getMemberRole(user)==='instructor'?Math.max(0,Math.min(rewardCredit.available,Math.floor(eligibleMerchandiseAmount)-appliedShoppingCredit,Math.floor(Number(baseCheckoutSummary.total||0)-1)-appliedShoppingCredit)):0;
+  const appliedRewardCredit=useRewardCredit?Math.min(Math.max(0,Math.floor(Number(rewardCreditAmount)||0)),maximumRewardCredit):0;
   const checkoutSummary = {
     ...baseCheckoutSummary,
     shoppingCreditAmount: appliedShoppingCredit,
-    paymentTotal: Number(baseCheckoutSummary.total || 0) - appliedShoppingCredit,
+    rewardCreditAmount:appliedRewardCredit,
+    paymentTotal: Number(baseCheckoutSummary.total || 0) - appliedShoppingCredit - appliedRewardCredit,
   };
   const activeShippingGroup = baseCheckoutSummary.shippingGroup || (
     fulfillmentMethod === FULFILLMENT_DELIVERY ? shippingGroup : null
@@ -204,10 +212,19 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     invoiceDefaultsLoadedRef.current = true;
   }, [user?.uid, user?.role, user?.defaultInvoiceCompanyName, user?.defaultInvoiceTaxId]);
 
+  useEffect(()=>{
+    let alive=true;
+    if(getMemberRole(user)!=='instructor'){setRewardCredit({available:0,loading:false,error:'',ready:false});return()=>{alive=false;};}
+    setRewardCredit(state=>({...state,loading:true,error:''}));
+    getMyRewardCredit().then(data=>{if(alive)setRewardCredit({available:Math.max(0,Number(data.available_balance)||0),loading:false,error:'',ready:true});})
+      .catch(error=>{if(alive)setRewardCredit({available:0,loading:false,error:error.code==='PGRST202'?'':error.message||'返饋金餘額暫時無法載入。',ready:false});});
+    return()=>{alive=false;};
+  },[user?.uid,user?.role,walletRevision]);
+  useEffect(()=>{setUseRewardCredit(false);setRewardCreditAmount(0);},[user?.uid,user?.role]);
+  useEffect(()=>{setUseShoppingCredit(false);setShoppingCreditAmount(0);},[user?.uid]);
+  useEffect(()=>{const focus=()=>setWalletRevision(r=>r+1);window.addEventListener('focus',focus);return()=>window.removeEventListener('focus',focus);},[]);
   useEffect(() => {
     let active = true;
-    setUseShoppingCredit(false);
-    setShoppingCreditAmount(0);
     if (!user?.uid) {
       setShoppingCredit({ available: 0, loading: false, error: '' });
       return () => { active = false; };
@@ -226,7 +243,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       });
     });
     return () => { active = false; };
-  }, [user?.uid]);
+  }, [user?.uid,walletRevision]);
 
   useEffect(() => {
     let active = true;
@@ -293,7 +310,8 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       invoiceCompanyName: authoritativeOrder.invoice_company_name || '',
       invoiceTaxId: authoritativeOrder.invoice_tax_id || '',
       shoppingCreditAmount: Number(authoritativeOrder.shopping_credit_amount || 0),
-      paymentTotal: Number(authoritativeOrder.payment_amount ?? authoritativeOrder.total),
+      rewardCreditAmount:Number(authoritativeOrder.reward_credit_amount||0),
+    paymentTotal: Number(authoritativeOrder.payment_amount ?? authoritativeOrder.total),
       shippingGroup: authoritativeOrder.shippingGroup,
       isAdditionalOrder: authoritativeOrder.isAdditionalOrder,
     };
@@ -348,6 +366,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       return;
     }
     if (step !== 2) return;
+    if ((useRewardCredit && (rewardCredit.loading||!rewardCredit.ready)) || (useShoppingCredit&&shoppingCredit.loading)){setPaymentError('請先重新確認可用錢包餘額。');return;}
     // React state is updated asynchronously, so multiple clicks in the same
     // event loop can enter this handler before `submitting` disables the
     // button. A synchronous ref closes that gap and prevents duplicate orders.
@@ -360,18 +379,20 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     try {
       const latestQuote = await quoteAuthoritativeOrder({
         items:cart, fulfillmentMethod, couponCode:appliedCouponCode, email:form.email,
+        walletPricing:rewardCredit.ready,shoppingCreditAmount:appliedShoppingCredit,rewardCreditAmount:appliedRewardCredit,
       });
       const latestSummary = toPaymentSummary(latestQuote);
       const visible = baseCheckoutSummary;
+      const walletChanged=rewardCredit.ready && Number(latestQuote.payment_amount)!==Number(checkoutSummary.paymentTotal);
       const amountChanged = ['subtotal','discount','shipping','total'].some(key => Number(latestSummary[key]) !== Number(visible[key]));
       const itemChanged = cart.some(item => {
         const line = latestQuote.items.find(line => Number(line.product_id || line.id) === Number(item.id)
           && (!item.variantId || String(line.variant_id) === String(item.variantId)) && line.line_type !== 'gift');
         return !line || Number(line.unit_price) !== getMemberPrice(item,user);
       });
-      if (amountChanged || itemChanged) {
+      if (amountChanged || itemChanged || walletChanged || (useRewardCredit&&Number(rewardCreditAmount)!==appliedRewardCredit)) {
         setCouponQuote(latestSummary);
-        if (!window.confirm(`商品或優惠金額已更新，最新訂單總額 NT$${Number(latestQuote.total).toLocaleString()}。請確認是否使用最新報價建立訂單。`)) return;
+        if (!window.confirm(`商品或優惠金額已更新，最新銀行應付 NT$${Number(latestQuote.payment_amount??(latestQuote.total-appliedShoppingCredit)).toLocaleString()}，購物金 NT$${Number(latestQuote.shopping_credit_amount??appliedShoppingCredit).toLocaleString()}、返饋金 NT$${Number(latestQuote.reward_credit_amount||0).toLocaleString()}。請確認是否使用最新報價建立訂單。`)) return;
       }
       const authoritativeOrder = await createAuthoritativeOrder({
           items: cart.map(item => {
@@ -394,6 +415,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
           invoiceCompanyName: invoiceCompanyName.trim(),
           invoiceTaxId: invoiceTaxId.trim(),
           shoppingCreditAmount: appliedShoppingCredit,
+          rewardCreditAmount:appliedRewardCredit,walletPricing:rewardCredit.ready,
           expectedQuote:latestQuote,
         });
       const authoritativeOrderNo = authoritativeOrder.order_id;
@@ -460,6 +482,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       const message = err?.name === 'AbortError'
         ? '付款服務連線逾時，請稍後再試或聯繫客服。'
         : '付款單建立失敗，請稍後再試或聯繫客服。' + (err?.message ? `（${err.message}）` : '');
+      setWalletRevision(r=>r+1);
       setPaymentError(message);
     } finally {
       submittingRef.current = false;
@@ -817,6 +840,13 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                     </div>
                   )}
 
+                  {getMemberRole(user)==='instructor' && (rewardCredit.ready||rewardCredit.loading||rewardCredit.error) && <div style={{border:'1px solid var(--light)',padding:'18px 20px'}}>
+                    <p style={{fontSize:10,letterSpacing:'0.2em',color:'var(--dark)',marginBottom:6}}>師資返饋金</p><p style={{fontSize:12,color:'var(--dark)',lineHeight:1.6}}>{rewardCredit.loading?'正在載入可用餘額…':`可用 NT$ ${rewardCredit.available.toLocaleString()}，本次最多 NT$ ${maximumRewardCredit.toLocaleString()}`}</p>
+                    <button style={{border:'1px solid var(--light)',background:useRewardCredit?'var(--black)':'var(--white)',color:useRewardCredit?'var(--white)':'var(--dark)',padding:'8px 12px',fontSize:11,fontFamily:'var(--font-body)',cursor:'pointer'}} type="button" role="switch" aria-label="使用返饋金" aria-checked={useRewardCredit} disabled={rewardCredit.loading||(!useRewardCredit&&maximumRewardCredit<=0)} onClick={()=>{const next=!useRewardCredit;setUseRewardCredit(next);setRewardCreditAmount(next?maximumRewardCredit:0);}}>{useRewardCredit?'已使用':'使用'}</button>
+                    {useRewardCredit&&<label>本次使用返饋金<input aria-label="返饋金使用金額" type="number" inputMode="numeric" min="0" max={maximumRewardCredit} step="1" value={rewardCreditAmount} onChange={e=>setRewardCreditAmount(e.target.value===''?'':Math.min(maximumRewardCredit,Math.max(0,Math.floor(Number(e.target.value)||0))))} style={{width:'100%',padding:11,border:'1px solid var(--light)',fontFamily:'inherit'}}/></label>}
+                    {rewardCredit.error&&<p role="alert">{rewardCredit.error}</p>}<p>僅折抵商品金額，雙錢包合計後銀行付款至少 NT$1。</p>
+                  </div>}
+
                   <div>
                     <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase', marginBottom:14 }}>付款方式</p>
                     <div style={{ display:'grid', gap:12 }}>
@@ -856,7 +886,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                   <div style={{ background:'#fffbf0', border:'1px solid #e8d9b0', padding:'12px 14px', fontSize:11, color:'#5a4a1e', lineHeight:1.85, marginBottom:10 }}>
                     ⚠ <strong>退貨說明</strong>：本訂單商品為個人衛生用品，依《消費者保護法》第 19 條之 1，<strong>已拆封商品不適用七天猶豫期退貨</strong>。未拆封商品自收到次日起 7 日內可申請退貨（運費由消費者負擔）。如有品質瑕疵，不限拆封與否均可退換（運費由本公司負擔）。詳見<a href="/info" style={{ color:'#5a4a1e' }}>退換貨政策</a>。
                   </div>
-                  <button type="submit" disabled={submitting} style={{ background: submitting ? 'var(--dark)' : 'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: submitting ? 'wait' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8, opacity: submitting ? 0.7 : 1 }}>
+                  <button type="submit" disabled={submitting||(useRewardCredit&&rewardCredit.loading)||(useShoppingCredit&&shoppingCredit.loading)} style={{ background: submitting ? 'var(--dark)' : 'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: submitting ? 'wait' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8, opacity: submitting ? 0.7 : 1 }}>
                     {submitting ? '建立付款單中...' : '建立付款單'}
                   </button>
                   {paymentError && <p style={{ fontSize:12, color:'#c0392b', textAlign:'center', lineHeight:1.6 }}>{paymentError}</p>}

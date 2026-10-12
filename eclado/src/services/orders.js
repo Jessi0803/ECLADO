@@ -47,12 +47,16 @@ export async function quoteAuthoritativeOrder({
   fulfillmentMethod = 'delivery',
   couponCode = '',
   email = '',
+  shoppingCreditAmount = 0,
+  rewardCreditAmount = 0,
+  walletPricing = false,
 }) {
-  const { data, error } = await supabase.rpc('quote_order_pricing', {
+  const { data, error } = await supabase.rpc(walletPricing ? 'quote_order_with_wallets' : 'quote_order_pricing', {
     p_items: toPricingItems(items),
     p_fulfillment_method: fulfillmentMethod,
     p_coupon_code: couponCode,
     p_guest_email: email,
+    ...(walletPricing ? {p_shopping_credit_amount:shoppingCreditAmount,p_reward_credit_amount:rewardCreditAmount} : {}),
   });
   if (error) throw error;
   return normalizeQuote(data);
@@ -72,6 +76,8 @@ export async function createAuthoritativeOrder({
   invoiceCompanyName = '',
   invoiceTaxId = '',
   shoppingCreditAmount = 0,
+  rewardCreditAmount = 0,
+  walletPricing = false,
   expectedQuote = null,
 }) {
   const args = {
@@ -88,11 +94,12 @@ export async function createAuthoritativeOrder({
     p_invoice_company_name: invoiceType === 'company' ? invoiceCompanyName : null,
     p_invoice_tax_id: invoiceType === 'company' ? invoiceTaxId : null,
     p_shopping_credit_amount: shoppingCreditAmount,
+    ...(walletPricing ? {p_reward_credit_amount:rewardCreditAmount} : {}),
     ...(expectedQuote ? {p_expected_quote:expectedQuote} : {}),
   };
-  let { data, error } = await supabase.rpc('create_order_with_pricing', args);
+  let { data, error } = await supabase.rpc(walletPricing ? 'create_order_with_wallets' : 'create_order_with_pricing', args);
   // Pre-1C DB has no matching overload and no student-price activation.
-  if (expectedQuote && ['PGRST202','42883'].includes(error?.code)) {
+  if (!walletPricing && expectedQuote && ['PGRST202','42883'].includes(error?.code)) {
     const readiness = await supabase.rpc('get_my_student_product_prices');
     if (!['PGRST202','42883'].includes(readiness.error?.code)) throw error;
     const { p_expected_quote, ...legacyArgs } = args;
@@ -105,6 +112,7 @@ export async function createAuthoritativeOrder({
   return {
     ...normalizeQuote(data),
     shopping_credit_amount: Number(data.shopping_credit_amount) || 0,
+    reward_credit_amount: Number(data.reward_credit_amount) || 0,
     payment_amount: Number(data.payment_amount ?? data.total) || 0,
     paymentToken: data.payment_token || '',
   };

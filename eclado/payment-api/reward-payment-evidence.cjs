@@ -11,3 +11,22 @@ function verifiedRewardPaymentEvidence(payment, providerOrderNo, isPaidLike) {
   return null;
 }
 module.exports={verifiedRewardPaymentEvidence};
+
+function verifiedRewardPaymentFailure(payment,providerOrderNo){
+  const order=payment?.raw?.orderQuery?.OrderList?.[0];
+  if(!order || (order.OrderNo && String(order.OrderNo).trim()!==String(providerOrderNo).trim()))return false;
+  return ['F','FAIL','FAILED','ERROR'].includes(String(order.PayStatus||order.PayFlag||'').toUpperCase());
+}
+module.exports.verifiedRewardPaymentFailure=verifiedRewardPaymentFailure;
+
+function rewardBankAmount(payment,providerOrderNo){
+ const raw=payment?.raw;
+ for(const result of [raw?.orderQuery?.OrderList?.[0],raw?.payQuery?.TSResultContent]){
+  if(result?.OrderNo && String(result.OrderNo).trim()!==String(providerOrderNo).trim())continue;
+  for(const key of ['Amount','Amt','Total','PayAmount']){
+   if(result?.[key]!=null&&result[key]!==''){const value=Number(String(result[key]).replace(/,/g,''));return Number.isFinite(value)?value:null;}
+  }
+ }
+ return null;
+}
+module.exports.rewardBankAmount=rewardBankAmount;
