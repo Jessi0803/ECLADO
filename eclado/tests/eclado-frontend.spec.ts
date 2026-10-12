@@ -2249,6 +2249,7 @@ test('師資會員專區顯示以資格期間裁切的自然季採購統計', as
   });
 
   await page.goto('/account');
+  await page.getByRole('tab', { name: '專業資格', exact: true }).click();
   const panel = page.getByRole('region', { name: '季度採購統計' });
   await expect(panel.getByText('2026 Q3（部分季度）')).toBeVisible();
   await expect(panel.getByText('2026/09/07－2026/09/30')).toBeVisible();

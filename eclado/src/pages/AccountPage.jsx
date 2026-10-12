@@ -7,6 +7,7 @@ import {
 } from '../domain/catalog.jsx';
 import QuarterlySalesPanel from '../components/account/QuarterlySalesPanel.jsx';
 import ProfessionalRenewalPanel from '../components/account/ProfessionalRenewalPanel.jsx';
+import InstructorRewardsPanel from '../components/account/InstructorRewardsPanel.jsx';
 import ShoppingCreditPanel from '../components/account/ShoppingCreditPanel.jsx';
 import { getOrderStatusLabel, getPaymentStateColor, getPaymentStateLabel } from '../domain/payments.js';
 import { isQuarterlySalesRole, normalizeProfessionalSales } from '../domain/professionalSales.js';
@@ -34,6 +35,8 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
   const isMobile = useIsMobile();
   const isAdmin = useAdminAccess(user?.uid);
   const [accountTab, setAccountTab] = useState('orders');
+  const hasRewardsTab = getMemberRole(user) === 'instructor';
+  const showRewardsTab = hasRewardsTab && accountTab === 'rewards';
   const hasProfessionalTab = isQuarterlySalesRole(getMemberRole(user));
   const showProfessionalTab = hasProfessionalTab && accountTab === 'professional';
   const [orders, setOrders] = useState([]);
@@ -502,7 +505,7 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
           <section>
             {hasProfessionalTab && (
               <div role="tablist" aria-label="會員專區內容" style={{ display:'flex', gap:isMobile ? 24 : 32, borderBottom:'1px solid var(--light)', marginBottom:28 }}>
-                {[['orders', '我的訂單'], ['professional', '專業資格']].map(([value, label]) => (
+                {[['orders', '我的訂單'], ['professional', '專業資格'], ...(hasRewardsTab ? [['rewards', '師資返饋金']] : [])].map(([value, label]) => (
                   <button key={value} type="button" role="tab" id={`account-tab-${value}`} aria-selected={accountTab === value} aria-controls={`account-panel-${value}`} onClick={() => setAccountTab(value)}
                     style={{ border:'none', borderBottom:accountTab === value ? '2px solid var(--black)' : '2px solid transparent', background:'none', color:accountTab === value ? 'var(--black)' : 'var(--mid)', padding:'12px 0', fontSize:14, fontFamily:'inherit', cursor:'pointer' }}>
                     {label}
@@ -528,7 +531,8 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
               />
               </div>
             )}
-            {!showProfessionalTab && (
+            {showRewardsTab && <div role="tabpanel" id="account-panel-rewards" aria-labelledby="account-tab-rewards"><InstructorRewardsPanel key={user.uid} userId={user.uid} /></div>}
+            {!showProfessionalTab && !showRewardsTab && (
               <div role={hasProfessionalTab ? 'tabpanel' : undefined} id="account-panel-orders" aria-labelledby={hasProfessionalTab ? 'account-tab-orders' : undefined}>
             <ShoppingCreditPanel userId={user.uid} isMobile={isMobile} />
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:16, marginBottom:22 }}>

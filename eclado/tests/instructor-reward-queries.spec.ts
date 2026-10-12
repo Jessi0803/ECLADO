@@ -1,0 +1,54 @@
+import {test,expect,type Page} from '@playwright/test';
+import {mockEcladoApis,adminProfileRows,adminProductRows} from './support/eclado-mocks';
+import {canAccessBackofficePage} from '../src/admin/domain/access.js';
+const user={id:'reward-reader',email:'reader@example.test',user_metadata:{name:'返饋老師'},app_metadata:{provider:'email'},aud:'authenticated',role:'authenticated',created_at:'2026-05-01'};
+const report={summary:{balance:-12,available_balance:0,pending_balance:100,credited_total:300,reversed_total:312},order_count:21,ledger_count:1,
+  orders:[{order_id:'HISTORICAL-OLD-TEACHER',created_at:'2026-10-10T00:00:00Z',order_source:'online',student_name:'歷史學生',student_deleted:false,reward_status:'reversed',total_reward:100,
+    items:[{product_id:1,variant_id:1,name:'歷史商品',size:'100ml',qty:2,unit_price:900,reward:100}]}],
+  entries:[{id:1,order_id:'HISTORICAL-OLD-TEACHER',event_type:'reverse',amount:100,balance_after:-12,pending_after:100,created_at:'2026-10-11T00:00:00Z'}]};
+async function setup(page:Page,role='instructor',permissions?:string[]){
+  await mockEcladoApis(page,{authUser:user,adminAccess:!!permissions,products:adminProductRows,
+    profiles:[{...adminProfileRows[0],id:user.id,email:user.email,role,name:'返饋老師'}],
+    ...(permissions?{backofficeAccess:{role:'admin',permissions}}:{})});
+}
+async function rewards(page:Page){await page.goto('/account');await page.getByRole('tab',{name:'師資返饋金',exact:true}).click();return page.getByRole('region',{name:'師資返饋金',exact:true});}
+test('teacher scoped report, debt and separate pagination; focus refresh uses no caller teacher ID',async({page})=>{
+  await setup(page);const args:any[]=[];
+  await page.route('**/rest/v1/rpc/get_my_instructor_reward_report',r=>{const a=r.request().postDataJSON();args.push(a);return r.fulfill({json:{...report,orders:a.p_offset?[{...report.orders[0],order_id:'NEXT-PAGE'}]:report.orders}});});
+  const panel=await rewards(page);await expect(panel.getByText('HISTORICAL-OLD-TEACHER · 歷史學生',{exact:true})).toBeVisible();
+  await expect(panel.getByText('歷史商品 100ml × 2',{exact:false})).toBeVisible();await expect(panel.getByText('帳戶為負餘額',{exact:false})).toBeVisible();
+  await panel.getByRole('button',{name:'訂單下一頁'}).click();await expect(panel.getByText('NEXT-PAGE',{exact:false}).first()).toBeVisible();
+  expect(args.at(-1)).toEqual({p_offset:20,p_limit:20,p_ledger_offset:0});
+  const count=args.length;await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await expect.poll(()=>args.length).toBeGreaterThan(count);
+});
+test('permission revocation clears previously loaded data; failed lookup cannot appear as zero balance',async({page})=>{
+  await setup(page);let allowed=true;
+  await page.route('**/rest/v1/rpc/get_my_instructor_reward_report',r=>allowed?r.fulfill({json:report}):r.fulfill({status:403,json:{code:'42501',message:'師資資格不足'}}));
+  const panel=await rewards(page);await expect(panel.getByText('HISTORICAL-OLD-TEACHER · 歷史學生',{exact:true})).toBeVisible();allowed=false;
+  await panel.getByRole('button',{name:'重新整理',exact:true}).click();await expect(panel.getByRole('alert')).toHaveText('師資資格不足');
+  await expect(panel.getByText('HISTORICAL-OLD-TEACHER · 歷史學生',{exact:true})).toHaveCount(0);await expect(panel.getByText('可用餘額',{exact:true})).toHaveCount(0);
+});
+test('empty and missing RPC are distinct; pro has no teacher query entrance',async({page})=>{
+  await setup(page);let installed=true;
+  await page.route('**/rest/v1/rpc/get_my_instructor_reward_report',r=>installed?r.fulfill({json:{...report,orders:[],entries:[],order_count:0,ledger_count:0}}):r.fulfill({status:404,json:{code:'PGRST202',message:'not installed'}}));
+  const panel=await rewards(page);await expect(panel.getByText('目前沒有返饋訂單紀錄。')).toBeVisible();installed=false;
+  await panel.getByRole('button',{name:'重新整理',exact:true}).click();await expect(panel.getByRole('alert')).toHaveText('返饋查詢尚未安裝。');
+});
+test('non instructor role cannot see rewards tab',async({page})=>{await setup(page,'pro');await page.goto('/account');await expect(page.getByRole('tab',{name:'師資返饋金'})).toHaveCount(0);});
+async function admin(page:Page,permissions:string[]){await setup(page,'consumer',permissions);await page.goto('/admin');if((page.viewportSize()?.width||0)<=900)await page.getByRole('button',{name:'開啟選單'}).click();}
+test('admin reads named account history through limited RPC only',async({page})=>{
+  await page.route('**/rest/v1/rpc/get_admin_instructor_reward_accounts',r=>r.fulfill({json:{total:1,accounts:[{id:'teacher-history',name:'帳務老師',balance:-12,pending_balance:100,student_count:0,inconsistent:true}]}}));
+  await admin(page,['orders.read','members.read','catalog.read']);
+  // mock setup routes are registered last, override after setup.
+  await page.route('**/rest/v1/rpc/get_admin_instructor_reward_accounts',r=>r.fulfill({json:{total:1,accounts:[{id:'teacher-history',name:'帳務老師',balance:-12,pending_balance:100,student_count:0,inconsistent:true}]}}));
+  let args:any;await page.route('**/rest/v1/rpc/get_admin_instructor_reward_report',r=>{args=r.request().postDataJSON();return r.fulfill({json:report});});
+  await page.locator('.app-sidebar button:not(.sidebar-star)').filter({hasText:'師資返饋帳務'}).click();
+  await page.getByRole('button',{name:/帳務老師/}).click();await expect(page.getByText('帳務需查核',{exact:false})).toBeVisible();await expect(page.getByText('HISTORICAL-OLD-TEACHER · 歷史學生',{exact:true})).toBeVisible();
+  expect(args).toEqual({p_instructor_id:'teacher-history',p_offset:0,p_limit:20,p_ledger_offset:0});
+});
+test('backoffice entrance requires both read permissions and admin role',async({page})=>{
+  await admin(page,['orders.read']);await expect(page.locator('.app-sidebar button').filter({hasText:'師資返饋帳務'})).toHaveCount(0);
+  for(const permissions of [['members.read'],['orders.read'],[]])expect(canAccessBackofficePage({role:'admin',permissions},'rewards')).toBe(false);
+  expect(canAccessBackofficePage({role:'catalog_editor',permissions:['orders.read','members.read']},'rewards')).toBe(false);
+  expect(canAccessBackofficePage({role:'admin',permissions:['orders.read','members.read']},'rewards')).toBe(true);
+});

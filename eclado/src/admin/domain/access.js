@@ -55,6 +55,7 @@ export function hasBackofficePermission(access, permission) {
 }
 
 export function canAccessBackofficePage(access, page) {
+  if (page === 'rewards') return ['admin', 'super_admin'].includes(access?.role) && hasBackofficePermission(access, BACKOFFICE_PERMISSIONS.ORDERS_READ) && hasBackofficePermission(access, BACKOFFICE_PERMISSIONS.MEMBERS_READ);
   if (page === 'settings' && hasBackofficePermission(access, BACKOFFICE_PERMISSIONS.INSTRUCTOR_STUDENTS_MANAGE)) return true;
   const permission = PAGE_PERMISSIONS[page];
   return Boolean(permission) && hasBackofficePermission(access, permission);
