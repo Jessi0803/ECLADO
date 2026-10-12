@@ -67,14 +67,15 @@ export async function createProfessionalApplication(application, certificateFile
       if (uploadedPaths.length) {
         await supabase.storage.from(PROFESSIONAL_CERTIFICATE_BUCKET).remove(uploadedPaths);
       }
-      return { data: null, error: new Error(`證照圖片轉換失敗：${optimizationError.message || '請稍後再試'}`) };
+      return { data: null, error: new Error(`證照圖片處理失敗：${optimizationError.message || '請重新選擇圖片後重試'}`) };
     }
-    const storagePath = `${userId}/${applicationId}/${crypto.randomUUID()}.webp`;
+    const extension = optimizedImage.file.type === 'image/jpeg' ? 'jpg' : 'webp';
+    const storagePath = `${userId}/${applicationId}/${crypto.randomUUID()}.${extension}`;
     const { error: uploadError } = await supabase.storage
       .from(PROFESSIONAL_CERTIFICATE_BUCKET)
       .upload(storagePath, optimizedImage.file, {
         cacheControl: '3600',
-        contentType: 'image/webp',
+        contentType: optimizedImage.file.type,
         upsert: false,
       });
     if (uploadError) {
@@ -87,7 +88,7 @@ export async function createProfessionalApplication(application, certificateFile
     certificateMetadata.push({
       storage_path: storagePath,
       original_name: file.name,
-      mime_type: 'image/webp',
+      mime_type: optimizedImage.file.type,
       file_size: optimizedImage.file.size,
     });
   }

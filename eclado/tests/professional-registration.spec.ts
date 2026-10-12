@@ -197,7 +197,15 @@ test('美容師申請發票資料可留白，填寫時需同時提供公司抬�
   expect(insertCount).toBe(0);
 });
 
-test('美容師申請可選填上傳最多三張私人證照圖片', async ({ page }) => {
+for (const fallback of [false, true]) {
+test(`美容師申請可選填上傳最多三張私人證照圖片${fallback ? '（JPEG 備援）' : ''}`, async ({ page }) => {
+  if (fallback) await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.toBlob;
+    HTMLCanvasElement.prototype.toBlob = function(callback, type, quality) {
+      if (type === 'image/webp') return callback(null);
+      return original.call(this, callback, type, quality);
+    };
+  });
   const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+AvzvAAAAAElFTkSuQmCC', 'base64');
   const uploadedPaths: string[] = [];
   let capturedApplication: Record<string, unknown> | null = null;
@@ -232,9 +240,10 @@ test('美容師申請可選填上傳最多三張私人證照圖片', async ({ pa
   const certificates = application.professional_application_certificates as Record<string, unknown>[];
   expect(certificates).toHaveLength(2);
   expect(uploadedPaths.every(path => path.startsWith(`${FAKE_USER_ID}/${application.id}/`))).toBe(true);
-  expect(uploadedPaths.every(path => path.endsWith('.webp'))).toBe(true);
-  expect(certificates.every(certificate => certificate.mime_type === 'image/webp')).toBe(true);
+  expect(uploadedPaths.every(path => path.endsWith(fallback ? '.jpg' : '.webp'))).toBe(true);
+  expect(certificates.every(certificate => certificate.mime_type === (fallback ? 'image/jpeg' : 'image/webp'))).toBe(true);
 });
+}
 
 test('審核中會員不能再次送出美容師申請', async ({ page }) => {
   let appInsertCalled = false;
