@@ -202,7 +202,7 @@ begin
 end;
 $$;
 
-revoke all on function public.begin_order_payment_retry(text) from public;
+revoke all on function public.begin_order_payment_retry(text) from public, anon, authenticated;
 grant execute on function public.begin_order_payment_retry(text) to service_role;
 
 comment on table public.order_payment_attempts is

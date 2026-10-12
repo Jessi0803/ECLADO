@@ -321,7 +321,7 @@ begin
 end;
 $$;
 
-revoke all on function public.claim_order_payment(text, text) from public;
+revoke all on function public.claim_order_payment(text, text) from public, anon, authenticated;
 grant execute on function public.claim_order_payment(text, text) to service_role;
 
 notify pgrst, 'reload schema';
