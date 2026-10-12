@@ -415,6 +415,8 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       prices_applied:false }, instructor_settings:null, students:[], history:[] });
   });
   await page.route('**/rest/v1/rpc/get_my_student_product_prices', async route => json(route, { enabled:false, prices:[] }));
+  await page.route('**/rest/v1/rpc/get_admin_reward_payment_requirement', async route => json(route, { applicable:false,confirmed:false }));
+  await page.route('**/rest/v1/rpc/confirm_admin_instructor_reward_payment', async route => json(route, { applicable:false }));
   await page.route('**/rest/v1/rpc/get_admin_student_pricing_settings', route => json(route,
     { multipliers:{ student_1:0.9, student_2:0.95 }, version:0, prices_applied:false }));
   await page.route('**/rest/v1/rpc/get_admin_student_pricing_history', route => json(route, []));

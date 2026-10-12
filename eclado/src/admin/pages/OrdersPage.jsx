@@ -8,6 +8,7 @@ import OrderPrintPreview from '../components/OrderPrintPreview.jsx';
 import usePanelHistory from '../hooks/usePanelHistory.js';
 import { shipShippingGroup } from '../../services/shippingGroups.js';
 import { getAssistedLink,assistedLink } from '../../services/assistedOrders.js';
+import {rewardPaymentRequirement,confirmRewardPayment} from '../../services/rewardPayment.js';
 
 const INVENTORY_ACTIVE_STATUSES = new Set([
   'paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered',
@@ -124,10 +125,11 @@ function NoteBox({ kind, text }) {
   );
 }
 
-export default function Orders({ orders, members = [], persistOrderPatch, onSaveInvoiceNumber, onDeleteCancelledOrder, onCancelHistoricalOrder, onAssignGuestOrder, defaultFilter = 'all', memberNotes = {}, focusOrderId = '', backToMember = null, onOpenMember, onClearCrossLink, onCreateAssistedOrder }) {
+export default function Orders({ orders, members = [], persistOrderPatch, onSaveInvoiceNumber, onDeleteCancelledOrder, onCancelHistoricalOrder, onAssignGuestOrder, defaultFilter = 'all', memberNotes = {}, focusOrderId = '', backToMember = null, onOpenMember, onClearCrossLink, onCreateAssistedOrder, canConfirmPayments = false }) {
   const [assistedUrl,setAssistedUrl] = useState('');
   const [assistedRecord,setAssistedRecord] = useState(null);
   const [assistedError,setAssistedError] = useState('');
+  const manualReceiptInFlight=useRef(false);
   useEffect(()=>{setAssistedUrl('');setAssistedError('');},[focusOrderId]);
   const [selected, setSelected] = useState(null);
   useEffect(()=>{setAssistedUrl('');setAssistedError('');setAssistedRecord(null);},[selected?.id]);
@@ -352,6 +354,13 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
       return;
     }
     try {
+      if(canConfirmPayments && status==='paid' && order?.orderSource!=='historical_manual'){
+        const requirement=await rewardPaymentRequirement(id);
+        if(requirement?.applicable && !requirement.confirmed){
+          if(!window.confirm('請確認已實際收到此訂單的全額應付款項。確認後將保留收款金額、操作者及時間，是否確認收款？'))return;
+          await confirmRewardPayment(id);
+        }
+      }
       if (order?.orderSource === 'historical_manual' && status === 'cancelled') {
         if (!onCancelHistoricalOrder) throw new Error('歷史訂單取消功能尚未啟用');
         await onCancelHistoricalOrder(id);
@@ -371,6 +380,20 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
     if (shouldNotifyShipment) {
       await sendShipmentNotice({ ...order, status, tracking: shipmentTracking });
     }
+  }
+
+  async function confirmManualPayment(){
+    if(!selected || manualReceiptInFlight.current)return;
+    manualReceiptInFlight.current=true;
+    setLineNotice('');
+    try{
+      const requirement=await rewardPaymentRequirement(selected.id);
+      if(!requirement?.applicable){setLineNotice('此筆訂單不需額外收款確認。');return;}
+      if(requirement.confirmed){setLineNotice('此筆訂單已確認收款。');return;}
+      if(!window.confirm('請確認已實際收到此訂單的全額應付款項。確認後將保留收款金額、操作者及時間，是否確認收款？'))return;
+      await confirmRewardPayment(selected.id);setLineNotice('已保存收款確認紀錄。');
+    }catch(error){setLineNotice('收款確認失敗：'+(error.message||'請稍後再試'));}
+    finally{manualReceiptInFlight.current=false;}
   }
 
   async function permanentlyDeleteCancelledOrder() {
@@ -975,6 +998,9 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
               </div>
             )}
           </div>
+          {canConfirmPayments && selected.orderSource!=='historical_manual' && !['cancelled','returned'].includes(selected.status) && (
+            <button type="button" onClick={confirmManualPayment} style={{padding:'9px 18px',border:'1px solid var(--border)',background:'var(--white)',color:'var(--dark)',fontSize:12,cursor:'pointer',marginBottom:12}}>確認人工收款</button>
+          )}
           {selected.status !== 'cancelled' && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button

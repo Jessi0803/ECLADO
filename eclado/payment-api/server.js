@@ -5,6 +5,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const crypto = require('crypto');
 const { mountAssistedRoutes, isAmbiguousGatewayFailure } = require('./assisted-orders');
+const { verifiedRewardPaymentEvidence } = require('./reward-payment-evidence.cjs');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -687,6 +688,21 @@ async function updatePaymentAttemptState(providerOrderNo, paymentState, payment 
   return true;
 }
 
+async function persistVerifiedRewardPayment(orderNo,providerOrderNo,payment) {
+  const proof=verifiedRewardPaymentEvidence(payment,providerOrderNo,isPaidLike);
+  if(!proof)return;
+  try {
+    await callSupabaseRpc('record_verified_instructor_reward_payment',{
+      p_order_id:orderNo,p_provider_order_no:providerOrderNo,p_proof_kind:proof,
+    });
+  } catch(error) {
+    // Pre-2B database compatibility only. Other failures require a retry;
+    // never infer a reward receipt from the order's status or paid_at.
+    if(/PGRST202/.test(error.message))return;
+    throw error;
+  }
+}
+
 async function getOrderPaymentInstruction(orderNo) {
   const params = new URLSearchParams({
     order_id: `eq.${orderNo}`,
@@ -1185,6 +1201,7 @@ async function redirectPaymentReturn(req, res) {
       resolvedOrderNo = await resolveSiteOrderNo(providerOrderNo, resolvedOrderNo);
       resultAccessToken = resolvedOrderNo ? createPaymentResultAccessToken(resolvedOrderNo) : '';
       if (resolvedOrderNo && payment.paid) {
+        await persistVerifiedRewardPayment(resolvedOrderNo,providerOrderNo,payment);
         // 先轉發給 Vercel（此時訂單尚未標記 paid）→ Vercel 標記已付款並寄 LINE／Email，
         // 再由 Vultr 補寫一次作為保險（Vercel 失敗時仍會標記）。
         await forwardPaidNotification(resolvedOrderNo);
@@ -1390,6 +1407,7 @@ app.post('/api/sinopac/query-payment', async (req, res) => {
     const inner = buildQueryBody({ ...(req.body || {}), orderNo: providerOrderNo });
     const result = await callOrderApi('OrderQuery', inner);
     const paymentState = resolvePaymentQueryState(order, result.data);
+    await persistVerifiedRewardPayment(orderNo,providerOrderNo,{raw:{orderQuery:result.data}});
     try {
       const paymentDetails = {
         payStatus: result.data?.OrderList?.[0]?.PayStatus,
@@ -1549,6 +1567,7 @@ app.post('/api/sinopac/notify', async (req, res) => {
     let forwarded = { sent: false, reason: 'payment not completed' };
 
     if (payment.paid) {
+      await persistVerifiedRewardPayment(orderNo,providerOrderNo,payment);
       // 先轉發給 Vercel 標記已付款並寄送 LINE／Email（此時訂單尚未 paid，才不會被當成已處理跳過），
       // 再由 Vultr 補寫一次作為保險。
       forwarded = await forwardPaidNotification(orderNo);
@@ -1615,6 +1634,7 @@ module.exports = {
   normalizeRequestBody,
   summarizePaymentWebhook,
   isPaidLike,
+  persistVerifiedRewardPayment,
   isPendingLike,
   getSinopacPaymentError,
   buildCreateBody,
