@@ -29,7 +29,7 @@ async function isolatedDb(){
   return {query,exec:sql=>query(sql),connect,
     close:async()=>{await Promise.allSettled(connections.map(c=>c.end()));await cluster.stop();}};
 }
-test('1C: real existing engines plus student prices and AUTO/MANUAL', {skip:!process.env.PGLITE_MODULE&&!process.env.EMBEDDED_POSTGRES_MODULE,timeout:120000},async()=>{
+async function runStudentPricingDatabaseScenario(extraChecks){
   const db=await isolatedDb();
   try{
     await db.exec(`create role anon;create role authenticated;create role service_role;create schema auth;create schema extensions;
@@ -248,5 +248,9 @@ test('1C: real existing engines plus student prices and AUTO/MANUAL', {skip:!pro
     assert.equal((await one("select has_function_privilege('authenticated','public.student_pricing_multiplier(uuid)','EXECUTE') as allowed")).allowed,false);
     assert.equal((await one("select has_table_privilege('authenticated','public.student_pricing_feature_settings','UPDATE') as allowed")).allowed,false);
     console.log('PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery');
+    if(extraChecks)await extraChecks({db,read,fn,base,create,quote,normal,ordinaryQuote,ordinaryCreate,one,actor,student,teacher});
   }finally{await db.close();}
-});
+}
+module.exports={runStudentPricingDatabaseScenario};
+if(require.main===module)test('1C: real existing engines plus student prices and AUTO/MANUAL',
+  {skip:!process.env.PGLITE_MODULE&&!process.env.EMBEDDED_POSTGRES_MODULE,timeout:120000},()=>runStudentPricingDatabaseScenario());
