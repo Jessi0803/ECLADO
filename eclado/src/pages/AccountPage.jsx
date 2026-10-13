@@ -23,6 +23,7 @@ import {
   updateMemberInvoiceDefaults,
 } from '../services/membership.js';
 import { fetchAccountOrders } from '../services/accountOrders.js';
+import { assistedLink, getMyAssistedLink } from '../services/assistedOrders.js';
 import { fetchProfessionalApplicationStatus } from '../services/professionalApplications.js';
 import { getMemberPaymentInstructions, getMemberPaymentSummaries, retrySinopacPayment } from '../services/paymentApi.js';
 import { getPendingPayment, savePendingPayment } from '../services/pendingPayment.js';
@@ -201,6 +202,21 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
         [order.id]: paymentError?.message || '付款資訊無法載入，請稍後再試。',
       }));
     } finally {
+      setOpeningPaymentOrder('');
+    }
+  }
+
+  async function openAssistedPayment(order) {
+    setOpeningPaymentOrder(order.id);
+    setPaymentErrors(current => ({ ...current, [order.id]: '' }));
+    try {
+      const link = await getMyAssistedLink(order.id);
+      window.location.assign(assistedLink(link));
+    } catch (paymentError) {
+      setPaymentErrors(current => ({
+        ...current,
+        [order.id]: paymentError?.message || '訂單確認連結無法載入，請稍後再試。',
+      }));
       setOpeningPaymentOrder('');
     }
   }
@@ -549,6 +565,7 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
               {orders.map(order => {
                 const items = Array.isArray(order.items) ? order.items : [];
                 const isHistorical = order.order_source === 'historical_manual';
+                const isAssisted = order.order_source === 'admin_assisted';
                 const paymentDueTime = new Date(order.payment_due_at || '').getTime();
                 const paymentExpired = Number.isFinite(paymentDueTime) && paymentDueTime <= Date.now();
                 const paymentSummary = paymentSummaries[order.id];
@@ -558,7 +575,7 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
                     : ['awaiting_confirm', 'unpaid'].includes(order.status)
                       ? 'pending'
                       : order.status === 'cancelled' ? 'cancelled' : '');
-                const canRetryPayment = paymentSummary?.can_retry === true;
+                const canRetryPayment = !isAssisted && paymentSummary?.can_retry === true;
                 const canResumePayment = ['awaiting_confirm', 'unpaid'].includes(order.status)
                   && !paymentExpired
                   && !canRetryPayment;
@@ -613,15 +630,21 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
                       </div>
                       <div style={{ textAlign:isMobile ? 'left' : 'right' }}>
                         <div style={{ fontSize:12, color:'var(--dark)', marginBottom:5 }}>{order.transaction_date || order.date || order.created_at?.slice(0, 10) || ''}</div>
-                        <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'var(--black)' }}>NT$ {Number(order.total || 0).toLocaleString()}</div>
+                        {isAssisted && Number(order.shopping_credit_amount) > 0 ? <>
+                          <div style={{ fontSize:12, color:'var(--dark)' }}>訂單總額 NT$ {Number(order.total || 0).toLocaleString()}</div>
+                          <div style={{ fontSize:12, color:'var(--dark)', marginTop:4 }}>購物金折抵 −NT$ {Number(order.shopping_credit_amount).toLocaleString()}</div>
+                          <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'var(--black)', marginTop:6 }}>
+                            {order.payment_amount == null ? '尚需付款金額待確認' : `尚需付款 NT$ ${Number(order.payment_amount).toLocaleString()}`}
+                          </div>
+                        </> : <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'var(--black)' }}>NT$ {Number(order.total || 0).toLocaleString()}</div>}
                         {(canResumePayment || canRetryPayment) && (
                           <button
                             type="button"
-                            onClick={() => canRetryPayment ? retryFailedPayment(order) : openPendingPayment(order)}
+                            onClick={() => isAssisted ? openAssistedPayment(order) : canRetryPayment ? retryFailedPayment(order) : openPendingPayment(order)}
                             disabled={openingPaymentOrder === order.id}
                             style={{ marginTop:12, border:'1px solid var(--black)', background:'var(--black)', color:'var(--white)', padding:'9px 12px', fontSize:11, letterSpacing:'0.08em', cursor:openingPaymentOrder === order.id ? 'wait' : 'pointer', fontFamily:'inherit', opacity:openingPaymentOrder === order.id ? 0.65 : 1 }}
                           >
-                            {openingPaymentOrder === order.id ? (canRetryPayment ? '正在建立付款單…' : '正在讀取…') : (canRetryPayment ? '重新付款' : '查看付款資訊')}
+                            {openingPaymentOrder === order.id ? (isAssisted ? '正在開啟…' : canRetryPayment ? '正在建立付款單…' : '正在讀取…') : (isAssisted ? '確認明細與付款' : canRetryPayment ? '重新付款' : '查看付款資訊')}
                           </button>
                         )}
                         {paymentExpired && ['awaiting_confirm', 'unpaid'].includes(order.status) && (

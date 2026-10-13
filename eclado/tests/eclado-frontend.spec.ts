@@ -2341,6 +2341,53 @@ test('會員可從我的訂單安全返回尚未付款的原付款單', async ({
   expect(saved?.paymentToken).toBe('');
 });
 
+test('會員代客訂單顯示購物金與銀行應付額，從本人連結確認後再付款', async ({ page }) => {
+  const instructionRequests: string[] = [];
+  const linkRequests: Array<{ orderId:string; authorization:string }> = [];
+  await mockEcladoApis(page, {
+    authUser: authUser('member@example.com'), profiles:[profile('consumer')],
+    onPaymentInstructionRequest:request => instructionRequests.push(request.orderNo),
+    orders:[{
+      id:'ECL-ASSISTED-MEMBER-001', user_id:TEST_USER_ID, order_source:'admin_assisted',
+      member:'E2E 會員', items:[{ name:'完美潔面卸妝膏', qty:1, price:5000 }],
+      subtotal:5000, shipping:120, total:5120, shopping_credit_amount:400, payment_amount:4720,
+      status:'awaiting_confirm', payment_due_at:'2099-01-01T00:00:00.000Z', created_at:'2026-10-13T00:00:00.000Z',
+    }],
+  });
+  await page.route('**/rest/v1/rpc/get_my_assisted_order_link', route => {
+    linkRequests.push({orderId:route.request().postDataJSON().p_order_id,authorization:route.request().headers().authorization || ''});
+    return route.fulfill({json:{order_id:'ECL-ASSISTED-MEMBER-001',link_token:'a'.repeat(64)}});
+  });
+  await page.route('**/api/orders/assisted-details', route => route.fulfill({json:{
+    ok:true,paymentMethod:'atm',creditConsentRecorded:false,
+    order:{id:'ECL-ASSISTED-MEMBER-001',member:'E2E 會員',phone:'0911111111',email:'member@example.com',address:'台北市',invoice_type:'personal',status:'awaiting_confirm',subtotal:5000,shipping:120,total:5120,shopping_credit_amount:400,payment_amount:4720,payment_due_at:'2099-01-01',is_member:true,items:[{name:'完美潔面卸妝膏',qty:1,unit_price:5000,line_total:5000}]},
+    instruction:null,
+  }}));
+
+  await page.goto('/account');
+  await expect(page.getByText('訂單總額 NT$ 5,120')).toBeVisible();
+  await expect(page.getByText('購物金折抵 −NT$ 400')).toBeVisible();
+  await expect(page.getByText('尚需付款 NT$ 4,720')).toBeVisible();
+  await page.getByRole('button',{name:'確認明細與付款'}).click();
+  await expect(page).toHaveURL(/\/order-payment#order=ECL-ASSISTED-MEMBER-001&token=/);
+  await expect(page.getByRole('heading',{name:'訂單確認與付款'})).toBeVisible();
+  await expect(page.getByRole('checkbox',{name:/同意本訂單使用購物金/})).toBeVisible();
+  expect(instructionRequests).toEqual([]);
+  expect(linkRequests).toEqual([{orderId:'ECL-ASSISTED-MEMBER-001',authorization:'Bearer mock-access-token'}]);
+});
+
+test('會員無法取得代客訂單連結時停留在原頁並顯示錯誤', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser:authUser('member@example.com'), profiles:[profile('consumer')],
+    orders:[{id:'ECL-ASSISTED-002',user_id:TEST_USER_ID,order_source:'admin_assisted',member:'E2E 會員',items:[],total:5120,status:'unpaid',payment_due_at:'2099-01-01T00:00:00.000Z',created_at:'2026-10-13T00:00:00.000Z'}],
+  });
+  await page.route('**/rest/v1/rpc/get_my_assisted_order_link',route=>route.fulfill({status:403,json:{code:'42501',message:'此訂單無法繼續付款，請重新整理訂單狀態或聯繫客服'}}));
+  await page.goto('/account');
+  await page.getByRole('button',{name:'確認明細與付款'}).click();
+  await expect(page).toHaveURL(/\/account$/);
+  await expect(page.getByRole('alert')).toContainText('此訂單無法繼續付款');
+});
+
 test('會員可從我的訂單以本人登入憑證重新付款且保留原訂單', async ({ page }) => {
   const retryRequests: Array<{ authorization:string; body:Record<string, unknown> }> = [];
   const summaryAuth: string[] = [];

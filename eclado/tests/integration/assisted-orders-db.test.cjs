@@ -55,6 +55,8 @@ test('assisted SQL: atomic creation/recovery, owner/roles, immutable snapshots, 
     await db.exec(fn('supabase-professional-shipping-groups.sql','prepare_shipping_group_for_order_status'));
     await db.exec('create trigger shipping_prepare before update of status on public.orders for each row execute function public.prepare_shipping_group_for_order_status();');
     const migration=read('supabase-assisted-orders.sql');await db.exec(migration);
+    const memberLinkMigration=read('supabase-assisted-order-member-link.sql');await db.exec(memberLinkMigration);
+    await db.exec(memberLinkMigration); // Safe to rerun when deploying an incremental migration.
     await db.exec("alter table public.orders drop constraint orders_assisted_payment_method_check;alter table public.orders add constraint orders_assisted_payment_method_check check(assisted_payment_method in ('card','atm'))");
     await db.exec(migration); // Upgrade the original card/ATM-only installation.
     const verification=(await db.query(read('supabase-assisted-orders-verify.sql'))).rows[0];
@@ -65,6 +67,14 @@ test('assisted SQL: atomic creation/recovery, owner/roles, immutable snapshots, 
     const create=(key,payload=base)=>db.query('select public.create_assisted_order($1::uuid,$2::jsonb) as result',[key,JSON.stringify(payload)]).then(data=>data.rows[0].result);
     const one=async sql=>(await db.query(sql)).rows[0];
     const key='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';const created=await create(key);assert.ok(created.order_id);assert.equal(created.link_token.length,64);
+    assert.equal((await one("select has_function_privilege('anon','public.get_my_assisted_order_link(text)','execute') as allowed")).allowed,false);
+    assert.equal((await one("select has_function_privilege('authenticated','public.get_my_assisted_order_link(text)','execute') as allowed")).allowed,true);
+    await assert.rejects(db.query('select public.get_my_assisted_order_link($1)',[created.order_id]),/無法繼續付款/);
+    await db.exec("select set_config('test.uid','22222222-2222-4222-8222-222222222222',false)");
+    const memberLink=(await db.query('select public.get_my_assisted_order_link($1) as result',[created.order_id])).rows[0].result;
+    assert.deepEqual(memberLink,{order_id:created.order_id,link_token:created.link_token});
+    await assert.rejects(db.query('select public.get_my_assisted_order_link($1)',['OTHER-ORDER']),/無法繼續付款/);
+    await db.exec("select set_config('test.uid','11111111-1111-4111-8111-111111111111',false)");
     const order=await one(`select * from public.orders where id='${created.order_id}'`);
     assert.equal(order.user_id,base.member_id);assert.equal(order.status,'awaiting_confirm');assert.equal(order.total,'1120');assert.equal(order.items[0].unit_price,500);
     assert.equal((await one('select stock from public.product_variants where id=1')).stock,8);

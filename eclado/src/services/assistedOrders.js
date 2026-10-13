@@ -10,6 +10,7 @@ export const createAssistedOrder=(requestKey,payload)=>rpc('create_assisted_orde
 export const quoteAssistedOrder=payload=>rpc('quote_assisted_order',{p_payload:payload});
 export const getAssistedRequest=requestKey=>rpc('get_admin_assisted_request',{p_request_key:requestKey});
 export const getAssistedLink=orderId=>rpc('get_admin_assisted_link',{p_order_id:orderId});
+export const getMyAssistedLink=orderId=>rpc('get_my_assisted_order_link',{p_order_id:orderId});
 export function assistedLink(result) {
   // Fragment avoids leaking the bearer credential into access logs/referrers.
   return `${window.location.origin}/order-payment#order=${encodeURIComponent(result.order_id)}&token=${encodeURIComponent(result.link_token)}`;
