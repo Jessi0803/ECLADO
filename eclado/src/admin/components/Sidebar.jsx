@@ -11,6 +11,8 @@ const MENU_GROUPS = [
       { id: 'dashboard', icon: 'dashboard', label: '儀表板' },
       { id: 'orders', icon: 'orders', label: '訂單管理' },
       { id: 'withdrawals', icon: 'analytics', label: '師資提領管理' },
+      { id: 'reward_notifications', icon: 'analytics', label: '返饋金通知紀錄' },
+      { id: 'reward_reconciliation', icon: 'analytics', label: '返饋金財務對帳' },
       { id: 'rewards', icon: 'analytics', label: '師資返饋帳務' },
     ],
   },
