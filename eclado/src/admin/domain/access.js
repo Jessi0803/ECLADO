@@ -14,6 +14,8 @@ export const BACKOFFICE_PERMISSIONS = Object.freeze({
   NOTIFICATIONS_SEND: 'notifications.send',
   BACKORDERS_MANAGE: 'backorders.manage',
   INVENTORY_COUNTS_MANAGE: 'inventory_counts.manage',
+  REWARD_WITHDRAWALS_READ: 'rewards.withdrawals.read',
+  REWARD_WITHDRAWALS_MANAGE: 'rewards.withdrawals.manage',
   SHOPPING_CREDIT_MANAGE: 'shopping_credit.manage',
 });
 
@@ -55,6 +57,7 @@ export function hasBackofficePermission(access, permission) {
 }
 
 export function canAccessBackofficePage(access, page) {
+  if (page === 'withdrawals') return ['admin','super_admin'].includes(access?.role) && hasBackofficePermission(access,BACKOFFICE_PERMISSIONS.REWARD_WITHDRAWALS_READ);
   if (page === 'rewards') return ['admin', 'super_admin'].includes(access?.role) && hasBackofficePermission(access, BACKOFFICE_PERMISSIONS.ORDERS_READ) && hasBackofficePermission(access, BACKOFFICE_PERMISSIONS.MEMBERS_READ);
   if (page === 'settings' && hasBackofficePermission(access, BACKOFFICE_PERMISSIONS.INSTRUCTOR_STUDENTS_MANAGE)) return true;
   const permission = PAGE_PERMISSIONS[page];

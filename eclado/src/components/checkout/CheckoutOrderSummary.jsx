@@ -64,7 +64,6 @@ export default function CheckoutOrderSummary({ items, summary, user, fulfillment
           );
         })}
       </div>
-      {Number(summary.rewardCreditAmount||0)>0&&<div style={{display:'flex',justifyContent:'space-between',fontSize:13,marginBottom:14}}><span>返饋金支付</span><span>−NT$ {Number(summary.rewardCreditAmount).toLocaleString()}</span></div>}
       <div style={{ height:1, background:'var(--light)', marginBottom:14 }} />
       <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--dark)', marginBottom:8 }}>
         <span>小計</span><span style={{ fontFamily:'var(--font-display)' }}>NT$ {summary.subtotal.toLocaleString()}</span>
@@ -98,10 +97,10 @@ export default function CheckoutOrderSummary({ items, summary, user, fulfillment
           <span style={{ fontFamily:'var(--font-display)' }}>−NT$ {Number(summary.shoppingCreditAmount).toLocaleString()}</span>
         </div>
       )}
-      {Number(summary.rewardCreditAmount||0)>0&&<div style={{display:'flex',justifyContent:'space-between',fontSize:13,marginBottom:14}}><span>返饋金支付</span><span>−NT$ {Number(summary.rewardCreditAmount).toLocaleString()}</span></div>}
+      {Number(summary.rewardCreditAmount||0)>0&&<div style={{display:'flex',justifyContent:'space-between',fontSize:13,color:'var(--dark)',marginBottom:14}}><span>返饋金支付</span><span style={{fontFamily:'var(--font-display)'}}>−NT$ {Number(summary.rewardCreditAmount).toLocaleString()}</span></div>}
       <div style={{ height:1, background:'var(--light)', marginBottom:14 }} />
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
-        <span style={{ fontSize:13, fontWeight:500 }}>{Number(summary.shoppingCreditAmount || 0) > 0 ? '尚需付款' : '合計'}</span>
+        <span style={{ fontSize:13, fontWeight:500 }}>{Number(summary.shoppingCreditAmount || 0) + Number(summary.rewardCreditAmount || 0) > 0 ? '尚需付款' : '合計'}</span>
         <span style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:300 }}>NT$ {Number(summary.paymentTotal ?? summary.total).toLocaleString()}</span>
       </div>
     </div>

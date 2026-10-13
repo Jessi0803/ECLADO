@@ -1,8 +1,6 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');
 const {runStudentPricingDatabaseScenario}=require('./student-pricing-db.test.cjs');
-test('4: double wallet pricing, lifecycle and authoritative gateway contracts',
- {skip:!process.env.PGLITE_MODULE&&!process.env.EMBEDDED_POSTGRES_MODULE,timeout:180000},()=>
- runStudentPricingDatabaseScenario(async({db,read,fn,one,actor,student,teacher,ordinaryQuote,ordinaryCreate,base,quote})=>{
+async function runRewardCheckoutDatabaseScenario(extraChecks){return runStudentPricingDatabaseScenario(async({db,read,fn,one,actor,student,teacher,ordinaryQuote,ordinaryCreate,base,quote})=>{
  const admin='11111111-1111-4111-8111-111111111111';await actor(admin);
  await db.exec(`insert into auth.users values('${teacher}'),('44444444-4444-4444-8444-444444444444');
  alter table public.profiles add constraint test_wallet_profile_auth foreign key(id) references auth.users(id) on delete cascade;
@@ -162,4 +160,8 @@ test('4: double wallet pricing, lifecycle and authoritative gateway contracts',
  const row=Array.isArray(verification)?verification.find(v=>v.rows?.[0]?.verification):verification;
  for(const [name,value]of Object.entries(row.rows[0].verification))assert.equal(value,true,name);
  console.log('PASS stage 4 reserve/consume/refund, late success exceptions, role downgrade, caps and bank amount contract');
- }));
+ if(extraChecks)await extraChecks({db,read,fn,one,actor,student,teacher,admin,ordinaryQuote,ordinaryCreate,walletQuote,create,account,status,bank,consistent});
+ });}
+
+module.exports={runRewardCheckoutDatabaseScenario};
+if(require.main===module)test('4: double wallet pricing, lifecycle and authoritative gateway contracts',{skip:!process.env.PGLITE_MODULE&&!process.env.EMBEDDED_POSTGRES_MODULE,timeout:180000},()=>runRewardCheckoutDatabaseScenario());

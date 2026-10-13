@@ -1,9 +1,8 @@
+import '../../components/account/InstructorRewards.css';
 import React, { useEffect, useState } from 'react';
 import { fetchInstructorStudentMember, saveInstructorStudentType, saveInstructorStudentBinding } from '../../services/instructorStudents.js';
 
 const labels = { bind:'建立綁定', unbind:'解除綁定', rebind:'更換老師', instructor_type:'老師類型變更', member_deleted:'會員刪除結束綁定' };
-const inputStyle = { width:'100%', padding:9, border:'1px solid var(--border)', fontSize:12, background:'var(--white)' };
-const buttonStyle = { padding:'7px 12px', border:'1px solid var(--border)', background:'var(--white)', fontSize:12, cursor:'pointer' };
 
 export default function InstructorStudentSection({ member, members, canManage }) {
   const [data, setData] = useState(null);
@@ -60,44 +59,44 @@ export default function InstructorStudentSection({ member, members, canManage })
   const context = data?.context;
   const teachers = members.filter(row => row.type === 'instructor' && row.id !== member.id
     && `${row.name} ${row.id}`.toLowerCase().includes(search.toLowerCase()));
-  return <section aria-label="師生綁定設定" style={{ marginTop:20, paddingTop:18, borderTop:'1px solid var(--border)', fontSize:12 }}>
-    <h4 style={{ margin:'0 0 8px', fontSize:14 }}>師生綁定與學生類型</h4>
-    <p style={{ color:'var(--mid)', lineHeight:1.8 }}>此階段只管理資料，學生價格與返饋金尚未啟用。</p>
+  return <section aria-label="師生綁定設定" className="reward-view reward-binding">
+    <h4 >師生綁定與學生類型</h4>
+    <p className="reward-note">此階段只管理資料，學生價格與返饋金尚未啟用。</p>
     {busy && <p>處理中…</p>}
     {error && <p role="alert" style={{ color:'var(--red)' }}>{error}</p>}
     {message && <p role="status" style={{ color:'var(--green)' }}>{message}</p>}
-    <button type="button" onClick={reload} disabled={busy} style={buttonStyle}>重新載入師生設定</button>
+    <button type="button" onClick={reload} disabled={busy} className="reward-button">重新載入師生設定</button>
     {data && <>
-      {(member.type === 'instructor' || data.instructor_settings) && <div style={{ marginTop:16 }}>
+      {(member.type === 'instructor' || data.instructor_settings) && <div className="reward-details">
         <form onSubmit={saveType}>
-          <label>老師學生價格類型<select aria-label="老師學生價格類型" value={type}
-            disabled={!canManage || busy || member.type !== 'instructor'} onChange={e => setType(e.target.value)} style={inputStyle}>
+          <label className="reward-field">老師學生價格類型<select aria-label="老師學生價格類型" value={type}
+            disabled={!canManage || busy || member.type !== 'instructor'} onChange={e => setType(e.target.value)}>
             <option value="">未設定</option><option value="student_1">學生1</option><option value="student_2">學生2</option>
           </select></label>
-          {canManage && member.type === 'instructor' && <button type="submit" disabled={busy} style={{ ...buttonStyle, marginTop:8 }}>儲存老師類型</button>}
+          {canManage && member.type === 'instructor' && <button type="submit" disabled={busy} className="reward-button reward-button--primary">儲存老師類型</button>}
         </form>
         <p>目前名下學生：{data.students?.length || 0} 位</p>
         {(data.students || []).map(student => <div key={student.binding_id} style={{ padding:'6px 0' }}>
           {student.student_name || student.student_id} · {student.context.student_pricing_eligible ? '資格符合（價格未啟用）' : '資格暫停'}
         </div>)}
       </div>}
-      {(member.type === 'pro' || context?.has_binding) && <div style={{ marginTop:16 }}>
+      {(member.type === 'pro' || context?.has_binding) && <div className="reward-details">
         <p>目前老師：{context?.has_binding ? context.instructor_name || context.instructor_id : '未綁定'}</p>
         {context?.has_binding && <p>類型：{context.student_price_type || '未設定'} · {context.student_pricing_eligible ? '資格符合（價格未啟用）' : '資格暫停'}
           {!context.student_role_eligible && '；學生目前不是 pro'}{!context.instructor_role_eligible && '；老師目前不是 instructor'}{!context.instructor_type_set && '；老師尚未設定類型'}
         </p>}
         {canManage && <>
-          <input aria-label="搜尋綁定老師" placeholder="搜尋老師姓名" value={search} onChange={e => setSearch(e.target.value)} style={inputStyle} />
-          <select aria-label="選擇綁定老師" value={teacherId} onChange={e => setTeacherId(e.target.value)} disabled={busy} style={{ ...inputStyle, marginTop:8 }}>
+          <label className="reward-field"><span>搜尋老師</span><input aria-label="搜尋綁定老師" placeholder="搜尋老師姓名" value={search} onChange={e => setSearch(e.target.value)} /></label>
+          <label className="reward-field"><span>綁定老師</span><select aria-label="選擇綁定老師" value={teacherId} onChange={e => setTeacherId(e.target.value)} disabled={busy} >
             <option value="">選擇老師</option>{teachers.map(teacher => <option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}
-          </select>
-          <div style={{ display:'flex', gap:8, marginTop:8, flexWrap:'wrap' }}>
-            <button type="button" disabled={busy || !teacherId} onClick={() => saveBinding(context?.has_binding ? 'rebind' : 'bind')} style={buttonStyle}>{context?.has_binding ? '更換老師' : '建立師生綁定'}</button>
-            {context?.has_binding && <button type="button" disabled={busy} onClick={() => saveBinding('unbind')} style={buttonStyle}>解除師生綁定</button>}
+          </select></label>
+          <div className="reward-actions">
+            <button type="button" disabled={busy || !teacherId} onClick={() => saveBinding(context?.has_binding ? 'rebind' : 'bind')} className="reward-button">{context?.has_binding ? '更換老師' : '建立師生綁定'}</button>
+            {context?.has_binding && <button type="button" disabled={busy} onClick={() => saveBinding('unbind')} className="reward-button">解除師生綁定</button>}
           </div>
         </>}
       </div>}
-      <details style={{ marginTop:16 }}><summary>師生異動歷史（最近100筆）</summary>
+      <details className="reward-details"><summary>師生異動歷史（最近100筆）</summary>
         {!data.history?.length ? <p>尚無異動</p> : data.history.map(entry => <div key={entry.id} style={{ padding:'8px 0', borderBottom:'1px solid var(--border)', overflowWrap:'anywhere' }}>
           {new Date(entry.created_at).toLocaleString('zh-TW', { timeZone:'Asia/Taipei' })} · {labels[entry.event_type] || entry.event_type}
           <div>操作者：{entry.actor_user_id || '系統（會員刪除）'}</div>

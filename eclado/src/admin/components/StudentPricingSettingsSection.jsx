@@ -1,3 +1,4 @@
+import '../../components/account/InstructorRewards.css';
 import React, { useEffect, useState } from 'react';
 import { parseFold, formatFold } from '../../domain/memberPricing.js';
 import { fetchStudentPricingSettings, fetchStudentPricingHistory, saveStudentPricingSettings } from '../../services/instructorStudents.js';
@@ -42,27 +43,27 @@ export default function StudentPricingSettingsSection() {
     } catch (err) { setError(`儲存失敗：${err.message}`); }
     finally { setBusy(false); }
   }
-  return <section aria-label="學生全域價格設定" style={{ maxWidth:720, marginTop:24, padding:24, background:'var(--white)', border:'1px solid var(--border)' }}>
-    <h2 style={{ fontSize:18, marginBottom:12 }}>學生價格設定</h2>
-    <p style={{ fontSize:12, color:'var(--mid)', lineHeight:1.8 }}>目前只儲存設定，尚未套用學生專屬售價。</p>
-    <form onSubmit={save}>
-      {['student_1', 'student_2'].map((key, index) => <label key={key} style={{ display:'block', margin:'16px 0', fontSize:13 }}>
+  return <section aria-label="學生全域價格設定" className="reward-view reward-panel reward-settings">
+    <h2 className="reward-heading">學生價格設定</h2>
+    <p className="reward-note">目前只儲存設定，尚未套用學生專屬售價。</p>
+    <form onSubmit={save}><div className="reward-form-grid">
+      {['student_1', 'student_2'].map((key, index) => <label key={key} className="reward-field">
         學生{index + 1}預設折數
-        <div style={{ display:'flex', gap:8, alignItems:'center', marginTop:6 }}>
+        <div className="reward-fold">
           <input aria-label={`學生${index + 1}預設折數`} type="number" min="0.01" max="10" step="0.01" required
             value={draft[key] ?? ''} disabled={busy || !snapshot}
             onChange={e => setDraft(previous => ({ ...previous, [key]:e.target.value }))}
-            style={{ width:150, padding:10, border:'1px solid var(--border)' }} />折
+             />折
         </div>
       </label>)}
-      <div style={{ display:'flex', gap:12 }}>
-        <button type="submit" disabled={busy || !snapshot} style={{ padding:'10px 20px', background:'var(--dark)', color:'#fff', border:0 }}>儲存學生折數</button>
-        <button type="button" disabled={busy} onClick={load} style={{ padding:'10px 20px', border:'1px solid var(--border)', background:'var(--white)' }}>重新載入學生設定</button>
+      </div><div className="reward-actions">
+        <button type="submit" disabled={busy || !snapshot} className="admin-primary-btn">儲存學生折數</button>
+        <button type="button" disabled={busy} onClick={load} className="admin-secondary-btn">重新載入學生設定</button>
       </div>
     </form>
     {error && <p role="alert" style={{ color:'var(--red)', fontSize:12 }}>{error}</p>}
     {message && <p role="status" style={{ color:'var(--green)', fontSize:12 }}>{message}</p>}
-    <details style={{ marginTop:18, fontSize:12 }}><summary>學生折數異動歷史（最近100筆）</summary>
+    <details className="reward-details"><summary>學生折數異動歷史（最近100筆）</summary>
       {!history.length ? <p>尚無異動</p> : history.map(entry => <div key={entry.id} style={{ padding:'8px 0', borderBottom:'1px solid var(--border)' }}>
         {new Date(entry.created_at).toLocaleString('zh-TW', { timeZone:'Asia/Taipei' })} · 操作者 {entry.actor_user_id || '系統'}
         <div>學生1：{formatFold(entry.before_data.student_1)} → {formatFold(entry.after_data.student_1)} 折；學生2：{formatFold(entry.before_data.student_2)} → {formatFold(entry.after_data.student_2)} 折</div>

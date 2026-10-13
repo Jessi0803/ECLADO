@@ -11,6 +11,7 @@ import {
   setProfessionalMembershipStart,
   updateMemberRoleWithMembership,
 } from '../services/professionalSales.js';
+import RewardWithdrawalsPage from './pages/RewardWithdrawalsPage.jsx';
 import InstructorRewardsPage from './pages/InstructorRewardsPage.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import AIReorder from './pages/AIReorderPage.jsx';
@@ -677,6 +678,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
     switch (page) {
       case 'dashboard': return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;
       case 'orders': return <Orders orders={orders} members={members} persistOrderPatch={persistOrderPatch} onSaveInvoiceNumber={saveOrderInvoiceNumber} onDeleteCancelledOrder={deleteCancelledOrder} onCancelHistoricalOrder={cancelHistoricalOrder} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={ordersDefaultFilter} memberNotes={memberNotes} focusOrderId={crossLink?.orderId || ''} backToMember={crossLink?.backMemberId ? { id: crossLink.backMemberId, name: crossLink.backMemberName } : null} onOpenMember={canReadMembers ? openMemberFromOrder : null} onClearCrossLink={() => setCrossLink(null)} onCreateAssistedOrder={canCreateAssistedOrder ? ()=>openAssistedOrder() : null} canConfirmPayments={canWriteOrders && ['admin','super_admin'].includes(backofficeAccess?.role)} />;
+      case 'withdrawals': return <RewardWithdrawalsPage key={adminUserId} adminUserId={adminUserId} canManage={hasBackofficePermission(backofficeAccess,'rewards.withdrawals.manage')} />;
       case 'rewards': return <InstructorRewardsPage key={adminUserId} adminUserId={adminUserId} />;
       case 'audit': return <AuditLogsPage />;
       case 'settings': return <MemberPricingPage onSaved={fetchAll} canManageMemberPricing={hasPermission(BACKOFFICE_PERMISSIONS.MEMBER_PRICING_MANAGE)} canManageInstructorStudents={canManageInstructorStudents} />;

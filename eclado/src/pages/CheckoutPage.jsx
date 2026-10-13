@@ -24,6 +24,7 @@ import {
 } from '../domain/payments.js';
 import { createAuthoritativeOrder, quoteAuthoritativeOrder } from '../services/orders.js';
 import { createSinopacPayment, querySinopacPayment } from '../services/paymentApi.js';
+import '../components/account/InstructorRewards.css';
 import {getMyRewardCredit} from '../services/instructorRewards.js';
 import { getMyShoppingCredit } from '../services/shoppingCredit.js';
 import { getMyAppendableShippingGroup } from '../services/shippingGroups.js';
@@ -840,11 +841,11 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                     </div>
                   )}
 
-                  {getMemberRole(user)==='instructor' && (rewardCredit.ready||rewardCredit.loading||rewardCredit.error) && <div style={{border:'1px solid var(--light)',padding:'18px 20px'}}>
-                    <p style={{fontSize:10,letterSpacing:'0.2em',color:'var(--dark)',marginBottom:6}}>師資返饋金</p><p style={{fontSize:12,color:'var(--dark)',lineHeight:1.6}}>{rewardCredit.loading?'正在載入可用餘額…':`可用 NT$ ${rewardCredit.available.toLocaleString()}，本次最多 NT$ ${maximumRewardCredit.toLocaleString()}`}</p>
-                    <button style={{border:'1px solid var(--light)',background:useRewardCredit?'var(--black)':'var(--white)',color:useRewardCredit?'var(--white)':'var(--dark)',padding:'8px 12px',fontSize:11,fontFamily:'var(--font-body)',cursor:'pointer'}} type="button" role="switch" aria-label="使用返饋金" aria-checked={useRewardCredit} disabled={rewardCredit.loading||(!useRewardCredit&&maximumRewardCredit<=0)} onClick={()=>{const next=!useRewardCredit;setUseRewardCredit(next);setRewardCreditAmount(next?maximumRewardCredit:0);}}>{useRewardCredit?'已使用':'使用'}</button>
-                    {useRewardCredit&&<label>本次使用返饋金<input aria-label="返饋金使用金額" type="number" inputMode="numeric" min="0" max={maximumRewardCredit} step="1" value={rewardCreditAmount} onChange={e=>setRewardCreditAmount(e.target.value===''?'':Math.min(maximumRewardCredit,Math.max(0,Math.floor(Number(e.target.value)||0))))} style={{width:'100%',padding:11,border:'1px solid var(--light)',fontFamily:'inherit'}}/></label>}
-                    {rewardCredit.error&&<p role="alert">{rewardCredit.error}</p>}<p>僅折抵商品金額，雙錢包合計後銀行付款至少 NT$1。</p>
+                  {getMemberRole(user)==='instructor' && (rewardCredit.ready||rewardCredit.loading||rewardCredit.error) && <div className="reward-view reward-checkout-wallet">
+                    <div className="reward-wallet-heading"><div><p className="reward-wallet-title">師資返饋金</p><p>{rewardCredit.loading?'正在載入可用餘額…':`可用 NT$ ${rewardCredit.available.toLocaleString()}，本次最多 NT$ ${maximumRewardCredit.toLocaleString()}`}</p></div>
+                    <button className={`reward-button ${useRewardCredit?'reward-button--primary':''}`} type="button" role="switch" aria-label="使用返饋金" aria-checked={useRewardCredit} disabled={rewardCredit.loading||(!useRewardCredit&&maximumRewardCredit<=0)} onClick={()=>{const next=!useRewardCredit;setUseRewardCredit(next);setRewardCreditAmount(next?maximumRewardCredit:0);}}>{useRewardCredit?'已使用':'使用'}</button></div>
+                    {useRewardCredit&&<label className="reward-wallet-amount">本次使用返饋金<input aria-label="返饋金使用金額" type="number" inputMode="numeric" min="0" max={maximumRewardCredit} step="1" value={rewardCreditAmount} onChange={e=>setRewardCreditAmount(e.target.value===''?'':Math.min(maximumRewardCredit,Math.max(0,Math.floor(Number(e.target.value)||0))))}/></label>}
+                    {rewardCredit.error&&<p role="alert" className="reward-message">{rewardCredit.error}</p>}<p className="reward-note">僅折抵商品金額，雙錢包合計後銀行付款至少 NT$1。</p>
                   </div>}
 
                   <div>
