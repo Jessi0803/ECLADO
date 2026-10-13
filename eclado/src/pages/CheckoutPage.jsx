@@ -5,6 +5,7 @@ import CheckoutSteps from '../components/checkout/CheckoutSteps.jsx';
 import PaymentInfo from '../components/checkout/PaymentInfo.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
 import { isProfessionalMember, getMemberPrice, getMemberRole } from '../domain/catalog.jsx';
+import { getOrderPaymentAmounts } from '../domain/orderPaymentAmounts.js';
 import { getProfessionalOrderProgress, hasProfessionalOrderRules } from '../domain/memberShopping.js';
 import { calculateDiscount } from '../domain/promotions.js';
 import {
@@ -177,7 +178,22 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
         // checkout. Do not replace it with the completed historical payment.
         if (cart.length > 0) return;
       }
-      hydrateStoredPayment(storedPayment, state, result.response);
+      let payment = storedPayment;
+      if (result.order?.shopping_credit_amount != null && result.order?.payment_amount != null) {
+        const { total, shoppingCreditAmount, paymentAmount } = getOrderPaymentAmounts(result.order);
+        payment = {
+          ...storedPayment,
+          amount: paymentAmount,
+          summary: {
+            ...storedPayment.summary,
+            total,
+            shoppingCreditAmount,
+            paymentTotal: paymentAmount,
+          },
+        };
+        savePendingPayment(payment);
+      }
+      hydrateStoredPayment(payment, state, result.response);
     } catch (error) {
       if (['ORDER_NOT_FOUND', 'PAYMENT_ACCESS_INVALID'].includes(error?.code)) {
         clearPendingPayment();

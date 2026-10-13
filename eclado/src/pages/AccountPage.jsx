@@ -23,10 +23,11 @@ import {
   updateMemberInvoiceDefaults,
 } from '../services/membership.js';
 import { fetchAccountOrders } from '../services/accountOrders.js';
+import { getOrderPaymentAmounts } from '../domain/orderPaymentAmounts.js';
 import { assistedLink, getMyAssistedLink } from '../services/assistedOrders.js';
 import { fetchProfessionalApplicationStatus } from '../services/professionalApplications.js';
 import { getMemberPaymentInstructions, getMemberPaymentSummaries, retrySinopacPayment } from '../services/paymentApi.js';
-import { getPendingPayment, savePendingPayment } from '../services/pendingPayment.js';
+import { savePendingPayment } from '../services/pendingPayment.js';
 import { fetchMyProfessionalSales } from '../services/professionalSales.js';
 import { normalizeRenewalPayload } from '../domain/professionalRenewals.js';
 import { fetchMyProfessionalRenewal } from '../services/professionalRenewals.js';
@@ -152,10 +153,6 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
     setOpeningPaymentOrder(order.id);
     setPaymentErrors(current => ({ ...current, [order.id]: '' }));
     try {
-      if (getPendingPayment(order.id)) {
-        setPage('checkout');
-        return;
-      }
       const result = await getMemberPaymentInstructions(order.id);
       if (result.paymentState === 'failed') {
         await retryFailedPayment(order, result.instruction);
@@ -166,11 +163,17 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
       const subtotal = Number(authoritativeOrder.subtotal ?? order.subtotal) || 0;
       const discount = Number(authoritativeOrder.discount ?? order.discount) || 0;
       const shipping = Number(authoritativeOrder.shipping ?? order.shipping) || 0;
-      const total = Number(authoritativeOrder.total ?? order.total) || 0;
+      const { total, shoppingCreditAmount, paymentAmount } = getOrderPaymentAmounts(authoritativeOrder);
+      const listedAmounts = getOrderPaymentAmounts(order);
+      if (total !== listedAmounts.total
+        || shoppingCreditAmount !== listedAmounts.shoppingCreditAmount
+        || paymentAmount !== listedAmounts.paymentAmount) {
+        throw new Error('訂單付款資料前後不一致，請勿付款並聯繫客服確認。');
+      }
       const saved = savePendingPayment({
         orderNo: order.id,
         accessType: 'member',
-        amount: total,
+        amount: paymentAmount,
         method: instruction.payment_method || authoritativeOrder.payment_method || order.payment_method || 'atm',
         paymentLink: instruction.payment_url || '',
         paymentDeadline: paymentDeadlineFromIso(instruction.payment_due_at || authoritativeOrder.payment_due_at),
@@ -187,6 +190,8 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
           finalSubtotal: subtotal - discount,
           shipping,
           total,
+          shoppingCreditAmount,
+          paymentTotal: paymentAmount,
           fulfillmentMethod: authoritativeOrder.fulfillment_method || order.fulfillment_method || 'delivery',
           promotion: authoritativeOrder.promotion_name
             ? { id: `order-${order.id}`, name: authoritativeOrder.promotion_name }
@@ -225,17 +230,24 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
     setOpeningPaymentOrder(order.id);
     setPaymentErrors(current => ({ ...current, [order.id]: '' }));
     try {
+      getOrderPaymentAmounts(order);
       const result = await retrySinopacPayment({ orderNo:order.id });
       const authoritativeOrder = result.order || order;
       const subtotal = Number(authoritativeOrder.subtotal ?? order.subtotal) || 0;
       const discount = Number(authoritativeOrder.discount ?? order.discount) || 0;
       const shipping = Number(authoritativeOrder.shipping ?? order.shipping) || 0;
-      const total = Number(authoritativeOrder.total ?? order.total) || 0;
+      const { total, shoppingCreditAmount, paymentAmount } = getOrderPaymentAmounts(authoritativeOrder);
+      const listedAmounts = getOrderPaymentAmounts(order);
+      if (total !== listedAmounts.total
+        || shoppingCreditAmount !== listedAmounts.shoppingCreditAmount
+        || paymentAmount !== listedAmounts.paymentAmount) {
+        throw new Error('訂單付款資料前後不一致，請勿付款並聯繫客服確認。');
+      }
       const saved = savePendingPayment({
         orderNo:order.id,
         accessType:'member',
         resultAccessToken:result.resultAccessToken,
-        amount:total,
+        amount:paymentAmount,
         method:instruction.payment_method || paymentSummaries[order.id]?.payment_method || 'card',
         paymentLink:result.paymentLink,
         paymentDueAt:authoritativeOrder.payment_due_at || order.payment_due_at,
@@ -246,6 +258,8 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
           finalSubtotal:subtotal - discount,
           shipping,
           total,
+          shoppingCreditAmount,
+          paymentTotal:paymentAmount,
           fulfillmentMethod:authoritativeOrder.fulfillment_method || order.fulfillment_method || 'delivery',
           promotion:authoritativeOrder.promotion_name ? { id:`order-${order.id}`, name:authoritativeOrder.promotion_name } : null,
           items:Array.isArray(authoritativeOrder.items) ? authoritativeOrder.items : [],
@@ -630,11 +644,15 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
                       </div>
                       <div style={{ textAlign:isMobile ? 'left' : 'right' }}>
                         <div style={{ fontSize:12, color:'var(--dark)', marginBottom:5 }}>{order.transaction_date || order.date || order.created_at?.slice(0, 10) || ''}</div>
-                        {isAssisted && Number(order.shopping_credit_amount) > 0 ? <>
+                        {Number(order.shopping_credit_amount) > 0 ? <>
                           <div style={{ fontSize:12, color:'var(--dark)' }}>訂單總額 NT$ {Number(order.total || 0).toLocaleString()}</div>
                           <div style={{ fontSize:12, color:'var(--dark)', marginTop:4 }}>購物金折抵 −NT$ {Number(order.shopping_credit_amount).toLocaleString()}</div>
                           <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'var(--black)', marginTop:6 }}>
-                            {order.payment_amount == null ? '尚需付款金額待確認' : `尚需付款 NT$ ${Number(order.payment_amount).toLocaleString()}`}
+                            {order.payment_amount == null
+                              || !Number.isFinite(Number(order.payment_amount))
+                              || Math.abs(Number(order.total) - Number(order.shopping_credit_amount) - Number(order.payment_amount)) > 0.001
+                              ? '尚需付款金額待確認'
+                              : `尚需付款 NT$ ${Number(order.payment_amount).toLocaleString()}`}
                           </div>
                         </> : <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'var(--black)' }}>NT$ {Number(order.total || 0).toLocaleString()}</div>}
                         {(canResumePayment || canRetryPayment) && (

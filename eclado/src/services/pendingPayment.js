@@ -24,6 +24,8 @@ function sanitizeSummary(summary) {
     finalSubtotal: Number(summary.finalSubtotal) || 0,
     shipping: Number(summary.shipping) || 0,
     total: Number(summary.total) || 0,
+    shoppingCreditAmount: Number(summary.shoppingCreditAmount) || 0,
+    paymentTotal: Number(summary.paymentTotal ?? summary.total) || 0,
     fulfillmentMethod: String(summary.fulfillmentMethod || 'delivery'),
     promotion: summary.promotion?.id
       ? { id: summary.promotion.id, name: String(summary.promotion.name || '') }
