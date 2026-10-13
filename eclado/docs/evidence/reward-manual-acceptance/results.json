@@ -1,0 +1,2572 @@
+{
+  "environment": "local PG17.6; fake Auth/bank/LINE/Email",
+  "results": [
+    {
+      "name": "1a 銀行儲存與遮蔽",
+      "status": "passed",
+      "at": "2026-10-13T03:26:23.517Z",
+      "role": "http://127.0.0.1:5181/account",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 1000,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 2,
+        "updated_at": "2026-10-13T03:06:43.032Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572"
+      ]
+    },
+    {
+      "name": "1b 全額提領1000／費15／實匯985／保留且不可取消",
+      "status": "passed",
+      "at": "2026-10-13T03:26:23.834Z",
+      "role": "http://127.0.0.1:5181/account",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 3,
+        "updated_at": "2026-10-13T03:26:23.713Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 1000
+      },
+      "withdrawals": [
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "pending",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 1
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572"
+      ],
+      "withdrawalId": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+      "scheduledDate": "2026-11-10"
+    },
+    {
+      "name": "1c 老師LINE與管理員Email／內容與防重",
+      "status": "passed",
+      "at": "2026-10-13T03:26:24.033Z",
+      "role": "http://127.0.0.1:5181/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 3,
+        "updated_at": "2026-10-13T03:26:23.713Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 1000
+      },
+      "withdrawals": [
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "pending",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 1
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572"
+      ]
+    },
+    {
+      "name": "1d 銀行變更不改申請快照／focus事件清除完整資料",
+      "status": "passed",
+      "at": "2026-10-13T03:26:25.830Z",
+      "role": "http://127.0.0.1:5181/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 3,
+        "updated_at": "2026-10-13T03:26:23.713Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 1000
+      },
+      "withdrawals": [
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "pending",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 1
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572"
+      ]
+    },
+    {
+      "name": "2 模擬人工匯款985／收費／終態／通知／對帳",
+      "status": "passed",
+      "at": "2026-10-13T03:26:26.376Z",
+      "role": "http://127.0.0.1:5181/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 4,
+        "updated_at": "2026-10-13T03:26:26.062Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572"
+      ]
+    },
+    {
+      "name": "2b 成功通知需明確選擇補發新版本",
+      "status": "passed",
+      "at": "2026-10-13T03:26:26.579Z",
+      "role": "http://127.0.0.1:5181/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 4,
+        "updated_at": "2026-10-13T03:26:26.062Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572"
+      ]
+    },
+    {
+      "name": "3 明確失敗全額退回／不收費／原申請不可重匯",
+      "status": "passed",
+      "at": "2026-10-13T03:26:27.410Z",
+      "role": "http://127.0.0.1:5181/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 1000,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 8,
+        "updated_at": "2026-10-13T03:26:27.096Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "8c56f747-20de-4857-9739-ccd9ad5020ac",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572",
+        "ECL-20261013-112626-13C08FC1"
+      ]
+    },
+    {
+      "name": "4a 待查帳保留1000／禁止再用／通知與對帳列管",
+      "status": "passed",
+      "at": "2026-10-13T03:26:28.374Z",
+      "role": "http://127.0.0.1:5181/account",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 9,
+        "updated_at": "2026-10-13T03:26:27.594Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 1000
+      },
+      "withdrawals": [
+        {
+          "id": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+          "status": "unknown",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "8c56f747-20de-4857-9739-ccd9ad5020ac",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572",
+        "ECL-20261013-112626-13C08FC1"
+      ]
+    },
+    {
+      "name": "4b 待查帳確認未付款退回／finding解除保留歷史",
+      "status": "passed",
+      "at": "2026-10-13T03:26:28.826Z",
+      "role": "http://127.0.0.1:5181/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 1000,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 10,
+        "updated_at": "2026-10-13T03:26:28.546Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "8c56f747-20de-4857-9739-ccd9ad5020ac",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572",
+        "ECL-20261013-112626-13C08FC1"
+      ]
+    },
+    {
+      "name": "5a 提領後退貨負200／申請不变／重複退貨不重扣",
+      "status": "passed",
+      "at": "2026-10-13T03:26:30.313Z",
+      "role": "http://127.0.0.1:5181/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": -200,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 19,
+        "updated_at": "2026-10-13T03:26:30.048Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "6bd8ab46-3d72-4ba2-b485-198da3a4f666",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "e9f4a452-93c6-4bf3-a8c3-4fb9f0fddb7e",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "8c56f747-20de-4857-9739-ccd9ad5020ac",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572",
+        "ECL-20261013-112626-13C08FC1",
+        "ECL-20261013-112629-8D79B132",
+        "ECL-20261013-112629-19BA059E"
+      ]
+    },
+    {
+      "name": "5b 新收入200抵銷負餘額",
+      "status": "passed",
+      "at": "2026-10-13T03:26:30.633Z",
+      "role": "http://127.0.0.1:5181/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 21,
+        "updated_at": "2026-10-13T03:26:30.320Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "6bd8ab46-3d72-4ba2-b485-198da3a4f666",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "e9f4a452-93c6-4bf3-a8c3-4fb9f0fddb7e",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "8c56f747-20de-4857-9739-ccd9ad5020ac",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572",
+        "ECL-20261013-112626-13C08FC1",
+        "ECL-20261013-112629-8D79B132",
+        "ECL-20261013-112629-19BA059E",
+        "ECL-20261013-112630-E3FCEFE1"
+      ]
+    },
+    {
+      "name": "6a 15元前後端不可提領",
+      "status": "passed",
+      "at": "2026-10-13T03:26:30.810Z",
+      "role": "http://127.0.0.1:5181/account",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 15,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 23,
+        "updated_at": "2026-10-13T03:26:30.642Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "6bd8ab46-3d72-4ba2-b485-198da3a4f666",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "e9f4a452-93c6-4bf3-a8c3-4fb9f0fddb7e",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "8c56f747-20de-4857-9739-ccd9ad5020ac",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572",
+        "ECL-20261013-112626-13C08FC1",
+        "ECL-20261013-112629-8D79B132",
+        "ECL-20261013-112629-19BA059E",
+        "ECL-20261013-112630-E3FCEFE1",
+        "ECL-20261013-112630-C65E251F"
+      ]
+    },
+    {
+      "name": "6b 16元可提領／實匯1",
+      "status": "passed",
+      "at": "2026-10-13T03:26:31.122Z",
+      "role": "http://127.0.0.1:5181/account",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 27,
+        "updated_at": "2026-10-13T03:26:30.994Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 16
+      },
+      "withdrawals": [
+        {
+          "id": "d474788d-2591-41f9-a441-713d3f14301a",
+          "status": "pending",
+          "amount": 16,
+          "fee": 15,
+          "net_amount": 1,
+          "version": 1
+        },
+        {
+          "id": "6bd8ab46-3d72-4ba2-b485-198da3a4f666",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "e9f4a452-93c6-4bf3-a8c3-4fb9f0fddb7e",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "8c56f747-20de-4857-9739-ccd9ad5020ac",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572",
+        "ECL-20261013-112626-13C08FC1",
+        "ECL-20261013-112629-8D79B132",
+        "ECL-20261013-112629-19BA059E",
+        "ECL-20261013-112630-E3FCEFE1",
+        "ECL-20261013-112630-C65E251F",
+        "ECL-20261013-112630-5D80EBFD"
+      ]
+    },
+    {
+      "name": "6c LINE5xx備援Email／帳務不變",
+      "status": "passed",
+      "at": "2026-10-13T03:26:31.832Z",
+      "role": "http://127.0.0.1:5181/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 31,
+        "updated_at": "2026-10-13T03:26:31.545Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 200
+      },
+      "withdrawals": [
+        {
+          "id": "eaa1bf2f-4686-48cb-9042-e7df86c97af0",
+          "status": "pending",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 1
+        },
+        {
+          "id": "d474788d-2591-41f9-a441-713d3f14301a",
+          "status": "paid",
+          "amount": 16,
+          "fee": 15,
+          "net_amount": 1,
+          "version": 3
+        },
+        {
+          "id": "6bd8ab46-3d72-4ba2-b485-198da3a4f666",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "e9f4a452-93c6-4bf3-a8c3-4fb9f0fddb7e",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "8c56f747-20de-4857-9739-ccd9ad5020ac",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572",
+        "ECL-20261013-112626-13C08FC1",
+        "ECL-20261013-112629-8D79B132",
+        "ECL-20261013-112629-19BA059E",
+        "ECL-20261013-112630-E3FCEFE1",
+        "ECL-20261013-112630-C65E251F",
+        "ECL-20261013-112630-5D80EBFD",
+        "ECL-20261013-112631-B469257E"
+      ]
+    },
+    {
+      "name": "6d timeout同鍵重試／不立即Email／恢復成功",
+      "status": "passed",
+      "at": "2026-10-13T03:26:32.552Z",
+      "role": "http://127.0.0.1:5181/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 33,
+        "updated_at": "2026-10-13T03:26:32.244Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 200
+      },
+      "withdrawals": [
+        {
+          "id": "0ec6d9d0-bee6-4620-82bc-e2486a4bb342",
+          "status": "pending",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 1
+        },
+        {
+          "id": "eaa1bf2f-4686-48cb-9042-e7df86c97af0",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "d474788d-2591-41f9-a441-713d3f14301a",
+          "status": "paid",
+          "amount": 16,
+          "fee": 15,
+          "net_amount": 1,
+          "version": 3
+        },
+        {
+          "id": "6bd8ab46-3d72-4ba2-b485-198da3a4f666",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "e9f4a452-93c6-4bf3-a8c3-4fb9f0fddb7e",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "8c56f747-20de-4857-9739-ccd9ad5020ac",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572",
+        "ECL-20261013-112626-13C08FC1",
+        "ECL-20261013-112629-8D79B132",
+        "ECL-20261013-112629-19BA059E",
+        "ECL-20261013-112630-E3FCEFE1",
+        "ECL-20261013-112630-C65E251F",
+        "ECL-20261013-112630-5D80EBFD",
+        "ECL-20261013-112631-B469257E"
+      ]
+    },
+    {
+      "name": "6e 六次timeout上限／人工查核／不再自動送",
+      "status": "passed",
+      "at": "2026-10-13T03:26:33.319Z",
+      "role": "http://127.0.0.1:5181/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 35,
+        "updated_at": "2026-10-13T03:26:32.961Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 200
+      },
+      "withdrawals": [
+        {
+          "id": "3d7d0354-0cbf-43db-b018-68ebbc8cfaf3",
+          "status": "pending",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 1
+        },
+        {
+          "id": "0ec6d9d0-bee6-4620-82bc-e2486a4bb342",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "eaa1bf2f-4686-48cb-9042-e7df86c97af0",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "d474788d-2591-41f9-a441-713d3f14301a",
+          "status": "paid",
+          "amount": 16,
+          "fee": 15,
+          "net_amount": 1,
+          "version": 3
+        },
+        {
+          "id": "6bd8ab46-3d72-4ba2-b485-198da3a4f666",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "e9f4a452-93c6-4bf3-a8c3-4fb9f0fddb7e",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "8c56f747-20de-4857-9739-ccd9ad5020ac",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572",
+        "ECL-20261013-112626-13C08FC1",
+        "ECL-20261013-112629-8D79B132",
+        "ECL-20261013-112629-19BA059E",
+        "ECL-20261013-112630-E3FCEFE1",
+        "ECL-20261013-112630-C65E251F",
+        "ECL-20261013-112630-5D80EBFD",
+        "ECL-20261013-112631-B469257E"
+      ]
+    },
+    {
+      "name": "6f Email永久錯誤保留失敗／不回滾帳務",
+      "status": "passed",
+      "at": "2026-10-13T03:26:34.084Z",
+      "role": "http://127.0.0.1:5181/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 37,
+        "updated_at": "2026-10-13T03:26:33.794Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 200
+      },
+      "withdrawals": [
+        {
+          "id": "54a567f8-0bac-46e4-a029-8fb2177e79c5",
+          "status": "pending",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 1
+        },
+        {
+          "id": "3d7d0354-0cbf-43db-b018-68ebbc8cfaf3",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "0ec6d9d0-bee6-4620-82bc-e2486a4bb342",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "eaa1bf2f-4686-48cb-9042-e7df86c97af0",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "d474788d-2591-41f9-a441-713d3f14301a",
+          "status": "paid",
+          "amount": 16,
+          "fee": 15,
+          "net_amount": 1,
+          "version": 3
+        },
+        {
+          "id": "6bd8ab46-3d72-4ba2-b485-198da3a4f666",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "e9f4a452-93c6-4bf3-a8c3-4fb9f0fddb7e",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "8c56f747-20de-4857-9739-ccd9ad5020ac",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572",
+        "ECL-20261013-112626-13C08FC1",
+        "ECL-20261013-112629-8D79B132",
+        "ECL-20261013-112629-19BA059E",
+        "ECL-20261013-112630-E3FCEFE1",
+        "ECL-20261013-112630-C65E251F",
+        "ECL-20261013-112630-5D80EBFD",
+        "ECL-20261013-112631-B469257E"
+      ]
+    },
+    {
+      "name": "6g 更正只稽核／明確發送新通知／不改帳務",
+      "status": "passed",
+      "at": "2026-10-13T03:26:34.717Z",
+      "role": "http://127.0.0.1:5181/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 200,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 38,
+        "updated_at": "2026-10-13T03:26:34.296Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "54a567f8-0bac-46e4-a029-8fb2177e79c5",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "3d7d0354-0cbf-43db-b018-68ebbc8cfaf3",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "0ec6d9d0-bee6-4620-82bc-e2486a4bb342",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "eaa1bf2f-4686-48cb-9042-e7df86c97af0",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "d474788d-2591-41f9-a441-713d3f14301a",
+          "status": "paid",
+          "amount": 16,
+          "fee": 15,
+          "net_amount": 1,
+          "version": 3
+        },
+        {
+          "id": "6bd8ab46-3d72-4ba2-b485-198da3a4f666",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "e9f4a452-93c6-4bf3-a8c3-4fb9f0fddb7e",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "8c56f747-20de-4857-9739-ccd9ad5020ac",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572",
+        "ECL-20261013-112626-13C08FC1",
+        "ECL-20261013-112629-8D79B132",
+        "ECL-20261013-112629-19BA059E",
+        "ECL-20261013-112630-E3FCEFE1",
+        "ECL-20261013-112630-C65E251F",
+        "ECL-20261013-112630-5D80EBFD",
+        "ECL-20261013-112631-B469257E"
+      ]
+    },
+    {
+      "name": "6h 唯讀UI限制與RPC拒絕寫入／執行對帳",
+      "status": "passed",
+      "at": "2026-10-13T03:26:34.915Z",
+      "role": "http://127.0.0.1:5181/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 200,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 38,
+        "updated_at": "2026-10-13T03:26:34.296Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "54a567f8-0bac-46e4-a029-8fb2177e79c5",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "3d7d0354-0cbf-43db-b018-68ebbc8cfaf3",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "0ec6d9d0-bee6-4620-82bc-e2486a4bb342",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "eaa1bf2f-4686-48cb-9042-e7df86c97af0",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "d474788d-2591-41f9-a441-713d3f14301a",
+          "status": "paid",
+          "amount": 16,
+          "fee": 15,
+          "net_amount": 1,
+          "version": 3
+        },
+        {
+          "id": "6bd8ab46-3d72-4ba2-b485-198da3a4f666",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "e9f4a452-93c6-4bf3-a8c3-4fb9f0fddb7e",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "8c56f747-20de-4857-9739-ccd9ad5020ac",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572",
+        "ECL-20261013-112626-13C08FC1",
+        "ECL-20261013-112629-8D79B132",
+        "ECL-20261013-112629-19BA059E",
+        "ECL-20261013-112630-E3FCEFE1",
+        "ECL-20261013-112630-C65E251F",
+        "ECL-20261013-112630-5D80EBFD",
+        "ECL-20261013-112631-B469257E"
+      ]
+    },
+    {
+      "name": "最終財務一致性／無前端未捕捉錯誤",
+      "status": "passed",
+      "at": "2026-10-13T03:26:35.263Z",
+      "role": "http://127.0.0.1:5181/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 200,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 38,
+        "updated_at": "2026-10-13T03:26:34.296Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "54a567f8-0bac-46e4-a029-8fb2177e79c5",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "3d7d0354-0cbf-43db-b018-68ebbc8cfaf3",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "0ec6d9d0-bee6-4620-82bc-e2486a4bb342",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "eaa1bf2f-4686-48cb-9042-e7df86c97af0",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "d474788d-2591-41f9-a441-713d3f14301a",
+          "status": "paid",
+          "amount": 16,
+          "fee": 15,
+          "net_amount": 1,
+          "version": 3
+        },
+        {
+          "id": "6bd8ab46-3d72-4ba2-b485-198da3a4f666",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "e9f4a452-93c6-4bf3-a8c3-4fb9f0fddb7e",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "8c56f747-20de-4857-9739-ccd9ad5020ac",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-110643-2A26E572",
+        "ECL-20261013-112626-13C08FC1",
+        "ECL-20261013-112629-8D79B132",
+        "ECL-20261013-112629-19BA059E",
+        "ECL-20261013-112630-E3FCEFE1",
+        "ECL-20261013-112630-C65E251F",
+        "ECL-20261013-112630-5D80EBFD",
+        "ECL-20261013-112631-B469257E"
+      ]
+    }
+  ],
+  "errors": [],
+  "finalAudit": {
+    "reconciliation": {
+      "runs": [
+        {
+          "id": "85a3e670-a4fc-49ac-9643-63b43533f123",
+          "scope": "all_reward_finances",
+          "status": "complete",
+          "created_at": "2026-10-13T11:26:35.047343+08:00",
+          "error_code": null,
+          "snapshot_at": "2026-10-13T11:26:35.047705+08:00",
+          "checked_count": 110,
+          "finding_count": 2
+        },
+        {
+          "id": "e11226ce-e905-4975-bea5-fe0c580b3790",
+          "scope": "all_reward_finances",
+          "status": "complete",
+          "created_at": "2026-10-13T11:26:30.486045+08:00",
+          "error_code": null,
+          "snapshot_at": "2026-10-13T11:26:30.48667+08:00",
+          "checked_count": 85,
+          "finding_count": 2
+        },
+        {
+          "id": "8b346aba-c422-41f8-87c9-0bb310bbe2ed",
+          "scope": "all_reward_finances",
+          "status": "complete",
+          "created_at": "2026-10-13T11:26:30.197123+08:00",
+          "error_code": null,
+          "snapshot_at": "2026-10-13T11:26:30.197496+08:00",
+          "checked_count": 82,
+          "finding_count": 2
+        },
+        {
+          "id": "2cf4cf34-8bab-464d-84f5-432014e27c49",
+          "scope": "all_reward_finances",
+          "status": "complete",
+          "created_at": "2026-10-13T11:26:28.713991+08:00",
+          "error_code": null,
+          "snapshot_at": "2026-10-13T11:26:28.714375+08:00",
+          "checked_count": 69,
+          "finding_count": 2
+        },
+        {
+          "id": "81c0b6e4-fdf4-4054-9a04-e67d8928fddc",
+          "scope": "all_reward_finances",
+          "status": "complete",
+          "created_at": "2026-10-13T11:26:28.130311+08:00",
+          "error_code": null,
+          "snapshot_at": "2026-10-13T11:26:28.130719+08:00",
+          "checked_count": 68,
+          "finding_count": 3
+        },
+        {
+          "id": "1e7e7602-159c-43bb-9dc2-e021e0408033",
+          "scope": "all_reward_finances",
+          "status": "complete",
+          "created_at": "2026-10-13T11:26:27.296771+08:00",
+          "error_code": null,
+          "snapshot_at": "2026-10-13T11:26:27.297136+08:00",
+          "checked_count": 66,
+          "finding_count": 2
+        },
+        {
+          "id": "fd18fbe8-6f9d-4732-a1c7-5c551b1e3fe8",
+          "scope": "all_reward_finances",
+          "status": "complete",
+          "created_at": "2026-10-13T11:26:26.263278+08:00",
+          "error_code": null,
+          "snapshot_at": "2026-10-13T11:26:26.263655+08:00",
+          "checked_count": 60,
+          "finding_count": 2
+        }
+      ],
+      "total": 3,
+      "findings": [
+        {
+          "id": 2,
+          "rule": "payment_unknown",
+          "actual": {
+            "reason": "payment_after_release"
+          },
+          "source": "ECL-20261013-110642-9EEF424D",
+          "present": true,
+          "expected": {
+            "action": "manual_review"
+          },
+          "last_run_id": "85a3e670-a4fc-49ac-9643-63b43533f123",
+          "last_seen_at": "2026-10-13T11:26:35.047705+08:00",
+          "first_seen_at": "2026-10-13T11:26:26.263655+08:00"
+        },
+        {
+          "id": 1,
+          "rule": "payment_unknown",
+          "actual": {
+            "reason": "payment_after_release"
+          },
+          "source": "ECL-20261013-110642-784BB0F5",
+          "present": true,
+          "expected": {
+            "action": "manual_review"
+          },
+          "last_run_id": "85a3e670-a4fc-49ac-9643-63b43533f123",
+          "last_seen_at": "2026-10-13T11:26:35.047705+08:00",
+          "first_seen_at": "2026-10-13T11:26:26.263655+08:00"
+        },
+        {
+          "id": 7,
+          "rule": "withdrawal_unknown",
+          "actual": {
+            "status": "unknown"
+          },
+          "source": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+          "present": false,
+          "expected": {
+            "action": "manual_bank_review_hold_unchanged"
+          },
+          "last_run_id": "2cf4cf34-8bab-464d-84f5-432014e27c49",
+          "last_seen_at": "2026-10-13T11:26:28.130719+08:00",
+          "first_seen_at": "2026-10-13T11:26:28.130719+08:00"
+        }
+      ]
+    },
+    "notifications": [
+      {
+        "id": "c2d35bdb-053c-441f-9658-f138388bf9f2",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:34.667055+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:34.663782+08:00",
+        "event_type": "correction",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:34.667055+08:00",
+        "withdrawal_id": "54a567f8-0bac-46e4-a029-8fb2177e79c5",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:34.665782+08:00"
+      },
+      {
+        "id": "3afe85e5-8036-46f6-95b8-a537f3bc2f4a",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:34.319166+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:34.296163+08:00",
+        "event_type": "failed",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:34.319166+08:00",
+        "withdrawal_id": "54a567f8-0bac-46e4-a029-8fb2177e79c5",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:34.317799+08:00"
+      },
+      {
+        "id": "0a6f4ac0-00c3-4f17-a497-a332bd3bb905",
+        "status": "failed",
+        "channel": "email",
+        "sent_at": null,
+        "version": 1,
+        "audience": "admin",
+        "created_at": "2026-10-13T11:26:33.924193+08:00",
+        "event_type": "requested",
+        "last_error": "permanent",
+        "line_attempts": 0,
+        "next_retry_at": "2026-10-13T11:27:33.931109+08:00",
+        "withdrawal_id": "54a567f8-0bac-46e4-a029-8fb2177e79c5",
+        "email_attempts": 1,
+        "recipient_mask": "a***@example.test",
+        "last_attempt_at": "2026-10-13T11:26:33.929727+08:00"
+      },
+      {
+        "id": "2aebd29a-b159-4b90-8aa1-c0afefdd171e",
+        "status": "failed",
+        "channel": "email",
+        "sent_at": null,
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:33.794256+08:00",
+        "event_type": "requested",
+        "last_error": "permanent",
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:33.93206+08:00",
+        "withdrawal_id": "54a567f8-0bac-46e4-a029-8fb2177e79c5",
+        "email_attempts": 1,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:33.929727+08:00"
+      },
+      {
+        "id": "1a973d24-cb01-41b4-b05b-f869755d1338",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:33.551168+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:33.529412+08:00",
+        "event_type": "failed",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:33.551168+08:00",
+        "withdrawal_id": "3d7d0354-0cbf-43db-b018-68ebbc8cfaf3",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:33.548366+08:00"
+      },
+      {
+        "id": "cc9edee6-abb9-4186-b27c-1b511190b77f",
+        "status": "sent",
+        "channel": "email",
+        "sent_at": "2026-10-13T11:26:33.095575+08:00",
+        "version": 1,
+        "audience": "admin",
+        "created_at": "2026-10-13T11:26:33.087173+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 0,
+        "next_retry_at": "2026-10-13T11:27:33.095575+08:00",
+        "withdrawal_id": "3d7d0354-0cbf-43db-b018-68ebbc8cfaf3",
+        "email_attempts": 1,
+        "recipient_mask": "a***@example.test",
+        "last_attempt_at": "2026-10-13T11:26:33.094382+08:00"
+      },
+      {
+        "id": "825f51b8-92d7-45b1-85cc-baf5197dc1b2",
+        "status": "unknown",
+        "channel": "line",
+        "sent_at": null,
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:32.961504+08:00",
+        "event_type": "requested",
+        "last_error": "ambiguous",
+        "line_attempts": 6,
+        "next_retry_at": "2026-10-13T17:26:33.148391+08:00",
+        "withdrawal_id": "3d7d0354-0cbf-43db-b018-68ebbc8cfaf3",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:33.147244+08:00"
+      },
+      {
+        "id": "90f31fbb-726f-4496-a932-2b7f1e34832f",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:32.783479+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:32.763049+08:00",
+        "event_type": "failed",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:32.783479+08:00",
+        "withdrawal_id": "0ec6d9d0-bee6-4620-82bc-e2486a4bb342",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:32.78162+08:00"
+      },
+      {
+        "id": "cc79ef94-1d6d-410d-8a3a-efdaf2607e32",
+        "status": "sent",
+        "channel": "email",
+        "sent_at": "2026-10-13T11:26:32.376808+08:00",
+        "version": 1,
+        "audience": "admin",
+        "created_at": "2026-10-13T11:26:32.370142+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 0,
+        "next_retry_at": "2026-10-13T11:27:32.376808+08:00",
+        "withdrawal_id": "0ec6d9d0-bee6-4620-82bc-e2486a4bb342",
+        "email_attempts": 1,
+        "recipient_mask": "a***@example.test",
+        "last_attempt_at": "2026-10-13T11:26:32.375585+08:00"
+      },
+      {
+        "id": "b0862d3e-6018-474b-b371-f7b14424efc1",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:32.525296+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:32.244753+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 3,
+        "next_retry_at": "2026-10-13T11:41:32.525296+08:00",
+        "withdrawal_id": "0ec6d9d0-bee6-4620-82bc-e2486a4bb342",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:32.523576+08:00"
+      },
+      {
+        "id": "aaf68132-7465-47b6-bc8d-64e18b36bc3d",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:32.051337+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:32.029636+08:00",
+        "event_type": "failed",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:32.051337+08:00",
+        "withdrawal_id": "eaa1bf2f-4686-48cb-9042-e7df86c97af0",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:32.050128+08:00"
+      },
+      {
+        "id": "5318d36a-8ca5-4822-be4a-c0ca0281e05e",
+        "status": "sent",
+        "channel": "email",
+        "sent_at": "2026-10-13T11:26:31.679993+08:00",
+        "version": 1,
+        "audience": "admin",
+        "created_at": "2026-10-13T11:26:31.673849+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 0,
+        "next_retry_at": "2026-10-13T11:27:31.679993+08:00",
+        "withdrawal_id": "eaa1bf2f-4686-48cb-9042-e7df86c97af0",
+        "email_attempts": 1,
+        "recipient_mask": "a***@example.test",
+        "last_attempt_at": "2026-10-13T11:26:31.678662+08:00"
+      },
+      {
+        "id": "8a8c3548-76d3-48b6-b36c-06bae6d113c9",
+        "status": "sent",
+        "channel": "email",
+        "sent_at": "2026-10-13T11:26:31.680777+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:31.545461+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:31.680777+08:00",
+        "withdrawal_id": "eaa1bf2f-4686-48cb-9042-e7df86c97af0",
+        "email_attempts": 1,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:31.678662+08:00"
+      },
+      {
+        "id": "7e3d9b5d-d4fc-48e3-9649-1d8971b4379e",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:31.365517+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:31.34669+08:00",
+        "event_type": "paid",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:31.365517+08:00",
+        "withdrawal_id": "d474788d-2591-41f9-a441-713d3f14301a",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:31.363797+08:00"
+      },
+      {
+        "id": "8f45a923-9b31-4eca-b4d2-e720c882a101",
+        "status": "sent",
+        "channel": "email",
+        "sent_at": "2026-10-13T11:26:31.132971+08:00",
+        "version": 1,
+        "audience": "admin",
+        "created_at": "2026-10-13T11:26:31.124297+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 0,
+        "next_retry_at": "2026-10-13T11:27:31.132971+08:00",
+        "withdrawal_id": "d474788d-2591-41f9-a441-713d3f14301a",
+        "email_attempts": 1,
+        "recipient_mask": "a***@example.test",
+        "last_attempt_at": "2026-10-13T11:26:31.131822+08:00"
+      },
+      {
+        "id": "bda3ef36-1f3f-450c-b11e-fd24ad3413ee",
+        "status": "sent",
+        "channel": "email",
+        "sent_at": "2026-10-13T11:26:31.13372+08:00",
+        "version": 1,
+        "audience": "admin",
+        "created_at": "2026-10-13T11:26:31.124297+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 0,
+        "next_retry_at": "2026-10-13T11:27:31.13372+08:00",
+        "withdrawal_id": "6bd8ab46-3d72-4ba2-b485-198da3a4f666",
+        "email_attempts": 1,
+        "recipient_mask": "a***@example.test",
+        "last_attempt_at": "2026-10-13T11:26:31.131822+08:00"
+      },
+      {
+        "id": "56c2896f-99ce-49eb-8aec-8ee1fa026f9d",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:31.129082+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:30.994978+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:31.129082+08:00",
+        "withdrawal_id": "d474788d-2591-41f9-a441-713d3f14301a",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:31.124297+08:00"
+      },
+      {
+        "id": "fc76965d-6950-4c81-b83d-91757c4c362c",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:31.12811+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:30.048469+08:00",
+        "event_type": "paid",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:31.12811+08:00",
+        "withdrawal_id": "6bd8ab46-3d72-4ba2-b485-198da3a4f666",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:31.124297+08:00"
+      },
+      {
+        "id": "66081e97-d09f-449c-b727-8e973520a8ad",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:31.127066+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:29.561149+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:31.127066+08:00",
+        "withdrawal_id": "6bd8ab46-3d72-4ba2-b485-198da3a4f666",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:31.124297+08:00"
+      },
+      {
+        "id": "02ebbbd1-adbe-465d-944d-93fe009771d3",
+        "status": "sent",
+        "channel": "email",
+        "sent_at": "2026-10-13T11:26:29.368482+08:00",
+        "version": 1,
+        "audience": "admin",
+        "created_at": "2026-10-13T11:26:29.362178+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 0,
+        "next_retry_at": "2026-10-13T11:27:29.368482+08:00",
+        "withdrawal_id": "e9f4a452-93c6-4bf3-a8c3-4fb9f0fddb7e",
+        "email_attempts": 1,
+        "recipient_mask": "a***@example.test",
+        "last_attempt_at": "2026-10-13T11:26:29.367583+08:00"
+      },
+      {
+        "id": "79d0c382-692c-4a58-b3c4-af3e3bba667f",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:29.365517+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:29.345755+08:00",
+        "event_type": "paid",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:29.365517+08:00",
+        "withdrawal_id": "e9f4a452-93c6-4bf3-a8c3-4fb9f0fddb7e",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:29.362178+08:00"
+      },
+      {
+        "id": "28a3bb2f-4589-445b-8e7a-050ebcb30d83",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:29.364501+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:29.013881+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:29.364501+08:00",
+        "withdrawal_id": "e9f4a452-93c6-4bf3-a8c3-4fb9f0fddb7e",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:29.362178+08:00"
+      },
+      {
+        "id": "d8ef6e05-5ce5-458e-9071-d55d4371945c",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:29.363792+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:28.546415+08:00",
+        "event_type": "failed",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:29.363792+08:00",
+        "withdrawal_id": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:29.362178+08:00"
+      },
+      {
+        "id": "c99683c6-5e31-412d-ac76-b8e18c6c7620",
+        "status": "sent",
+        "channel": "email",
+        "sent_at": "2026-10-13T11:26:27.977114+08:00",
+        "version": 1,
+        "audience": "admin",
+        "created_at": "2026-10-13T11:26:27.968448+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 0,
+        "next_retry_at": "2026-10-13T11:27:27.977114+08:00",
+        "withdrawal_id": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+        "email_attempts": 1,
+        "recipient_mask": "a***@example.test",
+        "last_attempt_at": "2026-10-13T11:26:27.97427+08:00"
+      },
+      {
+        "id": "5cb7fed9-6767-488c-9206-be81788f2128",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:27.971363+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:27.946995+08:00",
+        "event_type": "unknown",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:27.971363+08:00",
+        "withdrawal_id": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:27.968448+08:00"
+      },
+      {
+        "id": "dbf93361-08fb-401b-9a69-4b6c643b76f2",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:27.970539+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:27.594619+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:27.970539+08:00",
+        "withdrawal_id": "f1d848ab-14ea-44fe-a09c-8088e9d2c3fc",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:27.968448+08:00"
+      },
+      {
+        "id": "551b93be-c18b-4261-8085-29f40f94911e",
+        "status": "sent",
+        "channel": "email",
+        "sent_at": "2026-10-13T11:26:27.132486+08:00",
+        "version": 1,
+        "audience": "admin",
+        "created_at": "2026-10-13T11:26:27.124224+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 0,
+        "next_retry_at": "2026-10-13T11:27:27.132486+08:00",
+        "withdrawal_id": "8c56f747-20de-4857-9739-ccd9ad5020ac",
+        "email_attempts": 1,
+        "recipient_mask": "a***@example.test",
+        "last_attempt_at": "2026-10-13T11:26:27.131051+08:00"
+      },
+      {
+        "id": "5a2b0a7e-eba9-407f-b9ea-6d14a0bea374",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:27.128121+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:27.096195+08:00",
+        "event_type": "failed",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:27.128121+08:00",
+        "withdrawal_id": "8c56f747-20de-4857-9739-ccd9ad5020ac",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:27.124224+08:00"
+      },
+      {
+        "id": "a0f4d0ed-5b9e-4f06-8bba-91289f77f6dc",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:27.126782+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:26.761041+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:27.126782+08:00",
+        "withdrawal_id": "8c56f747-20de-4857-9739-ccd9ad5020ac",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:27.124224+08:00"
+      },
+      {
+        "id": "0a6cf7e8-9f3d-466d-9c7c-f10bbaca7923",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:26.564544+08:00",
+        "version": 2,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:26.546555+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:26.564544+08:00",
+        "withdrawal_id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:26.562827+08:00"
+      },
+      {
+        "id": "e619104f-4424-42f3-942c-5418875d7794",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:26.088141+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:26.062442+08:00",
+        "event_type": "paid",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:26.088141+08:00",
+        "withdrawal_id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:26.086606+08:00"
+      },
+      {
+        "id": "14dc9d22-7a8f-4e70-98f1-dd9aa010c3b4",
+        "status": "sent",
+        "channel": "email",
+        "sent_at": "2026-10-13T11:26:23.863218+08:00",
+        "version": 1,
+        "audience": "admin",
+        "created_at": "2026-10-13T11:26:23.836767+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 0,
+        "next_retry_at": "2026-10-13T11:27:23.863218+08:00",
+        "withdrawal_id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+        "email_attempts": 1,
+        "recipient_mask": "a***@example.test",
+        "last_attempt_at": "2026-10-13T11:26:23.861588+08:00"
+      },
+      {
+        "id": "cee7e474-c3db-4365-9711-2ad64a65c7b4",
+        "status": "sent",
+        "channel": "line",
+        "sent_at": "2026-10-13T11:26:23.858253+08:00",
+        "version": 1,
+        "audience": "teacher",
+        "created_at": "2026-10-13T11:26:23.713373+08:00",
+        "event_type": "requested",
+        "last_error": null,
+        "line_attempts": 1,
+        "next_retry_at": "2026-10-13T11:27:23.858253+08:00",
+        "withdrawal_id": "79ff0591-de06-4ca7-9098-6e263e45dab6",
+        "email_attempts": 0,
+        "recipient_mask": "LINE 綁定帳號",
+        "last_attempt_at": "2026-10-13T11:26:23.836767+08:00"
+      }
+    ],
+    "attempts": [
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:34.667055+08:00",
+        "notification_id": "c2d35bdb-053c-441f-9658-f138388bf9f2"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:34.665782+08:00",
+        "notification_id": "c2d35bdb-053c-441f-9658-f138388bf9f2"
+      },
+      {
+        "action": "correction_confirmed",
+        "result": "requested",
+        "channel": null,
+        "created_at": "2026-10-13T11:26:34.663782+08:00",
+        "notification_id": "c2d35bdb-053c-441f-9658-f138388bf9f2"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:34.319166+08:00",
+        "notification_id": "3afe85e5-8036-46f6-95b8-a537f3bc2f4a"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:34.317799+08:00",
+        "notification_id": "3afe85e5-8036-46f6-95b8-a537f3bc2f4a"
+      },
+      {
+        "action": "complete",
+        "result": "permanent",
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:33.93206+08:00",
+        "notification_id": "2aebd29a-b159-4b90-8aa1-c0afefdd171e"
+      },
+      {
+        "action": "complete",
+        "result": "permanent",
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:33.931109+08:00",
+        "notification_id": "0a6f4ac0-00c3-4f17-a497-a332bd3bb905"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:33.929727+08:00",
+        "notification_id": "2aebd29a-b159-4b90-8aa1-c0afefdd171e"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:33.929727+08:00",
+        "notification_id": "0a6f4ac0-00c3-4f17-a497-a332bd3bb905"
+      },
+      {
+        "action": "complete",
+        "result": "line_server_error",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:33.925894+08:00",
+        "notification_id": "2aebd29a-b159-4b90-8aa1-c0afefdd171e"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:33.924193+08:00",
+        "notification_id": "2aebd29a-b159-4b90-8aa1-c0afefdd171e"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:33.551168+08:00",
+        "notification_id": "1a973d24-cb01-41b4-b05b-f869755d1338"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:33.548366+08:00",
+        "notification_id": "1a973d24-cb01-41b4-b05b-f869755d1338"
+      },
+      {
+        "action": "complete",
+        "result": "ambiguous",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:33.148391+08:00",
+        "notification_id": "825f51b8-92d7-45b1-85cc-baf5197dc1b2"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:33.147244+08:00",
+        "notification_id": "825f51b8-92d7-45b1-85cc-baf5197dc1b2"
+      },
+      {
+        "action": "complete",
+        "result": "ambiguous",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:33.137662+08:00",
+        "notification_id": "825f51b8-92d7-45b1-85cc-baf5197dc1b2"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:33.13663+08:00",
+        "notification_id": "825f51b8-92d7-45b1-85cc-baf5197dc1b2"
+      },
+      {
+        "action": "complete",
+        "result": "ambiguous",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:33.126987+08:00",
+        "notification_id": "825f51b8-92d7-45b1-85cc-baf5197dc1b2"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:33.125839+08:00",
+        "notification_id": "825f51b8-92d7-45b1-85cc-baf5197dc1b2"
+      },
+      {
+        "action": "complete",
+        "result": "ambiguous",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:33.116261+08:00",
+        "notification_id": "825f51b8-92d7-45b1-85cc-baf5197dc1b2"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:33.115141+08:00",
+        "notification_id": "825f51b8-92d7-45b1-85cc-baf5197dc1b2"
+      },
+      {
+        "action": "complete",
+        "result": "ambiguous",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:33.105333+08:00",
+        "notification_id": "825f51b8-92d7-45b1-85cc-baf5197dc1b2"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:33.104329+08:00",
+        "notification_id": "825f51b8-92d7-45b1-85cc-baf5197dc1b2"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:33.095575+08:00",
+        "notification_id": "cc9edee6-abb9-4186-b27c-1b511190b77f"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:33.094382+08:00",
+        "notification_id": "cc9edee6-abb9-4186-b27c-1b511190b77f"
+      },
+      {
+        "action": "complete",
+        "result": "ambiguous",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:33.091139+08:00",
+        "notification_id": "825f51b8-92d7-45b1-85cc-baf5197dc1b2"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:33.087173+08:00",
+        "notification_id": "825f51b8-92d7-45b1-85cc-baf5197dc1b2"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:32.783479+08:00",
+        "notification_id": "90f31fbb-726f-4496-a932-2b7f1e34832f"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:32.78162+08:00",
+        "notification_id": "90f31fbb-726f-4496-a932-2b7f1e34832f"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:32.525296+08:00",
+        "notification_id": "b0862d3e-6018-474b-b371-f7b14424efc1"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:32.523576+08:00",
+        "notification_id": "b0862d3e-6018-474b-b371-f7b14424efc1"
+      },
+      {
+        "action": "complete",
+        "result": "ambiguous",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:32.514231+08:00",
+        "notification_id": "b0862d3e-6018-474b-b371-f7b14424efc1"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:32.51258+08:00",
+        "notification_id": "b0862d3e-6018-474b-b371-f7b14424efc1"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:32.376808+08:00",
+        "notification_id": "cc79ef94-1d6d-410d-8a3a-efdaf2607e32"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:32.375585+08:00",
+        "notification_id": "cc79ef94-1d6d-410d-8a3a-efdaf2607e32"
+      },
+      {
+        "action": "complete",
+        "result": "ambiguous",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:32.372378+08:00",
+        "notification_id": "b0862d3e-6018-474b-b371-f7b14424efc1"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:32.370142+08:00",
+        "notification_id": "b0862d3e-6018-474b-b371-f7b14424efc1"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:32.051337+08:00",
+        "notification_id": "aaf68132-7465-47b6-bc8d-64e18b36bc3d"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:32.050128+08:00",
+        "notification_id": "aaf68132-7465-47b6-bc8d-64e18b36bc3d"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:31.680777+08:00",
+        "notification_id": "8a8c3548-76d3-48b6-b36c-06bae6d113c9"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:31.679993+08:00",
+        "notification_id": "5318d36a-8ca5-4822-be4a-c0ca0281e05e"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:31.678662+08:00",
+        "notification_id": "8a8c3548-76d3-48b6-b36c-06bae6d113c9"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:31.678662+08:00",
+        "notification_id": "5318d36a-8ca5-4822-be4a-c0ca0281e05e"
+      },
+      {
+        "action": "complete",
+        "result": "line_server_error",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:31.675927+08:00",
+        "notification_id": "8a8c3548-76d3-48b6-b36c-06bae6d113c9"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:31.673849+08:00",
+        "notification_id": "8a8c3548-76d3-48b6-b36c-06bae6d113c9"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:31.365517+08:00",
+        "notification_id": "7e3d9b5d-d4fc-48e3-9649-1d8971b4379e"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:31.363797+08:00",
+        "notification_id": "7e3d9b5d-d4fc-48e3-9649-1d8971b4379e"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:31.13372+08:00",
+        "notification_id": "bda3ef36-1f3f-450c-b11e-fd24ad3413ee"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:31.132971+08:00",
+        "notification_id": "8f45a923-9b31-4eca-b4d2-e720c882a101"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:31.131822+08:00",
+        "notification_id": "bda3ef36-1f3f-450c-b11e-fd24ad3413ee"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:31.131822+08:00",
+        "notification_id": "8f45a923-9b31-4eca-b4d2-e720c882a101"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:31.129082+08:00",
+        "notification_id": "56c2896f-99ce-49eb-8aec-8ee1fa026f9d"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:31.12811+08:00",
+        "notification_id": "fc76965d-6950-4c81-b83d-91757c4c362c"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:31.127066+08:00",
+        "notification_id": "66081e97-d09f-449c-b727-8e973520a8ad"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:31.124297+08:00",
+        "notification_id": "56c2896f-99ce-49eb-8aec-8ee1fa026f9d"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:31.124297+08:00",
+        "notification_id": "fc76965d-6950-4c81-b83d-91757c4c362c"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:31.124297+08:00",
+        "notification_id": "66081e97-d09f-449c-b727-8e973520a8ad"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:29.368482+08:00",
+        "notification_id": "02ebbbd1-adbe-465d-944d-93fe009771d3"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:29.367583+08:00",
+        "notification_id": "02ebbbd1-adbe-465d-944d-93fe009771d3"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:29.365517+08:00",
+        "notification_id": "79d0c382-692c-4a58-b3c4-af3e3bba667f"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:29.364501+08:00",
+        "notification_id": "28a3bb2f-4589-445b-8e7a-050ebcb30d83"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:29.363792+08:00",
+        "notification_id": "d8ef6e05-5ce5-458e-9071-d55d4371945c"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:29.362178+08:00",
+        "notification_id": "79d0c382-692c-4a58-b3c4-af3e3bba667f"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:29.362178+08:00",
+        "notification_id": "28a3bb2f-4589-445b-8e7a-050ebcb30d83"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:29.362178+08:00",
+        "notification_id": "d8ef6e05-5ce5-458e-9071-d55d4371945c"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:27.977114+08:00",
+        "notification_id": "c99683c6-5e31-412d-ac76-b8e18c6c7620"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:27.97427+08:00",
+        "notification_id": "c99683c6-5e31-412d-ac76-b8e18c6c7620"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:27.971363+08:00",
+        "notification_id": "5cb7fed9-6767-488c-9206-be81788f2128"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:27.970539+08:00",
+        "notification_id": "dbf93361-08fb-401b-9a69-4b6c643b76f2"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:27.968448+08:00",
+        "notification_id": "5cb7fed9-6767-488c-9206-be81788f2128"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:27.968448+08:00",
+        "notification_id": "dbf93361-08fb-401b-9a69-4b6c643b76f2"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:27.132486+08:00",
+        "notification_id": "551b93be-c18b-4261-8085-29f40f94911e"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:27.131051+08:00",
+        "notification_id": "551b93be-c18b-4261-8085-29f40f94911e"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:27.128121+08:00",
+        "notification_id": "5a2b0a7e-eba9-407f-b9ea-6d14a0bea374"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:27.126782+08:00",
+        "notification_id": "a0f4d0ed-5b9e-4f06-8bba-91289f77f6dc"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:27.124224+08:00",
+        "notification_id": "5a2b0a7e-eba9-407f-b9ea-6d14a0bea374"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:27.124224+08:00",
+        "notification_id": "a0f4d0ed-5b9e-4f06-8bba-91289f77f6dc"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:26.564544+08:00",
+        "notification_id": "0a6cf7e8-9f3d-466d-9c7c-f10bbaca7923"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:26.562827+08:00",
+        "notification_id": "0a6cf7e8-9f3d-466d-9c7c-f10bbaca7923"
+      },
+      {
+        "action": "manual:984f248b-8b11-4495-bc01-ebe3ccd9d8d2",
+        "result": "requested",
+        "channel": null,
+        "created_at": "2026-10-13T11:26:26.546555+08:00",
+        "notification_id": "0a6cf7e8-9f3d-466d-9c7c-f10bbaca7923"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:26.088141+08:00",
+        "notification_id": "e619104f-4424-42f3-942c-5418875d7794"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:26.086606+08:00",
+        "notification_id": "e619104f-4424-42f3-942c-5418875d7794"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:23.863218+08:00",
+        "notification_id": "14dc9d22-7a8f-4e70-98f1-dd9aa010c3b4"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "email",
+        "created_at": "2026-10-13T11:26:23.861588+08:00",
+        "notification_id": "14dc9d22-7a8f-4e70-98f1-dd9aa010c3b4"
+      },
+      {
+        "action": "complete",
+        "result": "accepted",
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:23.858253+08:00",
+        "notification_id": "cee7e474-c3db-4365-9711-2ad64a65c7b4"
+      },
+      {
+        "action": "claim",
+        "result": null,
+        "channel": "line",
+        "created_at": "2026-10-13T11:26:23.836767+08:00",
+        "notification_id": "cee7e474-c3db-4365-9711-2ad64a65c7b4"
+      }
+    ]
+  }
+}
