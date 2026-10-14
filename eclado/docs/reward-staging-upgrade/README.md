@@ -64,4 +64,4 @@ Preview／本機產品程式仍硬編正式Supabase／付款URL；安裝test DB�
 
 實際登入畫面驗證：學生會員中心只見自己的訂單，老師會員中心顯示歷史學生訂單、待入帳及正式入帳Ledger，帳戶／可用餘額1280。另以authenticated＋READ ONLY交易驗證學生呼叫老師報表回傳42501；管理員受限RPC可讀到balance1280、1筆訂單及2筆Ledger。
 
-Vercel環境變數已將正式Supabase及付款設定限縮於Production，Preview設定指向test Supabase且付款／LINE停用；尚未push或觸發Preview自動部署。正式網站、正式資料庫及正式學生價均未變更。
+Vercel環境變數已將正式Supabase及付款設定限縮於Production，Preview設定指向test Supabase且付款／LINE停用。commit `3816976` 推送至 `codex/instructor-student-rewards` 後，Git自動部署的Preview顯示Ready；實際開啟可見TEST橫幅、付款停用提示及test商品，網址為 `https://eclado-4446me43h-eclado-s-projects.vercel.app/`。正式網站、正式資料庫及正式學生價均未變更。
