@@ -1,0 +1,8 @@
+					212 row public.orders 0
+					215 row public.products 1
+					218 row public.profiles 0
+					221 row public.promotions 0
+					224 row public.professional_applications 0
+					227 row auth.users 0
+					230 row storage.buckets 0
+					233 row storage.objects 0

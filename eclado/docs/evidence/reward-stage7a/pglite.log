@@ -1,0 +1,46 @@
+PASS assisted order migration and real inventory lifecycle/count compatibility
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+✔ assisted SQL: atomic creation/recovery, owner/roles, immutable snapshots, reservation/payment/cancel/count (11027.20075ms)
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+PASS stage 4 reserve/consume/refund, late success exceptions, role downgrade, caps and bank amount contract
+✔ 4: double wallet pricing, lifecycle and authoritative gateway contracts (13305.87325ms)
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+PASS 2B verified bank/admin evidence, immutable ledger, terminals, debt arithmetic, deletion guard and unchanged existing SQL
+✔ 2B: reward ledger, verified evidence, terminal lifecycle and concurrent reconciliation (13124.846958ms)
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+PASS stage 4 reserve/consume/refund, late success exceptions, role downgrade, caps and bank amount contract
+PASS stage 6 atomic events, immutable payloads, downgrade delivery, fencing/recovery, fallback, masked RPC, reconciliation and idempotency
+✔ 6: transactional outbox, fenced workers and read-only financial reconciliation (13868.576584ms)
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+PASS stage 3 ownership, downgrade/restore, deleted member/order, whitelist, actual permissions, pagination, diagnostics, OFF and unchanged accounting
+✔ 3: isolated reward queries, historical ownership, ACL and consistent read pages (11554.6845ms)
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+PASS stage 4 reserve/consume/refund, late success exceptions, role downgrade, caps and bank amount contract
+PASS stage 5 full withdrawal, negative balance, fixed fee, calendar cutoff, immutable snapshot, manual evidence, rollback and ACL
+✔ 5: encrypted bank snapshots, full withdrawals, immutable manual transfer and wallet concurrency (13295.450459ms)
+✔ 1B migration scope is settings/relations only; no existing price/payment/order writes (10.80825ms)
+✔ isolated 1B: RPC permissions, validation, history, stale writes, qualification and Auth deletion (10001.641ms)
+PASS: actual SQL migration and rerun, quote prices across identities/variants, atomic product save, stale versions, audit, historical preservation and helper ACLs
+✔ isolated DB: migration, authoritative prices, saves, roles, audit, stale versions and rerun (3462.194583ms)
+✔ payment RPC ACL repair blocks real client calls and preserves service payment behavior (3682.955833ms)
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+✔ 1C: real existing engines plus student prices and AUTO/MANUAL (3639.978167ms)
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+KNOWN EXISTING CONFLICT: Auth deletion with owned assisted orders is blocked by protect_assisted_order; 2A does not alter it
+PASS 2A ordinary/assisted snapshots, benefits independence, recovery, immutability, ACL and OFF
+✔ 2A: private immutable snapshots in existing ordinary/assisted transactions (2764.190083ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16347.431917

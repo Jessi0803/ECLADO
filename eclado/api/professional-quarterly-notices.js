@@ -1,6 +1,6 @@
 const { buildBrandedEmailHtml } = require('./_email-template.js');
 
-const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
+const { resolveSupabaseUrl } = require('./_supabase-env.js');
 const DEFAULT_FROM = 'ECLADO <service@ecladotaiwan.com>';
 
 function requireCron(req, res) {
@@ -11,7 +11,7 @@ function requireCron(req, res) {
 async function request(path, options = {}) {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
   if (!key) throw new Error('SUPABASE_SERVICE_KEY not set');
-  const response = await fetch(`${process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL}/rest/v1/${path}`, {
+  const response = await fetch(`${resolveSupabaseUrl()}/rest/v1/${path}`, {
     ...options,
     headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', ...(options.headers || {}) },
   });

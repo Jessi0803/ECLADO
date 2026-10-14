@@ -1,7 +1,6 @@
 const { buildBrandedEmailHtml } = require('./_email-template.js');
 
-const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
-const DEFAULT_SUPABASE_ANON = 'sb_publishable_BasrQNdstdbX_InrQWmCuw_Jb1Lscnl';
+const { resolveSupabaseAnonKey, resolveSupabaseUrl } = require('./_supabase-env.js');
 const DEFAULT_FROM = 'ECLADO <service@ecladotaiwan.com>';
 const DEFAULT_ADMIN_EMAIL = 'ecladotaiwan@gmail.com';
 const ADMIN_URL = 'https://ecladotaiwan.com/admin';
@@ -67,8 +66,8 @@ module.exports = async function handler(req, res) {
   const applicationId = String(req.body?.applicationId || '').trim();
   if (!applicationId) return res.status(400).json({ error: 'applicationId required' });
 
-  const supabaseUrl = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON;
+  const supabaseUrl = resolveSupabaseUrl();
+  const anonKey = resolveSupabaseAnonKey();
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
   const resendKey = process.env.RESEND_API_KEY;
   const recipient = process.env.PROFESSIONAL_APPLICATION_ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL;

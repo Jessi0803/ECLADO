@@ -1,0 +1,114 @@
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS PostgreSQL independent manager/buyer sessions: uncommitted type isolation, stale creation rollback, no deadlocks
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+PASS PostgreSQL two-wallet reserve race, paid/cancel, retry/old callback, credit/spend and reversal/spend; deadlocks=0
+PASS stage 4 reserve/consume/refund, late success exceptions, role downgrade, caps and bank amount contract
+✔ 4: double wallet pricing, lifecycle and authoritative gateway contracts (3837.0425ms)
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS PostgreSQL independent manager/buyer sessions: uncommitted type isolation, stale creation rollback, no deadlocks
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+PASS real PostgreSQL: simultaneous receipt/fulfillment, duplicate refunds and receipt/cancel; exactly-once ledger, deadlocks=0
+PASS 2B verified bank/admin evidence, immutable ledger, terminals, debt arithmetic, deletion guard and unchanged existing SQL
+✔ 2B: reward ledger, verified evidence, terminal lifecycle and concurrent reconciliation (3693.723667ms)
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS PostgreSQL independent manager/buyer sessions: uncommitted type isolation, stale creation rollback, no deadlocks
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+PASS PostgreSQL two-wallet reserve race, paid/cancel, retry/old callback, credit/spend and reversal/spend; deadlocks=0
+PASS stage 4 reserve/consume/refund, late success exceptions, role downgrade, caps and bank amount contract
+PASS stage 6 atomic events, immutable payloads, downgrade delivery, fencing/recovery, fallback, masked RPC, reconciliation and idempotency
+✔ 6: transactional outbox, fenced workers and read-only financial reconciliation (4222.056292ms)
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS PostgreSQL independent manager/buyer sessions: uncommitted type isolation, stale creation rollback, no deadlocks
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+PASS PostgreSQL separate-connection committed/uncommitted read consistency; deadlocks=0
+PASS stage 3 ownership, downgrade/restore, deleted member/order, whitelist, actual permissions, pagination, diagnostics, OFF and unchanged accounting
+✔ 3: isolated reward queries, historical ownership, ACL and consistent read pages (3363.776833ms)
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS PostgreSQL independent manager/buyer sessions: uncommitted type isolation, stale creation rollback, no deadlocks
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+PASS PostgreSQL two-wallet reserve race, paid/cancel, retry/old callback, credit/spend and reversal/spend; deadlocks=0
+PASS stage 4 reserve/consume/refund, late success exceptions, role downgrade, caps and bank amount contract
+PASS stage 5 independent withdrawal/withdrawal, withdrawal/shopping, withdrawal/reversal sessions; deadlocks=0
+PASS stage 5 full withdrawal, negative balance, fixed fee, calendar cutoff, immutable snapshot, manual evidence, rollback and ACL
+✔ 5: encrypted bank snapshots, full withdrawals, immutable manual transfer and wallet concurrency (4046.218875ms)
+▶ 1B real PostgreSQL: separate sessions, bind/rebind/unbind/Auth-delete races and ACL
+  ✔ round 1: competing initial bind (24.249042ms)
+  ✔ round 1: two administrators rebind (19.700875ms)
+  ✔ round 1: rebind wins rebind/unbind (19.842333ms)
+  ✔ round 1: unbind wins rebind/unbind (21.190125ms)
+  ✔ round 1: delete student, deleteFirst=true (21.281334ms)
+  ✔ round 1: delete student, deleteFirst=false (12.15575ms)
+  ✔ round 1: delete old_teacher, deleteFirst=true (27.374916ms)
+  ✔ round 1: delete old_teacher, deleteFirst=false (12.313375ms)
+  ✔ round 1: delete new_teacher, deleteFirst=true (24.4615ms)
+  ✔ round 1: delete new_teacher, deleteFirst=false (14.369834ms)
+  ✔ round 1: initial bind/teacher delete, deleteFirst=true (10.59625ms)
+  ✔ round 1: initial bind/teacher delete, deleteFirst=false (17.314958ms)
+  ✔ round 2: competing initial bind (18.264125ms)
+  ✔ round 2: two administrators rebind (19.39325ms)
+  ✔ round 2: rebind wins rebind/unbind (10.853583ms)
+  ✔ round 2: unbind wins rebind/unbind (21.104166ms)
+  ✔ round 2: delete student, deleteFirst=true (25.474208ms)
+  ✔ round 2: delete student, deleteFirst=false (10.037334ms)
+  ✔ round 2: delete old_teacher, deleteFirst=true (21.142417ms)
+  ✔ round 2: delete old_teacher, deleteFirst=false (22.305583ms)
+  ✔ round 2: delete new_teacher, deleteFirst=true (19.862375ms)
+  ✔ round 2: delete new_teacher, deleteFirst=false (21.286917ms)
+  ✔ round 2: initial bind/teacher delete, deleteFirst=true (5.064208ms)
+  ✔ round 2: initial bind/teacher delete, deleteFirst=false (6.509917ms)
+  ✔ round 3: competing initial bind (16.936167ms)
+  ✔ round 3: two administrators rebind (18.159667ms)
+  ✔ round 3: rebind wins rebind/unbind (22.465625ms)
+  ✔ round 3: unbind wins rebind/unbind (7.350083ms)
+  ✔ round 3: delete student, deleteFirst=true (24.936333ms)
+  ✔ round 3: delete student, deleteFirst=false (7.968959ms)
+  ✔ round 3: delete old_teacher, deleteFirst=true (22.394042ms)
+  ✔ round 3: delete old_teacher, deleteFirst=false (23.289875ms)
+  ✔ round 3: delete new_teacher, deleteFirst=true (19.865125ms)
+  ✔ round 3: delete new_teacher, deleteFirst=false (24.046542ms)
+  ✔ round 3: initial bind/teacher delete, deleteFirst=true (16.500708ms)
+  ✔ round 3: initial bind/teacher delete, deleteFirst=false (11.792875ms)
+  ✔ round 4: competing initial bind (15.244084ms)
+  ✔ round 4: two administrators rebind (20.038583ms)
+  ✔ round 4: rebind wins rebind/unbind (23.052542ms)
+  ✔ round 4: unbind wins rebind/unbind (23.739ms)
+  ✔ round 4: delete student, deleteFirst=true (17.664417ms)
+  ✔ round 4: delete student, deleteFirst=false (13.804416ms)
+  ✔ round 4: delete old_teacher, deleteFirst=true (21.184875ms)
+  ✔ round 4: delete old_teacher, deleteFirst=false (10.513125ms)
+  ✔ round 4: delete new_teacher, deleteFirst=true (22.918875ms)
+  ✔ round 4: delete new_teacher, deleteFirst=false (21.40725ms)
+  ✔ round 4: initial bind/teacher delete, deleteFirst=true (6.952042ms)
+  ✔ round 4: initial bind/teacher delete, deleteFirst=false (20.819209ms)
+  ✔ round 5: competing initial bind (15.449541ms)
+  ✔ round 5: two administrators rebind (12.305167ms)
+  ✔ round 5: rebind wins rebind/unbind (19.954208ms)
+  ✔ round 5: unbind wins rebind/unbind (25.838125ms)
+  ✔ round 5: delete student, deleteFirst=true (45.363583ms)
+  ✔ round 5: delete student, deleteFirst=false (29.908292ms)
+  ✔ round 5: delete old_teacher, deleteFirst=true (44.423209ms)
+  ✔ round 5: delete old_teacher, deleteFirst=false (35.898ms)
+  ✔ round 5: delete new_teacher, deleteFirst=true (23.901791ms)
+  ✔ round 5: delete new_teacher, deleteFirst=false (38.02325ms)
+  ✔ round 5: initial bind/teacher delete, deleteFirst=true (20.36975ms)
+  ✔ round 5: initial bind/teacher delete, deleteFirst=false (20.955417ms)
+  ✔ simultaneous start stress: 40 initial binds/rebinds (144.49525ms)
+  ✔ actual caller ACL/RLS and immutable audit (48.627791ms)
+✔ 1B real PostgreSQL: separate sessions, bind/rebind/unbind/Auth-delete races and ACL (4149.29275ms)
+ℹ PostgreSQL 17.6 on x86_64-apple-darwin23.6.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.6), 64-bit
+ℹ backend PIDs=60134,60135,60136; races=60; proven lock waits=60; deadlocks=0
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS PostgreSQL independent manager/buyer sessions: uncommitted type isolation, stale creation rollback, no deadlocks
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+PASS PostgreSQL independent sessions: type/unbind/OFF/Auth DELETE writers wait, mid-create price race rolls back, simultaneous assisted recovery has one snapshot; deadlocks=0
+KNOWN EXISTING CONFLICT: Auth deletion with owned assisted orders is blocked by protect_assisted_order; 2A does not alter it
+PASS 2A ordinary/assisted snapshots, benefits independence, recovery, immutability, ACL and OFF
+✔ 2A: private immutable snapshots in existing ordinary/assisted transactions (3754.731875ms)
+ℹ tests 69
+ℹ suites 0
+ℹ pass 69
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4319.192167

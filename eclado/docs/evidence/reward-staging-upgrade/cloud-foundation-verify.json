@@ -1,0 +1,75 @@
+{
+  "schema": {
+    "audit_ready": true,
+    "bindings_ready": true,
+    "student_unique": true,
+    "audit_immutable": true,
+    "direct_clients_denied": true,
+    "global_settings_ready": true,
+    "deletion_cleanup_ready": true,
+    "admin_permissions_ready": true,
+    "instructor_settings_ready": true
+  },
+  "rpc_acl": [
+    {
+      "signature": "public.get_admin_student_pricing_settings()",
+      "anon_denied": true,
+      "client_acl_correct": true
+    },
+    {
+      "signature": "public.save_student_pricing_settings(jsonb,bigint)",
+      "anon_denied": true,
+      "client_acl_correct": true
+    },
+    {
+      "signature": "public.get_admin_instructor_student_member(uuid)",
+      "anon_denied": true,
+      "client_acl_correct": true
+    },
+    {
+      "signature": "public.get_admin_student_pricing_history()",
+      "anon_denied": true,
+      "client_acl_correct": true
+    },
+    {
+      "signature": "public.set_instructor_student_price_type(uuid,text,bigint)",
+      "anon_denied": true,
+      "client_acl_correct": true
+    },
+    {
+      "signature": "public.save_instructor_student_binding(uuid,uuid,uuid,text)",
+      "anon_denied": true,
+      "client_acl_correct": true
+    },
+    {
+      "signature": "public.get_my_student_pricing_context()",
+      "anon_denied": true,
+      "client_acl_correct": true
+    },
+    {
+      "signature": "public.get_my_instructor_students()",
+      "anon_denied": true,
+      "client_acl_correct": true
+    },
+    {
+      "signature": "public.assert_instructor_student_admin(boolean)",
+      "anon_denied": true,
+      "client_acl_correct": true
+    },
+    {
+      "signature": "public.instructor_student_context(uuid)",
+      "anon_denied": true,
+      "client_acl_correct": true
+    },
+    {
+      "signature": "public.end_instructor_student_bindings_on_member_delete()",
+      "anon_denied": true,
+      "client_acl_correct": true
+    },
+    {
+      "signature": "public.prevent_instructor_student_audit_mutation()",
+      "anon_denied": true,
+      "client_acl_correct": true
+    }
+  ]
+}

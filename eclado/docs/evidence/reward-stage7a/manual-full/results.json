@@ -1,0 +1,1281 @@
+{
+  "environment": "local PG17.6; fake Auth/bank/LINE/Email",
+  "results": [
+    {
+      "name": "1a 銀行儲存與遮蔽",
+      "status": "passed",
+      "at": "2026-10-13T06:15:32.371Z",
+      "role": "http://127.0.0.1:5191/account",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 1000,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 2,
+        "updated_at": "2026-10-13T06:14:41.252Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96"
+      ]
+    },
+    {
+      "name": "1b 全額提領1000／費15／實匯985／保留且不可取消",
+      "status": "passed",
+      "at": "2026-10-13T06:15:32.720Z",
+      "role": "http://127.0.0.1:5191/account",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 3,
+        "updated_at": "2026-10-13T06:15:32.600Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 1000
+      },
+      "withdrawals": [
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "pending",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 1
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96"
+      ],
+      "withdrawalId": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+      "scheduledDate": "2026-11-10"
+    },
+    {
+      "name": "1c 老師LINE與管理員Email／內容與防重",
+      "status": "passed",
+      "at": "2026-10-13T06:15:32.988Z",
+      "role": "http://127.0.0.1:5191/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 3,
+        "updated_at": "2026-10-13T06:15:32.600Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 1000
+      },
+      "withdrawals": [
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "pending",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 1
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96"
+      ]
+    },
+    {
+      "name": "1d 銀行變更不改申請快照／focus事件清除完整資料",
+      "status": "passed",
+      "at": "2026-10-13T06:15:34.804Z",
+      "role": "http://127.0.0.1:5191/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 3,
+        "updated_at": "2026-10-13T06:15:32.600Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 1000
+      },
+      "withdrawals": [
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "pending",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 1
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96"
+      ]
+    },
+    {
+      "name": "2 模擬人工匯款985／收費／終態／通知／對帳",
+      "status": "passed",
+      "at": "2026-10-13T06:15:35.408Z",
+      "role": "http://127.0.0.1:5191/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 4,
+        "updated_at": "2026-10-13T06:15:35.051Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96"
+      ]
+    },
+    {
+      "name": "2b 成功通知需明確選擇補發新版本",
+      "status": "passed",
+      "at": "2026-10-13T06:15:35.616Z",
+      "role": "http://127.0.0.1:5191/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 4,
+        "updated_at": "2026-10-13T06:15:35.051Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96"
+      ]
+    },
+    {
+      "name": "3 明確失敗全額退回／不收費／原申請不可重匯",
+      "status": "passed",
+      "at": "2026-10-13T06:15:36.591Z",
+      "role": "http://127.0.0.1:5191/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 1000,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 8,
+        "updated_at": "2026-10-13T06:15:36.236Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "f4135af6-19f4-4e55-8c8f-023d15acf8da",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96",
+        "ECL-20261013-141535-49E1A11D"
+      ]
+    },
+    {
+      "name": "4a 待查帳保留1000／禁止再用／通知與對帳列管",
+      "status": "passed",
+      "at": "2026-10-13T06:15:37.602Z",
+      "role": "http://127.0.0.1:5191/account",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 9,
+        "updated_at": "2026-10-13T06:15:36.815Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 1000
+      },
+      "withdrawals": [
+        {
+          "id": "9a7b60ed-f9ba-49d6-a082-5a56d0acc3b7",
+          "status": "unknown",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "f4135af6-19f4-4e55-8c8f-023d15acf8da",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96",
+        "ECL-20261013-141535-49E1A11D"
+      ]
+    },
+    {
+      "name": "4b 待查帳確認未付款退回／finding解除保留歷史",
+      "status": "passed",
+      "at": "2026-10-13T06:15:38.137Z",
+      "role": "http://127.0.0.1:5191/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 1000,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 10,
+        "updated_at": "2026-10-13T06:15:37.784Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "9a7b60ed-f9ba-49d6-a082-5a56d0acc3b7",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "f4135af6-19f4-4e55-8c8f-023d15acf8da",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96",
+        "ECL-20261013-141535-49E1A11D"
+      ]
+    },
+    {
+      "name": "5a 提領後退貨負200／申請不變／重複退貨不重扣",
+      "status": "passed",
+      "at": "2026-10-13T06:15:39.866Z",
+      "role": "http://127.0.0.1:5191/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": -200,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 19,
+        "updated_at": "2026-10-13T06:15:39.550Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "0b41f5a0-fbbd-4166-b3eb-728a9dc97bbe",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "b82bd4c7-8f68-484c-9a32-54866ab115a3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9a7b60ed-f9ba-49d6-a082-5a56d0acc3b7",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "f4135af6-19f4-4e55-8c8f-023d15acf8da",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96",
+        "ECL-20261013-141535-49E1A11D",
+        "ECL-20261013-141538-254C1BC9",
+        "ECL-20261013-141538-E4CD69FC"
+      ]
+    },
+    {
+      "name": "5b 新收入200抵銷負餘額",
+      "status": "passed",
+      "at": "2026-10-13T06:15:40.152Z",
+      "role": "http://127.0.0.1:5191/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 21,
+        "updated_at": "2026-10-13T06:15:39.873Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "0b41f5a0-fbbd-4166-b3eb-728a9dc97bbe",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "b82bd4c7-8f68-484c-9a32-54866ab115a3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9a7b60ed-f9ba-49d6-a082-5a56d0acc3b7",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "f4135af6-19f4-4e55-8c8f-023d15acf8da",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96",
+        "ECL-20261013-141535-49E1A11D",
+        "ECL-20261013-141538-254C1BC9",
+        "ECL-20261013-141538-E4CD69FC",
+        "ECL-20261013-141539-2AD63367"
+      ]
+    },
+    {
+      "name": "6a 15元前後端不可提領",
+      "status": "passed",
+      "at": "2026-10-13T06:15:40.352Z",
+      "role": "http://127.0.0.1:5191/account",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 15,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 23,
+        "updated_at": "2026-10-13T06:15:40.159Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "0b41f5a0-fbbd-4166-b3eb-728a9dc97bbe",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "b82bd4c7-8f68-484c-9a32-54866ab115a3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9a7b60ed-f9ba-49d6-a082-5a56d0acc3b7",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "f4135af6-19f4-4e55-8c8f-023d15acf8da",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96",
+        "ECL-20261013-141535-49E1A11D",
+        "ECL-20261013-141538-254C1BC9",
+        "ECL-20261013-141538-E4CD69FC",
+        "ECL-20261013-141539-2AD63367",
+        "ECL-20261013-141540-BDAECA11"
+      ]
+    },
+    {
+      "name": "6b 16元可提領／實匯1",
+      "status": "passed",
+      "at": "2026-10-13T06:15:40.692Z",
+      "role": "http://127.0.0.1:5191/account",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 27,
+        "updated_at": "2026-10-13T06:15:40.565Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 16
+      },
+      "withdrawals": [
+        {
+          "id": "b31d1181-f22f-419b-9d46-4ea2e57b36de",
+          "status": "pending",
+          "amount": 16,
+          "fee": 15,
+          "net_amount": 1,
+          "version": 1
+        },
+        {
+          "id": "0b41f5a0-fbbd-4166-b3eb-728a9dc97bbe",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "b82bd4c7-8f68-484c-9a32-54866ab115a3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9a7b60ed-f9ba-49d6-a082-5a56d0acc3b7",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "f4135af6-19f4-4e55-8c8f-023d15acf8da",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96",
+        "ECL-20261013-141535-49E1A11D",
+        "ECL-20261013-141538-254C1BC9",
+        "ECL-20261013-141538-E4CD69FC",
+        "ECL-20261013-141539-2AD63367",
+        "ECL-20261013-141540-BDAECA11",
+        "ECL-20261013-141540-C55BA827"
+      ]
+    },
+    {
+      "name": "6c LINE5xx備援Email／帳務不變",
+      "status": "passed",
+      "at": "2026-10-13T06:15:41.495Z",
+      "role": "http://127.0.0.1:5191/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 31,
+        "updated_at": "2026-10-13T06:15:41.199Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 200
+      },
+      "withdrawals": [
+        {
+          "id": "7a4bc2ed-f3de-4810-b299-c827347b7c4b",
+          "status": "pending",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 1
+        },
+        {
+          "id": "b31d1181-f22f-419b-9d46-4ea2e57b36de",
+          "status": "paid",
+          "amount": 16,
+          "fee": 15,
+          "net_amount": 1,
+          "version": 3
+        },
+        {
+          "id": "0b41f5a0-fbbd-4166-b3eb-728a9dc97bbe",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "b82bd4c7-8f68-484c-9a32-54866ab115a3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9a7b60ed-f9ba-49d6-a082-5a56d0acc3b7",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "f4135af6-19f4-4e55-8c8f-023d15acf8da",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96",
+        "ECL-20261013-141535-49E1A11D",
+        "ECL-20261013-141538-254C1BC9",
+        "ECL-20261013-141538-E4CD69FC",
+        "ECL-20261013-141539-2AD63367",
+        "ECL-20261013-141540-BDAECA11",
+        "ECL-20261013-141540-C55BA827",
+        "ECL-20261013-141541-C5996640"
+      ]
+    },
+    {
+      "name": "6d timeout同鍵重試／不立即Email／恢復成功",
+      "status": "passed",
+      "at": "2026-10-13T06:15:42.345Z",
+      "role": "http://127.0.0.1:5191/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 33,
+        "updated_at": "2026-10-13T06:15:41.999Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 200
+      },
+      "withdrawals": [
+        {
+          "id": "70c48156-0dce-42d4-b513-4b21d53445fd",
+          "status": "pending",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 1
+        },
+        {
+          "id": "7a4bc2ed-f3de-4810-b299-c827347b7c4b",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "b31d1181-f22f-419b-9d46-4ea2e57b36de",
+          "status": "paid",
+          "amount": 16,
+          "fee": 15,
+          "net_amount": 1,
+          "version": 3
+        },
+        {
+          "id": "0b41f5a0-fbbd-4166-b3eb-728a9dc97bbe",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "b82bd4c7-8f68-484c-9a32-54866ab115a3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9a7b60ed-f9ba-49d6-a082-5a56d0acc3b7",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "f4135af6-19f4-4e55-8c8f-023d15acf8da",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96",
+        "ECL-20261013-141535-49E1A11D",
+        "ECL-20261013-141538-254C1BC9",
+        "ECL-20261013-141538-E4CD69FC",
+        "ECL-20261013-141539-2AD63367",
+        "ECL-20261013-141540-BDAECA11",
+        "ECL-20261013-141540-C55BA827",
+        "ECL-20261013-141541-C5996640"
+      ]
+    },
+    {
+      "name": "6e 六次timeout上限／人工查核／不再自動送",
+      "status": "passed",
+      "at": "2026-10-13T06:15:43.271Z",
+      "role": "http://127.0.0.1:5191/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 35,
+        "updated_at": "2026-10-13T06:15:42.799Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 200
+      },
+      "withdrawals": [
+        {
+          "id": "0e7743e1-a789-4c2b-b212-198f9c13f101",
+          "status": "pending",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 1
+        },
+        {
+          "id": "70c48156-0dce-42d4-b513-4b21d53445fd",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "7a4bc2ed-f3de-4810-b299-c827347b7c4b",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "b31d1181-f22f-419b-9d46-4ea2e57b36de",
+          "status": "paid",
+          "amount": 16,
+          "fee": 15,
+          "net_amount": 1,
+          "version": 3
+        },
+        {
+          "id": "0b41f5a0-fbbd-4166-b3eb-728a9dc97bbe",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "b82bd4c7-8f68-484c-9a32-54866ab115a3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9a7b60ed-f9ba-49d6-a082-5a56d0acc3b7",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "f4135af6-19f4-4e55-8c8f-023d15acf8da",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96",
+        "ECL-20261013-141535-49E1A11D",
+        "ECL-20261013-141538-254C1BC9",
+        "ECL-20261013-141538-E4CD69FC",
+        "ECL-20261013-141539-2AD63367",
+        "ECL-20261013-141540-BDAECA11",
+        "ECL-20261013-141540-C55BA827",
+        "ECL-20261013-141541-C5996640"
+      ]
+    },
+    {
+      "name": "6f Email永久錯誤保留失敗／不回滾帳務",
+      "status": "passed",
+      "at": "2026-10-13T06:15:44.034Z",
+      "role": "http://127.0.0.1:5191/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 0,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 37,
+        "updated_at": "2026-10-13T06:15:43.733Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 200
+      },
+      "withdrawals": [
+        {
+          "id": "80ffd8a0-fdcf-4cd2-9f37-b6c3d354b60b",
+          "status": "pending",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 1
+        },
+        {
+          "id": "0e7743e1-a789-4c2b-b212-198f9c13f101",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "70c48156-0dce-42d4-b513-4b21d53445fd",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "7a4bc2ed-f3de-4810-b299-c827347b7c4b",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "b31d1181-f22f-419b-9d46-4ea2e57b36de",
+          "status": "paid",
+          "amount": 16,
+          "fee": 15,
+          "net_amount": 1,
+          "version": 3
+        },
+        {
+          "id": "0b41f5a0-fbbd-4166-b3eb-728a9dc97bbe",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "b82bd4c7-8f68-484c-9a32-54866ab115a3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9a7b60ed-f9ba-49d6-a082-5a56d0acc3b7",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "f4135af6-19f4-4e55-8c8f-023d15acf8da",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96",
+        "ECL-20261013-141535-49E1A11D",
+        "ECL-20261013-141538-254C1BC9",
+        "ECL-20261013-141538-E4CD69FC",
+        "ECL-20261013-141539-2AD63367",
+        "ECL-20261013-141540-BDAECA11",
+        "ECL-20261013-141540-C55BA827",
+        "ECL-20261013-141541-C5996640"
+      ]
+    },
+    {
+      "name": "6g 更正只稽核／明確發送新通知／不改帳務",
+      "status": "passed",
+      "at": "2026-10-13T06:15:44.745Z",
+      "role": "http://127.0.0.1:5191/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 200,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 38,
+        "updated_at": "2026-10-13T06:15:44.255Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "80ffd8a0-fdcf-4cd2-9f37-b6c3d354b60b",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "0e7743e1-a789-4c2b-b212-198f9c13f101",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "70c48156-0dce-42d4-b513-4b21d53445fd",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "7a4bc2ed-f3de-4810-b299-c827347b7c4b",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "b31d1181-f22f-419b-9d46-4ea2e57b36de",
+          "status": "paid",
+          "amount": 16,
+          "fee": 15,
+          "net_amount": 1,
+          "version": 3
+        },
+        {
+          "id": "0b41f5a0-fbbd-4166-b3eb-728a9dc97bbe",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "b82bd4c7-8f68-484c-9a32-54866ab115a3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9a7b60ed-f9ba-49d6-a082-5a56d0acc3b7",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "f4135af6-19f4-4e55-8c8f-023d15acf8da",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96",
+        "ECL-20261013-141535-49E1A11D",
+        "ECL-20261013-141538-254C1BC9",
+        "ECL-20261013-141538-E4CD69FC",
+        "ECL-20261013-141539-2AD63367",
+        "ECL-20261013-141540-BDAECA11",
+        "ECL-20261013-141540-C55BA827",
+        "ECL-20261013-141541-C5996640"
+      ]
+    },
+    {
+      "name": "6h 唯讀UI限制與RPC拒絕寫入／執行對帳",
+      "status": "passed",
+      "at": "2026-10-13T06:15:44.985Z",
+      "role": "http://127.0.0.1:5191/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 200,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 38,
+        "updated_at": "2026-10-13T06:15:44.255Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "80ffd8a0-fdcf-4cd2-9f37-b6c3d354b60b",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "0e7743e1-a789-4c2b-b212-198f9c13f101",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "70c48156-0dce-42d4-b513-4b21d53445fd",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "7a4bc2ed-f3de-4810-b299-c827347b7c4b",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "b31d1181-f22f-419b-9d46-4ea2e57b36de",
+          "status": "paid",
+          "amount": 16,
+          "fee": 15,
+          "net_amount": 1,
+          "version": 3
+        },
+        {
+          "id": "0b41f5a0-fbbd-4166-b3eb-728a9dc97bbe",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "b82bd4c7-8f68-484c-9a32-54866ab115a3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9a7b60ed-f9ba-49d6-a082-5a56d0acc3b7",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "f4135af6-19f4-4e55-8c8f-023d15acf8da",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96",
+        "ECL-20261013-141535-49E1A11D",
+        "ECL-20261013-141538-254C1BC9",
+        "ECL-20261013-141538-E4CD69FC",
+        "ECL-20261013-141539-2AD63367",
+        "ECL-20261013-141540-BDAECA11",
+        "ECL-20261013-141540-C55BA827",
+        "ECL-20261013-141541-C5996640"
+      ]
+    },
+    {
+      "name": "最終財務一致性／無前端未捕捉錯誤",
+      "status": "passed",
+      "at": "2026-10-13T06:15:45.363Z",
+      "role": "http://127.0.0.1:5191/admin",
+      "account": {
+        "user_id": "55555555-5555-4555-8555-555555555555",
+        "balance": 200,
+        "pending_balance": 0,
+        "status": "active",
+        "version": 38,
+        "updated_at": "2026-10-13T06:15:44.255Z",
+        "reserved_balance": 0,
+        "withdrawal_reserved_balance": 0
+      },
+      "withdrawals": [
+        {
+          "id": "80ffd8a0-fdcf-4cd2-9f37-b6c3d354b60b",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "0e7743e1-a789-4c2b-b212-198f9c13f101",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "70c48156-0dce-42d4-b513-4b21d53445fd",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "7a4bc2ed-f3de-4810-b299-c827347b7c4b",
+          "status": "failed",
+          "amount": 200,
+          "fee": 15,
+          "net_amount": 185,
+          "version": 3
+        },
+        {
+          "id": "b31d1181-f22f-419b-9d46-4ea2e57b36de",
+          "status": "paid",
+          "amount": 16,
+          "fee": 15,
+          "net_amount": 1,
+          "version": 3
+        },
+        {
+          "id": "0b41f5a0-fbbd-4166-b3eb-728a9dc97bbe",
+          "status": "paid",
+          "amount": 1200,
+          "fee": 15,
+          "net_amount": 1185,
+          "version": 3
+        },
+        {
+          "id": "b82bd4c7-8f68-484c-9a32-54866ab115a3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9a7b60ed-f9ba-49d6-a082-5a56d0acc3b7",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 4
+        },
+        {
+          "id": "f4135af6-19f4-4e55-8c8f-023d15acf8da",
+          "status": "failed",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        },
+        {
+          "id": "9f6e0532-7f8d-447c-9207-439cc52407f3",
+          "status": "paid",
+          "amount": 1000,
+          "fee": 15,
+          "net_amount": 985,
+          "version": 3
+        }
+      ],
+      "incomeOrders": [
+        "ECL-20261013-141441-391CCE96",
+        "ECL-20261013-141535-49E1A11D",
+        "ECL-20261013-141538-254C1BC9",
+        "ECL-20261013-141538-E4CD69FC",
+        "ECL-20261013-141539-2AD63367",
+        "ECL-20261013-141540-BDAECA11",
+        "ECL-20261013-141540-C55BA827",
+        "ECL-20261013-141541-C5996640"
+      ]
+    }
+  ],
+  "errors": []
+}

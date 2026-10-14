@@ -1,0 +1,162 @@
+{
+  "s1": [
+    {
+      "signature": "public.begin_order_payment_retry(text)",
+      "anon_denied": true,
+      "service_allowed": true,
+      "authenticated_denied": true
+    },
+    {
+      "signature": "public.claim_order_payment(text,text)",
+      "anon_denied": true,
+      "service_allowed": true,
+      "authenticated_denied": true
+    }
+  ],
+  "orders": 0,
+  "outbox": 0,
+  "tables": 68,
+  "postgres": "PostgreSQL 17.6 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit",
+  "products": 1,
+  "profiles": 0,
+  "functions": 257,
+  "read_only": "on",
+  "snapshots": 0,
+  "auth_users": 0,
+  "withdrawals": 0,
+  "reward_ledger": 0,
+  "legacy_product": {
+    "id": 1239098751,
+    "name": "playwright-staging-product",
+    "size": null,
+    "slug": "playwright-staging-product",
+    "price": 1,
+    "stock": 10,
+    "active": false,
+    "series": null,
+    "name_zh": "Playwright staging product",
+    "category": "test",
+    "features": [],
+    "subtitle": null,
+    "variants": [],
+    "asset_key": "d6d3191c-d229-4e22-8ae0-17a8390b43fc",
+    "image_url": null,
+    "min_stock": 0,
+    "pro_price": 1,
+    "skin_type": null,
+    "created_at": "2026-05-20T10:42:34.086442+00:00",
+    "image_urls": [],
+    "updated_at": "2026-05-20T10:42:34.086442+00:00",
+    "description": null,
+    "ingredients": null,
+    "is_pro_only": false,
+    "publication_status": "archived",
+    "source_folder_name": null,
+    "imported_from_drive": false,
+    "apply_tier_multiplier": true,
+    "staff_price_multiplier": null,
+    "product_list_image_scale": null,
+    "product_detail_image_scale": null,
+    "instructor_price_multiplier": null,
+    "distributor_price_multiplier": null
+  },
+  "reward_accounts": 0,
+  "storage_objects": 0,
+  "student_feature": {
+    "enabled": false,
+    "version": 0
+  },
+  "financial_tables": [
+    {
+      "rls": true,
+      "name": "instructor_reward_accounts",
+      "anon_direct": false,
+      "authenticated_direct": false
+    },
+    {
+      "rls": true,
+      "name": "instructor_reward_bank_calendar_versions",
+      "anon_direct": false,
+      "authenticated_direct": false
+    },
+    {
+      "rls": true,
+      "name": "instructor_reward_bank_profiles",
+      "anon_direct": false,
+      "authenticated_direct": false
+    },
+    {
+      "rls": true,
+      "name": "instructor_reward_ledger",
+      "anon_direct": false,
+      "authenticated_direct": false
+    },
+    {
+      "rls": true,
+      "name": "instructor_reward_notification_attempts",
+      "anon_direct": false,
+      "authenticated_direct": false
+    },
+    {
+      "rls": true,
+      "name": "instructor_reward_notification_outbox",
+      "anon_direct": false,
+      "authenticated_direct": false
+    },
+    {
+      "rls": true,
+      "name": "instructor_reward_order_states",
+      "anon_direct": false,
+      "authenticated_direct": false
+    },
+    {
+      "rls": true,
+      "name": "instructor_reward_payment_exceptions",
+      "anon_direct": false,
+      "authenticated_direct": false
+    },
+    {
+      "rls": true,
+      "name": "instructor_reward_payment_receipts",
+      "anon_direct": false,
+      "authenticated_direct": false
+    },
+    {
+      "rls": true,
+      "name": "instructor_reward_reconciliation_findings",
+      "anon_direct": false,
+      "authenticated_direct": false
+    },
+    {
+      "rls": true,
+      "name": "instructor_reward_reconciliation_runs",
+      "anon_direct": false,
+      "authenticated_direct": false
+    },
+    {
+      "rls": true,
+      "name": "instructor_reward_reservations",
+      "anon_direct": false,
+      "authenticated_direct": false
+    },
+    {
+      "rls": true,
+      "name": "instructor_reward_withdrawal_events",
+      "anon_direct": false,
+      "authenticated_direct": false
+    },
+    {
+      "rls": true,
+      "name": "instructor_reward_withdrawals",
+      "anon_direct": false,
+      "authenticated_direct": false
+    },
+    {
+      "rls": true,
+      "name": "student_reward_snapshots",
+      "anon_direct": false,
+      "authenticated_direct": false
+    }
+  ],
+  "project_expected": "qqlgqasbmbicnmvnlqbr"
+}

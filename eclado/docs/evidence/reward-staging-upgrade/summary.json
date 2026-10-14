@@ -1,0 +1,45 @@
+{
+  "scope": "test DB only",
+  "target": "qqlgqasbmbicnmvnlqbr",
+  "installed_steps": 8,
+  "tables": 68,
+  "functions": 257,
+  "protected_financial_tables": 15,
+  "nine_verify_sql": "completed without errors; 1B 33 and S1 6 booleans true; other files DO assertions",
+  "rollback_smoke": {
+    "auth": "SQL claims simulation",
+    "cleanup": "ROLLBACK follows",
+    "real_bank": false,
+    "wallet_status": "refunded",
+    "online_snapshot": 2000,
+    "delivered_balance": 2000,
+    "assisted_snapshots": 2,
+    "assisted_auto_snapshot": 2000,
+    "assisted_manual_snapshot": 5000
+  },
+  "legacy_product_original_fields_unchanged": true,
+  "cleanup": {
+    "auth_users": 0,
+    "profiles": 0,
+    "orders": 0,
+    "snapshots": 0,
+    "reward_accounts": 0,
+    "reward_ledger": 0,
+    "withdrawals": 0,
+    "outbox": 0
+  },
+  "test_feature": {
+    "enabled": false,
+    "version": 0
+  },
+  "limitations": [
+    "SQL JWT claims simulation, not real Auth/PostgREST",
+    "no real bank or notification",
+    "Preview/local product URLs not changed",
+    "no persistent test login accounts",
+    "production snapshot from 2026-10-13; no resync after pause"
+  ],
+  "build": "2026-10-13 isolated Build exit0,466 modules,1 mock product,8 articles; source unchanged",
+  "commit_push_deploy": false,
+  "production_written": false
+}

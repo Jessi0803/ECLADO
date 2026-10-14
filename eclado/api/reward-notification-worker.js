@@ -7,10 +7,11 @@ function authorized(req, secret) {
   return b.length > 0 && a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 async function rpc(name, args, env, fetchImpl) {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('configuration');
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_KEY;
+  if (!env.SUPABASE_URL || !serviceKey) throw new Error('configuration');
   const response = await fetchImpl(`${env.SUPABASE_URL}/rest/v1/rpc/${name}`, {
     method: 'POST', signal: AbortSignal.timeout(5000),
-    headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' },
+    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(args),
   });
   if (!response.ok) throw new Error('database_request_failed');

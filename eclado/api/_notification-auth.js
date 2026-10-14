@@ -1,7 +1,6 @@
 const crypto = require('node:crypto');
 
-const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
-const DEFAULT_SUPABASE_ANON = 'sb_publishable_BasrQNdstdbX_InrQWmCuw_Jb1Lscnl';
+const { resolveSupabaseAnonKey, resolveSupabaseUrl } = require('./_supabase-env.js');
 
 function getHeader(req, name) {
   const headers = req?.headers || {};
@@ -44,8 +43,8 @@ async function requireNotificationAuthorization(req, { allowPaymentSecret = fals
     return { ok: false, status: 401, error: 'Unauthorized' };
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON;
+  const supabaseUrl = resolveSupabaseUrl();
+  const anonKey = resolveSupabaseAnonKey();
 
   try {
     const authHeaders = {

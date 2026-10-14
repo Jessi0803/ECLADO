@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 !.env.staging.example
+!.env.test.example
 .playwright/
 node_modules/
 dist/

@@ -1,0 +1,44 @@
+[
+  {
+    "order": 1,
+    "file": "supabase-student-reward-snapshots.sql",
+    "sha256": "a561ac6d6d99be4b30daa0b74cfc145b780e1c4a883c9d490bdf4a79eae19164",
+    "formal_approved": false
+  },
+  {
+    "order": 2,
+    "file": "supabase-instructor-reward-ledger.sql",
+    "sha256": "ea46aee7ef32e3f632db98800a43125a4203f228dcb0d7344717f8d04af17808",
+    "formal_approved": false
+  },
+  {
+    "order": 3,
+    "file": "supabase-instructor-reward-queries.sql",
+    "sha256": "7bef89e919abda64d0f4740f10a6e956ed334fa62f46bc95bfd7c315901e99fa",
+    "formal_approved": false
+  },
+  {
+    "order": 4,
+    "file": "supabase-instructor-reward-checkout.sql",
+    "sha256": "5eba6f84815ca6df2d2edf4beff34e9ad3789fa47a9b0477dd031a158126fb92",
+    "formal_approved": false
+  },
+  {
+    "order": 5,
+    "file": "supabase-instructor-reward-withdrawals.sql",
+    "sha256": "a614c8fe73fa4ea916a477920e0f11e8cdb95424f8876c74fea861364bb187de",
+    "formal_approved": false
+  },
+  {
+    "order": 6,
+    "file": "supabase-instructor-reward-notifications.sql",
+    "sha256": "5fe6a7f3c1e4caaf38055d51bbe3bc068234e75b100e6b0cf76a68a0c93471a2",
+    "formal_approved": false
+  },
+  {
+    "order": 7,
+    "file": "supabase-instructor-reward-reconciliation.sql",
+    "sha256": "c155a544b66b13b75037b535653924020abe92057f3a408275da56f5a29d5669",
+    "formal_approved": false
+  }
+]

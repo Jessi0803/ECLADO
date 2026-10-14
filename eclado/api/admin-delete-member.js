@@ -1,5 +1,4 @@
-const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
-const DEFAULT_SUPABASE_ANON = 'sb_publishable_BasrQNdstdbX_InrQWmCuw_Jb1Lscnl';
+const { resolveSupabaseAnonKey, resolveSupabaseUrl } = require('./_supabase-env.js');
 
 function getAuthHeader(req) {
   return req.headers.authorization || req.headers.Authorization || '';
@@ -73,8 +72,8 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON;
+  const supabaseUrl = resolveSupabaseUrl();
+  const anonKey = resolveSupabaseAnonKey();
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
   if (!serviceKey) {

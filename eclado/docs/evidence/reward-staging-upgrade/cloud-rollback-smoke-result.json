@@ -1,0 +1,11 @@
+{
+  "auth": "SQL claims simulation",
+  "cleanup": "ROLLBACK follows",
+  "real_bank": false,
+  "wallet_status": "refunded",
+  "online_snapshot": 2000,
+  "delivered_balance": 2000,
+  "assisted_snapshots": 2,
+  "assisted_auto_snapshot": 2000,
+  "assisted_manual_snapshot": 5000
+}

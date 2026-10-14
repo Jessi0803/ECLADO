@@ -5,6 +5,7 @@ import '@fontsource/open-sans/latin-400.css';
 import '@fontsource/open-sans/latin-500.css';
 import '@fontsource/open-sans/latin-600.css';
 import App from './app/App.jsx';
+import EnvironmentBanner from './components/EnvironmentBanner.jsx';
 import './styles.css';
 
 // LINE 的 iOS 內建瀏覽器在工具列收合時會直接改變 WKWebView 高度。
@@ -26,4 +27,4 @@ if (isLineBrowser) {
   }, { passive:true });
 }
 
-createRoot(document.getElementById('root')).render(<App />);
+createRoot(document.getElementById('root')).render(<><EnvironmentBanner /><App /></>);

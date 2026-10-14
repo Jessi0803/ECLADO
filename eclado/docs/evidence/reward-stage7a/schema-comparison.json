@@ -1,0 +1,755 @@
+{
+  "newTables": [
+    {
+      "name": "student_reward_snapshots",
+      "productionPresent": false,
+      "expectedPresent": true
+    },
+    {
+      "name": "instructor_reward_accounts",
+      "productionPresent": false,
+      "expectedPresent": true
+    },
+    {
+      "name": "instructor_reward_order_states",
+      "productionPresent": false,
+      "expectedPresent": true
+    },
+    {
+      "name": "instructor_reward_ledger",
+      "productionPresent": false,
+      "expectedPresent": true
+    },
+    {
+      "name": "instructor_reward_payment_receipts",
+      "productionPresent": false,
+      "expectedPresent": true
+    },
+    {
+      "name": "instructor_reward_reservations",
+      "productionPresent": false,
+      "expectedPresent": true
+    },
+    {
+      "name": "instructor_reward_payment_exceptions",
+      "productionPresent": false,
+      "expectedPresent": true
+    },
+    {
+      "name": "instructor_reward_bank_profiles",
+      "productionPresent": false,
+      "expectedPresent": true
+    },
+    {
+      "name": "instructor_reward_bank_calendar_versions",
+      "productionPresent": false,
+      "expectedPresent": true
+    },
+    {
+      "name": "instructor_reward_withdrawals",
+      "productionPresent": false,
+      "expectedPresent": true
+    },
+    {
+      "name": "instructor_reward_withdrawal_events",
+      "productionPresent": false,
+      "expectedPresent": true
+    },
+    {
+      "name": "instructor_reward_notification_outbox",
+      "productionPresent": false,
+      "expectedPresent": true
+    },
+    {
+      "name": "instructor_reward_notification_attempts",
+      "productionPresent": false,
+      "expectedPresent": true
+    },
+    {
+      "name": "instructor_reward_reconciliation_runs",
+      "productionPresent": false,
+      "expectedPresent": true
+    },
+    {
+      "name": "instructor_reward_reconciliation_findings",
+      "productionPresent": false,
+      "expectedPresent": true
+    }
+  ],
+  "baselineFunctions": [
+    {
+      "signature": "allocate_assisted_inventory(text,jsonb,boolean)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "allocate_inventory_count_gift_shortages(bigint)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "allocate_inventory_for_paid_order(text,jsonb)",
+      "productionPresent": true,
+      "definitionMatches": false,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "apply_student_price(numeric,numeric)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": false,
+      "productionSecurityDefiner": false
+    },
+    {
+      "signature": "assert_assisted_credit_consent(text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "assert_instructor_student_admin(boolean)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "assisted_auto_unit_price(uuid,text,products,product_variants,numeric)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "assisted_coupon_allows_identity(uuid,text,uuid)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "assisted_discount_quote(jsonb,text,text,text,uuid,boolean)",
+      "productionPresent": true,
+      "definitionMatches": false,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "assisted_gift_quote(jsonb,text,text,text,uuid,boolean)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "authorize_assisted_link(text,text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "begin_order_payment_retry(text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "calculate_order_shipping(jsonb)",
+      "productionPresent": true,
+      "definitionMatches": false,
+      "aclMatches": true,
+      "expectedSecurityDefiner": false,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "claim_order_payment(text,text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "close_backorders_for_fulfillment(text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "close_inventory_count_shortages_on_order_status()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "complete_inventory_count(uuid)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "confirm_assisted_credit_consent(text,text,bigint)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "consume_order_shopping_credit(text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "coupon_campaign_allows_identity(uuid,text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "create_assisted_order(uuid,jsonb)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "create_assisted_order_base_v1(uuid,jsonb)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "create_inventory_count(text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "create_order_with_pricing(jsonb,text,text,text,text,text,text,text,text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "create_order_with_pricing(jsonb,text,text,text,text,text,text,text,text,text,text,text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "create_order_with_pricing(jsonb,text,text,text,text,text,text,text,text,text,text,text,bigint)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "create_order_with_pricing(jsonb,text,text,text,text,text,text,text,text,text,text,text,bigint,jsonb)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "create_order_with_pricing_discount_v2(jsonb,text,text,text,text,text,text,text,text)",
+      "productionPresent": true,
+      "definitionMatches": false,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "delete_draft_inventory_count(uuid)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "end_instructor_student_bindings_on_member_delete()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "get_admin_assisted_link(text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "get_admin_assisted_request(uuid)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "get_admin_instructor_student_member(uuid)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "get_admin_student_pricing_history()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "get_admin_student_pricing_settings()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "get_inventory_count_detail(uuid)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "get_inventory_count_gift_shortages()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "get_inventory_count_sessions()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "get_my_appendable_shipping_group()",
+      "productionPresent": true,
+      "definitionMatches": false,
+      "aclMatches": false,
+      "expectedSecurityDefiner": false,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "get_my_instructor_students()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "get_my_student_pricing_context()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "get_my_student_product_prices()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "has_backoffice_permission(text)",
+      "productionPresent": true,
+      "definitionMatches": false,
+      "aclMatches": true,
+      "expectedSecurityDefiner": false,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "instructor_student_context(uuid)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "is_eclado_admin()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "normalize_coupon_campaign_code()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": false,
+      "productionSecurityDefiner": false
+    },
+    {
+      "signature": "order_consumes_inventory(text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": false,
+      "productionSecurityDefiner": false
+    },
+    {
+      "signature": "persist_assisted_benefits(text,jsonb,uuid,text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "prepare_shipping_group_for_order_status()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "prevent_instructor_student_audit_mutation()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": false,
+      "productionSecurityDefiner": false
+    },
+    {
+      "signature": "promotion_item_matches_scope(uuid,jsonb,text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "protect_assisted_order()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": false,
+      "productionSecurityDefiner": false
+    },
+    {
+      "signature": "protect_order_pricing_snapshot()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": false,
+      "productionSecurityDefiner": false
+    },
+    {
+      "signature": "quote_assisted_order(jsonb)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "quote_order_pricing(jsonb,text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "quote_order_pricing(jsonb,text,text,text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "quote_order_pricing_discount_v2(jsonb,text,text,text)",
+      "productionPresent": true,
+      "definitionMatches": false,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "quote_order_pricing_internal_20260916(jsonb,text)",
+      "productionPresent": true,
+      "definitionMatches": false,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "refund_order_shopping_credit(text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "release_assisted_inventory(text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "release_inventory_for_order(text)",
+      "productionPresent": true,
+      "definitionMatches": false,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "release_order_shopping_credit(text,text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "reserve_order_shopping_credit(uuid,text,bigint)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "resolve_assisted_payment_claim(text,text,text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "resolve_product_price_multiplier(products,text,numeric)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": false,
+      "productionSecurityDefiner": false
+    },
+    {
+      "signature": "sanitize_public_order_quote(jsonb)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": false,
+      "productionSecurityDefiner": false
+    },
+    {
+      "signature": "save_instructor_student_binding(uuid,uuid,uuid,text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "save_student_pricing_settings(jsonb,bigint)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "set_instructor_student_price_type(uuid,text,bigint)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "set_order_payment_amount_defaults()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": false,
+      "productionSecurityDefiner": false
+    },
+    {
+      "signature": "student_price_confirmation(jsonb)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": false,
+      "productionSecurityDefiner": false
+    },
+    {
+      "signature": "student_pricing_multiplier(uuid)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "sync_assisted_inventory()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "sync_coupon_redemption_from_order_status()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "sync_gift_reservation_from_order_status()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "sync_inventory_allocation_for_order()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "sync_product_stock_mirror(integer)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "sync_shopping_credit_from_order_status()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "update_inventory_count_item(bigint,integer,integer)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    }
+  ],
+  "patchedBaseline": [
+    {
+      "signature": "begin_order_payment_retry(text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "claim_order_payment(text,text)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "create_assisted_order(uuid,jsonb)",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "create_order_with_pricing_discount_v2(jsonb,text,text,text,text,text,text,text,text)",
+      "productionPresent": true,
+      "definitionMatches": false,
+      "aclMatches": false,
+      "expectedSecurityDefiner": true,
+      "productionSecurityDefiner": true
+    },
+    {
+      "signature": "set_order_payment_amount_defaults()",
+      "productionPresent": true,
+      "definitionMatches": true,
+      "aclMatches": true,
+      "expectedSecurityDefiner": false,
+      "productionSecurityDefiner": false
+    }
+  ]
+}

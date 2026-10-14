@@ -1,0 +1,109 @@
+[2m[WebServer] [22m(node:62808) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 12 tests using 1 worker
+
+(node:62813) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:62813) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [chromium] › tests/admin.spec.ts:1642:5 › 商品管理可從本機上傳圖片並以規格 RPC 建立草稿 (1.7s)
+  ✓   2 [chromium] › tests/admin.spec.ts:1688:5 › 新增商品缺少必填欄位時在編輯面板內顯示警示 (941ms)
+  ✓   3 [chromium] › tests/admin.spec.ts:1757:5 › 新增商品寫入失敗時顯示錯誤且不加入商品清單 (2.4s)
+  ✓   4 [chromium] › tests/eclado-frontend.spec.ts:519:5 › 後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序 (1.1s)
+  ✘   5 [chromium] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則 (9.3s)
+(node:62835) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:62835) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   6 [chromium] › tests/eclado-frontend.spec.ts:2260:5 › 師資會員專區的季度採購包含管理員補登的線下採購 (634ms)
+(node:62841) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:62841) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   7 [mobile-chrome] › tests/admin.spec.ts:1642:5 › 商品管理可從本機上傳圖片並以規格 RPC 建立草稿 (1.5s)
+  ✓   8 [mobile-chrome] › tests/admin.spec.ts:1688:5 › 新增商品缺少必填欄位時在編輯面板內顯示警示 (1.3s)
+  ✓   9 [mobile-chrome] › tests/admin.spec.ts:1757:5 › 新增商品寫入失敗時顯示錯誤且不加入商品清單 (1.6s)
+  ✓  10 [mobile-chrome] › tests/eclado-frontend.spec.ts:519:5 › 後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序 (1.5s)
+  ✘  11 [mobile-chrome] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則 (10.4s)
+(node:62859) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:62859) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  12 [mobile-chrome] › tests/eclado-frontend.spec.ts:2260:5 › 師資會員專區的季度採購包含管理員補登的線下採購 (989ms)
+
+
+  1) [chromium] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則 ────────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  getByTestId('cart-shipping-progress')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  8000ms
+
+    Call log:
+    [2m  - Expect "toHaveCount" with timeout 8000ms[22m
+    [2m  - waiting for getByTestId('cart-shipping-progress')[22m
+    [2m    20 × locator resolved to 1 element[22m
+    [2m       - unexpected value "1"[22m
+
+
+      610 |   await page.goto('/cart');
+      611 |   await expect(page.getByText('免運', { exact: true })).toBeVisible();
+    > 612 |   await expect(page.getByTestId('cart-shipping-progress')).toHaveCount(0);
+          |                                                            ^
+      613 |
+      614 |   await page.goto('/info');
+      615 |   await expect(page.getByRole('button', { name: '會員購物須知', exact: true })).toHaveCount(0);
+        at /Users/chun/Documents/GitHub/ECLADO/eclado/tests/eclado-frontend.spec.ts:612:60
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則-chromium/error-context.md
+
+  2) [mobile-chrome] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則 ───────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  getByTestId('cart-shipping-progress')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  8000ms
+
+    Call log:
+    [2m  - Expect "toHaveCount" with timeout 8000ms[22m
+    [2m  - waiting for getByTestId('cart-shipping-progress')[22m
+    [2m    20 × locator resolved to 1 element[22m
+    [2m       - unexpected value "1"[22m
+
+
+      610 |   await page.goto('/cart');
+      611 |   await expect(page.getByText('免運', { exact: true })).toBeVisible();
+    > 612 |   await expect(page.getByTestId('cart-shipping-progress')).toHaveCount(0);
+          |                                                            ^
+      613 |
+      614 |   await page.goto('/info');
+      615 |   await expect(page.getByRole('button', { name: '會員購物須知', exact: true })).toHaveCount(0);
+        at /Users/chun/Documents/GitHub/ECLADO/eclado/tests/eclado-frontend.spec.ts:612:60
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則-mobile-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則-mobile-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則-mobile-chrome/error-context.md
+
+  2 failed
+    [chromium] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則 ─────────────
+    [mobile-chrome] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則 ────────
+  10 passed (36.8s)

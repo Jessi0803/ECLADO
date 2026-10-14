@@ -1,9 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../config/runtime.js';
 
-const SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
-const SUPABASE_ANON = 'sb_publishable_BasrQNdstdbX_InrQWmCuw_Jb1Lscnl';
-
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { detectSessionInUrl: true, persistSession: true },
 });
 

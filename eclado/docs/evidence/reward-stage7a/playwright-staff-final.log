@@ -1,0 +1,86 @@
+[2m[WebServer] [22m(node:63323) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:63325) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:63325) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、最低五千且固定免運、不使用追加規則 (9.9s)
+(node:63336) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:63336) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [mobile-chrome] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、最低五千且固定免運、不使用追加規則 (11.3s)
+
+
+  1) [chromium] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、最低五千且固定免運、不使用追加規則 ─────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByText(/滿 NT\$5,000/).first()
+    Expected: visible
+    Timeout: 8000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 8000ms[22m
+    [2m  - waiting for getByText(/滿 NT\$5,000/).first()[22m
+
+
+      616 |   await page.getByRole('button', { name: '會員購物須知', exact: true }).click();
+      617 |   await expect(page.getByRole('heading', { name: '內部人員－購物規範' })).toBeVisible();
+    > 618 |   await expect(page.getByText(/滿 NT\$5,000/).first()).toBeVisible();
+          |                                                       ^
+      619 | });
+      620 |
+      621 | for (const role of ['instructor', 'distributor', 'staff']) {
+        at /Users/chun/Documents/GitHub/ECLADO/eclado/tests/eclado-frontend.spec.ts:618:55
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、最低五千且固定免運、不使用追加規則-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、最低五千且固定免運、不使用追加規則-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、最低五千且固定免運、不使用追加規則-chromium/error-context.md
+
+  2) [mobile-chrome] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、最低五千且固定免運、不使用追加規則 ────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByText(/滿 NT\$5,000/).first()
+    Expected: visible
+    Timeout: 8000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 8000ms[22m
+    [2m  - waiting for getByText(/滿 NT\$5,000/).first()[22m
+
+
+      616 |   await page.getByRole('button', { name: '會員購物須知', exact: true }).click();
+      617 |   await expect(page.getByRole('heading', { name: '內部人員－購物規範' })).toBeVisible();
+    > 618 |   await expect(page.getByText(/滿 NT\$5,000/).first()).toBeVisible();
+          |                                                       ^
+      619 | });
+      620 |
+      621 | for (const role of ['instructor', 'distributor', 'staff']) {
+        at /Users/chun/Documents/GitHub/ECLADO/eclado/tests/eclado-frontend.spec.ts:618:55
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、最低五千且固定免運、不使用追加規則-mobile-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、最低五千且固定免運、不使用追加規則-mobile-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、最低五千且固定免運、不使用追加規則-mobile-chrome/error-context.md
+
+  2 failed
+    [chromium] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、最低五千且固定免運、不使用追加規則 ──────────
+    [mobile-chrome] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、最低五千且固定免運、不使用追加規則 ─────

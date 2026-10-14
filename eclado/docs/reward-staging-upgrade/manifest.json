@@ -1,0 +1,65 @@
+{
+  "target": "qqlgqasbmbicnmvnlqbr",
+  "production_read_only": "ilvdvlkdpntwmaijncaz",
+  "data_copy": "settings only; no customers/orders/financial accounts",
+  "preserve_legacy_product": true,
+  "schema_installed": true,
+  "migrations": [
+    {
+      "file": "docs/reward-staging-upgrade/01-production-schema-baseline.sql",
+      "sha256": "ff1426b18d0f593d903c281be113b565c30fa2b2630c7d707fd688e0e59df7e5"
+    },
+    {
+      "file": "supabase-student-reward-snapshots.sql",
+      "sha256": "a561ac6d6d99be4b30daa0b74cfc145b780e1c4a883c9d490bdf4a79eae19164"
+    },
+    {
+      "file": "supabase-instructor-reward-ledger.sql",
+      "sha256": "ea46aee7ef32e3f632db98800a43125a4203f228dcb0d7344717f8d04af17808"
+    },
+    {
+      "file": "supabase-instructor-reward-queries.sql",
+      "sha256": "7bef89e919abda64d0f4740f10a6e956ed334fa62f46bc95bfd7c315901e99fa"
+    },
+    {
+      "file": "supabase-instructor-reward-checkout.sql",
+      "sha256": "5eba6f84815ca6df2d2edf4beff34e9ad3789fa47a9b0477dd031a158126fb92"
+    },
+    {
+      "file": "supabase-instructor-reward-withdrawals.sql",
+      "sha256": "a614c8fe73fa4ea916a477920e0f11e8cdb95424f8876c74fea861364bb187de"
+    },
+    {
+      "file": "supabase-instructor-reward-notifications.sql",
+      "sha256": "5fe6a7f3c1e4caaf38055d51bbe3bc068234e75b100e6b0cf76a68a0c93471a2"
+    },
+    {
+      "file": "supabase-instructor-reward-reconciliation.sql",
+      "sha256": "c155a544b66b13b75037b535653924020abe92057f3a408275da56f5a29d5669"
+    }
+  ],
+  "installed_on": "2026-10-13",
+  "verified_on": "2026-10-14",
+  "cloud_tables": 68,
+  "cloud_functions": 257,
+  "test_student_pricing_enabled": false,
+  "production_written": false,
+  "website_connected_to_test": false,
+  "persistent_test_auth_users": 0,
+  "source_catalog_captured_on": "2026-10-13",
+  "post_pause_production_resync": false,
+  "verification_files": [
+    {
+      "file": "docs/reward-staging-upgrade/02-rollback-smoke.sql",
+      "sha256": "170670674bd2029c45b0e91b8da4fd49cb6dff81847a044993fb597c1731f272"
+    },
+    {
+      "file": "docs/reward-staging-upgrade/03-inventory-verify-readonly.sql",
+      "sha256": "a35948b34c932f73363f2633d543def47eb63b99a9669667c92d7f58d628d8f0"
+    },
+    {
+      "file": "docs/reward-staging-upgrade/04-foundation-verify-readonly.sql",
+      "sha256": "64998ec407fe13d15c7f0e1b5492e28316ba78fb4ebb1a19cb26abf1e7701bb5"
+    }
+  ]
+}

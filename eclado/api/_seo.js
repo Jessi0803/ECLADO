@@ -1,6 +1,5 @@
 const SITE_ORIGIN = 'https://ecladotaiwan.com';
-const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
-const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_BasrQNdstdbX_InrQWmCuw_Jb1Lscnl';
+const { resolveSupabaseAnonKey, resolveSupabaseUrl } = require('./_supabase-env.js');
 
 const LEGACY_PRODUCT_SLUGS = {
   '平衡爽膚水': 'rebalancing-toner', '完美潔面卸妝膏': 'perfect-cleansing-smoothie-balm',
@@ -143,8 +142,8 @@ function injectSeoDocument(template, seo, body) {
 }
 
 async function fetchStorefrontCatalog() {
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
+  const supabaseUrl = resolveSupabaseUrl({ allowVite: true });
+  const anonKey = resolveSupabaseAnonKey({ allowVite: true });
   const response = await fetch(`${supabaseUrl}/rest/v1/rpc/get_storefront_catalog`, {
     method: 'POST', headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json' }, body: '{}',
   });

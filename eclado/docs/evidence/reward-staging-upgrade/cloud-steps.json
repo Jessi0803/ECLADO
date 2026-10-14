@@ -1,0 +1,34 @@
+[
+  {
+    "file": "docs/reward-staging-upgrade/01-production-schema-baseline.sql",
+    "result": "UI returned setval, no SQL error; metadata verification follows"
+  },
+  {
+    "file": "supabase-student-reward-snapshots.sql",
+    "result": "Success. No rows returned"
+  },
+  {
+    "file": "supabase-instructor-reward-ledger.sql",
+    "result": "Success. No rows returned"
+  },
+  {
+    "file": "supabase-instructor-reward-queries.sql",
+    "result": "Success. No rows returned"
+  },
+  {
+    "file": "supabase-instructor-reward-checkout.sql",
+    "result": "Success. No rows returned"
+  },
+  {
+    "file": "supabase-instructor-reward-withdrawals.sql",
+    "result": "Success. No rows returned"
+  },
+  {
+    "file": "supabase-instructor-reward-notifications.sql",
+    "result": "Success. No rows returned"
+  },
+  {
+    "file": "supabase-instructor-reward-reconciliation.sql",
+    "result": "Success. No rows returned"
+  }
+]

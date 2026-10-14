@@ -22,6 +22,7 @@ import {
   signInWithPassword,
   signUp,
 } from '../services/auth.js';
+import { LINE_LOGIN_ENABLED } from '../config/runtime.js';
 
 export default function LoginPage({ setPage }) {
   const [view, setView]         = useState('login'); // 'login' | 'register' | 'forgot'
@@ -188,7 +189,7 @@ export default function LoginPage({ setPage }) {
           onEmailChange={event => setEmail(event.target.value)}
           onForgot={handleForgot}
           onForgotView={() => { setView('forgot'); reset(); }}
-          onLineSignIn={signInWithLine}
+          onLineSignIn={LINE_LOGIN_ENABLED ? signInWithLine : null}
           onNameChange={event => setName(event.target.value)}
           onPasswordChange={event => setPassword(event.target.value)}
           onPhoneChange={event => setPhone(event.target.value)}

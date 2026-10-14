@@ -1,10 +1,7 @@
 const crypto = require('crypto');
+const { resolveSiteUrl, resolveSupabaseUrl } = require('./_supabase-env.js');
 
-const SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
 const LINE_CHANNEL_ID = '2010106039';
-const SITE_URL = 'https://ecladotaiwan.com';
-const LINE_REDIRECT_URI = `${SITE_URL}/api/line-callback`;
-const LINE_AUTH_REDIRECT_URI = `${SITE_URL}/line-callback`;
 const LINE_STATE_COOKIE = 'eclado_line_oauth_state';
 
 function getCookie(req, name) {
@@ -21,6 +18,13 @@ function safeEqual(left, right) {
 }
 
 module.exports = async function handler(req, res) {
+  if (String(process.env.LINE_LOGIN_ENABLED || 'true').toLowerCase() !== 'true') {
+    return res.status(404).send('Not Found');
+  }
+  const siteUrl = resolveSiteUrl(req);
+  const supabaseUrl = resolveSupabaseUrl();
+  const lineRedirectUri = `${siteUrl}/api/line-callback`;
+  const lineAuthRedirectUri = `${siteUrl}/line-callback`;
   const { code, state, error: lineError } = req.query || {};
   const expectedState = getCookie(req, LINE_STATE_COOKIE);
   res.setHeader(
@@ -30,23 +34,23 @@ module.exports = async function handler(req, res) {
 
   if (!safeEqual(state, expectedState)) {
     console.warn('[LINE callback] invalid OAuth state');
-    return res.redirect(`${SITE_URL}/login?error=invalid_state`);
+    return res.redirect(`${siteUrl}/login?error=invalid_state`);
   }
 
   if (lineError || !code) {
-    return res.redirect(`${SITE_URL}/login?error=line_denied`);
+    return res.redirect(`${siteUrl}/login?error=line_denied`);
   }
 
-  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
   const loginSecret = process.env.LINE_LOGIN_CHANNEL_SECRET;
 
   if (!serviceKey || !loginSecret) {
     console.error('[LINE callback] missing env vars');
-    return res.redirect(`${SITE_URL}/login?error=config`);
+    return res.redirect(`${siteUrl}/login?error=config`);
   }
 
   const sb = (path, opts = {}) =>
-    fetch(`${SUPABASE_URL}${path}`, {
+    fetch(`${supabaseUrl}${path}`, {
       ...opts,
       headers: {
         apikey: serviceKey,
@@ -106,14 +110,14 @@ module.exports = async function handler(req, res) {
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        redirect_uri: LINE_REDIRECT_URI,
+        redirect_uri: lineRedirectUri,
         client_id: LINE_CHANNEL_ID,
         client_secret: loginSecret,
       }),
     });
     const tokenData = await expectOk(tokenRes, 'line_token');
     const { access_token, id_token } = tokenData || {};
-    if (!access_token) return res.redirect(`${SITE_URL}/login?error=token_failed`);
+    if (!access_token) return res.redirect(`${siteUrl}/login?error=token_failed`);
 
     // 2. Get LINE profile (userId + displayName)
     const profileRes = await fetch('https://api.line.me/v2/profile', {
@@ -122,7 +126,7 @@ module.exports = async function handler(req, res) {
     const lineProfile = await expectOk(profileRes, 'line_profile');
 
     const { userId: lineUserId, displayName } = lineProfile;
-    if (!lineUserId) return res.redirect(`${SITE_URL}/login?error=profile_failed`);
+    if (!lineUserId) return res.redirect(`${siteUrl}/login?error=profile_failed`);
     const lineEmail = await getLineEmail(id_token);
 
     // 3. Find existing profile by line_user_id
@@ -165,7 +169,7 @@ module.exports = async function handler(req, res) {
         }), 'auth_create_user');
 
         userId = created.id;
-        if (!userId) return res.redirect(`${SITE_URL}/login?error=create_failed`);
+        if (!userId) return res.redirect(`${siteUrl}/login?error=create_failed`);
 
         // 5. Create profile row
         await expectOk(await sb('/rest/v1/profiles', {
@@ -182,16 +186,16 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify({
         type: 'magiclink',
         email,
-        options: { redirectTo: LINE_AUTH_REDIRECT_URI },
+        options: { redirectTo: lineAuthRedirectUri },
       }),
     }), 'auth_generate_link');
 
     const actionLink = linkData.action_link || linkData.properties?.action_link;
-    if (!actionLink) return res.redirect(`${SITE_URL}/login?error=link_failed`);
+    if (!actionLink) return res.redirect(`${siteUrl}/login?error=link_failed`);
 
     return res.redirect(actionLink);
   } catch (err) {
     console.error('[LINE callback error]', err);
-    return res.redirect(`${SITE_URL}/login?error=server_error`);
+    return res.redirect(`${siteUrl}/login?error=server_error`);
   }
 };

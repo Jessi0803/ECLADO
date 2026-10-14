@@ -42,6 +42,17 @@ test('worker only claims canonical DB jobs and completes with fenced token',asyn
  };
  const r=await dispatchRewards({env,fetchImpl,limit:1000});assert.equal(r.accepted,1);assert.equal(calls[0].args.p_limit,5);assert.equal(calls[2].args.p_token,'lease');assert.deepEqual(calls[0].args.p_admin_emails,['admin@example.test']);
 });
+test('worker accepts the Vercel SUPABASE_SERVICE_KEY alias',async()=>{
+ const aliasEnv={...env,SUPABASE_SERVICE_KEY:'preview-service'};delete aliasEnv.SUPABASE_SERVICE_ROLE_KEY;
+ const headers=[];const fetchImpl=async(url,a)=>{headers.push(a.headers);
+  if(url.endsWith('claim_reward_notifications'))return new Response('[]');
+  return new Response('true');
+ };
+ const result=await dispatchRewards({env:aliasEnv,fetchImpl});
+ assert.deepEqual(result,{checked:0,accepted:0});
+ assert.equal(headers[0].apikey,'preview-service');
+ assert.equal(headers[0].Authorization,'Bearer preview-service');
+});
 test('worker interruption after provider accepts is not swallowed as confirmed completion',async()=>{
  await assert.rejects(dispatchRewards({env,fetchImpl:async(url)=>{
   if(url.endsWith('claim_reward_notifications'))return new Response(JSON.stringify([job]));

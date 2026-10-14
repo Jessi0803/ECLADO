@@ -1,0 +1,78 @@
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+✔ customer projection explicitly excludes staff notes, costs, stock and payment credentials (2.135ms)
+[assisted-payment] payment not created
+✔ shopping credit requires explicit matching consent before any bank request; recorded consent recovers safely (8.081708ms)
+✔ customer amounts separate shipping, discount, credit and tender; gift rows are explicit (0.475042ms)
+✔ invalid link denies details and never reaches bank (0.275041ms)
+✔ payment ignores client amounts/method; repeat/concurrent requests create only once (7.91475ms)
+[assisted-payment] gateway result unresolved
+[assisted-payment] payment not created
+✔ ambiguous timeout keeps claim; repeat cannot create another bank request (6.91075ms)
+✔ Apple/Google Pay use the existing wallet gateway mapping from the saved method, not caller input (12.11275ms)
+✔ definite rejection releases claim but retains original order for same-ID retry (12.211125ms)
+[assisted-payment] gateway result unresolved
+[assisted-payment] payment not created
+[assisted-payment] gateway result unresolved
+[assisted-payment] payment not created
+[assisted-payment] gateway result unresolved
+[assisted-payment] payment not created
+✔ duplicate bank response, malformed response and persistence failure never admit another creation (20.111208ms)
+✔ paid/cancelled/expired orders cannot create payment (0.585792ms)
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+✔ retry authorization rejects unauthorized clients and sends legitimate retries through service RPC (71.648042ms)
+◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+✔ reward proof excludes webhook/body claims, paid_at and inferred stored paid state (1.766917ms)
+✔ only positive real bank query evidence bound to the registered provider reference qualifies (0.782541ms)
+✔ reward failure requires explicit verified current query failure, never unknown/body/pending (0.156167ms)
+✔ bank amount is extracted only from bound verified query; zero status stays pending (0.129875ms)
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+✔ verified reward receipt sends no caller amount and propagates persistence failure for retry (17.5245ms)
+✔ released-wallet success is persisted then blocks activation; definite failure uses private release RPC (0.428584ms)
+✔ authoritative double-wallet net payment reaches bank as cents, caller amount ignored (16.026ms)
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+✔ exports pure helpers without starting the server (0.634666ms)
+✔ ORDER_CLEANUP_KEY 必須設定，且清理金鑰需完全一致 (0.333792ms)
+✔ PAYMENT_NOTIFY_SECRET 必須設定 (0.086916ms)
+✔ 訪客查詢碼、手機正規化與短效查詢憑證 (0.53375ms)
+✔ 付款回站使用限時且綁定訂單的查詢憑證 (0.540125ms)
+✔ 訪客付款單建立後寄送含查詢碼的訂單成立信並記錄結果 (18.929084ms)
+✔ 付款通知轉發會帶共用密鑰，且檢查 Vercel 回應 (0.623916ms)
+✔ Vercel 拒絕付款通知時，Vultr 會留下明確失敗結果 (0.295583ms)
+✔ 付款 webhook 日誌摘要不包含 PayToken 值或完整 payload (0.15425ms)
+✔ 已付款事件只有在通知轉發或 Supabase 至少一邊成功時才可回覆成功 (0.53675ms)
+✔ 付款通知補償工作只重送已到重試時間且尚未送達的訂單 (0.609708ms)
+[payment notification retry] sent 0/1
+✔ 單筆付款通知補送失敗仍回覆 200，讓外部排程下次繼續執行 (35.0115ms)
+✔ isPaidLike: 授權/請款/付款完成算已付款；待付款/逾期不算 (0.18825ms)
+✔ isPendingLike: 待付款類 (0.04625ms)
+✔ AES key 為 32 bytes（AES-256），加解密可往返 (0.354083ms)
+✔ signableString 排序（不分大小寫）並排除空值/物件 (10.632625ms)
+✔ generateSign 對相同輸入穩定、對不同 nonce 改變 (0.703917ms)
+✔ buildCreateBody: 信用卡 AutoBilling=Y，且 BackendURL 強制指向本服務 (0.200292ms)
+✔ buildCreateBody: ATM 帶 ATMParam；金額為 0 應拋錯 (0.099917ms)
+✔ buildAuthoritativeCreateBody: 忽略呼叫端 amount，使用資料庫訂單 total (6.698ms)
+✔ formatSinopacDeadline: 將權威截止時間轉為台灣日期與時間 (0.285292ms)
+✔ buildAuthoritativeCreateBody: 缺少 payment token 時拒絕建單 (0.1915ms)
+✔ getSinopacPaymentError: 失敗回傳描述，成功回空字串 (0.108458ms)
+✔ 付款返回網址不洩漏永豐或資料庫付款 token，只帶限時結果憑證 (0.197875ms)
+✔ resolvePaymentQueryState: 付款成功優先，逾期與取消不可再付款 (0.114334ms)
+✔ resolveStoredTerminalPaymentState: 後台終態可不查銀行直接關閉本機付款單 (0.036666ms)
+✔ 未完成付款依付款方式保留正確訂單狀態 (0.050792ms)
+✔ 付款資訊持久化只選取可恢復的付款連結與付款方式 (0.098833ms)
+✔ 重新付款只允許信用卡與行動支付，並還原正確的永豐付款參數 (0.146291ms)
+✔ 會員付款資訊端點會驗證登入身分與訂單所有權 (15.717542ms)
+✔ 會員不能讀取其他會員的付款資訊 (4.862208ms)
+✔ 會員付款摘要查詢登入會員自己的全部訂單並標示可重新付款 (3.516708ms)
+✔ 訪客以短查詢碼與手機取得付款資訊，且回應不洩漏個資 (2.813792ms)
+✔ 訪客短效憑證可更新已出貨訂單，且已付款後不回傳付款入口 (2.148083ms)
+✔ 訪客訂單更新端點拒絕過期或錯誤憑證 (1.391583ms)
+✔ 訪客手機不符時使用通用錯誤且不讀付款資訊 (2.409ms)
+✔ 訪客訂單查詢使用 Supabase 共享限流，超限回覆 429 (3.72925ms)
+ℹ tests 55
+ℹ suites 0
+ℹ pass 55
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 333.210958

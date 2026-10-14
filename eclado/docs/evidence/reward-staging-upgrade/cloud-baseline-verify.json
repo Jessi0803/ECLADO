@@ -1,0 +1,14 @@
+{
+  "tables": 53,
+  "enabled": false,
+  "legacy_product": {
+    "id": 1239098751,
+    "name": "playwright-staging-product",
+    "slug": "playwright-staging-product",
+    "price": 1,
+    "stock": 10,
+    "pro_price": 1,
+    "publication_status": "archived"
+  },
+  "s1_client_denied": true
+}

@@ -1,4 +1,4 @@
-const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
+const { resolveSupabaseUrl } = require('./_supabase-env.js');
 
 function getAuthHeader(req) {
   return req.headers.authorization || req.headers.Authorization || '';
@@ -19,7 +19,7 @@ function requireCronAuth(req, res) {
 }
 
 async function supabaseRequest(path, options = {}) {
-  const supabaseUrl = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const supabaseUrl = resolveSupabaseUrl();
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
   if (!serviceKey) {

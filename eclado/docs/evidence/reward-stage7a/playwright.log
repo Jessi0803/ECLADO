@@ -1,0 +1,1066 @@
+[2m[WebServer] [22m(node:60372) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 604 tests using 1 worker
+
+(node:60380) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:60380) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓    1 [chromium] › tests/admin-analytics.spec.ts:4:5 › 歷史補登不計入營業額與訂單數 (4ms)
+  ✓    2 [chromium] › tests/admin-analytics.spec.ts:13:5 › 歷史補登數量不計入商品銷售與補貨分析 (1ms)
+  ✓    3 [chromium] › tests/admin.spec.ts:67:5 › 系統設定重新載入沿用白底框線按鈕且只重新讀取設定 (899ms)
+  ✓    4 [chromium] › tests/admin.spec.ts:89:5 › 後台登入權限：非管理員擋下，管理員可進入 (1.7s)
+  ✓    5 [chromium] › tests/admin.spec.ts:108:5 › 後台登入權限：管理員 session 可進入儀表板 (1.9s)
+  ✓    6 [chromium] › tests/admin.spec.ts:119:5 › 導覽列可將頁面加入常用並依原本選單順序顯示 (672ms)
+  ✓    7 [chromium] › tests/admin.spec.ts:141:5 › 導覽列會載入帳號已存的常用並隱藏沒有權限的頁面 (442ms)
+  ✓    8 [chromium] › tests/admin.spec.ts:156:5 › 只有最高管理員能看到待補商品管理 (562ms)
+  ✓    9 [chromium] › tests/admin.spec.ts:179:5 › 商品小編只載入商品且無法看到營運、會員、叫貨與進貨成本 (978ms)
+  ✓   10 [chromium] › tests/admin.spec.ts:245:5 › 訂單管理以 user_id 區分訪客與一般會員 (567ms)
+  ✓   11 [chromium] › tests/admin.spec.ts:271:5 › 叫貨管理可多選商品、查看庫存、計算雙幣別並匯出三種格式 (2.1s)
+  ✓   12 [chromium] › tests/admin.spec.ts:334:5 › 叫貨單草稿可不填地址儲存並永久刪除，後期狀態不可降級後刪除 (1.0s)
+  ✓   13 [chromium] › tests/admin.spec.ts:371:5 › 後台側邊欄將操作紀錄歸在會員分類 (467ms)
+  ✓   14 [chromium] › tests/admin.spec.ts:389:5 › 後台切換左側導覽時主內容自動回到頂部 (1.4s)
+  ✓   15 [chromium] › tests/admin.spec.ts:405:5 › 儀表板最新訂單的查看全部會前往訂單管理 (595ms)
+  ✓   16 [chromium] › tests/admin.spec.ts:423:5 › 後台資料為空時維持空狀態，不顯示本機示範商品、會員或訂單 (963ms)
+  ✓   17 [chromium] › tests/admin.spec.ts:439:5 › 後台權限以資料庫 allow-list 為準，不再只相信管理員 Email (360ms)
+  ✓   18 [chromium] › tests/admin.spec.ts:450:5 › 商品、訂單與會員列表響應式切換，詳情使用抽屜且不撐寬頁面 (1.7s)
+  ✓   19 [chromium] › tests/admin.spec.ts:546:5 › 手機上一頁會關閉後台詳情，商品未儲存時先確認 (805ms)
+  ✓   20 [chromium] › tests/admin.spec.ts:584:5 › 儀表板顯示待處理資訊，點待審核申請可前往會員審核列表 (501ms)
+  ✓   21 [chromium] › tests/admin.spec.ts:597:5 › 儀表板六個月柱狀圖皆有有效背景色，歷史月份使用透明度 (468ms)
+  ✓   22 [chromium] › tests/admin.spec.ts:610:5 › 儀表板營業額與庫存警示固定上下排列，庫存內容獨立水平捲動 (627ms)
+  ✓   23 [chromium] › tests/admin.spec.ts:644:5 › 訂單管理可查看明細並更新狀態 (665ms)
+  ✓   24 [chromium] › tests/admin.spec.ts:676:5 › 訂單詳情顯示合併出貨批次、未付款提醒與人工處理警示 (552ms)
+  ✓   25 [chromium] › tests/admin.spec.ts:712:5 › 批次出貨在有未付款訂單時被擋下，付款後一次出貨並只發一則通知 (1.1s)
+  ✓   26 [chromium] › tests/admin.spec.ts:770:5 › 未付款狀態依付款方式區分信用卡與虛擬帳號匯款 (666ms)
+  ✓   27 [chromium] › tests/admin.spec.ts:817:5 › 訂單詳情顯示優惠券名稱與遮罩代碼 (569ms)
+  ✓   28 [chromium] › tests/admin.spec.ts:837:5 › 訂單詳情分開顯示訂單總額、購物金支付與尚需付款 (579ms)
+  ✓   29 [chromium] › tests/admin.spec.ts:863:5 › 訂單詳情顯示發票快照並可獨立儲存人工發票號碼 (786ms)
+  ✓   30 [chromium] › tests/admin.spec.ts:889:5 › 舊訂單沒有發票欄位時仍可開啟並顯示未記錄 (515ms)
+  ✓   31 [chromium] › tests/admin.spec.ts:898:5 › 訂單列印只呈現歷史快照與顧客可見資訊 (1.0s)
+  ✓   32 [chromium] › tests/admin.spec.ts:969:5 › 舊訂單缺少新快照欄位仍可開啟列印預覽 (917ms)
+  ✓   33 [chromium] › tests/admin.spec.ts:982:5 › 訂單全部分欄排除已取消，已取消分欄仍可查閱 (604ms)
+  ✓   34 [chromium] › tests/admin.spec.ts:1001:5 › 訂單管理可依狀態與待補庫存篩選 (542ms)
+  ✓   35 [chromium] › tests/admin.spec.ts:1023:5 › 已付款與備貨中訂單詳情顯示逐項現貨與缺少數量 (935ms)
+  ✓   36 [chromium] › tests/admin.spec.ts:1071:5 › 待補商品頁依付款順序執行 FIFO 並支援部分分配 (587ms)
+  ✓   37 [chromium] › tests/admin.spec.ts:1116:5 › 客訂自取訂單不顯示地址與托運欄位並可完成取貨流程 (785ms)
+  ✓   38 [chromium] › tests/admin.spec.ts:1155:5 › 已出貨與已到貨篩選包含對應的自取狀態 (533ms)
+  ✓   39 [chromium] › tests/admin.spec.ts:1178:5 › 訂單管理可取消訂單並同步 cancelled 狀態 (924ms)
+  ✓   40 [chromium] › tests/admin.spec.ts:1200:5 › 已取消且未付款的訂單可經二次確認後永久刪除 (887ms)
+  ✓   41 [chromium] › tests/admin.spec.ts:1222:5 › 曾付款後取消的訂單保留帳務紀錄且不可永久刪除 (559ms)
+  ✓   42 [chromium] › tests/admin.spec.ts:1236:5 › 訂單改為已付款會送出 LINE 付款通知，LINE 失敗時改寄 Email (628ms)
+  ✓   43 [chromium] › tests/admin.spec.ts:1264:5 › 出貨可寫入托運單號並送出 LINE 通知 (1.1s)
+  ✓   44 [chromium] › tests/admin.spec.ts:1305:5 › 未填托運單號不能確認出貨或發送通知 (1.1s)
+  ✓   45 [chromium] › tests/admin.spec.ts:1324:5 › 已有成功通知紀錄時不會自動重複發送 (658ms)
+  ✓   46 [chromium] › tests/admin.spec.ts:1348:5 › 沒有 LINE 綁定的訂單出貨會送出 Email 通知 (910ms)
+  ✓   47 [chromium] › tests/admin.spec.ts:1376:5 › 商品庫存可在規格表格修改並透過交易式 RPC 儲存 (851ms)
+  ✓   48 [chromium] › tests/admin.spec.ts:1400:5 › 贈品庫存分頁同時顯示一般商品與贈品專用商品的獨立庫存 (763ms)
+  ✓   49 [chromium] › tests/admin.spec.ts:1420:5 › 庫存盤點涵蓋一般與贈品庫存、版本衝突、完整填寫及完成後唯讀 (1.1s)
+  ✓   50 [chromium] › tests/admin.spec.ts:1508:5 › 商品庫存可依庫存狀態篩選 (589ms)
+  ✓   51 [chromium] › tests/admin.spec.ts:1533:5 › 商品庫存可依中文或英文名稱搜尋，並與庫存狀態共同篩選 (574ms)
+  ✓   52 [chromium] › tests/admin.spec.ts:1558:5 › 商品管理可編輯名稱、規格價格與院線限定並透過 RPC 儲存 (936ms)
+  ✓   53 [chromium] › tests/admin.spec.ts:1589:5 › 商品規格編輯改為多列卡片且窄畫面不需水平滑動 (1.3s)
+  ✘   54 [chromium] › tests/admin.spec.ts:1642:5 › 商品管理可從本機上傳圖片並以規格 RPC 建立草稿 (9.1s)
+(node:60520) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:60520) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   55 [chromium] › tests/admin.spec.ts:1688:5 › 新增商品缺少必填欄位時在編輯面板內顯示警示 (1.1s)
+(node:60526) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:60526) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   56 [chromium] › tests/admin.spec.ts:1704:5 › 新增商品可不放圖片並建立草稿 (1.1s)
+  ✓   57 [chromium] › tests/admin.spec.ts:1734:5 › 商品圖片上傳會阻止非圖片與超過 5 MB 的檔案 (974ms)
+  ✘   58 [chromium] › tests/admin.spec.ts:1757:5 › 新增商品寫入失敗時顯示錯誤且不加入商品清單 (9.1s)
+(node:60548) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:60548) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   59 [chromium] › tests/admin.spec.ts:1784:5 › 商品管理可下架、於已下架清單查看並重新上架商品 (766ms)
+  ✓   60 [chromium] › tests/admin.spec.ts:1807:5 › 商品管理可將草稿商品設定為活動限定 (848ms)
+  ✓   61 [chromium] › tests/admin.spec.ts:1842:5 › 商品管理可設定固定專業價而不套用身分倍率 (759ms)
+  ✓   62 [chromium] › tests/admin.spec.ts:1873:5 › 商品下架與重新上架寫入失敗時維持原清單狀態 (647ms)
+  ✓   63 [chromium] › tests/admin.spec.ts:1897:5 › 活動管理可建立原子百分比折扣並指定全館一般商品 (613ms)
+  ✓   64 [chromium] › tests/admin.spec.ts:1910:5 › 活動可套用全館商品並包含活動限定商品 (667ms)
+  ✓   65 [chromium] › tests/admin.spec.ts:1923:5 › 活動管理不顯示已停用活動 (458ms)
+  ✓   66 [chromium] › tests/admin.spec.ts:1942:5 › 百分比與固定金額折抵可改用滿件門檻 (665ms)
+  ✓   67 [chromium] › tests/admin.spec.ts:1958:5 › 活動限定商品可以被指定到優惠券專用活動 (686ms)
+  ✓   68 [chromium] › tests/admin.spec.ts:1975:5 › 活動指定商品可全選及全取消 (639ms)
+  ✓   69 [chromium] › tests/admin.spec.ts:1991:5 › 優惠券方案可打包多個優惠券專用活動 (825ms)
+  ✓   70 [chromium] › tests/admin.spec.ts:2019:5 › 編輯優惠券會依後端排序還原活動執行順序 (605ms)
+  ✓   71 [chromium] › tests/admin.spec.ts:2041:5 › 優惠券可搜尋並指定個別會員使用 (889ms)
+  ✓   72 [chromium] › tests/admin.spec.ts:2067:5 › 指定會員可用美容師聯絡人搜尋並顯示聯絡人名稱 (782ms)
+  ✓   73 [chromium] › tests/admin.spec.ts:2090:5 › 編輯指定會員優惠券會還原既有會員名單 (561ms)
+  ✓   74 [chromium] › tests/admin.spec.ts:2109:5 › 重複優惠碼顯示可理解的中文提示 (642ms)
+  ✓   75 [chromium] › tests/admin.spec.ts:2129:5 › 活動管理可從一般商品贈品庫存與贈品專用商品選擇贈品 (564ms)
+  ✓   76 [chromium] › tests/admin.spec.ts:2153:5 › 活動排程：排程中活動顯示「排程中」badge，已結束顯示「已結束」 (614ms)
+  ✓   77 [chromium] › tests/admin.spec.ts:2171:5 › 後台核准美容師申請會同步 application status 與 profiles.role (948ms)
+  ✓   78 [chromium] › tests/admin.spec.ts:2197:5 › 後台拒絕美容師申請會同步 rejected 與 consumer (1.4s)
+  ✓   79 [chromium] › tests/admin.spec.ts:2218:5 › 會員管理操作欄的會員類型下拉選單寬度一致 (947ms)
+  ✓   80 [chromium] › tests/admin.spec.ts:2233:5 › 一般桌面寬度不需水平捲動即可看到會員詳細按鈕 (718ms)
+  ✓   81 [chromium] › tests/admin.spec.ts:2255:5 › 會員列表提供查看詳情按鈕並開啟既有會員詳情面板 (831ms)
+  ✓   82 [chromium] › tests/admin.spec.ts:2277:5 › 會員詳細只顯示目前美容師申請的私人證照圖片與歷史筆數 (888ms)
+  ✓   83 [chromium] › tests/admin.spec.ts:2318:5 › 訂單詳細可將單張訪客訂單歸戶至會員 (1.1s)
+  ✓   84 [chromium] › tests/admin.spec.ts:2352:5 › 會員詳細可一次匯入一張訪客訂單並更新歷史訂單 (1.1s)
+  ✓   85 [chromium] › tests/admin.spec.ts:2387:5 › 會員詳情可由訪客訂單按鈕右側補登歷史訂單 (1.1s)
+  ✓   86 [chromium] › tests/admin.spec.ts:2440:5 › 後台可單向取消歷史補登並保留不可刪除提示 (919ms)
+  ✓   87 [chromium] › tests/admin.spec.ts:2479:5 › 手機會員小卡的查看詳情按鈕與會員類型選單並列且可開啟詳情 (795ms)
+  ✓   88 [chromium] › tests/admin.spec.ts:2503:5 › 會員管理長 Email 不會壓縮類型與申請狀態欄 (492ms)
+  ✓   89 [chromium] › tests/admin.spec.ts:2547:5 › 手機會員管理標題與篩選列上下排列，篩選項目維持三欄等寬 (823ms)
+  ✓   90 [chromium] › tests/admin.spec.ts:2576:5 › 會員管理可依會員與美容師申請資料搜尋，並與類型篩選共用 (657ms)
+  ✓   91 [chromium] › tests/admin.spec.ts:2651:5 › 會員管理待審核數量使用與訂單待確認相同的 badge 樣式 (592ms)
+  ✓   92 [chromium] › tests/admin.spec.ts:2676:5 › 會員管理可手動切換會員類型並同步 profile role (977ms)
+  ✓   93 [chromium] › tests/admin.spec.ts:2696:5 › 會員管理只在會員詳細顯示師資目前季度採購額與資格歷程 (556ms)
+  ✓   94 [chromium] › tests/admin.spec.ts:2728:5 › 會員內部備註可在會員詳情編輯並顯示於該會員的訂單 (1.3s)
+  ✓   95 [chromium] › tests/admin.spec.ts:2756:5 › 訂單列表以兩種顏色標籤區分會員內部備註與顧客訂單備註 (527ms)
+  ✓   96 [chromium] › tests/admin.spec.ts:2779:5 › 只有訂單權限的帳號看得到會員內部備註但不能跳到會員詳情 (502ms)
+  ✓   97 [chromium] › tests/admin.spec.ts:2798:5 › 訂單與會員詳情可雙向跳轉並顯示返回列 (1.6s)
+  ✓   98 [chromium] › tests/admin.spec.ts:2829:5 › 會員管理可回溯資格起始日並補登線下季度採購 (1.2s)
+  ✓   99 [chromium] › tests/admin.spec.ts:2870:5 › 會員管理可刪除會員並同步資料庫 (968ms)
+  ✓  100 [chromium] › tests/admin.spec.ts:2892:5 › 會員管理不提供刪除目前登入管理員的操作 (687ms)
+  ✓  101 [chromium] › tests/admin.spec.ts:2906:5 › 購物金管理顯示餘額與不可刪除明細，人工發放需原因及二次確認 (1.2s)
+  ✓  102 [chromium] › tests/admin.spec.ts:2992:5 › 只有會員寫入權限才顯示刪除會員操作 (584ms)
+  ✓  103 [chromium] › tests/admin.spec.ts:3005:5 › 營業分析與 AI 補貨只使用真實訂單統計，不套用預設銷量 (614ms)
+  ✓  104 [chromium] › tests/admin.spec.ts:3052:5 › 操作紀錄可依資料類型篩選並查看不可竄改的前後差異 (658ms)
+  ✓  105 [chromium] › tests/assisted-orders.spec.ts:21:5 › restored checkout resolves missing or broken snapshot images without changing totals (476ms)
+  ✓  106 [chromium] › tests/assisted-orders.spec.ts:34:5 › product search filters names and SKU without clearing chosen product or price (1.1s)
+  ✓  107 [chromium] › tests/assisted-orders.spec.ts:49:5 › assisted order detail link action uses existing outlined button and field styles (1.3s)
+  ✓  108 [chromium] › tests/assisted-orders.spec.ts:64:5 › order create button stays at header right with status filters below (693ms)
+  ✓  109 [chromium] › tests/assisted-orders.spec.ts:75:5 › member shortcut is the third inline action and preselects member contact and applicable pricing (998ms)
+  ✓  110 [chromium] › tests/assisted-orders.spec.ts:93:5 › member shortcut is hidden without order write permission (608ms)
+  ✓  111 [chromium] › tests/assisted-orders.spec.ts:99:5 › assisted dialog reuses historical modal styles and scrolls without clipping actions (667ms)
+  ✓  112 [chromium] › tests/assisted-orders.spec.ts:113:5 › guest suggested retail price, manual price, snapshot and generated private customer link (610ms)
+  ✓  113 [chromium] › tests/assisted-orders.spec.ts:125:5 › member product override suggested price; role and minimum exception are visible (574ms)
+  ✓  114 [chromium] › tests/assisted-orders.spec.ts:133:5 › failure after order creation stays locked and retries payment without another order RPC (932ms)
+  ✓  115 [chromium] › tests/assisted-orders.spec.ts:141:5 › read-only staff cannot see assisted create entry (505ms)
+  ✓  116 [chromium] › tests/assisted-orders.spec.ts:144:5 › member custom price supports coupon and credit; creation waits for customer instead of calling bank (928ms)
+  ✓  117 [chromium] › tests/assisted-orders.spec.ts:173:5 › staff assisted orders require minimum exception but keep fixed free shipping (548ms)
+  ✓  118 [chromium] › tests/assisted-orders.spec.ts:183:5 › discounted minimum explanation stays visible and preserves quote while typing (793ms)
+  ✓  119 [chromium] › tests/assisted-orders.spec.ts:211:5 › switching customer clears coupon and shopping credit, while guest has no wallet input (554ms)
+  ✓  120 [chromium] › tests/assisted-orders.spec.ts:218:5 › customer credit consent is unchecked by default, binds exact amount and shows discounts/gifts (603ms)
+  ✓  121 [chromium] › tests/assisted-orders.spec.ts:238:7 › Apple Pay can be selected by admin and the customer uses the saved wallet payment link (915ms)
+  ✓  122 [chromium] › tests/assisted-orders.spec.ts:238:7 › Google Pay can be selected by admin and the customer uses the saved wallet payment link (845ms)
+  ✓  123 [chromium] › tests/assisted-orders.spec.ts:255:5 › private customer page shows saved prices/invoice/ATM, no internal stock or admin UI (391ms)
+  ✓  124 [chromium] › tests/assisted-orders.spec.ts:262:5 › customer payment error and loading states use storefront cards and styled query actions (607ms)
+  ✓  125 [chromium] › tests/auth-email.spec.ts:11:7 › 忘記密碼 › 點「忘記密碼？」切換到忘記密碼表單，登入/註冊 tab 消失 (614ms)
+  ✓  126 [chromium] › tests/auth-email.spec.ts:30:7 › 忘記密碼 › 送出後顯示「密碼重設信已發送」成功訊息 (1.3s)
+  ✓  127 [chromium] › tests/auth-email.spec.ts:43:8 › 忘記密碼 › Supabase 回傳錯誤時顯示錯誤訊息 (648ms)
+  ✓  128 [chromium] › tests/auth-email.spec.ts:90:7 › 重設密碼頁 › 進入 /reset-password 顯示重設密碼表單 (570ms)
+  ✓  129 [chromium] › tests/auth-email.spec.ts:96:7 › 重設密碼頁 › 密碼少於 6 字元顯示錯誤，不送出 API (709ms)
+  ✓  130 [chromium] › tests/auth-email.spec.ts:113:7 › 重設密碼頁 › 兩次密碼不一致顯示錯誤，不送出 API (543ms)
+  ✓  131 [chromium] › tests/auth-email.spec.ts:130:7 › 重設密碼頁 › 密碼符合條件，成功更新後顯示「密碼已更新」 (633ms)
+  ✓  132 [chromium] › tests/auth-email.spec.ts:140:7 › 重設密碼頁 › Supabase 回傳錯誤（連結失效）顯示錯誤訊息 (561ms)
+  ✓  133 [chromium] › tests/auth-email.spec.ts:161:5 › Email 驗證後重導回登入頁，顯示「Email 已驗證成功」訊息 (548ms)
+  ✓  134 [chromium] › tests/auth-email.spec.ts:175:5 › 密碼登入成功後進入首頁且不顯示網路異常 (752ms)
+  ✓  135 [chromium] › tests/auth-email.spec.ts:187:5 › 密碼錯誤時顯示正確錯誤提示且不建立資料 (567ms)
+  ✓  136 [chromium] › tests/auth-email.spec.ts:215:5 › Email 未驗證時顯示驗證提示且不建立資料 (530ms)
+  ✓  137 [chromium] › tests/eclado-frontend.spec.ts:49:5 › 活動限定商品只出現在未列出的活動路徑並標示 noindex (1.3s)
+  ✓  138 [chromium] › tests/eclado-frontend.spec.ts:142:5 › 主要路徑可開啟且不白屏 (2.5s)
+  ✓  139 [chromium] › tests/eclado-frontend.spec.ts:152:5 › LINE 內建瀏覽器只對固定導覽列啟用合成層穩定處理 (1.2s)
+  ✓  140 [chromium] › tests/eclado-frontend.spec.ts:180:5 › 首頁依指定順序呈現熱門商品、品牌理念、三大系列與六篇專欄 (585ms)
+  ✓  141 [chromium] › tests/eclado-frontend.spec.ts:210:5 › 首頁六篇專欄可進入完整文章、列表及上一篇下一篇且不顯示閱讀時間 (3.6s)
+  ✓  142 [chromium] › tests/eclado-frontend.spec.ts:233:5 › 首頁頁尾訪客訂單查詢可進入查詢頁並返回首頁 (1.2s)
+  ✓  143 [chromium] › tests/eclado-frontend.spec.ts:242:5 › 從登入頁進入訪客訂單查詢時返回登入頁 (568ms)
+  ✓  144 [chromium] › tests/eclado-frontend.spec.ts:250:5 › 商品 API 尚未完成時不顯示內建 fallback 商品 (1.8s)
+  ✓  145 [chromium] › tests/eclado-frontend.spec.ts:275:5 › 聯絡我們與隱私權由前台 SPA 路由呈現 (534ms)
+  ✓  146 [chromium] › tests/eclado-frontend.spec.ts:285:5 › LINE 登入結帳回來後會回到結帳頁 (426ms)
+  ✓  147 [chromium] › tests/eclado-frontend.spec.ts:301:5 › LINE magic link 即使遺失 pending sessionStorage 仍會回到首頁 (694ms)
+  ✓  148 [chromium] › tests/eclado-frontend.spec.ts:313:5 › 商城瀏覽、商品詳情、一般會員價格與院線商品限制 (1.4s)
+  ✓  149 [chromium] › tests/eclado-frontend.spec.ts:326:5 › 商品具有可分享唯一路徑，重新整理與返回列表皆正常 (1.6s)
+  ✓  150 [chromium] › tests/eclado-frontend.spec.ts:347:5 › 商品新分類正確，院線商品不重複出現在一般分類 (703ms)
+  -  151 [chromium] › tests/eclado-frontend.spec.ts:363:5 › 手機分類橫向選單會自動捲入目前選取項目
+  ✓  152 [chromium] › tests/eclado-frontend.spec.ts:386:5 › 導覽列所有產品下拉分類會帶入商城分類並保留可分享網址 (1.3s)
+  ✓  153 [chromium] › tests/eclado-frontend.spec.ts:407:5 › 商城可在功效分類與系列分類間切換並保留系列網址 (673ms)
+  ✓  154 [chromium] › tests/eclado-frontend.spec.ts:423:5 › 後台以規格表格與交易式 RPC 儲存商品 (950ms)
+  ✓  155 [chromium] › tests/eclado-frontend.spec.ts:491:5 › 後台新商品預設為草稿並提供五種發布狀態 (639ms)
+  ✘  156 [chromium] › tests/eclado-frontend.spec.ts:519:5 › 後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序 (8.9s)
+(node:60809) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:60809) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  157 [chromium] › tests/eclado-frontend.spec.ts:575:7 › 會員角色價格：pro 看到對應價格並可購買院線商品 (900ms)
+  ✓  158 [chromium] › tests/eclado-frontend.spec.ts:575:7 › 會員角色價格：instructor 看到對應價格並可購買院線商品 (892ms)
+  ✓  159 [chromium] › tests/eclado-frontend.spec.ts:575:7 › 會員角色價格：distributor 看到對應價格並可購買院線商品 (842ms)
+  ✘  160 [chromium] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則 (9.3s)
+(node:60824) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:60824) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  161 [chromium] › tests/eclado-frontend.spec.ts:619:7 › 固定專業價商品不套用 instructor 身分倍率 (742ms)
+  ✓  162 [chromium] › tests/eclado-frontend.spec.ts:619:7 › 固定專業價商品不套用 distributor 身分倍率 (685ms)
+  ✓  163 [chromium] › tests/eclado-frontend.spec.ts:619:7 › 固定專業價商品不套用 staff 身分倍率 (678ms)
+  ✓  164 [chromium] › tests/eclado-frontend.spec.ts:649:5 › 一般會員不顯示會員購物須知 (516ms)
+  ✓  165 [chromium] › tests/eclado-frontend.spec.ts:659:5 › 專業會員購物車即時提示最低訂購與免運門檻 (1.4s)
+  ✓  166 [chromium] › tests/eclado-frontend.spec.ts:696:5 › 專業會員有已付款可追加批次時低於五千仍可結帳且不重複收運費 (1.3s)
+  ✓  167 [chromium] › tests/eclado-frontend.spec.ts:737:5 › DB 的 is_pro_only=true 會讓原本公開商品變院線限定 (584ms)
+  ✓  168 [chromium] › tests/eclado-frontend.spec.ts:753:5 › DB 的 price 覆蓋寫死的售價 (548ms)
+  ✓  169 [chromium] › tests/eclado-frontend.spec.ts:765:5 › Storage 商品圖片優先於舊欄位，並套用首圖、排序與停用規則 (536ms)
+  ✓  170 [chromium] › tests/eclado-frontend.spec.ts:816:5 › 商品多容量規格可切換價格並分開加入購物車 (1.0s)
+  ✓  171 [chromium] › tests/eclado-frontend.spec.ts:848:5 › DB 新增的商品會顯示在商城 (557ms)
+  ✓  172 [chromium] › tests/eclado-frontend.spec.ts:881:5 › DB 下架的商品不會顯示在商城 (566ms)
+  ✓  173 [chromium] › tests/eclado-frontend.spec.ts:891:5 › 購物車中的商品收到下架更新後會被移除 (802ms)
+  ✓  174 [chromium] › tests/eclado-frontend.spec.ts:910:5 › 購物車中的商品價格變更後會以最新價格重算 (840ms)
+  ✓  175 [chromium] › tests/eclado-frontend.spec.ts:929:5 › 購物車中的商品變成院線限定後一般會員不可繼續結帳 (1.1s)
+  ✓  176 [chromium] › tests/eclado-frontend.spec.ts:948:5 › 購物車中的商品庫存變成零時會同步顯示預購 (956ms)
+  ✓  177 [chromium] › tests/eclado-frontend.spec.ts:967:5 › 現貨、預購、活動折扣與購物車操作 (1.7s)
+  ✓  178 [chromium] › tests/eclado-frontend.spec.ts:989:5 › 優惠券專用活動不會在輸入優惠碼前當成自動折扣 (830ms)
+  ✓  179 [chromium] › tests/eclado-frontend.spec.ts:1005:5 › 活動折扣可先減金額再打折 (1.0s)
+  ✓  180 [chromium] › tests/eclado-frontend.spec.ts:1026:5 › active=false 的停用活動不會顯示或套用折扣 (554ms)
+  ✓  181 [chromium] › tests/eclado-frontend.spec.ts:1043:5 › 多個活動符合時套用折抵金額最高的一個 (927ms)
+  ✓  182 [chromium] › tests/eclado-frontend.spec.ts:1060:5 › 異常折扣率與負折抵活動會被忽略 (552ms)
+  ✓  183 [chromium] › tests/eclado-frontend.spec.ts:1076:5 › 尚未開始與已結束的活動不會套用折扣 (901ms)
+  ✓  184 [chromium] › tests/eclado-frontend.spec.ts:1089:5 › 活動開始與結束時間邊界依排程精確生效 (1.5s)
+  ✓  185 [chromium] › tests/eclado-frontend.spec.ts:1113:5 › 庫存為 0 顯示預購，且一般商品仍可加入購物車下單 (1.0s)
+  ✓  186 [chromium] › tests/eclado-frontend.spec.ts:1127:5 › 購物車重新整理後仍保留，且 localStorage 不保存價格資料 (1.2s)
+  ✓  187 [chromium] › tests/eclado-frontend.spec.ts:1156:5 › 數字型規格 ID 經 localStorage 還原後仍保留商品與正確價格 (1.6s)
+  ✓  188 [chromium] › tests/eclado-frontend.spec.ts:1183:5 › 結帳建立付款單但不寫入真實訂單或真金流 (2.8s)
+  ✓  189 [chromium] › tests/eclado-frontend.spec.ts:1210:5 › 專業會員公司發票帶入預設值並以本次修改內容保存訂單快照 (4.9s)
+  ✓  190 [chromium] › tests/eclado-frontend.spec.ts:1255:5 › 一般會員公司發票不帶入會員預設值但可填寫本次訂單資料 (4.0s)
+  ✓  191 [chromium] › tests/eclado-frontend.spec.ts:1295:5 › 付款單訂單明細優先顯示 product_images 的 Storage 首圖 (2.8s)
+  ✓  192 [chromium] › tests/eclado-frontend.spec.ts:1320:7 › ATM 付款單在重新整理後恢復原付款資訊 (3.0s)
+  ✓  193 [chromium] › tests/eclado-frontend.spec.ts:1320:7 › 信用卡 付款單在重新整理後恢復原付款資訊 (3.0s)
+  ✓  194 [chromium] › tests/eclado-frontend.spec.ts:1320:7 › Apple Pay 付款單在重新整理後恢復原付款資訊 (3.1s)
+  ✓  195 [chromium] › tests/eclado-frontend.spec.ts:1320:7 › Google Pay 付款單在重新整理後恢復原付款資訊 (2.3s)
+  ✓  196 [chromium] › tests/eclado-frontend.spec.ts:1343:5 › 舊付款單已付款時清除恢復紀錄，新的購物車可建立新付款單 (5.2s)
+  ✓  197 [chromium] › tests/eclado-frontend.spec.ts:1375:5 › 逾期付款單重新整理後停用付款入口且不建立第二張付款單 (3.3s)
+  ✓  198 [chromium] › tests/eclado-frontend.spec.ts:1397:5 › 後台取消訂單後清除本機付款恢復紀錄 (2.5s)
+  ✓  199 [chromium] › tests/eclado-frontend.spec.ts:1410:5 › 付款查詢暫時失敗時可手動清除舊紀錄 (2.8s)
+  ✓  200 [chromium] › tests/eclado-frontend.spec.ts:1420:5 › 後端成交價與預覽不同時須重新確認才建立付款單 (2.8s)
+  ✓  201 [chromium] › tests/eclado-frontend.spec.ts:1457:5 › 登入會員結帳會寫入訂單 payload 與 user_id，付款前不扣庫存 (3.0s)
+  ✓  202 [chromium] › tests/eclado-frontend.spec.ts:1502:5 › 登入會員可選擇購物金支付商品金額並保留至少一元外部付款 (3.6s)
+  ✓  203 [chromium] › tests/eclado-frontend.spec.ts:1554:5 › 全部為客訂規格時可選現場自取且後端訂單運費為零 (1.9s)
+  ✓  204 [chromium] › tests/eclado-frontend.spec.ts:1588:5 › 一般商品與混合購物車都只能宅配 (2.3s)
+  ✓  205 [chromium] › tests/eclado-frontend.spec.ts:1612:5 › 結帳可試算一組優惠碼並以同一代碼建立權威訂單 (2.1s)
+  ✓  206 [chromium] › tests/eclado-frontend.spec.ts:1646:5 › 竄改混合購物車為現場自取會被後端拒絕 (786ms)
+  ✓  207 [chromium] › tests/eclado-frontend.spec.ts:1677:5 › 訪客付款單顯示短查詢碼與訂單成立信寄送結果 (2.7s)
+  ✓  208 [chromium] › tests/eclado-frontend.spec.ts:1699:5 › 訪客可用短查詢碼與結帳手機查看訂單，並在待付款時返回付款單 (632ms)
+  ✓  209 [chromium] › tests/eclado-frontend.spec.ts:1738:5 › 訪客訂單查詢在重新整理後以短效憑證恢復，不需再次輸入手機 (729ms)
+  ✓  210 [chromium] › tests/eclado-frontend.spec.ts:1768:5 › 訪客重新驗證查詢碼與手機後可從訂單明細重新付款 (1.1s)
+  ✓  211 [chromium] › tests/eclado-frontend.spec.ts:1801:5 › 訪客可查看已出貨訂單與順豐托運資訊，已付款後不顯示付款入口 (561ms)
+  ✓  212 [chromium] › tests/eclado-frontend.spec.ts:1823:5 › 訪客逾期或已取消訂單不可重新付款或建立第二張付款單 (528ms)
+  ✓  213 [chromium] › tests/eclado-frontend.spec.ts:1844:5 › 信用卡、Apple Pay、Google Pay 會送出對應金流 payType (7.2s)
+  ✓  214 [chromium] › tests/eclado-frontend.spec.ts:1890:5 › 信用卡付款使用同分頁按鈕，並在付款結果頁權威確認成功 (2.9s)
+  ✓  215 [chromium] › tests/eclado-frontend.spec.ts:1930:5 › 付款回站即使沒有原分頁 session，仍可用限時結果憑證確認成功 (439ms)
+  ✓  216 [chromium] › tests/eclado-frontend.spec.ts:1947:5 › 付款回站遇到通知時間差會自動重查直到成功 (4.7s)
+  ✓  217 [chromium] › tests/eclado-frontend.spec.ts:1966:5 › 付款失敗頁保留原訂單並建立新的付款嘗試 (1.4s)
+  ✓  218 [chromium] › tests/eclado-frontend.spec.ts:2009:5 › 金流建單失敗時顯示錯誤且不進入付款完成畫面 (2.9s)
+  ✓  219 [chromium] › tests/eclado-frontend.spec.ts:2035:5 › 快速重複點擊建立付款單只會送出一次金流請求 (1.9s)
+  ✓  220 [chromium] › tests/eclado-frontend.spec.ts:2069:5 › 權威訂單建立失敗時不建立付款單 (2.0s)
+  ✓  221 [chromium] › tests/eclado-frontend.spec.ts:2099:5 › 會員專區顯示自己的訂單與托運單號 (470ms)
+  ✓  222 [chromium] › tests/eclado-frontend.spec.ts:2132:5 › 會員專區安全顯示歷史補登且不偽造付款物流或內部備註 (443ms)
+  ✓  223 [chromium] › tests/eclado-frontend.spec.ts:2165:5 › 會員專區隱藏後台已作廢的歷史補登但保留一般取消訂單 (455ms)
+  ✓  224 [chromium] › tests/eclado-frontend.spec.ts:2192:5 › 會員專區顯示可用購物金並以收合明細呈現公開異動原因 (577ms)
+  ✓  225 [chromium] › tests/eclado-frontend.spec.ts:2233:5 › 師資會員專區顯示以資格期間裁切的自然季採購統計 (648ms)
+  ✘  226 [chromium] › tests/eclado-frontend.spec.ts:2260:5 › 師資會員專區的季度採購包含管理員補登的線下採購 (8.5s)
+(node:60996) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:60996) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  227 [chromium] › tests/eclado-frontend.spec.ts:2283:5 › 從首頁捲動位置進入長訂單會員專區時回到頁首 (1.2s)
+  ✓  228 [chromium] › tests/eclado-frontend.spec.ts:2310:5 › 會員可從我的訂單安全返回尚未付款的原付款單 (1.1s)
+  ✓  229 [chromium] › tests/eclado-frontend.spec.ts:2353:5 › 會員可從我的訂單以本人登入憑證重新付款且保留原訂單 (1.5s)
+  ✓  230 [chromium] › tests/eclado-frontend.spec.ts:2387:5 › 會員訂單付款期限已過時不顯示付款入口 (655ms)
+  -  231 [chromium] › tests/eclado-frontend.spec.ts:2411:5 › 手機版主要購物流程可使用
+  -  232 [chromium] › tests/eclado-frontend.spec.ts:2421:5 › 手機版購物到結帳建立付款單可完成
+  ✓  233 [chromium] › tests/instructor-reward-checkout.spec.ts:17:5 › both wallets share one NT$1 payment floor; backend create and bank use the same amount (1.9s)
+  ✓  234 [chromium] › tests/instructor-reward-checkout.spec.ts:27:5 › wallet repricing requires confirmation; refusal creates no order (1.8s)
+  ✓  235 [chromium] › tests/instructor-reward-checkout.spec.ts:34:5 › insufficient server balance prevents creation and shows clear failure (1.9s)
+  ✓  236 [chromium] › tests/instructor-reward-checkout.spec.ts:40:35 › nonpositive balance 0 disables reward spending (1.7s)
+  ✓  237 [chromium] › tests/instructor-reward-checkout.spec.ts:40:35 › nonpositive balance -100 disables reward spending (1.5s)
+  ✓  238 [chromium] › tests/instructor-reward-checkout.spec.ts:41:5 › pro has no reward credit spending entrance (577ms)
+  ✓  239 [chromium] › tests/instructor-reward-operations.spec.ts:14:5 › notification report is masked and uses original responsive styles (473ms)
+  ✓  240 [chromium] › tests/instructor-reward-operations.spec.ts:18:5 › read-only permissions hide supplement and correction actions (421ms)
+  ✓  241 [chromium] › tests/instructor-reward-operations.spec.ts:21:5 › manual supplement retries same key after unknown response (597ms)
+  ✓  242 [chromium] › tests/instructor-reward-operations.spec.ts:25:5 › explicit correction sends only immutable event ID and request key (493ms)
+  ✓  243 [chromium] › tests/instructor-reward-operations.spec.ts:28:5 › reconciliation lists pending review and executes no financial corrections (495ms)
+  ✓  244 [chromium] › tests/instructor-reward-operations.spec.ts:31:5 › query failure clears previous report instead of exposing stale records (517ms)
+  ✓  245 [chromium] › tests/instructor-reward-operations.spec.ts:34:5 › uninstalled stage 6 shows explicit installation message (532ms)
+  ✓  246 [chromium] › tests/instructor-reward-operations.spec.ts:37:5 › access policies require dedicated report capability and active administrator role (1ms)
+  ✓  247 [chromium] › tests/instructor-reward-payment.spec.ts:13:5 › manual reward receipt requires explicit confirmation; refusal does not write (944ms)
+  ✓  248 [chromium] › tests/instructor-reward-payment.spec.ts:25:5 › read-only backoffice cannot see the manual payment confirmation action (534ms)
+  ✓  249 [chromium] › tests/instructor-reward-payment.spec.ts:28:5 › installed dependency errors cannot silently become pre-2B compatibility (937ms)
+  ✓  250 [chromium] › tests/instructor-reward-queries.spec.ts:15:5 › teacher scoped report, debt and separate pagination; focus refresh uses no caller teacher ID (659ms)
+  ✓  251 [chromium] › tests/instructor-reward-queries.spec.ts:24:5 › permission revocation clears previously loaded data; failed lookup cannot appear as zero balance (563ms)
+  ✓  252 [chromium] › tests/instructor-reward-queries.spec.ts:31:5 › empty and missing RPC are distinct; pro has no teacher query entrance (497ms)
+  ✓  253 [chromium] › tests/instructor-reward-queries.spec.ts:37:5 › non instructor role cannot see rewards tab (499ms)
+  ✓  254 [chromium] › tests/instructor-reward-queries.spec.ts:39:5 › admin reads named account history through limited RPC only (587ms)
+  ✓  255 [chromium] › tests/instructor-reward-queries.spec.ts:49:5 › backoffice entrance requires both read permissions and admin role (431ms)
+  ✓  256 [chromium] › tests/instructor-reward-withdrawals.spec.ts:11:5 › full withdrawal uses authoritative preview and unique request key; bank remains masked (592ms)
+  ✓  257 [chromium] › tests/instructor-reward-withdrawals.spec.ts:15:36 › withdrawal is disabled at available 0 (517ms)
+  ✓  258 [chromium] › tests/instructor-reward-withdrawals.spec.ts:15:36 › withdrawal is disabled at available 15 (505ms)
+  ✓  259 [chromium] › tests/instructor-reward-withdrawals.spec.ts:15:36 › withdrawal is disabled at available -1 (617ms)
+  ✓  260 [chromium] › tests/instructor-reward-withdrawals.spec.ts:16:5 › bank save avoids persistent browser storage and sends no owner ID (2.0s)
+  ✓  261 [chromium] › tests/instructor-reward-withdrawals.spec.ts:21:5 › stale withdrawal quote asks user to reconfirm and surfaces backend error (533ms)
+  ✓  262 [chromium] › tests/instructor-reward-withdrawals.spec.ts:27:5 › read-only administrator sees masked bank but no transfer controls (487ms)
+  ✓  263 [chromium] › tests/instructor-reward-withdrawals.spec.ts:28:5 › authorized administrator claims once; processing ownership is required (625ms)
+  ✓  264 [chromium] › tests/instructor-reward-withdrawals.spec.ts:32:5 › withdrawal access requires dedicated read capability and administrator role (0ms)
+  ✓  265 [chromium] › tests/instructor-reward-withdrawals.spec.ts:33:5 › manual paid record supplies actual date reference amount; unresolved write retries same event key (1.4s)
+  ✓  266 [chromium] › tests/instructor-reward-withdrawals.spec.ts:41:5 › manager bank snapshot is temporary and clears on page focus (838ms)
+  ✓  267 [chromium] › tests/instructor-student-admin.spec.ts:22:5 › 學生折數独立設定、版本衝突可重讀，原會員折數不被呼叫 (843ms)
+  ✓  268 [chromium] › tests/instructor-student-admin.spec.ts:48:5 › 會員詳情可設定老師類型並確認清空，保留學生 (918ms)
+  ✓  269 [chromium] › tests/instructor-student-admin.spec.ts:76:5 › 學生建立、換綁、解除只送RPC，確認取消不寫入 (964ms)
+  ✓  270 [chromium] › tests/instructor-student-admin.spec.ts:110:5 › 只有會員讀權限時可讀關係但無管理操作或設定入口 (564ms)
+  ✓  271 [chromium] › tests/internal-staff-minimum.spec.ts:5:5 › 內部人員折扣後須滿5000、固定免運、不使用追加資格 (14ms)
+  ✓  272 [chromium] › tests/member-pricing-admin.spec.ts:20:5 › 全域設定確認後送出三身份倍率與原版本，不修改會員身份 (541ms)
+  ✓  273 [chromium] › tests/member-pricing-admin.spec.ts:36:5 › 取消確認不寫入、版本衝突保留輸入並要求重新載入 (561ms)
+  ✓  274 [chromium] › tests/member-pricing-admin.spec.ts:52:5 › 商品編輯移除舊勾選，三身份個別折數與全域提示共用所有規格 (579ms)
+  ✓  275 [chromium] › tests/member-pricing-admin.spec.ts:64:5 › 商品小編沒有全域設定入口 (418ms)
+  ✓  276 [chromium] › tests/member-pricing-admin.spec.ts:69:5 › 師資商品卡及規格切換使用商品88折，而非全域70折 (724ms)
+  ✓  277 [chromium] › tests/member-pricing-admin.spec.ts:84:5 › SQL未部署：全域設定失敗時不允許以預設假值儲存 (523ms)
+  ✓  278 [chromium] › tests/member-pricing.spec.ts:5:5 › 折數輸入：空值繼承、10折不打折、8.8折為88%，拒絕無效值 (3ms)
+  ✓  279 [chromium] › tests/member-pricing.spec.ts:15:5 › 個別倍率取代全域而非相乘；三身份互不影響 (1ms)
+  ✓  280 [chromium] › tests/member-pricing.spec.ts:27:5 › 舊未勾選商品三身份皆不打折；新資料不再由舊flag決定價格 (0ms)
+  ✓  281 [chromium] › tests/member-pricing.spec.ts:36:5 › SQL守住權限、併發、一次性轉換、既有報價及稽核邊界 (2ms)
+  ✓  282 [chromium] › tests/professional-renewals-manual.spec.ts:9:5 › 手動 migration 與完整 schema 一致，舊批次入口失效且保留交易防護 (3ms)
+  ✓  283 [chromium] › tests/professional-renewals-manual.spec.ts:34:5 › 唯讀預覽：台灣跨年、資格邊界、歷史申請與人數分開計算 (5ms)
+  ✓  284 [chromium] › tests/professional-renewals-manual.spec.ts:101:5 › 年度名單、單人結算與篩選不影響其他會員 (648ms)
+  ✓  285 [chromium] › tests/professional-renewals-manual.spec.ts:114:5 › 未申請降級需原因與確認，處理後仍留在年度名單 (637ms)
+  ✓  286 [chromium] › tests/professional-renewals-manual.spec.ts:128:5 › 取消確認不寫入；未結束年度禁止結算及降級 (601ms)
+  ✓  287 [chromium] › tests/professional-renewals-manual.spec.ts:138:5 › 資格變更拒絕後可重試、不顯示成功 (649ms)
+  ✓  288 [chromium] › tests/professional-renewals-manual.spec.ts:146:5 › SQL 未部署只有唯讀預覽，禁止任何新寫入 (582ms)
+  ✓  289 [chromium] › tests/professional-renewals-manual.spec.ts:154:5 › 僅讀取權限不提供資格異動操作 (552ms)
+  ✓  290 [chromium] › tests/professional-renewals-manual.spec.ts:160:5 › 另一分頁已結算時不當成新成功，重新載入並移除結算按鈕 (621ms)
+  ✓  291 [chromium] › tests/professional-renewals-manual.spec.ts:168:5 › 快速切換年度，較慢的舊年度回應不能覆蓋新名單 (999ms)
+  ✓  292 [chromium] › tests/professional-renewals-manual.spec.ts:183:5 › 審核成功但通知斷線，仍更新狀態且不允許重複審核 (669ms)
+  ✓  293 [chromium] › tests/shop-search.spec.ts:5:16 › search stays fixed-width at right and fills the row below modes when space runs out (770ms)
+  ✓  294 [chromium] › tests/shop-search.spec.ts:38:16 › shop name search supports Chinese and case-insensitive English and clearing (548ms)
+  ✓  295 [chromium] › tests/shop-search.spec.ts:63:16 › shop search intersects category and series; clear all resets both (709ms)
+  ✓  296 [chromium] › tests/shop-search.spec.ts:114:16 › search uses only storefront products and does not reveal restricted prices (526ms)
+  ✓  297 [chromium] › tests/student-pricing.spec.ts:14:5 › student price display is identity scoped; six original roles remain unchanged (1ms)
+  ✓  298 [chromium] › tests/student-pricing.spec.ts:23:5 › server student prices reach list, variants and cart; focus changes refresh them (1.4s)
+  ✓  299 [chromium] › tests/student-pricing.spec.ts:37:5 › OFF or pre-1C database preserves professional prices (504ms)
+  ✓  300 [chromium] › tests/student-pricing.spec.ts:43:5 › price lookup failure is not mistaken for OFF (564ms)
+  ✓  301 [chromium] › tests/student-pricing.spec.ts:48:5 › assisted manual equality stays MANUAL and AUTO uses server preview (1.5s)
+  ✓  302 [chromium] › tests/student-pricing.spec.ts:70:5 › old assisted backend cannot silently treat AUTO as manual (873ms)
+(node:61471) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:61471) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  303 [mobile-chrome] › tests/admin-analytics.spec.ts:4:5 › 歷史補登不計入營業額與訂單數 (3ms)
+  ✓  304 [mobile-chrome] › tests/admin-analytics.spec.ts:13:5 › 歷史補登數量不計入商品銷售與補貨分析 (0ms)
+  ✓  305 [mobile-chrome] › tests/admin.spec.ts:67:5 › 系統設定重新載入沿用白底框線按鈕且只重新讀取設定 (970ms)
+  ✓  306 [mobile-chrome] › tests/admin.spec.ts:89:5 › 後台登入權限：非管理員擋下，管理員可進入 (1.1s)
+  ✓  307 [mobile-chrome] › tests/admin.spec.ts:108:5 › 後台登入權限：管理員 session 可進入儀表板 (512ms)
+  ✓  308 [mobile-chrome] › tests/admin.spec.ts:119:5 › 導覽列可將頁面加入常用並依原本選單順序顯示 (857ms)
+  ✓  309 [mobile-chrome] › tests/admin.spec.ts:141:5 › 導覽列會載入帳號已存的常用並隱藏沒有權限的頁面 (497ms)
+  ✓  310 [mobile-chrome] › tests/admin.spec.ts:156:5 › 只有最高管理員能看到待補商品管理 (760ms)
+  ✓  311 [mobile-chrome] › tests/admin.spec.ts:179:5 › 商品小編只載入商品且無法看到營運、會員、叫貨與進貨成本 (1.1s)
+  ✓  312 [mobile-chrome] › tests/admin.spec.ts:245:5 › 訂單管理以 user_id 區分訪客與一般會員 (1.0s)
+  ✓  313 [mobile-chrome] › tests/admin.spec.ts:271:5 › 叫貨管理可多選商品、查看庫存、計算雙幣別並匯出三種格式 (2.4s)
+  ✓  314 [mobile-chrome] › tests/admin.spec.ts:334:5 › 叫貨單草稿可不填地址儲存並永久刪除，後期狀態不可降級後刪除 (1.4s)
+  ✓  315 [mobile-chrome] › tests/admin.spec.ts:371:5 › 後台側邊欄將操作紀錄歸在會員分類 (798ms)
+  ✓  316 [mobile-chrome] › tests/admin.spec.ts:389:5 › 後台切換左側導覽時主內容自動回到頂部 (1.6s)
+  ✓  317 [mobile-chrome] › tests/admin.spec.ts:405:5 › 儀表板最新訂單的查看全部會前往訂單管理 (1.6s)
+  ✓  318 [mobile-chrome] › tests/admin.spec.ts:423:5 › 後台資料為空時維持空狀態，不顯示本機示範商品、會員或訂單 (511ms)
+  ✓  319 [mobile-chrome] › tests/admin.spec.ts:439:5 › 後台權限以資料庫 allow-list 為準，不再只相信管理員 Email (381ms)
+  ✓  320 [mobile-chrome] › tests/admin.spec.ts:450:5 › 商品、訂單與會員列表響應式切換，詳情使用抽屜且不撐寬頁面 (2.8s)
+  ✓  321 [mobile-chrome] › tests/admin.spec.ts:546:5 › 手機上一頁會關閉後台詳情，商品未儲存時先確認 (2.1s)
+  ✓  322 [mobile-chrome] › tests/admin.spec.ts:584:5 › 儀表板顯示待處理資訊，點待審核申請可前往會員審核列表 (519ms)
+  ✓  323 [mobile-chrome] › tests/admin.spec.ts:597:5 › 儀表板六個月柱狀圖皆有有效背景色，歷史月份使用透明度 (437ms)
+  ✓  324 [mobile-chrome] › tests/admin.spec.ts:610:5 › 儀表板營業額與庫存警示固定上下排列，庫存內容獨立水平捲動 (563ms)
+  ✓  325 [mobile-chrome] › tests/admin.spec.ts:644:5 › 訂單管理可查看明細並更新狀態 (1.0s)
+  ✓  326 [mobile-chrome] › tests/admin.spec.ts:676:5 › 訂單詳情顯示合併出貨批次、未付款提醒與人工處理警示 (880ms)
+  ✓  327 [mobile-chrome] › tests/admin.spec.ts:712:5 › 批次出貨在有未付款訂單時被擋下，付款後一次出貨並只發一則通知 (1.9s)
+  ✓  328 [mobile-chrome] › tests/admin.spec.ts:770:5 › 未付款狀態依付款方式區分信用卡與虛擬帳號匯款 (853ms)
+  ✓  329 [mobile-chrome] › tests/admin.spec.ts:817:5 › 訂單詳情顯示優惠券名稱與遮罩代碼 (879ms)
+  ✓  330 [mobile-chrome] › tests/admin.spec.ts:837:5 › 訂單詳情分開顯示訂單總額、購物金支付與尚需付款 (867ms)
+  ✓  331 [mobile-chrome] › tests/admin.spec.ts:863:5 › 訂單詳情顯示發票快照並可獨立儲存人工發票號碼 (1.1s)
+  ✓  332 [mobile-chrome] › tests/admin.spec.ts:889:5 › 舊訂單沒有發票欄位時仍可開啟並顯示未記錄 (869ms)
+  ✓  333 [mobile-chrome] › tests/admin.spec.ts:898:5 › 訂單列印只呈現歷史快照與顧客可見資訊 (1.3s)
+  ✓  334 [mobile-chrome] › tests/admin.spec.ts:969:5 › 舊訂單缺少新快照欄位仍可開啟列印預覽 (1.1s)
+  ✓  335 [mobile-chrome] › tests/admin.spec.ts:982:5 › 訂單全部分欄排除已取消，已取消分欄仍可查閱 (1.0s)
+  ✓  336 [mobile-chrome] › tests/admin.spec.ts:1001:5 › 訂單管理可依狀態與待補庫存篩選 (1.7s)
+  ✓  337 [mobile-chrome] › tests/admin.spec.ts:1023:5 › 已付款與備貨中訂單詳情顯示逐項現貨與缺少數量 (1.4s)
+  ✓  338 [mobile-chrome] › tests/admin.spec.ts:1071:5 › 待補商品頁依付款順序執行 FIFO 並支援部分分配 (1.0s)
+  ✓  339 [mobile-chrome] › tests/admin.spec.ts:1116:5 › 客訂自取訂單不顯示地址與托運欄位並可完成取貨流程 (1.1s)
+  ✓  340 [mobile-chrome] › tests/admin.spec.ts:1155:5 › 已出貨與已到貨篩選包含對應的自取狀態 (1.7s)
+  ✓  341 [mobile-chrome] › tests/admin.spec.ts:1178:5 › 訂單管理可取消訂單並同步 cancelled 狀態 (1.5s)
+  ✓  342 [mobile-chrome] › tests/admin.spec.ts:1200:5 › 已取消且未付款的訂單可經二次確認後永久刪除 (1.2s)
+  ✓  343 [mobile-chrome] › tests/admin.spec.ts:1222:5 › 曾付款後取消的訂單保留帳務紀錄且不可永久刪除 (849ms)
+  ✓  344 [mobile-chrome] › tests/admin.spec.ts:1236:5 › 訂單改為已付款會送出 LINE 付款通知，LINE 失敗時改寄 Email (1.1s)
+  ✓  345 [mobile-chrome] › tests/admin.spec.ts:1264:5 › 出貨可寫入托運單號並送出 LINE 通知 (1.4s)
+  ✓  346 [mobile-chrome] › tests/admin.spec.ts:1305:5 › 未填托運單號不能確認出貨或發送通知 (1.2s)
+  ✓  347 [mobile-chrome] › tests/admin.spec.ts:1324:5 › 已有成功通知紀錄時不會自動重複發送 (938ms)
+  ✓  348 [mobile-chrome] › tests/admin.spec.ts:1348:5 › 沒有 LINE 綁定的訂單出貨會送出 Email 通知 (1.2s)
+  ✓  349 [mobile-chrome] › tests/admin.spec.ts:1376:5 › 商品庫存可在規格表格修改並透過交易式 RPC 儲存 (1.8s)
+  ✓  350 [mobile-chrome] › tests/admin.spec.ts:1400:5 › 贈品庫存分頁同時顯示一般商品與贈品專用商品的獨立庫存 (945ms)
+  ✓  351 [mobile-chrome] › tests/admin.spec.ts:1420:5 › 庫存盤點涵蓋一般與贈品庫存、版本衝突、完整填寫及完成後唯讀 (1.1s)
+  ✓  352 [mobile-chrome] › tests/admin.spec.ts:1508:5 › 商品庫存可依庫存狀態篩選 (830ms)
+  ✓  353 [mobile-chrome] › tests/admin.spec.ts:1533:5 › 商品庫存可依中文或英文名稱搜尋，並與庫存狀態共同篩選 (862ms)
+  ✓  354 [mobile-chrome] › tests/admin.spec.ts:1558:5 › 商品管理可編輯名稱、規格價格與院線限定並透過 RPC 儲存 (1.4s)
+  ✓  355 [mobile-chrome] › tests/admin.spec.ts:1589:5 › 商品規格編輯改為多列卡片且窄畫面不需水平滑動 (1.8s)
+  ✘  356 [mobile-chrome] › tests/admin.spec.ts:1642:5 › 商品管理可從本機上傳圖片並以規格 RPC 建立草稿 (9.6s)
+(node:61613) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:61613) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  357 [mobile-chrome] › tests/admin.spec.ts:1688:5 › 新增商品缺少必填欄位時在編輯面板內顯示警示 (1.5s)
+(node:61619) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:61619) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  358 [mobile-chrome] › tests/admin.spec.ts:1704:5 › 新增商品可不放圖片並建立草稿 (1.4s)
+  ✓  359 [mobile-chrome] › tests/admin.spec.ts:1734:5 › 商品圖片上傳會阻止非圖片與超過 5 MB 的檔案 (1.5s)
+  ✘  360 [mobile-chrome] › tests/admin.spec.ts:1757:5 › 新增商品寫入失敗時顯示錯誤且不加入商品清單 (9.6s)
+(node:61632) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:61632) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  361 [mobile-chrome] › tests/admin.spec.ts:1784:5 › 商品管理可下架、於已下架清單查看並重新上架商品 (1.2s)
+  ✓  362 [mobile-chrome] › tests/admin.spec.ts:1807:5 › 商品管理可將草稿商品設定為活動限定 (1.4s)
+  ✓  363 [mobile-chrome] › tests/admin.spec.ts:1842:5 › 商品管理可設定固定專業價而不套用身分倍率 (1.4s)
+  ✓  364 [mobile-chrome] › tests/admin.spec.ts:1873:5 › 商品下架與重新上架寫入失敗時維持原清單狀態 (1.2s)
+  ✓  365 [mobile-chrome] › tests/admin.spec.ts:1897:5 › 活動管理可建立原子百分比折扣並指定全館一般商品 (791ms)
+  ✓  366 [mobile-chrome] › tests/admin.spec.ts:1910:5 › 活動可套用全館商品並包含活動限定商品 (1.3s)
+  ✓  367 [mobile-chrome] › tests/admin.spec.ts:1923:5 › 活動管理不顯示已停用活動 (960ms)
+  ✓  368 [mobile-chrome] › tests/admin.spec.ts:1942:5 › 百分比與固定金額折抵可改用滿件門檻 (1.1s)
+  ✓  369 [mobile-chrome] › tests/admin.spec.ts:1958:5 › 活動限定商品可以被指定到優惠券專用活動 (1.2s)
+  ✓  370 [mobile-chrome] › tests/admin.spec.ts:1975:5 › 活動指定商品可全選及全取消 (1.1s)
+  ✓  371 [mobile-chrome] › tests/admin.spec.ts:1991:5 › 優惠券方案可打包多個優惠券專用活動 (1.2s)
+  ✓  372 [mobile-chrome] › tests/admin.spec.ts:2019:5 › 編輯優惠券會依後端排序還原活動執行順序 (1.0s)
+  ✓  373 [mobile-chrome] › tests/admin.spec.ts:2041:5 › 優惠券可搜尋並指定個別會員使用 (1.3s)
+  ✓  374 [mobile-chrome] › tests/admin.spec.ts:2067:5 › 指定會員可用美容師聯絡人搜尋並顯示聯絡人名稱 (1.1s)
+  ✓  375 [mobile-chrome] › tests/admin.spec.ts:2090:5 › 編輯指定會員優惠券會還原既有會員名單 (979ms)
+  ✓  376 [mobile-chrome] › tests/admin.spec.ts:2109:5 › 重複優惠碼顯示可理解的中文提示 (1.1s)
+  ✓  377 [mobile-chrome] › tests/admin.spec.ts:2129:5 › 活動管理可從一般商品贈品庫存與贈品專用商品選擇贈品 (904ms)
+  ✓  378 [mobile-chrome] › tests/admin.spec.ts:2153:5 › 活動排程：排程中活動顯示「排程中」badge，已結束顯示「已結束」 (824ms)
+  ✓  379 [mobile-chrome] › tests/admin.spec.ts:2171:5 › 後台核准美容師申請會同步 application status 與 profiles.role (1.3s)
+  ✓  380 [mobile-chrome] › tests/admin.spec.ts:2197:5 › 後台拒絕美容師申請會同步 rejected 與 consumer (1.4s)
+  ✓  381 [mobile-chrome] › tests/admin.spec.ts:2218:5 › 會員管理操作欄的會員類型下拉選單寬度一致 (616ms)
+  ✓  382 [mobile-chrome] › tests/admin.spec.ts:2233:5 › 一般桌面寬度不需水平捲動即可看到會員詳細按鈕 (596ms)
+  ✓  383 [mobile-chrome] › tests/admin.spec.ts:2255:5 › 會員列表提供查看詳情按鈕並開啟既有會員詳情面板 (1.3s)
+  ✓  384 [mobile-chrome] › tests/admin.spec.ts:2277:5 › 會員詳細只顯示目前美容師申請的私人證照圖片與歷史筆數 (892ms)
+  ✓  385 [mobile-chrome] › tests/admin.spec.ts:2318:5 › 訂單詳細可將單張訪客訂單歸戶至會員 (1.4s)
+  ✓  386 [mobile-chrome] › tests/admin.spec.ts:2352:5 › 會員詳細可一次匯入一張訪客訂單並更新歷史訂單 (1.3s)
+  ✓  387 [mobile-chrome] › tests/admin.spec.ts:2387:5 › 會員詳情可由訪客訂單按鈕右側補登歷史訂單 (1.3s)
+  ✓  388 [mobile-chrome] › tests/admin.spec.ts:2440:5 › 後台可單向取消歷史補登並保留不可刪除提示 (1.3s)
+  ✓  389 [mobile-chrome] › tests/admin.spec.ts:2479:5 › 手機會員小卡的查看詳情按鈕與會員類型選單並列且可開啟詳情 (894ms)
+  ✓  390 [mobile-chrome] › tests/admin.spec.ts:2503:5 › 會員管理長 Email 不會壓縮類型與申請狀態欄 (577ms)
+  ✓  391 [mobile-chrome] › tests/admin.spec.ts:2547:5 › 手機會員管理標題與篩選列上下排列，篩選項目維持三欄等寬 (795ms)
+  ✓  392 [mobile-chrome] › tests/admin.spec.ts:2576:5 › 會員管理可依會員與美容師申請資料搜尋，並與類型篩選共用 (1.1s)
+  ✓  393 [mobile-chrome] › tests/admin.spec.ts:2651:5 › 會員管理待審核數量使用與訂單待確認相同的 badge 樣式 (1.6s)
+  ✓  394 [mobile-chrome] › tests/admin.spec.ts:2676:5 › 會員管理可手動切換會員類型並同步 profile role (1.2s)
+  ✓  395 [mobile-chrome] › tests/admin.spec.ts:2696:5 › 會員管理只在會員詳細顯示師資目前季度採購額與資格歷程 (843ms)
+  ✓  396 [mobile-chrome] › tests/admin.spec.ts:2728:5 › 會員內部備註可在會員詳情編輯並顯示於該會員的訂單 (1.7s)
+  ✓  397 [mobile-chrome] › tests/admin.spec.ts:2756:5 › 訂單列表以兩種顏色標籤區分會員內部備註與顧客訂單備註 (972ms)
+  ✓  398 [mobile-chrome] › tests/admin.spec.ts:2779:5 › 只有訂單權限的帳號看得到會員內部備註但不能跳到會員詳情 (905ms)
+  ✓  399 [mobile-chrome] › tests/admin.spec.ts:2798:5 › 訂單與會員詳情可雙向跳轉並顯示返回列 (1.9s)
+  ✓  400 [mobile-chrome] › tests/admin.spec.ts:2829:5 › 會員管理可回溯資格起始日並補登線下季度採購 (1.4s)
+  ✓  401 [mobile-chrome] › tests/admin.spec.ts:2870:5 › 會員管理可刪除會員並同步資料庫 (1.1s)
+  ✓  402 [mobile-chrome] › tests/admin.spec.ts:2892:5 › 會員管理不提供刪除目前登入管理員的操作 (998ms)
+  ✓  403 [mobile-chrome] › tests/admin.spec.ts:2906:5 › 購物金管理顯示餘額與不可刪除明細，人工發放需原因及二次確認 (1.5s)
+  ✓  404 [mobile-chrome] › tests/admin.spec.ts:2992:5 › 只有會員寫入權限才顯示刪除會員操作 (976ms)
+  ✓  405 [mobile-chrome] › tests/admin.spec.ts:3005:5 › 營業分析與 AI 補貨只使用真實訂單統計，不套用預設銷量 (1.5s)
+  ✓  406 [mobile-chrome] › tests/admin.spec.ts:3052:5 › 操作紀錄可依資料類型篩選並查看不可竄改的前後差異 (935ms)
+  ✓  407 [mobile-chrome] › tests/assisted-orders.spec.ts:21:5 › restored checkout resolves missing or broken snapshot images without changing totals (544ms)
+  ✓  408 [mobile-chrome] › tests/assisted-orders.spec.ts:34:5 › product search filters names and SKU without clearing chosen product or price (922ms)
+  ✓  409 [mobile-chrome] › tests/assisted-orders.spec.ts:49:5 › assisted order detail link action uses existing outlined button and field styles (1.3s)
+  ✓  410 [mobile-chrome] › tests/assisted-orders.spec.ts:64:5 › order create button stays at header right with status filters below (810ms)
+  ✓  411 [mobile-chrome] › tests/assisted-orders.spec.ts:75:5 › member shortcut is the third inline action and preselects member contact and applicable pricing (1.2s)
+  ✓  412 [mobile-chrome] › tests/assisted-orders.spec.ts:93:5 › member shortcut is hidden without order write permission (885ms)
+  ✓  413 [mobile-chrome] › tests/assisted-orders.spec.ts:99:5 › assisted dialog reuses historical modal styles and scrolls without clipping actions (1.1s)
+  ✓  414 [mobile-chrome] › tests/assisted-orders.spec.ts:113:5 › guest suggested retail price, manual price, snapshot and generated private customer link (887ms)
+  ✓  415 [mobile-chrome] › tests/assisted-orders.spec.ts:125:5 › member product override suggested price; role and minimum exception are visible (917ms)
+  ✓  416 [mobile-chrome] › tests/assisted-orders.spec.ts:133:5 › failure after order creation stays locked and retries payment without another order RPC (938ms)
+  ✓  417 [mobile-chrome] › tests/assisted-orders.spec.ts:141:5 › read-only staff cannot see assisted create entry (839ms)
+  ✓  418 [mobile-chrome] › tests/assisted-orders.spec.ts:144:5 › member custom price supports coupon and credit; creation waits for customer instead of calling bank (1.4s)
+  ✓  419 [mobile-chrome] › tests/assisted-orders.spec.ts:173:5 › staff assisted orders require minimum exception but keep fixed free shipping (911ms)
+  ✓  420 [mobile-chrome] › tests/assisted-orders.spec.ts:183:5 › discounted minimum explanation stays visible and preserves quote while typing (1.4s)
+  ✓  421 [mobile-chrome] › tests/assisted-orders.spec.ts:211:5 › switching customer clears coupon and shopping credit, while guest has no wallet input (898ms)
+  ✓  422 [mobile-chrome] › tests/assisted-orders.spec.ts:218:5 › customer credit consent is unchecked by default, binds exact amount and shows discounts/gifts (494ms)
+  ✓  423 [mobile-chrome] › tests/assisted-orders.spec.ts:238:7 › Apple Pay can be selected by admin and the customer uses the saved wallet payment link (1.2s)
+  ✓  424 [mobile-chrome] › tests/assisted-orders.spec.ts:238:7 › Google Pay can be selected by admin and the customer uses the saved wallet payment link (1.3s)
+  ✓  425 [mobile-chrome] › tests/assisted-orders.spec.ts:255:5 › private customer page shows saved prices/invoice/ATM, no internal stock or admin UI (486ms)
+  ✓  426 [mobile-chrome] › tests/assisted-orders.spec.ts:262:5 › customer payment error and loading states use storefront cards and styled query actions (715ms)
+  ✓  427 [mobile-chrome] › tests/auth-email.spec.ts:11:7 › 忘記密碼 › 點「忘記密碼？」切換到忘記密碼表單，登入/註冊 tab 消失 (455ms)
+  ✓  428 [mobile-chrome] › tests/auth-email.spec.ts:30:7 › 忘記密碼 › 送出後顯示「密碼重設信已發送」成功訊息 (1.2s)
+  ✓  429 [mobile-chrome] › tests/auth-email.spec.ts:43:8 › 忘記密碼 › Supabase 回傳錯誤時顯示錯誤訊息 (463ms)
+  ✓  430 [mobile-chrome] › tests/auth-email.spec.ts:90:7 › 重設密碼頁 › 進入 /reset-password 顯示重設密碼表單 (397ms)
+  ✓  431 [mobile-chrome] › tests/auth-email.spec.ts:96:7 › 重設密碼頁 › 密碼少於 6 字元顯示錯誤，不送出 API (577ms)
+  ✓  432 [mobile-chrome] › tests/auth-email.spec.ts:113:7 › 重設密碼頁 › 兩次密碼不一致顯示錯誤，不送出 API (574ms)
+  ✓  433 [mobile-chrome] › tests/auth-email.spec.ts:130:7 › 重設密碼頁 › 密碼符合條件，成功更新後顯示「密碼已更新」 (479ms)
+  ✓  434 [mobile-chrome] › tests/auth-email.spec.ts:140:7 › 重設密碼頁 › Supabase 回傳錯誤（連結失效）顯示錯誤訊息 (526ms)
+  ✓  435 [mobile-chrome] › tests/auth-email.spec.ts:161:5 › Email 驗證後重導回登入頁，顯示「Email 已驗證成功」訊息 (432ms)
+  ✓  436 [mobile-chrome] › tests/auth-email.spec.ts:175:5 › 密碼登入成功後進入首頁且不顯示網路異常 (927ms)
+  ✓  437 [mobile-chrome] › tests/auth-email.spec.ts:187:5 › 密碼錯誤時顯示正確錯誤提示且不建立資料 (493ms)
+  ✓  438 [mobile-chrome] › tests/auth-email.spec.ts:215:5 › Email 未驗證時顯示驗證提示且不建立資料 (549ms)
+  ✓  439 [mobile-chrome] › tests/eclado-frontend.spec.ts:49:5 › 活動限定商品只出現在未列出的活動路徑並標示 noindex (1.0s)
+  ✓  440 [mobile-chrome] › tests/eclado-frontend.spec.ts:142:5 › 主要路徑可開啟且不白屏 (2.5s)
+  ✓  441 [mobile-chrome] › tests/eclado-frontend.spec.ts:152:5 › LINE 內建瀏覽器只對固定導覽列啟用合成層穩定處理 (759ms)
+  ✓  442 [mobile-chrome] › tests/eclado-frontend.spec.ts:180:5 › 首頁依指定順序呈現熱門商品、品牌理念、三大系列與六篇專欄 (695ms)
+  ✓  443 [mobile-chrome] › tests/eclado-frontend.spec.ts:210:5 › 首頁六篇專欄可進入完整文章、列表及上一篇下一篇且不顯示閱讀時間 (5.1s)
+  ✓  444 [mobile-chrome] › tests/eclado-frontend.spec.ts:233:5 › 首頁頁尾訪客訂單查詢可進入查詢頁並返回首頁 (2.6s)
+  ✓  445 [mobile-chrome] › tests/eclado-frontend.spec.ts:242:5 › 從登入頁進入訪客訂單查詢時返回登入頁 (506ms)
+  ✓  446 [mobile-chrome] › tests/eclado-frontend.spec.ts:250:5 › 商品 API 尚未完成時不顯示內建 fallback 商品 (1.8s)
+  ✓  447 [mobile-chrome] › tests/eclado-frontend.spec.ts:275:5 › 聯絡我們與隱私權由前台 SPA 路由呈現 (615ms)
+  ✓  448 [mobile-chrome] › tests/eclado-frontend.spec.ts:285:5 › LINE 登入結帳回來後會回到結帳頁 (494ms)
+  ✓  449 [mobile-chrome] › tests/eclado-frontend.spec.ts:301:5 › LINE magic link 即使遺失 pending sessionStorage 仍會回到首頁 (843ms)
+  ✓  450 [mobile-chrome] › tests/eclado-frontend.spec.ts:313:5 › 商城瀏覽、商品詳情、一般會員價格與院線商品限制 (1.5s)
+  ✓  451 [mobile-chrome] › tests/eclado-frontend.spec.ts:326:5 › 商品具有可分享唯一路徑，重新整理與返回列表皆正常 (1.2s)
+  ✓  452 [mobile-chrome] › tests/eclado-frontend.spec.ts:347:5 › 商品新分類正確，院線商品不重複出現在一般分類 (1.0s)
+  ✓  453 [mobile-chrome] › tests/eclado-frontend.spec.ts:363:5 › 手機分類橫向選單會自動捲入目前選取項目 (842ms)
+  ✓  454 [mobile-chrome] › tests/eclado-frontend.spec.ts:386:5 › 導覽列所有產品下拉分類會帶入商城分類並保留可分享網址 (1.1s)
+  ✓  455 [mobile-chrome] › tests/eclado-frontend.spec.ts:407:5 › 商城可在功效分類與系列分類間切換並保留系列網址 (798ms)
+  ✓  456 [mobile-chrome] › tests/eclado-frontend.spec.ts:423:5 › 後台以規格表格與交易式 RPC 儲存商品 (1.6s)
+  ✓  457 [mobile-chrome] › tests/eclado-frontend.spec.ts:491:5 › 後台新商品預設為草稿並提供五種發布狀態 (1.0s)
+  ✘  458 [mobile-chrome] › tests/eclado-frontend.spec.ts:519:5 › 後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序 (9.6s)
+(node:61849) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:61849) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  459 [mobile-chrome] › tests/eclado-frontend.spec.ts:575:7 › 會員角色價格：pro 看到對應價格並可購買院線商品 (1.0s)
+  ✓  460 [mobile-chrome] › tests/eclado-frontend.spec.ts:575:7 › 會員角色價格：instructor 看到對應價格並可購買院線商品 (999ms)
+  ✓  461 [mobile-chrome] › tests/eclado-frontend.spec.ts:575:7 › 會員角色價格：distributor 看到對應價格並可購買院線商品 (1.1s)
+  ✘  462 [mobile-chrome] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則 (10.5s)
+(node:61863) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:61863) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  463 [mobile-chrome] › tests/eclado-frontend.spec.ts:619:7 › 固定專業價商品不套用 instructor 身分倍率 (948ms)
+  ✓  464 [mobile-chrome] › tests/eclado-frontend.spec.ts:619:7 › 固定專業價商品不套用 distributor 身分倍率 (783ms)
+  ✓  465 [mobile-chrome] › tests/eclado-frontend.spec.ts:619:7 › 固定專業價商品不套用 staff 身分倍率 (814ms)
+  ✓  466 [mobile-chrome] › tests/eclado-frontend.spec.ts:649:5 › 一般會員不顯示會員購物須知 (601ms)
+  ✓  467 [mobile-chrome] › tests/eclado-frontend.spec.ts:659:5 › 專業會員購物車即時提示最低訂購與免運門檻 (1.2s)
+  ✓  468 [mobile-chrome] › tests/eclado-frontend.spec.ts:696:5 › 專業會員有已付款可追加批次時低於五千仍可結帳且不重複收運費 (1.3s)
+  ✓  469 [mobile-chrome] › tests/eclado-frontend.spec.ts:737:5 › DB 的 is_pro_only=true 會讓原本公開商品變院線限定 (606ms)
+  ✓  470 [mobile-chrome] › tests/eclado-frontend.spec.ts:753:5 › DB 的 price 覆蓋寫死的售價 (864ms)
+  ✓  471 [mobile-chrome] › tests/eclado-frontend.spec.ts:765:5 › Storage 商品圖片優先於舊欄位，並套用首圖、排序與停用規則 (729ms)
+  ✓  472 [mobile-chrome] › tests/eclado-frontend.spec.ts:816:5 › 商品多容量規格可切換價格並分開加入購物車 (908ms)
+  ✓  473 [mobile-chrome] › tests/eclado-frontend.spec.ts:848:5 › DB 新增的商品會顯示在商城 (873ms)
+  ✓  474 [mobile-chrome] › tests/eclado-frontend.spec.ts:881:5 › DB 下架的商品不會顯示在商城 (618ms)
+  ✓  475 [mobile-chrome] › tests/eclado-frontend.spec.ts:891:5 › 購物車中的商品收到下架更新後會被移除 (675ms)
+  ✓  476 [mobile-chrome] › tests/eclado-frontend.spec.ts:910:5 › 購物車中的商品價格變更後會以最新價格重算 (838ms)
+  ✓  477 [mobile-chrome] › tests/eclado-frontend.spec.ts:929:5 › 購物車中的商品變成院線限定後一般會員不可繼續結帳 (679ms)
+  ✓  478 [mobile-chrome] › tests/eclado-frontend.spec.ts:948:5 › 購物車中的商品庫存變成零時會同步顯示預購 (740ms)
+  ✓  479 [mobile-chrome] › tests/eclado-frontend.spec.ts:967:5 › 現貨、預購、活動折扣與購物車操作 (1.0s)
+  ✓  480 [mobile-chrome] › tests/eclado-frontend.spec.ts:989:5 › 優惠券專用活動不會在輸入優惠碼前當成自動折扣 (719ms)
+  ✓  481 [mobile-chrome] › tests/eclado-frontend.spec.ts:1005:5 › 活動折扣可先減金額再打折 (914ms)
+  ✓  482 [mobile-chrome] › tests/eclado-frontend.spec.ts:1026:5 › active=false 的停用活動不會顯示或套用折扣 (613ms)
+  ✓  483 [mobile-chrome] › tests/eclado-frontend.spec.ts:1043:5 › 多個活動符合時套用折抵金額最高的一個 (762ms)
+  ✓  484 [mobile-chrome] › tests/eclado-frontend.spec.ts:1060:5 › 異常折扣率與負折抵活動會被忽略 (890ms)
+  ✓  485 [mobile-chrome] › tests/eclado-frontend.spec.ts:1076:5 › 尚未開始與已結束的活動不會套用折扣 (991ms)
+  ✓  486 [mobile-chrome] › tests/eclado-frontend.spec.ts:1089:5 › 活動開始與結束時間邊界依排程精確生效 (695ms)
+  ✓  487 [mobile-chrome] › tests/eclado-frontend.spec.ts:1113:5 › 庫存為 0 顯示預購，且一般商品仍可加入購物車下單 (701ms)
+  ✓  488 [mobile-chrome] › tests/eclado-frontend.spec.ts:1127:5 › 購物車重新整理後仍保留，且 localStorage 不保存價格資料 (1.4s)
+  ✓  489 [mobile-chrome] › tests/eclado-frontend.spec.ts:1156:5 › 數字型規格 ID 經 localStorage 還原後仍保留商品與正確價格 (988ms)
+  ✓  490 [mobile-chrome] › tests/eclado-frontend.spec.ts:1183:5 › 結帳建立付款單但不寫入真實訂單或真金流 (1.7s)
+  ✓  491 [mobile-chrome] › tests/eclado-frontend.spec.ts:1210:5 › 專業會員公司發票帶入預設值並以本次修改內容保存訂單快照 (3.2s)
+  ✓  492 [mobile-chrome] › tests/eclado-frontend.spec.ts:1255:5 › 一般會員公司發票不帶入會員預設值但可填寫本次訂單資料 (3.7s)
+  ✓  493 [mobile-chrome] › tests/eclado-frontend.spec.ts:1295:5 › 付款單訂單明細優先顯示 product_images 的 Storage 首圖 (2.5s)
+  ✓  494 [mobile-chrome] › tests/eclado-frontend.spec.ts:1320:7 › ATM 付款單在重新整理後恢復原付款資訊 (2.9s)
+  ✓  495 [mobile-chrome] › tests/eclado-frontend.spec.ts:1320:7 › 信用卡 付款單在重新整理後恢復原付款資訊 (2.1s)
+  ✓  496 [mobile-chrome] › tests/eclado-frontend.spec.ts:1320:7 › Apple Pay 付款單在重新整理後恢復原付款資訊 (2.2s)
+  ✓  497 [mobile-chrome] › tests/eclado-frontend.spec.ts:1320:7 › Google Pay 付款單在重新整理後恢復原付款資訊 (3.6s)
+  ✓  498 [mobile-chrome] › tests/eclado-frontend.spec.ts:1343:5 › 舊付款單已付款時清除恢復紀錄，新的購物車可建立新付款單 (4.2s)
+  ✓  499 [mobile-chrome] › tests/eclado-frontend.spec.ts:1375:5 › 逾期付款單重新整理後停用付款入口且不建立第二張付款單 (2.4s)
+  ✓  500 [mobile-chrome] › tests/eclado-frontend.spec.ts:1397:5 › 後台取消訂單後清除本機付款恢復紀錄 (4.0s)
+  ✓  501 [mobile-chrome] › tests/eclado-frontend.spec.ts:1410:5 › 付款查詢暫時失敗時可手動清除舊紀錄 (3.9s)
+  ✓  502 [mobile-chrome] › tests/eclado-frontend.spec.ts:1420:5 › 後端成交價與預覽不同時須重新確認才建立付款單 (3.1s)
+  ✓  503 [mobile-chrome] › tests/eclado-frontend.spec.ts:1457:5 › 登入會員結帳會寫入訂單 payload 與 user_id，付款前不扣庫存 (3.1s)
+  ✓  504 [mobile-chrome] › tests/eclado-frontend.spec.ts:1502:5 › 登入會員可選擇購物金支付商品金額並保留至少一元外部付款 (5.3s)
+  ✓  505 [mobile-chrome] › tests/eclado-frontend.spec.ts:1554:5 › 全部為客訂規格時可選現場自取且後端訂單運費為零 (2.6s)
+  ✓  506 [mobile-chrome] › tests/eclado-frontend.spec.ts:1588:5 › 一般商品與混合購物車都只能宅配 (1.4s)
+  ✓  507 [mobile-chrome] › tests/eclado-frontend.spec.ts:1612:5 › 結帳可試算一組優惠碼並以同一代碼建立權威訂單 (2.0s)
+  ✓  508 [mobile-chrome] › tests/eclado-frontend.spec.ts:1646:5 › 竄改混合購物車為現場自取會被後端拒絕 (1.2s)
+  ✓  509 [mobile-chrome] › tests/eclado-frontend.spec.ts:1677:5 › 訪客付款單顯示短查詢碼與訂單成立信寄送結果 (2.7s)
+  ✓  510 [mobile-chrome] › tests/eclado-frontend.spec.ts:1699:5 › 訪客可用短查詢碼與結帳手機查看訂單，並在待付款時返回付款單 (768ms)
+  ✓  511 [mobile-chrome] › tests/eclado-frontend.spec.ts:1738:5 › 訪客訂單查詢在重新整理後以短效憑證恢復，不需再次輸入手機 (866ms)
+  ✓  512 [mobile-chrome] › tests/eclado-frontend.spec.ts:1768:5 › 訪客重新驗證查詢碼與手機後可從訂單明細重新付款 (1.4s)
+  ✓  513 [mobile-chrome] › tests/eclado-frontend.spec.ts:1801:5 › 訪客可查看已出貨訂單與順豐托運資訊，已付款後不顯示付款入口 (654ms)
+  ✓  514 [mobile-chrome] › tests/eclado-frontend.spec.ts:1823:5 › 訪客逾期或已取消訂單不可重新付款或建立第二張付款單 (964ms)
+  ✓  515 [mobile-chrome] › tests/eclado-frontend.spec.ts:1844:5 › 信用卡、Apple Pay、Google Pay 會送出對應金流 payType (4.9s)
+  ✓  516 [mobile-chrome] › tests/eclado-frontend.spec.ts:1890:5 › 信用卡付款使用同分頁按鈕，並在付款結果頁權威確認成功 (2.5s)
+  ✓  517 [mobile-chrome] › tests/eclado-frontend.spec.ts:1930:5 › 付款回站即使沒有原分頁 session，仍可用限時結果憑證確認成功 (506ms)
+  ✓  518 [mobile-chrome] › tests/eclado-frontend.spec.ts:1947:5 › 付款回站遇到通知時間差會自動重查直到成功 (4.7s)
+  ✓  519 [mobile-chrome] › tests/eclado-frontend.spec.ts:1966:5 › 付款失敗頁保留原訂單並建立新的付款嘗試 (1.6s)
+  ✓  520 [mobile-chrome] › tests/eclado-frontend.spec.ts:2009:5 › 金流建單失敗時顯示錯誤且不進入付款完成畫面 (1.8s)
+  ✓  521 [mobile-chrome] › tests/eclado-frontend.spec.ts:2035:5 › 快速重複點擊建立付款單只會送出一次金流請求 (1.7s)
+  ✓  522 [mobile-chrome] › tests/eclado-frontend.spec.ts:2069:5 › 權威訂單建立失敗時不建立付款單 (1.8s)
+  ✓  523 [mobile-chrome] › tests/eclado-frontend.spec.ts:2099:5 › 會員專區顯示自己的訂單與托運單號 (497ms)
+  ✓  524 [mobile-chrome] › tests/eclado-frontend.spec.ts:2132:5 › 會員專區安全顯示歷史補登且不偽造付款物流或內部備註 (522ms)
+  ✓  525 [mobile-chrome] › tests/eclado-frontend.spec.ts:2165:5 › 會員專區隱藏後台已作廢的歷史補登但保留一般取消訂單 (458ms)
+  ✓  526 [mobile-chrome] › tests/eclado-frontend.spec.ts:2192:5 › 會員專區顯示可用購物金並以收合明細呈現公開異動原因 (2.4s)
+  ✓  527 [mobile-chrome] › tests/eclado-frontend.spec.ts:2233:5 › 師資會員專區顯示以資格期間裁切的自然季採購統計 (1.4s)
+  ✘  528 [mobile-chrome] › tests/eclado-frontend.spec.ts:2260:5 › 師資會員專區的季度採購包含管理員補登的線下採購 (8.6s)
+(node:62040) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:62040) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  529 [mobile-chrome] › tests/eclado-frontend.spec.ts:2283:5 › 從首頁捲動位置進入長訂單會員專區時回到頁首 (1.5s)
+  ✓  530 [mobile-chrome] › tests/eclado-frontend.spec.ts:2310:5 › 會員可從我的訂單安全返回尚未付款的原付款單 (994ms)
+  ✓  531 [mobile-chrome] › tests/eclado-frontend.spec.ts:2353:5 › 會員可從我的訂單以本人登入憑證重新付款且保留原訂單 (1.6s)
+  ✓  532 [mobile-chrome] › tests/eclado-frontend.spec.ts:2387:5 › 會員訂單付款期限已過時不顯示付款入口 (515ms)
+  ✓  533 [mobile-chrome] › tests/eclado-frontend.spec.ts:2411:5 › 手機版主要購物流程可使用 (755ms)
+  ✓  534 [mobile-chrome] › tests/eclado-frontend.spec.ts:2421:5 › 手機版購物到結帳建立付款單可完成 (1.8s)
+  ✓  535 [mobile-chrome] › tests/instructor-reward-checkout.spec.ts:17:5 › both wallets share one NT$1 payment floor; backend create and bank use the same amount (2.7s)
+  ✓  536 [mobile-chrome] › tests/instructor-reward-checkout.spec.ts:27:5 › wallet repricing requires confirmation; refusal creates no order (1.3s)
+  ✓  537 [mobile-chrome] › tests/instructor-reward-checkout.spec.ts:34:5 › insufficient server balance prevents creation and shows clear failure (1.3s)
+  ✓  538 [mobile-chrome] › tests/instructor-reward-checkout.spec.ts:40:35 › nonpositive balance 0 disables reward spending (566ms)
+  ✓  539 [mobile-chrome] › tests/instructor-reward-checkout.spec.ts:40:35 › nonpositive balance -100 disables reward spending (588ms)
+  ✓  540 [mobile-chrome] › tests/instructor-reward-checkout.spec.ts:41:5 › pro has no reward credit spending entrance (892ms)
+  ✓  541 [mobile-chrome] › tests/instructor-reward-operations.spec.ts:14:5 › notification report is masked and uses original responsive styles (836ms)
+  ✓  542 [mobile-chrome] › tests/instructor-reward-operations.spec.ts:18:5 › read-only permissions hide supplement and correction actions (730ms)
+  ✓  543 [mobile-chrome] › tests/instructor-reward-operations.spec.ts:21:5 › manual supplement retries same key after unknown response (1.0s)
+  ✓  544 [mobile-chrome] › tests/instructor-reward-operations.spec.ts:25:5 › explicit correction sends only immutable event ID and request key (970ms)
+  ✓  545 [mobile-chrome] › tests/instructor-reward-operations.spec.ts:28:5 › reconciliation lists pending review and executes no financial corrections (873ms)
+  ✓  546 [mobile-chrome] › tests/instructor-reward-operations.spec.ts:31:5 › query failure clears previous report instead of exposing stale records (867ms)
+  ✓  547 [mobile-chrome] › tests/instructor-reward-operations.spec.ts:34:5 › uninstalled stage 6 shows explicit installation message (846ms)
+  ✓  548 [mobile-chrome] › tests/instructor-reward-operations.spec.ts:37:5 › access policies require dedicated report capability and active administrator role (0ms)
+  ✓  549 [mobile-chrome] › tests/instructor-reward-payment.spec.ts:13:5 › manual reward receipt requires explicit confirmation; refusal does not write (1.5s)
+  ✓  550 [mobile-chrome] › tests/instructor-reward-payment.spec.ts:25:5 › read-only backoffice cannot see the manual payment confirmation action (927ms)
+  ✓  551 [mobile-chrome] › tests/instructor-reward-payment.spec.ts:28:5 › installed dependency errors cannot silently become pre-2B compatibility (1.4s)
+  ✓  552 [mobile-chrome] › tests/instructor-reward-queries.spec.ts:15:5 › teacher scoped report, debt and separate pagination; focus refresh uses no caller teacher ID (2.5s)
+  ✓  553 [mobile-chrome] › tests/instructor-reward-queries.spec.ts:24:5 › permission revocation clears previously loaded data; failed lookup cannot appear as zero balance (620ms)
+  ✓  554 [mobile-chrome] › tests/instructor-reward-queries.spec.ts:31:5 › empty and missing RPC are distinct; pro has no teacher query entrance (873ms)
+  ✓  555 [mobile-chrome] › tests/instructor-reward-queries.spec.ts:37:5 › non instructor role cannot see rewards tab (440ms)
+  ✓  556 [mobile-chrome] › tests/instructor-reward-queries.spec.ts:39:5 › admin reads named account history through limited RPC only (837ms)
+  ✓  557 [mobile-chrome] › tests/instructor-reward-queries.spec.ts:49:5 › backoffice entrance requires both read permissions and admin role (501ms)
+  ✓  558 [mobile-chrome] › tests/instructor-reward-withdrawals.spec.ts:11:5 › full withdrawal uses authoritative preview and unique request key; bank remains masked (672ms)
+  ✓  559 [mobile-chrome] › tests/instructor-reward-withdrawals.spec.ts:15:36 › withdrawal is disabled at available 0 (791ms)
+  ✓  560 [mobile-chrome] › tests/instructor-reward-withdrawals.spec.ts:15:36 › withdrawal is disabled at available 15 (1.3s)
+  ✓  561 [mobile-chrome] › tests/instructor-reward-withdrawals.spec.ts:15:36 › withdrawal is disabled at available -1 (1.4s)
+  ✓  562 [mobile-chrome] › tests/instructor-reward-withdrawals.spec.ts:16:5 › bank save avoids persistent browser storage and sends no owner ID (910ms)
+  ✓  563 [mobile-chrome] › tests/instructor-reward-withdrawals.spec.ts:21:5 › stale withdrawal quote asks user to reconfirm and surfaces backend error (878ms)
+  ✓  564 [mobile-chrome] › tests/instructor-reward-withdrawals.spec.ts:27:5 › read-only administrator sees masked bank but no transfer controls (788ms)
+  ✓  565 [mobile-chrome] › tests/instructor-reward-withdrawals.spec.ts:28:5 › authorized administrator claims once; processing ownership is required (959ms)
+  ✓  566 [mobile-chrome] › tests/instructor-reward-withdrawals.spec.ts:32:5 › withdrawal access requires dedicated read capability and administrator role (0ms)
+  ✓  567 [mobile-chrome] › tests/instructor-reward-withdrawals.spec.ts:33:5 › manual paid record supplies actual date reference amount; unresolved write retries same event key (1.0s)
+  ✓  568 [mobile-chrome] › tests/instructor-reward-withdrawals.spec.ts:41:5 › manager bank snapshot is temporary and clears on page focus (989ms)
+  ✓  569 [mobile-chrome] › tests/instructor-student-admin.spec.ts:22:5 › 學生折數独立設定、版本衝突可重讀，原會員折數不被呼叫 (1.1s)
+  ✓  570 [mobile-chrome] › tests/instructor-student-admin.spec.ts:48:5 › 會員詳情可設定老師類型並確認清空，保留學生 (1.2s)
+  ✓  571 [mobile-chrome] › tests/instructor-student-admin.spec.ts:76:5 › 學生建立、換綁、解除只送RPC，確認取消不寫入 (1.4s)
+  ✓  572 [mobile-chrome] › tests/instructor-student-admin.spec.ts:110:5 › 只有會員讀權限時可讀關係但無管理操作或設定入口 (944ms)
+  ✓  573 [mobile-chrome] › tests/internal-staff-minimum.spec.ts:5:5 › 內部人員折扣後須滿5000、固定免運、不使用追加資格 (15ms)
+  ✓  574 [mobile-chrome] › tests/member-pricing-admin.spec.ts:20:5 › 全域設定確認後送出三身份倍率與原版本，不修改會員身份 (999ms)
+  ✓  575 [mobile-chrome] › tests/member-pricing-admin.spec.ts:36:5 › 取消確認不寫入、版本衝突保留輸入並要求重新載入 (1.1s)
+  ✓  576 [mobile-chrome] › tests/member-pricing-admin.spec.ts:52:5 › 商品編輯移除舊勾選，三身份個別折數與全域提示共用所有規格 (1.9s)
+  ✓  577 [mobile-chrome] › tests/member-pricing-admin.spec.ts:64:5 › 商品小編沒有全域設定入口 (417ms)
+  ✓  578 [mobile-chrome] › tests/member-pricing-admin.spec.ts:69:5 › 師資商品卡及規格切換使用商品88折，而非全域70折 (534ms)
+  ✓  579 [mobile-chrome] › tests/member-pricing-admin.spec.ts:84:5 › SQL未部署：全域設定失敗時不允許以預設假值儲存 (864ms)
+  ✓  580 [mobile-chrome] › tests/member-pricing.spec.ts:5:5 › 折數輸入：空值繼承、10折不打折、8.8折為88%，拒絕無效值 (3ms)
+  ✓  581 [mobile-chrome] › tests/member-pricing.spec.ts:15:5 › 個別倍率取代全域而非相乘；三身份互不影響 (1ms)
+  ✓  582 [mobile-chrome] › tests/member-pricing.spec.ts:27:5 › 舊未勾選商品三身份皆不打折；新資料不再由舊flag決定價格 (0ms)
+  ✓  583 [mobile-chrome] › tests/member-pricing.spec.ts:36:5 › SQL守住權限、併發、一次性轉換、既有報價及稽核邊界 (2ms)
+  ✓  584 [mobile-chrome] › tests/professional-renewals-manual.spec.ts:9:5 › 手動 migration 與完整 schema 一致，舊批次入口失效且保留交易防護 (3ms)
+  ✓  585 [mobile-chrome] › tests/professional-renewals-manual.spec.ts:34:5 › 唯讀預覽：台灣跨年、資格邊界、歷史申請與人數分開計算 (5ms)
+  ✓  586 [mobile-chrome] › tests/professional-renewals-manual.spec.ts:101:5 › 年度名單、單人結算與篩選不影響其他會員 (1.1s)
+  ✓  587 [mobile-chrome] › tests/professional-renewals-manual.spec.ts:114:5 › 未申請降級需原因與確認，處理後仍留在年度名單 (1.1s)
+  ✓  588 [mobile-chrome] › tests/professional-renewals-manual.spec.ts:128:5 › 取消確認不寫入；未結束年度禁止結算及降級 (986ms)
+  ✓  589 [mobile-chrome] › tests/professional-renewals-manual.spec.ts:138:5 › 資格變更拒絕後可重試、不顯示成功 (1.0s)
+  ✓  590 [mobile-chrome] › tests/professional-renewals-manual.spec.ts:146:5 › SQL 未部署只有唯讀預覽，禁止任何新寫入 (970ms)
+  ✓  591 [mobile-chrome] › tests/professional-renewals-manual.spec.ts:154:5 › 僅讀取權限不提供資格異動操作 (840ms)
+  ✓  592 [mobile-chrome] › tests/professional-renewals-manual.spec.ts:160:5 › 另一分頁已結算時不當成新成功，重新載入並移除結算按鈕 (979ms)
+  ✓  593 [mobile-chrome] › tests/professional-renewals-manual.spec.ts:168:5 › 快速切換年度，較慢的舊年度回應不能覆蓋新名單 (1.4s)
+  ✓  594 [mobile-chrome] › tests/professional-renewals-manual.spec.ts:183:5 › 審核成功但通知斷線，仍更新狀態且不允許重複審核 (971ms)
+  ✓  595 [mobile-chrome] › tests/shop-search.spec.ts:5:16 › search stays fixed-width at right and fills the row below modes when space runs out (1.1s)
+  ✓  596 [mobile-chrome] › tests/shop-search.spec.ts:38:16 › shop name search supports Chinese and case-insensitive English and clearing (809ms)
+  ✓  597 [mobile-chrome] › tests/shop-search.spec.ts:63:16 › shop search intersects category and series; clear all resets both (1.1s)
+  ✓  598 [mobile-chrome] › tests/shop-search.spec.ts:114:16 › search uses only storefront products and does not reveal restricted prices (592ms)
+  ✓  599 [mobile-chrome] › tests/student-pricing.spec.ts:14:5 › student price display is identity scoped; six original roles remain unchanged (1ms)
+  ✓  600 [mobile-chrome] › tests/student-pricing.spec.ts:23:5 › server student prices reach list, variants and cart; focus changes refresh them (746ms)
+  ✓  601 [mobile-chrome] › tests/student-pricing.spec.ts:37:5 › OFF or pre-1C database preserves professional prices (556ms)
+  ✓  602 [mobile-chrome] › tests/student-pricing.spec.ts:43:5 › price lookup failure is not mistaken for OFF (553ms)
+  ✓  603 [mobile-chrome] › tests/student-pricing.spec.ts:48:5 › assisted manual equality stays MANUAL and AUTO uses server preview (1.9s)
+  ✓  604 [mobile-chrome] › tests/student-pricing.spec.ts:70:5 › old assisted backend cannot silently treat AUTO as manual (1.2s)
+
+
+  1) [chromium] › tests/admin.spec.ts:1642:5 › 商品管理可從本機上傳圖片並以規格 RPC 建立草稿 ───────────────────────────
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mnot[2m.[22mtoBeNull[2m()[22m
+
+    Received: [31mnull[39m
+
+    Call Log:
+    - Timeout 8000ms exceeded while waiting on the predicate
+
+      1670 |   await panel.getByRole('button', { name: '建立草稿' }).click();
+      1671 |
+    > 1672 |   await expect.poll(() => savedRequest).not.toBeNull();
+           |                                             ^
+      1673 |   expect(savedRequest?.p_product).toMatchObject({
+      1674 |     name: 'E2E New Product',
+      1675 |     name_zh: 'E2E 新商品',
+        at /Users/chun/Documents/GitHub/ECLADO/eclado/tests/admin.spec.ts:1672:45
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .playwright/test-results/admin-商品管理可從本機上傳圖片並以規格-RPC-建立草稿-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    .playwright/test-results/admin-商品管理可從本機上傳圖片並以規格-RPC-建立草稿-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .playwright/test-results/admin-商品管理可從本機上傳圖片並以規格-RPC-建立草稿-chromium/error-context.md
+
+  2) [chromium] › tests/admin.spec.ts:1688:5 › 新增商品缺少必填欄位時在編輯面板內顯示警示 ───────────────────────────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('.detail-panel').getByRole('alert')
+    Expected: visible
+    Error: strict mode violation: locator('.detail-panel').getByRole('alert') resolved to 2 elements:
+        1) <div role="alert" aria-live="assertive">…</div> aka getByText('無法儲存商品請輸入中文名稱與英文名稱')
+        2) <p role="alert">折數設定尚未就緒，請先執行 supabase-member-pricing.sql；既有定價維持不…</p> aka getByText('折數設定尚未就緒，請先執行 supabase-member')
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 8000ms[22m
+    [2m  - waiting for locator('.detail-panel').getByRole('alert')[22m
+
+
+      1697 |
+      1698 |   const alert = panel.getByRole('alert');
+    > 1699 |   await expect(alert).toBeVisible();
+           |                       ^
+      1700 |   await expect(alert).toContainText('無法儲存商品');
+      1701 |   await expect(alert).toContainText('請輸入中文名稱與英文名稱');
+      1702 | });
+        at /Users/chun/Documents/GitHub/ECLADO/eclado/tests/admin.spec.ts:1699:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .playwright/test-results/admin-新增商品缺少必填欄位時在編輯面板內顯示警示-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    .playwright/test-results/admin-新增商品缺少必填欄位時在編輯面板內顯示警示-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .playwright/test-results/admin-新增商品缺少必填欄位時在編輯面板內顯示警示-chromium/error-context.md
+
+  3) [chromium] › tests/admin.spec.ts:1757:5 › 新增商品寫入失敗時顯示錯誤且不加入商品清單 ───────────────────────────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByText(/儲存商品失敗：測試商品新增失敗/)
+    Expected: visible
+    Timeout: 8000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 8000ms[22m
+    [2m  - waiting for getByText(/儲存商品失敗：測試商品新增失敗/)[22m
+
+
+      1778 |   await panel.getByRole('button', { name: '建立草稿' }).click();
+      1779 |
+    > 1780 |   await expect(page.getByText(/儲存商品失敗：測試商品新增失敗/)).toBeVisible();
+           |                                                   ^
+      1781 |   await expect(page.getByRole('table').getByText('失敗商品')).toHaveCount(0);
+      1782 | });
+      1783 |
+        at /Users/chun/Documents/GitHub/ECLADO/eclado/tests/admin.spec.ts:1780:51
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .playwright/test-results/admin-新增商品寫入失敗時顯示錯誤且不加入商品清單-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    .playwright/test-results/admin-新增商品寫入失敗時顯示錯誤且不加入商品清單-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .playwright/test-results/admin-新增商品寫入失敗時顯示錯誤且不加入商品清單-chromium/error-context.md
+
+  4) [chromium] › tests/eclado-frontend.spec.ts:519:5 › 後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序 ──────────────────
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoContain[2m([22m[32mexpected[39m[2m) // indexOf[22m
+
+    Expected substring: [32m"products/11111111-2222-4333-8444-555555555555/"[39m
+    Received string:    [31m""[39m
+
+    Call Log:
+    - Timeout 8000ms exceeded while waiting on the predicate
+
+      555 |   await page.getByRole('button', { name: '儲存', exact: true }).click();
+      556 |
+    > 557 |   await expect.poll(() => uploadedPath).toContain(`products/${assetKey}/`);
+          |                                         ^
+      558 |   await expect.poll(() => savedImagesRequest).not.toBeNull();
+      559 |   expect(savedImagesRequest?.p_product_id).toBe(2);
+      560 |   expect(savedImagesRequest?.p_images).toHaveLength(3);
+        at /Users/chun/Documents/GitHub/ECLADO/eclado/tests/eclado-frontend.spec.ts:557:41
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-後台可上傳多圖、指定首圖並以-RPC-儲存圖片順序-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-後台可上傳多圖、指定首圖並以-RPC-儲存圖片順序-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .playwright/test-results/eclado-frontend-後台可上傳多圖、指定首圖並以-RPC-儲存圖片順序-chromium/error-context.md
+
+  5) [chromium] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則 ────────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  getByRole('status')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  8000ms
+
+    Call log:
+    [2m  - Expect "toHaveCount" with timeout 8000ms[22m
+    [2m  - waiting for getByRole('status')[22m
+    [2m    20 × locator resolved to 1 element[22m
+    [2m       - unexpected value "1"[22m
+
+
+      610 |   await page.goto('/cart');
+      611 |   await expect(page.getByText('免運', { exact: true })).toBeVisible();
+    > 612 |   await expect(page.getByRole('status')).toHaveCount(0);
+          |                                          ^
+      613 |
+      614 |   await page.goto('/info');
+      615 |   await expect(page.getByRole('button', { name: '會員購物須知', exact: true })).toHaveCount(0);
+        at /Users/chun/Documents/GitHub/ECLADO/eclado/tests/eclado-frontend.spec.ts:612:42
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則-chromium/error-context.md
+
+  6) [chromium] › tests/eclado-frontend.spec.ts:2260:5 › 師資會員專區的季度採購包含管理員補登的線下採購 ───────────────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('region', { name: '季度採購統計' }).getByText('NT$ 58,600')
+    Expected: visible
+    Timeout: 8000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 8000ms[22m
+    [2m  - waiting for getByRole('region', { name: '季度採購統計' }).getByText('NT$ 58,600')[22m
+
+
+      2277 |   await page.goto('/account');
+      2278 |   const panel = page.getByRole('region', { name: '季度採購統計' });
+    > 2279 |   await expect(panel.getByText('NT$ 58,600')).toBeVisible();
+           |                                               ^
+      2280 |   await expect(panel.getByText('含線下採購 NT$ 30,000')).toBeVisible();
+      2281 | });
+      2282 |
+        at /Users/chun/Documents/GitHub/ECLADO/eclado/tests/eclado-frontend.spec.ts:2279:47
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-師資會員專區的季度採購包含管理員補登的線下採購-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-師資會員專區的季度採購包含管理員補登的線下採購-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .playwright/test-results/eclado-frontend-師資會員專區的季度採購包含管理員補登的線下採購-chromium/error-context.md
+
+  7) [mobile-chrome] › tests/admin.spec.ts:1642:5 › 商品管理可從本機上傳圖片並以規格 RPC 建立草稿 ──────────────────────
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mnot[2m.[22mtoBeNull[2m()[22m
+
+    Received: [31mnull[39m
+
+    Call Log:
+    - Timeout 8000ms exceeded while waiting on the predicate
+
+      1670 |   await panel.getByRole('button', { name: '建立草稿' }).click();
+      1671 |
+    > 1672 |   await expect.poll(() => savedRequest).not.toBeNull();
+           |                                             ^
+      1673 |   expect(savedRequest?.p_product).toMatchObject({
+      1674 |     name: 'E2E New Product',
+      1675 |     name_zh: 'E2E 新商品',
+        at /Users/chun/Documents/GitHub/ECLADO/eclado/tests/admin.spec.ts:1672:45
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .playwright/test-results/admin-商品管理可從本機上傳圖片並以規格-RPC-建立草稿-mobile-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    .playwright/test-results/admin-商品管理可從本機上傳圖片並以規格-RPC-建立草稿-mobile-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .playwright/test-results/admin-商品管理可從本機上傳圖片並以規格-RPC-建立草稿-mobile-chrome/error-context.md
+
+  8) [mobile-chrome] › tests/admin.spec.ts:1688:5 › 新增商品缺少必填欄位時在編輯面板內顯示警示 ──────────────────────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('.detail-panel').getByRole('alert')
+    Expected: visible
+    Error: strict mode violation: locator('.detail-panel').getByRole('alert') resolved to 2 elements:
+        1) <div role="alert" aria-live="assertive">…</div> aka getByText('無法儲存商品請輸入中文名稱與英文名稱')
+        2) <p role="alert">折數設定尚未就緒，請先執行 supabase-member-pricing.sql；既有定價維持不…</p> aka getByText('折數設定尚未就緒，請先執行 supabase-member')
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 8000ms[22m
+    [2m  - waiting for locator('.detail-panel').getByRole('alert')[22m
+
+
+      1697 |
+      1698 |   const alert = panel.getByRole('alert');
+    > 1699 |   await expect(alert).toBeVisible();
+           |                       ^
+      1700 |   await expect(alert).toContainText('無法儲存商品');
+      1701 |   await expect(alert).toContainText('請輸入中文名稱與英文名稱');
+      1702 | });
+        at /Users/chun/Documents/GitHub/ECLADO/eclado/tests/admin.spec.ts:1699:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .playwright/test-results/admin-新增商品缺少必填欄位時在編輯面板內顯示警示-mobile-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    .playwright/test-results/admin-新增商品缺少必填欄位時在編輯面板內顯示警示-mobile-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .playwright/test-results/admin-新增商品缺少必填欄位時在編輯面板內顯示警示-mobile-chrome/error-context.md
+
+  9) [mobile-chrome] › tests/admin.spec.ts:1757:5 › 新增商品寫入失敗時顯示錯誤且不加入商品清單 ──────────────────────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByText(/儲存商品失敗：測試商品新增失敗/)
+    Expected: visible
+    Timeout: 8000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 8000ms[22m
+    [2m  - waiting for getByText(/儲存商品失敗：測試商品新增失敗/)[22m
+
+
+      1778 |   await panel.getByRole('button', { name: '建立草稿' }).click();
+      1779 |
+    > 1780 |   await expect(page.getByText(/儲存商品失敗：測試商品新增失敗/)).toBeVisible();
+           |                                                   ^
+      1781 |   await expect(page.getByRole('table').getByText('失敗商品')).toHaveCount(0);
+      1782 | });
+      1783 |
+        at /Users/chun/Documents/GitHub/ECLADO/eclado/tests/admin.spec.ts:1780:51
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .playwright/test-results/admin-新增商品寫入失敗時顯示錯誤且不加入商品清單-mobile-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    .playwright/test-results/admin-新增商品寫入失敗時顯示錯誤且不加入商品清單-mobile-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .playwright/test-results/admin-新增商品寫入失敗時顯示錯誤且不加入商品清單-mobile-chrome/error-context.md
+
+  10) [mobile-chrome] › tests/eclado-frontend.spec.ts:519:5 › 後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序 ────────────
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoContain[2m([22m[32mexpected[39m[2m) // indexOf[22m
+
+    Expected substring: [32m"products/11111111-2222-4333-8444-555555555555/"[39m
+    Received string:    [31m""[39m
+
+    Call Log:
+    - Timeout 8000ms exceeded while waiting on the predicate
+
+      555 |   await page.getByRole('button', { name: '儲存', exact: true }).click();
+      556 |
+    > 557 |   await expect.poll(() => uploadedPath).toContain(`products/${assetKey}/`);
+          |                                         ^
+      558 |   await expect.poll(() => savedImagesRequest).not.toBeNull();
+      559 |   expect(savedImagesRequest?.p_product_id).toBe(2);
+      560 |   expect(savedImagesRequest?.p_images).toHaveLength(3);
+        at /Users/chun/Documents/GitHub/ECLADO/eclado/tests/eclado-frontend.spec.ts:557:41
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-後台可上傳多圖、指定首圖並以-RPC-儲存圖片順序-mobile-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-後台可上傳多圖、指定首圖並以-RPC-儲存圖片順序-mobile-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .playwright/test-results/eclado-frontend-後台可上傳多圖、指定首圖並以-RPC-儲存圖片順序-mobile-chrome/error-context.md
+
+  11) [mobile-chrome] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則 ──────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  getByRole('status')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  8000ms
+
+    Call log:
+    [2m  - Expect "toHaveCount" with timeout 8000ms[22m
+    [2m  - waiting for getByRole('status')[22m
+    [2m    20 × locator resolved to 1 element[22m
+    [2m       - unexpected value "1"[22m
+
+
+      610 |   await page.goto('/cart');
+      611 |   await expect(page.getByText('免運', { exact: true })).toBeVisible();
+    > 612 |   await expect(page.getByRole('status')).toHaveCount(0);
+          |                                          ^
+      613 |
+      614 |   await page.goto('/info');
+      615 |   await expect(page.getByRole('button', { name: '會員購物須知', exact: true })).toHaveCount(0);
+        at /Users/chun/Documents/GitHub/ECLADO/eclado/tests/eclado-frontend.spec.ts:612:42
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則-mobile-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則-mobile-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .playwright/test-results/eclado-frontend-內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則-mobile-chrome/error-context.md
+
+  12) [mobile-chrome] › tests/eclado-frontend.spec.ts:2260:5 › 師資會員專區的季度採購包含管理員補登的線下採購 ─────────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('region', { name: '季度採購統計' }).getByText('NT$ 58,600')
+    Expected: visible
+    Timeout: 8000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 8000ms[22m
+    [2m  - waiting for getByRole('region', { name: '季度採購統計' }).getByText('NT$ 58,600')[22m
+
+
+      2277 |   await page.goto('/account');
+      2278 |   const panel = page.getByRole('region', { name: '季度採購統計' });
+    > 2279 |   await expect(panel.getByText('NT$ 58,600')).toBeVisible();
+           |                                               ^
+      2280 |   await expect(panel.getByText('含線下採購 NT$ 30,000')).toBeVisible();
+      2281 | });
+      2282 |
+        at /Users/chun/Documents/GitHub/ECLADO/eclado/tests/eclado-frontend.spec.ts:2279:47
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-師資會員專區的季度採購包含管理員補登的線下採購-mobile-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    .playwright/test-results/eclado-frontend-師資會員專區的季度採購包含管理員補登的線下採購-mobile-chrome/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .playwright/test-results/eclado-frontend-師資會員專區的季度採購包含管理員補登的線下採購-mobile-chrome/error-context.md
+
+  12 failed
+    [chromium] › tests/admin.spec.ts:1642:5 › 商品管理可從本機上傳圖片並以規格 RPC 建立草稿 ────────────────────────────
+    [chromium] › tests/admin.spec.ts:1688:5 › 新增商品缺少必填欄位時在編輯面板內顯示警示 ────────────────────────────────
+    [chromium] › tests/admin.spec.ts:1757:5 › 新增商品寫入失敗時顯示錯誤且不加入商品清單 ────────────────────────────────
+    [chromium] › tests/eclado-frontend.spec.ts:519:5 › 後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序 ───────────────────
+    [chromium] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則 ─────────────
+    [chromium] › tests/eclado-frontend.spec.ts:2260:5 › 師資會員專區的季度採購包含管理員補登的線下採購 ────────────────────
+    [mobile-chrome] › tests/admin.spec.ts:1642:5 › 商品管理可從本機上傳圖片並以規格 RPC 建立草稿 ───────────────────────
+    [mobile-chrome] › tests/admin.spec.ts:1688:5 › 新增商品缺少必填欄位時在編輯面板內顯示警示 ───────────────────────────
+    [mobile-chrome] › tests/admin.spec.ts:1757:5 › 新增商品寫入失敗時顯示錯誤且不加入商品清單 ───────────────────────────
+    [mobile-chrome] › tests/eclado-frontend.spec.ts:519:5 › 後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序 ──────────────
+    [mobile-chrome] › tests/eclado-frontend.spec.ts:597:5 › 內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則 ────────
+    [mobile-chrome] › tests/eclado-frontend.spec.ts:2260:5 › 師資會員專區的季度採購包含管理員補登的線下採購 ───────────────
+  3 skipped
+  589 passed (12.5m)

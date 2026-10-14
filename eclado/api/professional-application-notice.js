@@ -1,7 +1,7 @@
 const { requireNotificationAuthorization } = require('./_notification-auth.js');
 const { buildBrandedEmailHtml } = require('./_email-template.js');
 
-const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
+const { resolveSupabaseUrl } = require('./_supabase-env.js');
 const DEFAULT_FROM = 'ECLADO <service@ecladotaiwan.com>';
 
 async function readJson(response) {
@@ -101,7 +101,7 @@ module.exports = async function handler(req, res) {
   const applicationId = String(req.body?.applicationId || '').trim();
   if (!applicationId) return res.status(400).json({ error: 'applicationId required' });
 
-  const supabaseUrl = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const supabaseUrl = resolveSupabaseUrl();
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
   if (!serviceKey) return res.status(500).json({ error: 'SUPABASE_SERVICE_KEY not set' });
 

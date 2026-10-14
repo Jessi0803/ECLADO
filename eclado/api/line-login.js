@@ -1,8 +1,7 @@
 const crypto = require('crypto');
+const { resolveSiteUrl } = require('./_supabase-env.js');
 
 const LINE_CHANNEL_ID = '2010106039';
-const SITE_URL = 'https://ecladotaiwan.com';
-const LINE_REDIRECT_URI = `${SITE_URL}/api/line-callback`;
 const LINE_STATE_COOKIE = 'eclado_line_oauth_state';
 const LINE_STATE_MAX_AGE_SECONDS = 10 * 60;
 
@@ -11,6 +10,11 @@ module.exports = function handler(req, res) {
     res.setHeader('Allow', 'GET');
     return res.status(405).send('Method Not Allowed');
   }
+  if (String(process.env.LINE_LOGIN_ENABLED || 'true').toLowerCase() !== 'true') {
+    return res.status(404).send('Not Found');
+  }
+  const siteUrl = resolveSiteUrl(req);
+  const lineRedirectUri = `${siteUrl}/api/line-callback`;
 
   const state = crypto.randomBytes(32).toString('base64url');
   res.setHeader('Cache-Control', 'no-store');
@@ -22,7 +26,7 @@ module.exports = function handler(req, res) {
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: LINE_CHANNEL_ID,
-    redirect_uri: LINE_REDIRECT_URI,
+    redirect_uri: lineRedirectUri,
     state,
     scope: 'profile openid email',
     bot_prompt: 'aggressive',

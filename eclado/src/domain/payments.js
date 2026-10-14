@@ -1,5 +1,7 @@
-export const SINOPAC_PAYMENT_API = 'https://pay.ecladotaiwan.com';
-export const SINOPAC_NOTIFY_API = 'https://ecladotaiwan.com/api/sinopac/notify';
+import { PAYMENT_API_URL, PAYMENT_NOTIFY_URL } from '../config/runtime.js';
+
+export const SINOPAC_PAYMENT_API = PAYMENT_API_URL;
+export const SINOPAC_NOTIFY_API = PAYMENT_NOTIFY_URL;
 export const PAYMENT_REQUEST_TIMEOUT_MS = 15000;
 
 export const PAYMENT_METHODS = {

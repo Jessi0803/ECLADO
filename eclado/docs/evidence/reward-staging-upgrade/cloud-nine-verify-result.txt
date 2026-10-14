@@ -1,0 +1,101 @@
+Browser tab: 10, Title: "Untitled query | SQL Editor | test | ecladotaiwan's Org | Supabase", URL: "https://supabase.com/dashboard/project/qqlgqasbmbicnmvnlqbr/sql/10a9e22c-55fd-49b6-88fa-253f8d12a826".
+1 AXWebArea Untitled query | SQL Editor | test | ecladotaiwan's Org | Supabase, URL: supabase.com/dashboard/project/qqlgqasbmbicnmvnlqbr/sql/10a9e22c-55fd-49b6-88fa-253f8d12a826
+	2 container
+		146 link Description: Skip to content, Value: supabase.com/dashboard/project/qqlgqasbmbicnmvnlqbr/sql/10a9e22c-55fd-49b6-88fa-253f8d12a826#main
+		147 container
+			148 image
+			149 text We are investigating a technical issue
+			150 container
+				151 text Follow the
+				152 link Description: status page, Value: status.supabase.com/
+				153 text  for updates
+			154 button Dismiss banner
+				155 image
+		156 container
+			157 button E test main
+				158 text E
+				159 text test
+				160 image
+				161 text main
+				162 image
+			163 button Connect
+			164 pop up button (collapsed) ID: radix-_r_49_, Secondary Actions: Expand
+			165 button Description: Open menu, Help: Menu dropdown button
+		166 container Floating toolbar
+			167 container mobile-nav-actions
+				168 button search-trigger
+					169 image
+				170 button Help, ID: help-dropdown-button
+					171 image
+					172 text Help
+				173 button Advisor Center, ID: advisor-center-trigger
+					174 image
+					175 text Advisor Center
+				176 button SQL Editor, ID: editor-trigger
+					177 image
+					178 text SQL Editor
+				179 button AI Assistant, ID: assistant-trigger
+					180 text AI Assistant
+		181 container
+			182 tab group
+				183 container
+					184 tab (selected, settable, boolean) Untitled query, ID: radix-_r_9h_-trigger-sql-10a9e22c-55fd-49b6-88fa-253f8d12a826, Value: 1
+Untitled query
+					185 button Close tab
+						186 image
+				187 button
+					188 image
+			189 text Unsaved edits
+			190 pop up button (collapsed) Description: More actions, ID: radix-_r_9u_, Secondary Actions: Expand
+			191 pop up button (collapsed) Description: Query source: Database, ID: radix-_r_a6_, Secondary Actions: Expand
+			192 button Save
+			193 button Run selected
+			194 container
+				195 editor (settable) Description: Editor content, Value: -- TEST ONLY: qqlgqasbmbicnmvnlqbr; read-only post-install verification
+
+-- supabase-instructor-student-foundation-verify.sql
+-- Read-only phase 1B verification. All boolean checks should be true.
+begin transaction read only;
+select
+  to_regclass('public.student_pricing_settings') is not null as global_settings_ready,
+  to_regclass('public.instructor_student_settings') is not null as instructor_settings_ready,
+…) targets(signature);
+rollback;
+
+			196 splitter 50
+			197 container
+				198 tab group
+					199 tab (selected, settable, boolean) Results, Value: 1, ID: radix-_r_ad_-trigger-results
+					200 tab (selectable, settable, boolean) Chart, Value: 0, ID: radix-_r_ad_-trigger-chart
+					202 button 2 rows
+						203 container
+							204 text 2  row s
+					201 pop up button (collapsed) Export, ID: radix-_r_b2_, Secondary Actions: Expand
+				205 table
+					206 row signature anon_denied authenticated_denied service_role_allowed
+						207 cell (selectable) signature
+						208 cell (selectable) anon_denied
+						209 cell (selectable) authenticated_denied
+						210 cell (selectable) service_role_allowed
+					211 row public.begin_order_payment_retry(text) true true true
+						212 cell (selectable) public.begin_order_payment_retry(text)
+						213 cell (selectable) true
+						214 cell (selectable) true
+						215 cell (selectable) true
+					216 row public.claim_order_payment(text,text) true true true
+						217 cell (selectable) public.claim_order_payment(text,text)
+						218 cell (selectable) true
+						219 cell (selectable) true
+						220 cell (selectable) true
+		145 text SQL Editor | test | ecladotaiwan's Org | Supabase
+
+The focused UI element is 195 editor (settable) Description: Editor content, Value: -- TEST ONLY: qqlgqasbmbicnmvnlqbr; read-only post-install verification
+
+-- supabase-instructor-student-foundation-verify.sql
+-- Read-only phase 1B verification. All boolean checks should be true.
+begin transaction read only;
+select
+  to_regclass('public.student_pricing_settings') is not null as global_settings_ready,
+  to_regclass('public.instructor_student_settings') is not null as instructor_settings_ready,
+…) targets(signature);
+rollback;

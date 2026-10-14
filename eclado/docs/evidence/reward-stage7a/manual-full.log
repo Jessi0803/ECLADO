@@ -1,0 +1,21 @@
+PASS 1a 銀行儲存與遮蔽
+PASS 1b 全額提領1000／費15／實匯985／保留且不可取消
+PASS 1c 老師LINE與管理員Email／內容與防重
+PASS 1d 銀行變更不改申請快照／focus事件清除完整資料
+PASS 2 模擬人工匯款985／收費／終態／通知／對帳
+PASS 2b 成功通知需明確選擇補發新版本
+PASS 3 明確失敗全額退回／不收費／原申請不可重匯
+PASS 4a 待查帳保留1000／禁止再用／通知與對帳列管
+PASS 4b 待查帳確認未付款退回／finding解除保留歷史
+PASS 5a 提領後退貨負200／申請不變／重複退貨不重扣
+PASS 5b 新收入200抵銷負餘額
+PASS 6a 15元前後端不可提領
+PASS 6b 16元可提領／實匯1
+PASS 6c LINE5xx備援Email／帳務不變
+PASS 6d timeout同鍵重試／不立即Email／恢復成功
+PASS 6e 六次timeout上限／人工查核／不再自動送
+PASS 6f Email永久錯誤保留失敗／不回滾帳務
+PASS 6g 更正只稽核／明確發送新通知／不改帳務
+PASS 6h 唯讀UI限制與RPC拒絕寫入／執行對帳
+PASS 最終財務一致性／無前端未捕捉錯誤
+RESULT 20 passed 0 failed

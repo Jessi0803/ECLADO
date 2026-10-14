@@ -1,0 +1,208 @@
+{
+  "backoffice_roles": [
+    {
+      "role": "admin",
+      "label": "管理員",
+      "active": true
+    },
+    {
+      "role": "catalog_editor",
+      "label": "商品小編",
+      "active": true
+    },
+    {
+      "role": "super_admin",
+      "label": "最高管理員",
+      "active": true
+    }
+  ],
+  "membership_tiers": [
+    {
+      "role": "consumer",
+      "label": "一般會員",
+      "active": true,
+      "can_buy_pro_products": false,
+      "professional_price_multiplier": null
+    },
+    {
+      "role": "distributor",
+      "label": "經銷商",
+      "active": true,
+      "can_buy_pro_products": true,
+      "professional_price_multiplier": 0.65
+    },
+    {
+      "role": "instructor",
+      "label": "師資",
+      "active": true,
+      "can_buy_pro_products": true,
+      "professional_price_multiplier": 0.7
+    },
+    {
+      "role": "pending",
+      "label": "審核中",
+      "active": true,
+      "can_buy_pro_products": false,
+      "professional_price_multiplier": null
+    },
+    {
+      "role": "pro",
+      "label": "美容師",
+      "active": true,
+      "can_buy_pro_products": true,
+      "professional_price_multiplier": 1
+    },
+    {
+      "role": "staff",
+      "label": "內部人員",
+      "active": true,
+      "can_buy_pro_products": true,
+      "professional_price_multiplier": 0.5
+    }
+  ],
+  "student_pricing_settings": {
+    "version": 0,
+    "singleton": true,
+    "student_1": 0.9,
+    "student_2": 0.95
+  },
+  "backoffice_role_permissions": [
+    {
+      "role": "admin",
+      "permission": "analytics.read"
+    },
+    {
+      "role": "admin",
+      "permission": "audit_logs.read"
+    },
+    {
+      "role": "admin",
+      "permission": "catalog.read"
+    },
+    {
+      "role": "admin",
+      "permission": "catalog.write"
+    },
+    {
+      "role": "admin",
+      "permission": "instructor_students.manage"
+    },
+    {
+      "role": "admin",
+      "permission": "inventory_counts.manage"
+    },
+    {
+      "role": "admin",
+      "permission": "member_pricing.manage"
+    },
+    {
+      "role": "admin",
+      "permission": "members.read"
+    },
+    {
+      "role": "admin",
+      "permission": "members.write"
+    },
+    {
+      "role": "admin",
+      "permission": "notifications.send"
+    },
+    {
+      "role": "admin",
+      "permission": "orders.read"
+    },
+    {
+      "role": "admin",
+      "permission": "orders.write"
+    },
+    {
+      "role": "admin",
+      "permission": "procurement.manage"
+    },
+    {
+      "role": "admin",
+      "permission": "promotions.manage"
+    },
+    {
+      "role": "admin",
+      "permission": "shopping_credit.manage"
+    },
+    {
+      "role": "catalog_editor",
+      "permission": "catalog.read"
+    },
+    {
+      "role": "catalog_editor",
+      "permission": "catalog.write"
+    },
+    {
+      "role": "super_admin",
+      "permission": "analytics.read"
+    },
+    {
+      "role": "super_admin",
+      "permission": "audit_logs.read"
+    },
+    {
+      "role": "super_admin",
+      "permission": "backorders.manage"
+    },
+    {
+      "role": "super_admin",
+      "permission": "catalog.read"
+    },
+    {
+      "role": "super_admin",
+      "permission": "catalog.write"
+    },
+    {
+      "role": "super_admin",
+      "permission": "instructor_students.manage"
+    },
+    {
+      "role": "super_admin",
+      "permission": "inventory_counts.manage"
+    },
+    {
+      "role": "super_admin",
+      "permission": "member_pricing.manage"
+    },
+    {
+      "role": "super_admin",
+      "permission": "members.read"
+    },
+    {
+      "role": "super_admin",
+      "permission": "members.write"
+    },
+    {
+      "role": "super_admin",
+      "permission": "notifications.send"
+    },
+    {
+      "role": "super_admin",
+      "permission": "orders.read"
+    },
+    {
+      "role": "super_admin",
+      "permission": "orders.write"
+    },
+    {
+      "role": "super_admin",
+      "permission": "procurement.manage"
+    },
+    {
+      "role": "super_admin",
+      "permission": "promotions.manage"
+    },
+    {
+      "role": "super_admin",
+      "permission": "shopping_credit.manage"
+    }
+  ],
+  "student_pricing_feature_settings": {
+    "enabled": false,
+    "version": 0,
+    "singleton": true
+  }
+}

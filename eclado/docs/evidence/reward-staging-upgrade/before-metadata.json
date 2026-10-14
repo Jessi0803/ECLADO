@@ -1,0 +1,1196 @@
+{
+  "constraints": [
+    {
+      "name": "orders_pkey",
+      "type": "p",
+      "table": "orders",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "orders_promotion_id_fkey",
+      "type": "f",
+      "table": "orders",
+      "validated": true,
+      "definition": "FOREIGN KEY (promotion_id) REFERENCES promotions(id) ON DELETE SET NULL"
+    },
+    {
+      "name": "orders_status_check",
+      "type": "c",
+      "table": "orders",
+      "validated": true,
+      "definition": "CHECK (status = ANY (ARRAY['awaiting_confirm'::text, 'unpaid'::text, 'paid'::text, 'preparing'::text, 'shipped'::text, 'delivered'::text, 'returned'::text, 'cancelled'::text]))"
+    },
+    {
+      "name": "orders_type_check",
+      "type": "c",
+      "table": "orders",
+      "validated": true,
+      "definition": "CHECK (type = ANY (ARRAY['consumer'::text, 'pro'::text, 'instructor'::text, 'distributor'::text, 'pending'::text]))"
+    },
+    {
+      "name": "orders_user_id_fkey",
+      "type": "f",
+      "table": "orders",
+      "validated": true,
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL"
+    },
+    {
+      "name": "products_min_stock_check",
+      "type": "c",
+      "table": "products",
+      "validated": true,
+      "definition": "CHECK (min_stock >= 0)"
+    },
+    {
+      "name": "products_pkey",
+      "type": "p",
+      "table": "products",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "products_stock_check",
+      "type": "c",
+      "table": "products",
+      "validated": true,
+      "definition": "CHECK (stock >= 0)"
+    },
+    {
+      "name": "professional_applications_pkey",
+      "type": "p",
+      "table": "professional_applications",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "professional_applications_source_check",
+      "type": "c",
+      "table": "professional_applications",
+      "validated": true,
+      "definition": "CHECK (source = ANY (ARRAY['registration'::text, 'standalone'::text]))"
+    },
+    {
+      "name": "professional_applications_status_check",
+      "type": "c",
+      "table": "professional_applications",
+      "validated": true,
+      "definition": "CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text]))"
+    },
+    {
+      "name": "professional_applications_user_id_fkey",
+      "type": "f",
+      "table": "professional_applications",
+      "validated": true,
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL"
+    },
+    {
+      "name": "profiles_email_key",
+      "type": "u",
+      "table": "profiles",
+      "validated": true,
+      "definition": "UNIQUE (email)"
+    },
+    {
+      "name": "profiles_id_fkey",
+      "type": "f",
+      "table": "profiles",
+      "validated": true,
+      "definition": "FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "profiles_line_user_id_key",
+      "type": "u",
+      "table": "profiles",
+      "validated": true,
+      "definition": "UNIQUE (line_user_id)"
+    },
+    {
+      "name": "profiles_pkey",
+      "type": "p",
+      "table": "profiles",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "profiles_role_check",
+      "type": "c",
+      "table": "profiles",
+      "validated": true,
+      "definition": "CHECK (role = ANY (ARRAY['consumer'::text, 'pro'::text, 'instructor'::text, 'distributor'::text, 'pending'::text]))"
+    },
+    {
+      "name": "promotions_pkey",
+      "type": "p",
+      "table": "promotions",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    }
+  ],
+  "database": {
+    "version": "PostgreSQL 17.6 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit",
+    "read_only": "on",
+    "captured_at": "2026-10-13T07:09:43.301263+00:00",
+    "migration_history_exists": false
+  },
+  "functions": [
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "md5": "601a8134e5da45f726778315a5e377c5",
+      "name": "adjust_inventory_for_order",
+      "owner": "postgres",
+      "execute": {
+        "anon": true,
+        "service_role": true,
+        "authenticated": true
+      },
+      "signature": "adjust_inventory_for_order(jsonb,integer)",
+      "definition": null,
+      "search_path": "search_path=public",
+      "normalized_md5": "56e7852e889103832ec49306f5b55d16",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "md5": "dcee110b40ef7fd799d3d66edfdc28cb",
+      "name": "handle_new_user",
+      "owner": "postgres",
+      "execute": {
+        "anon": true,
+        "service_role": true,
+        "authenticated": true
+      },
+      "signature": "handle_new_user()",
+      "definition": null,
+      "search_path": "search_path=public",
+      "normalized_md5": "6d9b7fdc4f87a00b0d886011ac77248f",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "md5": "239d4d24669f83903184a78b9f8fef3c",
+      "name": "order_consumes_inventory",
+      "owner": "postgres",
+      "execute": {
+        "anon": true,
+        "service_role": true,
+        "authenticated": true
+      },
+      "signature": "order_consumes_inventory(text)",
+      "definition": null,
+      "search_path": null,
+      "normalized_md5": "8322b4b8e5ecf1502cfb0c4d689490ba",
+      "security_definer": false
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "md5": "4d6804d5850641a33867814c9e76a714",
+      "name": "set_updated_at",
+      "owner": "postgres",
+      "execute": {
+        "anon": true,
+        "service_role": true,
+        "authenticated": true
+      },
+      "signature": "set_updated_at()",
+      "definition": null,
+      "search_path": null,
+      "normalized_md5": "dccfb6bbe3dca96fa053b6994088459c",
+      "security_definer": false
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "md5": "08b84d72b83c1ce1489210b9c7cbe475",
+      "name": "sync_inventory_for_order",
+      "owner": "postgres",
+      "execute": {
+        "anon": true,
+        "service_role": true,
+        "authenticated": true
+      },
+      "signature": "sync_inventory_for_order()",
+      "definition": null,
+      "search_path": "search_path=public",
+      "normalized_md5": "8ea72007ef1c5a578c0effb757847276",
+      "security_definer": true
+    }
+  ],
+  "indexes": [
+    {
+      "name": "orders_payment_reminder_idx",
+      "table": "orders",
+      "valid": true,
+      "unique": false,
+      "definition": "CREATE INDEX orders_payment_reminder_idx ON public.orders USING btree (status, created_at) WHERE (payment_reminded_at IS NULL)"
+    },
+    {
+      "name": "orders_pkey",
+      "table": "orders",
+      "valid": true,
+      "unique": true,
+      "definition": "CREATE UNIQUE INDEX orders_pkey ON public.orders USING btree (id)"
+    },
+    {
+      "name": "products_pkey",
+      "table": "products",
+      "valid": true,
+      "unique": true,
+      "definition": "CREATE UNIQUE INDEX products_pkey ON public.products USING btree (id)"
+    },
+    {
+      "name": "idx_professional_applications_status",
+      "table": "professional_applications",
+      "valid": true,
+      "unique": false,
+      "definition": "CREATE INDEX idx_professional_applications_status ON public.professional_applications USING btree (status, created_at DESC)"
+    },
+    {
+      "name": "professional_applications_pkey",
+      "table": "professional_applications",
+      "valid": true,
+      "unique": true,
+      "definition": "CREATE UNIQUE INDEX professional_applications_pkey ON public.professional_applications USING btree (id)"
+    },
+    {
+      "name": "profiles_email_key",
+      "table": "profiles",
+      "valid": true,
+      "unique": true,
+      "definition": "CREATE UNIQUE INDEX profiles_email_key ON public.profiles USING btree (email)"
+    },
+    {
+      "name": "profiles_line_user_id_key",
+      "table": "profiles",
+      "valid": true,
+      "unique": true,
+      "definition": "CREATE UNIQUE INDEX profiles_line_user_id_key ON public.profiles USING btree (line_user_id)"
+    },
+    {
+      "name": "profiles_pkey",
+      "table": "profiles",
+      "valid": true,
+      "unique": true,
+      "definition": "CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)"
+    },
+    {
+      "name": "promotions_pkey",
+      "table": "promotions",
+      "valid": true,
+      "unique": true,
+      "definition": "CREATE UNIQUE INDEX promotions_pkey ON public.promotions USING btree (id)"
+    }
+  ],
+  "policies": [
+    {
+      "name": "orders_insert_all",
+      "qual": null,
+      "roles": [
+        "public"
+      ],
+      "table": "orders",
+      "command": "INSERT",
+      "permissive": "PERMISSIVE",
+      "with_check": "true"
+    },
+    {
+      "name": "orders_select_all",
+      "qual": "true",
+      "roles": [
+        "public"
+      ],
+      "table": "orders",
+      "command": "SELECT",
+      "permissive": "PERMISSIVE",
+      "with_check": null
+    },
+    {
+      "name": "orders_update_all",
+      "qual": "true",
+      "roles": [
+        "public"
+      ],
+      "table": "orders",
+      "command": "UPDATE",
+      "permissive": "PERMISSIVE",
+      "with_check": "true"
+    },
+    {
+      "name": "products_insert_all",
+      "qual": null,
+      "roles": [
+        "public"
+      ],
+      "table": "products",
+      "command": "INSERT",
+      "permissive": "PERMISSIVE",
+      "with_check": "true"
+    },
+    {
+      "name": "products_select_all",
+      "qual": "true",
+      "roles": [
+        "public"
+      ],
+      "table": "products",
+      "command": "SELECT",
+      "permissive": "PERMISSIVE",
+      "with_check": null
+    },
+    {
+      "name": "products_update_all",
+      "qual": "true",
+      "roles": [
+        "public"
+      ],
+      "table": "products",
+      "command": "UPDATE",
+      "permissive": "PERMISSIVE",
+      "with_check": "true"
+    },
+    {
+      "name": "professional_applications_insert_all",
+      "qual": null,
+      "roles": [
+        "public"
+      ],
+      "table": "professional_applications",
+      "command": "INSERT",
+      "permissive": "PERMISSIVE",
+      "with_check": "true"
+    },
+    {
+      "name": "professional_applications_select_all",
+      "qual": "true",
+      "roles": [
+        "public"
+      ],
+      "table": "professional_applications",
+      "command": "SELECT",
+      "permissive": "PERMISSIVE",
+      "with_check": null
+    },
+    {
+      "name": "professional_applications_update_all",
+      "qual": "true",
+      "roles": [
+        "public"
+      ],
+      "table": "professional_applications",
+      "command": "UPDATE",
+      "permissive": "PERMISSIVE",
+      "with_check": "true"
+    },
+    {
+      "name": "profiles_insert_all",
+      "qual": null,
+      "roles": [
+        "public"
+      ],
+      "table": "profiles",
+      "command": "INSERT",
+      "permissive": "PERMISSIVE",
+      "with_check": "true"
+    },
+    {
+      "name": "profiles_select_all",
+      "qual": "true",
+      "roles": [
+        "public"
+      ],
+      "table": "profiles",
+      "command": "SELECT",
+      "permissive": "PERMISSIVE",
+      "with_check": null
+    },
+    {
+      "name": "profiles_update_all",
+      "qual": "true",
+      "roles": [
+        "public"
+      ],
+      "table": "profiles",
+      "command": "UPDATE",
+      "permissive": "PERMISSIVE",
+      "with_check": "true"
+    },
+    {
+      "name": "promotions_delete_all",
+      "qual": "true",
+      "roles": [
+        "public"
+      ],
+      "table": "promotions",
+      "command": "DELETE",
+      "permissive": "PERMISSIVE",
+      "with_check": null
+    },
+    {
+      "name": "promotions_insert_all",
+      "qual": null,
+      "roles": [
+        "public"
+      ],
+      "table": "promotions",
+      "command": "INSERT",
+      "permissive": "PERMISSIVE",
+      "with_check": "true"
+    },
+    {
+      "name": "promotions_select_all",
+      "qual": "true",
+      "roles": [
+        "public"
+      ],
+      "table": "promotions",
+      "command": "SELECT",
+      "permissive": "PERMISSIVE",
+      "with_check": null
+    },
+    {
+      "name": "promotions_update_all",
+      "qual": "true",
+      "roles": [
+        "public"
+      ],
+      "table": "promotions",
+      "command": "UPDATE",
+      "permissive": "PERMISSIVE",
+      "with_check": "true"
+    }
+  ],
+  "tables": [
+    {
+      "acl": {
+        "anon": {
+          "delete": true,
+          "insert": true,
+          "select": true,
+          "update": true,
+          "truncate": true
+        },
+        "service_role": {
+          "delete": true,
+          "insert": true,
+          "select": true,
+          "update": true,
+          "truncate": true
+        },
+        "authenticated": {
+          "delete": true,
+          "insert": true,
+          "select": true,
+          "update": true,
+          "truncate": true
+        }
+      },
+      "rls": true,
+      "kind": "r",
+      "name": "orders",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "member",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "default": "'consumer'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "items",
+          "type": "jsonb",
+          "default": "'[]'::jsonb",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "total",
+          "type": "numeric",
+          "default": "0",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "subtotal",
+          "type": "numeric",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "discount",
+          "type": "numeric",
+          "default": "0",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "default": "'awaiting_confirm'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "address",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "note",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "transfer_last5",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "tracking",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "promotion_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "promotion_name",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "payment_reminded_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        }
+      ],
+      "force_rls": false
+    },
+    {
+      "acl": {
+        "anon": {
+          "delete": true,
+          "insert": true,
+          "select": true,
+          "update": true,
+          "truncate": true
+        },
+        "service_role": {
+          "delete": true,
+          "insert": true,
+          "select": true,
+          "update": true,
+          "truncate": true
+        },
+        "authenticated": {
+          "delete": true,
+          "insert": true,
+          "select": true,
+          "update": true,
+          "truncate": true
+        }
+      },
+      "rls": true,
+      "kind": "r",
+      "name": "products",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "name_zh",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "category",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "size",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "price",
+          "type": "numeric",
+          "default": "0",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "pro_price",
+          "type": "numeric",
+          "default": "0",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "stock",
+          "type": "integer",
+          "default": "0",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "min_stock",
+          "type": "integer",
+          "default": "3",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "is_pro_only",
+          "type": "boolean",
+          "default": "false",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "image_url",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "skin_type",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "ingredients",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "features",
+          "type": "jsonb",
+          "default": "'[]'::jsonb",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "active",
+          "type": "boolean",
+          "default": "true",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        }
+      ],
+      "force_rls": false
+    },
+    {
+      "acl": {
+        "anon": {
+          "delete": true,
+          "insert": true,
+          "select": true,
+          "update": true,
+          "truncate": true
+        },
+        "service_role": {
+          "delete": true,
+          "insert": true,
+          "select": true,
+          "update": true,
+          "truncate": true
+        },
+        "authenticated": {
+          "delete": true,
+          "insert": true,
+          "select": true,
+          "update": true,
+          "truncate": true
+        }
+      },
+      "rls": true,
+      "kind": "r",
+      "name": "professional_applications",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "studio_name",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "contact_name",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "address",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "social_media",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "certificate",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "user_email",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "default": "'pending'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "default": "'standalone'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        }
+      ],
+      "force_rls": false
+    },
+    {
+      "acl": {
+        "anon": {
+          "delete": true,
+          "insert": true,
+          "select": true,
+          "update": true,
+          "truncate": true
+        },
+        "service_role": {
+          "delete": true,
+          "insert": true,
+          "select": true,
+          "update": true,
+          "truncate": true
+        },
+        "authenticated": {
+          "delete": true,
+          "insert": true,
+          "select": true,
+          "update": true,
+          "truncate": true
+        }
+      },
+      "rls": true,
+      "kind": "r",
+      "name": "profiles",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "line_user_id",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "role",
+          "type": "text",
+          "default": "'consumer'::text",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "cert",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        }
+      ],
+      "force_rls": false
+    },
+    {
+      "acl": {
+        "anon": {
+          "delete": true,
+          "insert": true,
+          "select": true,
+          "update": true,
+          "truncate": true
+        },
+        "service_role": {
+          "delete": true,
+          "insert": true,
+          "select": true,
+          "update": true,
+          "truncate": true
+        },
+        "authenticated": {
+          "delete": true,
+          "insert": true,
+          "select": true,
+          "update": true,
+          "truncate": true
+        }
+      },
+      "rls": true,
+      "kind": "r",
+      "name": "promotions",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "product_ids",
+          "type": "integer[]",
+          "default": "'{}'::integer[]",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "discount_rate",
+          "type": "numeric",
+          "default": "0.95",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "discount_amount",
+          "type": "numeric",
+          "default": "1000",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "start_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "end_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "not_null": false
+        },
+        {
+          "name": "active",
+          "type": "boolean",
+          "default": "true",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "not_null": true
+        }
+      ],
+      "force_rls": false
+    }
+  ],
+  "triggers": [
+    {
+      "name": "trg_orders_inventory_sync",
+      "table": "orders",
+      "enabled": "O",
+      "function": "sync_inventory_for_order()",
+      "definition": "CREATE TRIGGER trg_orders_inventory_sync AFTER INSERT OR UPDATE OF status, items ON orders FOR EACH ROW EXECUTE FUNCTION sync_inventory_for_order()"
+    },
+    {
+      "name": "trg_orders_updated_at",
+      "table": "orders",
+      "enabled": "O",
+      "function": "set_updated_at()",
+      "definition": "CREATE TRIGGER trg_orders_updated_at BEFORE UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    {
+      "name": "trg_products_updated_at",
+      "table": "products",
+      "enabled": "O",
+      "function": "set_updated_at()",
+      "definition": "CREATE TRIGGER trg_products_updated_at BEFORE UPDATE ON products FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    {
+      "name": "trg_professional_applications_updated_at",
+      "table": "professional_applications",
+      "enabled": "O",
+      "function": "set_updated_at()",
+      "definition": "CREATE TRIGGER trg_professional_applications_updated_at BEFORE UPDATE ON professional_applications FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    {
+      "name": "trg_profiles_updated_at",
+      "table": "profiles",
+      "enabled": "O",
+      "function": "set_updated_at()",
+      "definition": "CREATE TRIGGER trg_profiles_updated_at BEFORE UPDATE ON profiles FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    {
+      "name": "trg_promotions_updated_at",
+      "table": "promotions",
+      "enabled": "O",
+      "function": "set_updated_at()",
+      "definition": "CREATE TRIGGER trg_promotions_updated_at BEFORE UPDATE ON promotions FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    }
+  ]
+}

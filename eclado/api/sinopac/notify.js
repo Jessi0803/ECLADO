@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const { buildBrandedEmailHtml } = require('../_email-template.js');
 
-const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
+const { resolveSupabaseUrl } = require('../_supabase-env.js');
 const DEFAULT_QPAY_API_BASE = 'https://apisbx.sinopac.com/funBIZ-Sbx/QPay.WebAPI/api/';
 
 const INVENTORY_ACTIVE_STATUSES = new Set(['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered']);
@@ -123,7 +123,7 @@ function hasValidPaymentNotifySecret(req) {
 }
 
 async function supabaseRequest(path, options = {}) {
-  const supabaseUrl = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const supabaseUrl = resolveSupabaseUrl();
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
   if (!serviceKey) throw new Error('SUPABASE_SERVICE_KEY not set');

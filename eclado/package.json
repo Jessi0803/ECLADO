@@ -1,6 +1,7 @@
 {
   "scripts": {
     "dev": "vite",
+    "dev:test": "vite --mode test",
     "build": "vite build && node scripts/prerender-seo.mjs",
     "preview": "vite preview",
     "test": "npm run test:e2e",

@@ -1,6 +1,6 @@
 const { buildBrandedEmailHtml } = require('./_email-template.js');
 
-const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
+const { resolveSupabaseUrl } = require('./_supabase-env.js');
 const DEFAULT_REMIND_MINUTES = 180;
 const DEFAULT_SECOND_REMIND_MINUTES = 24 * 60;
 
@@ -59,7 +59,7 @@ function requireCronAuth(req, res) {
 }
 
 async function supabaseRequest(path, options = {}) {
-  const supabaseUrl = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const supabaseUrl = resolveSupabaseUrl();
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
   if (!serviceKey) throw new Error('SUPABASE_SERVICE_KEY not set');

@@ -1,0 +1,101 @@
+Browser tab: 10, Title: "Untitled query | SQL Editor | test | ecladotaiwan's Org | Supabase", URL: "https://supabase.com/dashboard/project/qqlgqasbmbicnmvnlqbr/sql/10a9e22c-55fd-49b6-88fa-253f8d12a826".
+1 AXWebArea Untitled query | SQL Editor | test | ecladotaiwan's Org | Supabase, URL: supabase.com/dashboard/project/qqlgqasbmbicnmvnlqbr/sql/10a9e22c-55fd-49b6-88fa-253f8d12a826
+	2 container
+		146 link Description: Skip to content, Value: supabase.com/dashboard/project/qqlgqasbmbicnmvnlqbr/sql/10a9e22c-55fd-49b6-88fa-253f8d12a826#main
+		147 container
+			148 image
+			149 text We are investigating a technical issue
+			150 container
+				151 text Follow the
+				152 link Description: status page, Value: status.supabase.com/
+				153 text  for updates
+			154 button Dismiss banner
+				155 image
+		156 container
+			157 button E test main
+				158 text E
+				159 text test
+				160 image
+				161 text main
+				162 image
+			163 button Connect
+			164 pop up button (collapsed) ID: radix-_r_49_, Secondary Actions: Expand
+			165 button Description: Open menu, Help: Menu dropdown button
+		166 container Floating toolbar
+			167 container mobile-nav-actions
+				168 button search-trigger
+					169 image
+				170 button Help, ID: help-dropdown-button
+					171 image
+					172 text Help
+				173 button Advisor Center, ID: advisor-center-trigger
+					174 image
+					175 text Advisor Center
+				176 button SQL Editor, ID: editor-trigger
+					177 image
+					178 text SQL Editor
+				179 button AI Assistant, ID: assistant-trigger
+					180 text AI Assistant
+		181 container
+			182 tab group
+				183 container
+					184 tab (selected, settable, boolean) Untitled query, ID: radix-_r_9h_-trigger-sql-10a9e22c-55fd-49b6-88fa-253f8d12a826, Value: 1
+Untitled query
+					185 button Close tab
+						186 image
+				187 button
+					188 image
+			189 text Unsaved edits
+			190 pop up button (collapsed) Description: More actions, ID: radix-_r_9u_, Secondary Actions: Expand
+			191 pop up button (collapsed) Description: Query source: Database, ID: radix-_r_a6_, Secondary Actions: Expand
+			192 button Save
+			193 button Run selected
+			194 container
+				195 editor (settable) Description: Editor content, Value: -- TEST ONLY: qqlgqasbmbicnmvnlqbr. No bank/LINE/Email requests.
+-- SQL identities simulate JWT claims; this is NOT real Auth/PostgREST login.
+-- All fake users/products/orders/financial rows ROLLBACK. Sequence gaps may remain.
+BEGIN;
+SET LOCAL statement_timeout='30s';
+SET LOCAL lock_timeout='5s';
+DO $smoke$
+DECLARE
+… 'assisted_snapshots',(SELECT count(*) FROM public.student_reward_snapshots WHERE order_source='admin_assisted'),
+ 'wallet_status',(SELECT status FROM public.instructor_reward_reservations WHERE user_id='77777777-7777-4777-8777-777777777702'),
+ 'real_bank',false,'auth','SQL claims simulation','cleanup','ROLLBACK follows') AS result;
+ROLLBACK;
+
+				202 container
+					205 text 70 
+					204 content list
+						206 container
+							207 text SELECT
+							208 text  jsonb_build_object
+							209 text (
+			196 splitter 50
+			197 container
+				198 tab group
+					199 tab (selected, settable, boolean) Results, Value: 1, ID: radix-_r_ad_-trigger-results
+					200 tab (selectable, settable, boolean) Chart, Value: 0, ID: radix-_r_ad_-trigger-chart
+					210 button 1 row
+						211 container
+							212 text 1  row
+					201 pop up button (collapsed) Export, ID: radix-_r_b2_, Secondary Actions: Expand
+				213 table
+					214 row result
+						215 cell (selectable) result
+					216 row {"auth":"SQL claims simulation","cleanup":"ROLLBACK follows","real_bank":false,"wallet_status":"refunded","online_snapshot":2000,"delivered_balance":2000,"assisted_snapshots":2,"assisted_auto_snapshot":2000,"assisted_manual_snapshot":5000} View full cell content
+						217 cell (selectable) Description: View full cell content, Value: {"auth":"SQL claims simulation","cleanup":"ROLLBACK follows","real_bank":false,"wallet_status":"refunded","online_snapshot":2000,"delivered_balance":2000,"assisted_snapshots":2,"assisted_auto_snapshot":2000,"assisted_manual_snapshot":5000}
+		145 text SQL Editor | test | ecladotaiwan's Org | Supabase
+
+The focused UI element is 195 editor (settable) Description: Editor content, Value: -- TEST ONLY: qqlgqasbmbicnmvnlqbr. No bank/LINE/Email requests.
+-- SQL identities simulate JWT claims; this is NOT real Auth/PostgREST login.
+-- All fake users/products/orders/financial rows ROLLBACK. Sequence gaps may remain.
+BEGIN;
+SET LOCAL statement_timeout='30s';
+SET LOCAL lock_timeout='5s';
+DO $smoke$
+DECLARE
+… 'assisted_snapshots',(SELECT count(*) FROM public.student_reward_snapshots WHERE order_source='admin_assisted'),
+ 'wallet_status',(SELECT status FROM public.instructor_reward_reservations WHERE user_id='77777777-7777-4777-8777-777777777702'),
+ 'real_bank',false,'auth','SQL claims simulation','cleanup','ROLLBACK follows') AS result;
+ROLLBACK;

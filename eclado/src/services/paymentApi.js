@@ -2,6 +2,7 @@ import {
   PAYMENT_REQUEST_TIMEOUT_MS,
   SINOPAC_PAYMENT_API,
 } from '../domain/payments.js';
+import { assertPaymentEnabled } from '../config/runtime.js';
 import { supabase } from './supabase.js';
 
 async function memberAuthorizationHeaders() {
@@ -11,6 +12,7 @@ async function memberAuthorizationHeaders() {
 }
 
 export async function createSinopacPayment(payload) {
+  assertPaymentEnabled();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PAYMENT_REQUEST_TIMEOUT_MS);
 
@@ -45,6 +47,7 @@ export async function createSinopacPayment(payload) {
 }
 
 export async function querySinopacPayment({ orderNo, paymentToken, guestAccessToken, resultAccessToken }) {
+  assertPaymentEnabled();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PAYMENT_REQUEST_TIMEOUT_MS);
   try {
@@ -78,6 +81,7 @@ export async function querySinopacPayment({ orderNo, paymentToken, guestAccessTo
 }
 
 export async function retrySinopacPayment({ orderNo, paymentToken, guestAccessToken, resultAccessToken }) {
+  assertPaymentEnabled();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PAYMENT_REQUEST_TIMEOUT_MS);
   try {
@@ -105,6 +109,7 @@ export async function retrySinopacPayment({ orderNo, paymentToken, guestAccessTo
 }
 
 export async function lookupGuestOrder({ lookupCode, phone }) {
+  assertPaymentEnabled();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PAYMENT_REQUEST_TIMEOUT_MS);
   try {
@@ -125,6 +130,7 @@ export async function lookupGuestOrder({ lookupCode, phone }) {
 }
 
 export async function fetchGuestOrderDetails({ orderNo, guestAccessToken }) {
+  assertPaymentEnabled();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PAYMENT_REQUEST_TIMEOUT_MS);
   try {
@@ -145,6 +151,7 @@ export async function fetchGuestOrderDetails({ orderNo, guestAccessToken }) {
 }
 
 export async function getMemberPaymentInstructions(orderNo) {
+  assertPaymentEnabled();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PAYMENT_REQUEST_TIMEOUT_MS);
   try {
@@ -167,6 +174,7 @@ export async function getMemberPaymentInstructions(orderNo) {
 }
 
 export async function getMemberPaymentSummaries() {
+  assertPaymentEnabled();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PAYMENT_REQUEST_TIMEOUT_MS);
   try {

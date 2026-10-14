@@ -122,7 +122,7 @@ export default function AuthForms({
         </form>
       )}
 
-      {view !== 'forgot' && (
+      {view !== 'forgot' && onLineSignIn && (
         <>
           <div style={{ display:'flex', alignItems:'center', gap:14, margin:'24px 0' }}>
             <div style={{ flex:1, height:1, background:'var(--light)' }} />

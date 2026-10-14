@@ -1,0 +1,67 @@
+{
+  "target": "isolated PostgreSQL 17.6",
+  "steps": [
+    "production-schema-baseline",
+    "supabase-student-reward-snapshots.sql",
+    "supabase-instructor-reward-ledger.sql",
+    "supabase-instructor-reward-queries.sql",
+    "supabase-instructor-reward-checkout.sql",
+    "supabase-instructor-reward-withdrawals.sql",
+    "supabase-instructor-reward-notifications.sql",
+    "supabase-instructor-reward-reconciliation.sql"
+  ],
+  "cloudExecuted": false,
+  "legacyProductPreserved": true,
+  "tables": 68,
+  "studentFeature": false,
+  "verify": [
+    {
+      "file": "supabase-instructor-student-foundation-verify.sql",
+      "booleans": 33
+    },
+    {
+      "file": "supabase-student-pricing-integration-verify.sql",
+      "booleans": 0
+    },
+    {
+      "file": "supabase-student-reward-snapshots-verify.sql",
+      "booleans": 0
+    },
+    {
+      "file": "supabase-instructor-reward-ledger-verify.sql",
+      "booleans": 0
+    },
+    {
+      "file": "supabase-instructor-reward-queries-verify.sql",
+      "booleans": 0
+    },
+    {
+      "file": "supabase-instructor-reward-checkout-verify.sql",
+      "booleans": 0
+    },
+    {
+      "file": "supabase-instructor-reward-withdrawals-verify.sql",
+      "booleans": 0
+    },
+    {
+      "file": "supabase-instructor-reward-operations-verify.sql",
+      "booleans": 0
+    },
+    {
+      "file": "supabase-payment-rpc-access-hardening-verify.sql",
+      "booleans": 6
+    }
+  ],
+  "directFinancialReadDenied": true,
+  "rollbackSmoke": true,
+  "runtime": {
+    "binding": true,
+    "offSubtotal": 10000,
+    "onSubtotal": 9000,
+    "snapshotReward": 2000,
+    "deliveredBalance": 2000,
+    "auth": "local SQL auth.uid/role stubs; not Supabase Auth/PostgREST",
+    "data": "isolated fake only"
+  },
+  "pass": true
+}

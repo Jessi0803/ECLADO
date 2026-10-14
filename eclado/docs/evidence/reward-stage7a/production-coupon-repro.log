@@ -1,0 +1,13 @@
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS PostgreSQL independent manager/buyer sessions: uncommitted type isolation, stale creation rollback, no deadlocks
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+CONFIRMED EXISTING PRODUCTION COMPATIBILITY BLOCKER: ONLY members coupon quote accepted; production creator preserved by 2A rejects 22023; no partial order
+✔ 7A: production member-targeted quote/create mismatch is reproduced without production writes (1508.790125ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1565.782584

@@ -1,4 +1,4 @@
-const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
+const { resolveSupabaseUrl } = require('./_supabase-env.js');
 
 // 歷史補登訂單是已完成的舊交易，任何顧客通知都是多餘的。
 // 查不到或查詢失敗時回傳 false：寧可讓正常訂單照常通知，也不要整批靜默。
@@ -6,7 +6,7 @@ async function isHistoricalOrder(orderId) {
   const id = String(orderId || '').trim();
   if (!id) return false;
 
-  const supabaseUrl = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const supabaseUrl = resolveSupabaseUrl();
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
   if (!serviceKey) return false;
 

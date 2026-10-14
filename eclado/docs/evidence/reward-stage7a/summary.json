@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-13",
+  "head": "a2b89ed33cdbc26bc0a6fd30b69deb8275f7d9a5",
+  "postgres": {
+    "pass": 69,
+    "fail": 0,
+    "skip": 0
+  },
+  "pglite": {
+    "pass": 12,
+    "fail": 0,
+    "skip": 0
+  },
+  "api_mock": {
+    "pass": 70,
+    "fail": 0
+  },
+  "payment_api_mock": {
+    "pass": 55,
+    "fail": 0
+  },
+  "playwright_first": {
+    "pass": 589,
+    "fail": 12,
+    "skip": 3,
+    "total": 604
+  },
+  "playwright_affected_final": {
+    "pass": 12,
+    "fail": 0
+  },
+  "ui_final_case_coverage": {
+    "pass": 601,
+    "skip": 3,
+    "note": "first batch plus affected-only recheck, not a separate all-green full batch"
+  },
+  "sql_static": {
+    "pass": 118,
+    "fail": 0
+  },
+  "local_full": {
+    "pass": 20,
+    "fail": 0
+  },
+  "coupon_repro": {
+    "pass": 1,
+    "business_behavior": "FAIL: quote accepts members coupon, production creator rejects22023"
+  },
+  "schema_upgrade": "isolated fixture completed; production difference remains",
+  "build": {
+    "exit": 0,
+    "modules": 466,
+    "mock_catalog_products": 1,
+    "articles": 8,
+    "warnings": [
+      "large chunks",
+      "closed SEO Vite harness dependency scan"
+    ]
+  },
+  "go_no_go": "NO-GO",
+  "stage7a_scope": "audit/tests/plans complete; formal/staging service integration not complete",
+  "stage7b_executed": false,
+  "stage7c_executed": false
+}

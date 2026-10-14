@@ -1,0 +1,11 @@
+(node:63364) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/chun/Documents/GitHub/ECLADO/eclado/vite.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/chun/Documents/GitHub/ECLADO/eclado/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS PostgreSQL independent manager/buyer sessions: uncommitted type isolation, stale creation rollback, no deadlocks
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+PASS PostgreSQL two-wallet reserve race, paid/cancel, retry/old callback, credit/spend and reversal/spend; deadlocks=0
+PASS stage 4 reserve/consume/refund, late success exceptions, role downgrade, caps and bank amount contract
+2:14:41 PM [vite] (client) Re-optimizing dependencies because lockfile has changed
+LOCAL ACCEPTANCE: http://127.0.0.1:5191/__acceptance

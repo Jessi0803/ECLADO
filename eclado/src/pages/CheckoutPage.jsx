@@ -26,6 +26,7 @@ import { createAuthoritativeOrder, quoteAuthoritativeOrder } from '../services/o
 import { createSinopacPayment, querySinopacPayment } from '../services/paymentApi.js';
 import '../components/account/InstructorRewards.css';
 import {getMyRewardCredit} from '../services/instructorRewards.js';
+import { PAYMENT_ENABLED } from '../config/runtime.js';
 import { getMyShoppingCredit } from '../services/shoppingCredit.js';
 import { getMyAppendableShippingGroup } from '../services/shippingGroups.js';
 import {
@@ -367,6 +368,10 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       return;
     }
     if (step !== 2) return;
+    if (!PAYMENT_ENABLED) {
+      setPaymentError('測試環境尚未啟用隔離付款服務，不會建立訂單或連線正式金流。');
+      return;
+    }
     if ((useRewardCredit && (rewardCredit.loading||!rewardCredit.ready)) || (useShoppingCredit&&shoppingCredit.loading)){setPaymentError('請先重新確認可用錢包餘額。');return;}
     // React state is updated asynchronously, so multiple clicks in the same
     // event loop can enter this handler before `submitting` disables the

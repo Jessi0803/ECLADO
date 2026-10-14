@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js';
 import { SINOPAC_PAYMENT_API, PAYMENT_REQUEST_TIMEOUT_MS } from '../domain/payments.js';
+import { assertPaymentEnabled } from '../config/runtime.js';
 
 async function rpc(name,args) {
   const {data,error}=await supabase.rpc(name,args);
@@ -15,6 +16,7 @@ export function assistedLink(result) {
   return `${window.location.origin}/order-payment#order=${encodeURIComponent(result.order_id)}&token=${encodeURIComponent(result.link_token)}`;
 }
 export async function assistedApi(action,{orderNo,linkToken,creditConsentAmount}) {
+  assertPaymentEnabled();
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),PAYMENT_REQUEST_TIMEOUT_MS);
   try {

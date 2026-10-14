@@ -1,7 +1,7 @@
 const { requireNotificationAuthorization } = require('./_notification-auth.js');
 const { buildBrandedEmailHtml } = require('./_email-template.js');
 
-const DEFAULT_SUPABASE_URL = 'https://ilvdvlkdpntwmaijncaz.supabase.co';
+const { resolveSupabaseUrl } = require('./_supabase-env.js');
 const DEFAULT_FROM = 'ECLADO <service@ecladotaiwan.com>';
 
 async function readJson(response) {
@@ -40,7 +40,7 @@ module.exports = async function handler(req, res) {
   if (!applicationId) return res.status(400).json({ error:'applicationId required' });
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
   if (!serviceKey) return res.status(500).json({ error:'SUPABASE_SERVICE_KEY not set' });
-  const base = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const base = resolveSupabaseUrl();
   const headers = { apikey:serviceKey, Authorization:`Bearer ${serviceKey}`, 'Content-Type':'application/json' };
   try {
     const applications = await readJson(await fetch(`${base}/rest/v1/professional_renewal_applications?id=eq.${encodeURIComponent(applicationId)}&select=id,user_id,renewal_year,status,decision_reason&limit=1`, { headers }));

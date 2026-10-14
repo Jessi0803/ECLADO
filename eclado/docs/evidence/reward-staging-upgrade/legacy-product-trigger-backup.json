@@ -1,0 +1,56 @@
+{
+  "products": [
+    {
+      "id": 1239098751,
+      "name": "playwright-staging-product",
+      "size": null,
+      "price": 1,
+      "stock": 10,
+      "active": false,
+      "name_zh": "Playwright staging product",
+      "category": "test",
+      "features": [],
+      "image_url": null,
+      "min_stock": 0,
+      "pro_price": 1,
+      "skin_type": null,
+      "created_at": "2026-05-20T10:42:34.086442+00:00",
+      "updated_at": "2026-05-20T10:42:34.086442+00:00",
+      "description": null,
+      "ingredients": null,
+      "is_pro_only": false
+    }
+  ],
+  "triggers": [
+    {
+      "name": "trg_profiles_updated_at",
+      "table": "profiles",
+      "definition": "CREATE TRIGGER trg_profiles_updated_at BEFORE UPDATE ON profiles FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    {
+      "name": "trg_products_updated_at",
+      "table": "products",
+      "definition": "CREATE TRIGGER trg_products_updated_at BEFORE UPDATE ON products FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    {
+      "name": "trg_orders_updated_at",
+      "table": "orders",
+      "definition": "CREATE TRIGGER trg_orders_updated_at BEFORE UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    {
+      "name": "trg_promotions_updated_at",
+      "table": "promotions",
+      "definition": "CREATE TRIGGER trg_promotions_updated_at BEFORE UPDATE ON promotions FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    {
+      "name": "trg_professional_applications_updated_at",
+      "table": "professional_applications",
+      "definition": "CREATE TRIGGER trg_professional_applications_updated_at BEFORE UPDATE ON professional_applications FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    {
+      "name": "trg_orders_inventory_sync",
+      "table": "orders",
+      "definition": "CREATE TRIGGER trg_orders_inventory_sync AFTER INSERT OR UPDATE OF status, items ON orders FOR EACH ROW EXECUTE FUNCTION sync_inventory_for_order()"
+    }
+  ]
+}
