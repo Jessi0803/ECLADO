@@ -57,3 +57,29 @@
 使用者批准將選取師資後的帳務由列表尾端改成右側抽屜，沿用既有detail-panel-wide與usePanelHistory。面板獨立捲動，手機全寬；提供關閉、遮罩、Esc、手機返回及瀏覽器返回，焦點限制於面板，關閉後回原老師按鈕並保留名單頁碼／位置。顯示所選老師名稱，帳務資料仍由原受限RPC查詢，不新增聯絡資料或比較價格。
 
 修改InstructorRewardsPage、專用CSS、queries UI測試。16／16桌面＋手機通過（API mock），含每頁20位、第二頁選取、明細在可視範圍內、獨立捲動、手機全寬、返回關閉與位置保留；原老師／後台權限回歸通過。初次20位測試在新頁API回應完成前操作舊DOM而有2項失敗，補等待新頁指定老師渲染後重跑全檔通過。test Build469模組及diff check通過，既有chunk警告保留。僅本機修改，未commit／push或操作DB。
+
+## 對帳執行按鈕位置（2026-10-15）
+
+依使用者進一步確認，最終版沿用procurement-header：左側為標題及其下方說明，右側為「執行財務對帳」，不把按鈕插在標題與說明之間。手機沿用既有標題列響應式。只修改RewardOperationsPage，移除前一版額外CSS，不改原權限、busy、防重鍵或確認提示。operations UI回歸首批23通過／1項因未等待頁籤新查詢的測試時序失敗，補齊測試等待後通過；最終版再次全檔桌面＋手機24／24通過，test Build469模組及diff check通過。尚未commit／push。
+
+使用者另以庫存盤點按鈕為對齊範例，補上按鈕專用align-self:flex-start，與左側標題區塊上緣對齊，說明維持標題下方；不修改全站header。對帳操作桌面＋手機2／2回歸及test Build469模組、diff check通過。修改RewardOperationsPage與專用CSS，未commit／push。
+
+上方共用「重新整理」也依使用者要求採相同右側頂端對齊。修改RewardManagementPage與專用CSS；四頁刷新桌面／手機2／2回歸、test Build469模組及diff check通過，未commit／push。
+
+## 對帳異常中文說明（2026-10-15）
+
+依使用者要求，將現有SQL輸出的19種異常代碼全部轉成中文標題與核對說明；預期／實際資料以中文欄位分欄呈現，區分金額、事件次數、缺資料及狀態。`account_ledger` 顯示「帳戶與帳務明細不一致」；原代碼與原JSON收在技術明細，未知代碼保留原始資料供查核。只改呈現，不改DB檢查規則／RPC／資料／補正流程。
+
+新增src/admin/domain/rewardReconciliation.js、tests/integration/reward-reconciliation-presentation.test.mjs；修改RewardOperationsPage、專用CSS與operations UI測試。單元測試2／2通過（比對SQL全部19類、金額與次數區別、負值／null／未知欄位保留），桌面＋手機26／26通過，test Build470模組及diff check通過，既有chunk及Node模組類型提示保留。未commit／push。
+
+另依使用者要求在獨立本機PostgreSQL示範一筆account_ledger異常：Ledger1000、帳戶1100，實際執行對帳checked56／findings1；網站http://127.0.0.1:5190/admin已顯示中文結果。使用/tmp/eclado-reconciliation-demo.mjs臨時衍生腳本，假登入／假外部服務、隔離資料庫，不操作正式或test Supabase，也不把故意不一致資料／產生器放入產品程式。
+
+## 師生設定按鈕位置（2026-10-15）
+
+依使用者要求，「重新載入師生設定」移至「師生綁定與學生類型」標題同列右側，「儲存老師類型」放在學生價格類型選單右側並底端對齊欄位。只修改InstructorStudentSection及專用CSS，不改資料載入、清空確認、版本衝突、師生綁定或權限。既有instructor-student-admin桌面＋手機8／8通過、test Build470模組及diff check通過（既有chunk警告）。未commit／push。
+
+後續依使用者要求，選單及儲存按鈕統一為40px高；專用CSS限定此表單，不影響其他按鈕。既有老師類型測試新增boundingBox等高斷言，桌面／手機2／2通過，test Build470模組及diff check通過，未commit／push。
+
+## 四分頁說明白話化（2026-10-15）
+
+依使用者要求，返饋帳務、提領匯款、通知紀錄與財務對帳改用簡短用途說明，移除服務商、Ledger與LINE錯誤碼等工程措辭。提領保留每月10日批次、假日人工順延且名單不變，以及結果不明先查帳的提醒；對帳保留不自動修改金額的說明。不改任何帳務、通知或匯款行為。修改InstructorRewardsPage、RewardWithdrawalsPage、RewardOperationsPage及既有withdrawals測試的文字斷言。桌面／手機針對四分頁回歸8／8通過（API mock），test Build470模組通過（既有chunk警告）；首次沙盒內瀏覽器啟動受限，沙盒外重跑通過。使用者已確認畫面符合預期。未commit／push。

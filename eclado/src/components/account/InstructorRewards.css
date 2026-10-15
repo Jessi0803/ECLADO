@@ -90,6 +90,14 @@
 .app-main .reward-field input:focus, .app-main .reward-field select:focus, .app-main .reward-field textarea:focus { border-color: var(--mid); }
 .app-main .reward-metric > strong { font-family: var(--font-d); font-size: 24px; font-weight: 400; }
 .reward-admin-header { margin-bottom: 24px; }
+.reward-reconciliation-run, .reward-management-refresh { align-self: flex-start; flex-shrink: 0; }
+.reward-reconciliation-values { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin: 16px 0; }
+.reward-reconciliation-values > section { min-width: 0; padding: 14px; border: 1px solid var(--reward-border); }
+.reward-reconciliation-values dl { margin: 0; }
+.reward-reconciliation-values dl > div { display: flex; justify-content: space-between; gap: 16px; margin-top: 6px; }
+.reward-reconciliation-values dt { color: var(--reward-muted); }
+.reward-reconciliation-values dd { margin: 0; text-align: right; overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 600px) { .reward-reconciliation-values { grid-template-columns: minmax(0,1fr); } }
 .reward-account-list { display: grid; gap: 10px; margin-bottom: 20px; }
 .reward-account-card { display: block; width: 100%; text-align: left; padding: 20px; border: 1px solid var(--border); background: var(--white); color: var(--dark); font: inherit; cursor: pointer; }
 .reward-management-tabs { display: flex; width: max-content; max-width: 100%; box-sizing: border-box; overflow-x: auto; border: 1px solid var(--border); background: var(--white); margin-bottom: 24px; }
@@ -109,6 +117,14 @@
 .reward-settings .reward-fold { max-width: 200px; display: flex; align-items: center; gap: 8px; }
 .reward-binding { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
 .reward-binding h4 { font-size: 13px; font-weight: 600; }
+.reward-binding-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.reward-binding-header h4 { margin: 0; }
+.reward-binding-header > button { flex-shrink: 0; }
+.reward-type-form { display: flex; align-items: flex-end; gap: 12px; }
+.reward-binding .reward-type-form > .reward-field { flex: 1; min-width: 0; margin-top: 0; }
+.reward-binding .reward-type-form > .reward-button { flex-shrink: 0; margin-top: 0; }
+.reward-binding .reward-type-form select,
+.reward-binding .reward-type-form > .reward-button { height: 40px; min-height: 40px; box-sizing: border-box; }
 .reward-binding .reward-field { margin-top: 12px; }
 .reward-binding .reward-button { min-height: 32px; padding: 7px 12px; font-size: 11px; }
 .reward-binding .reward-actions, .reward-binding form > .reward-button { margin-top: 12px; }

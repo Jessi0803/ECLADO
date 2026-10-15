@@ -59,6 +59,9 @@ test('會員詳情可設定老師類型並確認清空，保留學生', async ({
   await page.goto('/admin'); await open(page,'會員管理');
   await page.locator('tr').filter({ hasText:'老師A' }).click();
   const panel=page.getByRole('dialog',{ name:'會員詳情' });
+  const typeBox=await panel.getByLabel('老師學生價格類型').boundingBox();
+  const saveBox=await panel.getByRole('button',{name:'儲存老師類型'}).boundingBox();
+  expect(typeBox).not.toBeNull();expect(saveBox).not.toBeNull();expect(saveBox!.height).toBeCloseTo(typeBox!.height,0);
   await panel.getByLabel('老師學生價格類型').selectOption('student_1');
   await panel.getByRole('button',{ name:'儲存老師類型' }).click();
   await expect(panel.getByRole('status')).toContainText('商品售價不變');

@@ -31,7 +31,7 @@ export default function InstructorRewardsPage({adminUserId,embedded=false,refres
     return()=>{alive=false;};
   },[adminUserId,offset,revision,refreshVersion]);
   useEffect(()=>{const focus=()=>setRevision(r=>r+1);window.addEventListener('focus',focus);return()=>window.removeEventListener('focus',focus);},[]);
-  return <div className="reward-view"><div className="procurement-header reward-admin-header"><div><Heading>師資返饋帳務</Heading><p>查看師資帳戶、歷史學生訂單及返饋異動。</p></div>{!embedded&&<button className="admin-secondary-btn" type="button" onClick={()=>setRevision(r=>r+1)}>重新整理帳戶</button>}</div>
+  return <div className="reward-view"><div className="procurement-header reward-admin-header"><div><Heading>師資返饋帳務</Heading><p>查看老師的返饋餘額、學生訂單與帳務紀錄。</p></div>{!embedded&&<button className="admin-secondary-btn" type="button" onClick={()=>setRevision(r=>r+1)}>重新整理帳戶</button>}</div>
     {error&&<p role="alert" className="reward-message">{error}</p>}
     {!data&&!error&&<p>正在載入返饋帳戶…</p>}
     {data&&<>

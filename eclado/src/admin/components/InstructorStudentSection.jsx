@@ -60,15 +60,14 @@ export default function InstructorStudentSection({ member, members, canManage })
   const teachers = members.filter(row => row.type === 'instructor' && row.id !== member.id
     && `${row.name} ${row.id}`.toLowerCase().includes(search.toLowerCase()));
   return <section aria-label="師生綁定設定" className="reward-view reward-binding">
-    <h4 >師生綁定與學生類型</h4>
+    <div className="reward-binding-header"><h4>師生綁定與學生類型</h4><button type="button" onClick={reload} disabled={busy} className="reward-button">重新載入師生設定</button></div>
     <p className="reward-note">此階段只管理資料，學生價格與返饋金尚未啟用。</p>
     {busy && <p>處理中…</p>}
     {error && <p role="alert" style={{ color:'var(--red)' }}>{error}</p>}
     {message && <p role="status" style={{ color:'var(--green)' }}>{message}</p>}
-    <button type="button" onClick={reload} disabled={busy} className="reward-button">重新載入師生設定</button>
     {data && <>
       {(member.type === 'instructor' || data.instructor_settings) && <div className="reward-details">
-        <form onSubmit={saveType}>
+        <form onSubmit={saveType} className="reward-type-form">
           <label className="reward-field">老師學生價格類型<select aria-label="老師學生價格類型" value={type}
             disabled={!canManage || busy || member.type !== 'instructor'} onChange={e => setType(e.target.value)}>
             <option value="">未設定</option><option value="student_1">學生1</option><option value="student_2">學生2</option>

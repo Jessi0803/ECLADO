@@ -34,7 +34,7 @@ test('shared refresh queries only active tab without running reconciliation; tab
  await page.route('**/rest/v1/rpc/run_reward_reconciliation',r=>{runs++;return r.fulfill({json:{}});});
  await open(page,'返饋金通知紀錄');
  for(const [i,label]of ['返饋帳務','提領匯款','通知紀錄','財務對帳'].entries()){
-  await page.getByRole('tab',{name:label,exact:true}).click();await expect.poll(()=>counts[i]).toBeGreaterThan(0);
+  const beforeSwitch=counts[i];await page.getByRole('tab',{name:label,exact:true}).click();await expect.poll(()=>counts[i]).toBeGreaterThan(beforeSwitch);
   const before=[...counts];await expect(page.getByRole('button',{name:'重新整理',exact:true})).toHaveCount(1);
   await page.getByRole('button',{name:'重新整理',exact:true}).click();await expect.poll(()=>counts[i]).toBe(before[i]+1);
   expect(counts.filter((_,j)=>j!==i)).toEqual(before.filter((_,j)=>j!==i));
@@ -69,6 +69,13 @@ test('explicit correction sends only immutable event ID and request key',async({
 });
 test('reconciliation lists pending review and executes no financial corrections',async({page})=>{
  await setup(page);let args:any;await page.route('**/rest/v1/rpc/run_reward_reconciliation',r=>{args=r.request().postDataJSON();return r.fulfill({json:{id:'run2',status:'complete',checked:50,findings:1}});});await open(page,'返饋金財務對帳');await expect(page.getByText('待人工查核',{exact:true})).toBeVisible();page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'執行財務對帳'}).click();await expect.poll(()=>args?.p_request_key).toMatch(/^[0-9a-f-]{36}$/);expect(Object.keys(args)).toEqual(['p_request_key']);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+test('reconciliation explains mismatch in Chinese and keeps raw codes in collapsed details',async({page})=>{
+ await setup(page);await page.route('**/rest/v1/rpc/get_admin_reward_reconciliation',r=>r.fulfill({json:{total:1,runs:[],findings:[{id:1,rule:'account_ledger',source:'demo-teacher',expected:{balance:1000,pending:0,shopping_hold:0,withdrawal_hold:0},actual:{balance:1100,pending:0,shopping_hold:0,withdrawal_hold:0},present:true}]}}));
+ await open(page,'返饋金財務對帳');await expect(page.getByRole('heading',{name:'帳戶與帳務明細不一致',exact:true})).toBeVisible();
+ await expect(page.getByRole('region',{name:'預期應有資料'}).getByText('NT$ 1,000',{exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'目前實際資料'}).getByText('NT$ 1,100',{exact:true})).toBeVisible();
+ await expect(page.getByText('異常代碼：account_ledger',{exact:true})).not.toBeVisible();await page.getByText('技術明細',{exact:true}).click();await expect(page.getByText('異常代碼：account_ledger',{exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 test('query failure clears previous report instead of exposing stale records',async({page})=>{
  await setup(page);await open(page,'返饋金通知紀錄');await expect(page.getByText(/t\*\*\*@example.test/)).toBeVisible();await page.route('**/rest/v1/rpc/get_admin_reward_notifications',r=>r.fulfill({status:403,json:{code:'42501',message:'denied'}}));await page.getByRole('button',{name:'重新整理',exact:true}).click();await expect(page.getByRole('alert')).toBeVisible();await expect(page.getByText(/t\*\*\*@example.test/)).toHaveCount(0);

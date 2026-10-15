@@ -36,7 +36,7 @@ test('shared refresh retains withdrawal pagination',async({page})=>{
  await page.getByRole('button',{name:'管理提領下一頁'}).click();await expect.poll(()=>offsets.at(-1)).toBe(20);
  const count=offsets.length;await page.getByRole('button',{name:'重新整理',exact:true}).click();await expect.poll(()=>offsets.length).toBe(count+1);expect(offsets.at(-1)).toBe(20);
 });
-test('withdrawal management uses nominal monthly batch without annual bank calendar controls',async({page})=>{await admin(page,['orders.read','rewards.withdrawals.read','rewards.withdrawals.manage']);await expect(page.getByText(/預計日期固定為名目批次的每月 10 日/)).toBeVisible();await expect(page.getByRole('heading',{name:'年度銀行休假資料'})).toHaveCount(0);});
+test('withdrawal management uses nominal monthly batch without annual bank calendar controls',async({page})=>{await admin(page,['orders.read','rewards.withdrawals.read','rewards.withdrawals.manage']);await expect(page.getByText(/每月 10 日為匯款批次/)).toBeVisible();await expect(page.getByRole('heading',{name:'年度銀行休假資料'})).toHaveCount(0);});
 test('withdrawal access requires dedicated read capability and administrator role',()=>{expect(canAccessBackofficePage({role:'admin',permissions:['orders.read','members.read']},'withdrawals')).toBe(false);expect(canAccessBackofficePage({role:'catalog_editor',permissions:['rewards.withdrawals.read']},'withdrawals')).toBe(false);});
 test('manual paid record supplies actual date reference amount; unresolved write retries same event key',async({page})=>{
  await admin(page,['orders.read','rewards.withdrawals.read','rewards.withdrawals.manage']);

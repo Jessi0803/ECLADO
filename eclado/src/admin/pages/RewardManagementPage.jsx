@@ -13,7 +13,7 @@ export default function RewardManagementPage({adminUserId,access,page,onChange})
  const manage=hasBackofficePermission(access,'rewards.withdrawals.manage');
  if(!active)return null;
  return <div className="reward-management">
-  <div className="procurement-header"><div><h1>師資返饋管理</h1><p>管理返饋帳務、提領匯款、通知與財務對帳。</p></div><button className="admin-secondary-btn" type="button" onClick={()=>setRefreshVersion(value=>value+1)}>重新整理</button></div>
+  <div className="procurement-header"><div><h1>師資返饋管理</h1><p>管理返饋帳務、提領匯款、通知與財務對帳。</p></div><button className="admin-secondary-btn reward-management-refresh" type="button" onClick={()=>setRefreshVersion(value=>value+1)}>重新整理</button></div>
   <div className="reward-management-tabs" role="tablist" aria-label="師資返饋管理功能">
    {visible.map(([id,label])=><button type="button" role="tab" key={id} id={`reward-tab-${id}`} aria-selected={active===id} aria-controls={`reward-panel-${id}`} onClick={()=>onChange(id)}>{label}</button>)}
   </div>

@@ -24,7 +24,7 @@ export default function RewardWithdrawalsPage({adminUserId,canManage,embedded=fa
  pending.current={id:w.id,key:crypto.randomUUID(),type,version:w.version,details};await resend();
  }
  async function resend(){await run(async()=>{const p=pending.current;if(!p)return;try{await manageWithdrawal(p.id,p.key,p.type,p.version,p.details);pending.current=null;}catch(e){if(/^(22|23|40|42|55|P0002)/.test(e.code||''))pending.current=null;throw e;}});}
- return <div className="reward-view"><div className="procurement-header reward-admin-header"><div><Heading>師資提領管理</Heading><p>實際匯款於銀行端人工執行。預計日期固定為名目批次的每月 10 日；遇假日由管理員人工順延，原批次名單不變。結果不明請查帳，勿再次匯款。</p></div></div>
+ return <div className="reward-view"><div className="procurement-header reward-admin-header"><div><Heading>師資提領管理</Heading><p>處理提領申請並記錄人工匯款結果。每月 10 日為匯款批次，遇假日順延，名單不變；結果不明時請先查帳，勿重複匯款。</p></div></div>
  {!embedded&&<button className="reward-button" type="button" onClick={()=>setRevision(r=>r+1)}>重新整理提領管理</button>}{pending.current&&<button className="reward-button" type="button" disabled={busy} onClick={resend}>重送原處理結果</button>}{error&&<p role="alert" className="reward-message">{error}</p>}
  {data&&<>{data.withdrawals.map(w=><article key={w.id} className="reward-card">
  <div className="reward-heading"><h3>{w.name||'已刪除會員'}</h3><span className="reward-status">{withdrawalStatus(w.status)}</span></div><p className="reward-meta">{w.id} · 申請 {w.created_at} · 預計 {w.scheduled_date}</p><p>申請 NT$ {w.amount} · 手續費 NT$ {w.fee} · 實匯 NT$ {w.net_amount}</p><p>{w.bank.bank_code} {w.bank.bank_name} · {w.bank.branch} · {w.bank.holder} · {w.bank.account}</p>
