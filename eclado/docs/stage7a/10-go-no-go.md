@@ -12,7 +12,7 @@
 | 6 雙錢包金額 | PASS（隔離）／NOT VERIFIED正式 | 真SQL／API55／UI；正式新欄及新API未安裝 |
 | 7 Ledger對帳 | PASS（隔離）／NOT VERIFIED正式 | sum與逐筆after、重複credit/reverse／MVCC已測 |
 | 8 提領保留 | PASS（隔離）／NOT VERIFIED正式 | 真withdraw/return/negative20及PG競爭 |
-| 9 銀行金鑰 | BLOCKED | 正式keyring配置／備份／rotation演練未做 |
+| 9 銀行金鑰 | BLOCKED | 正式上線前必須提醒使用者：在Production後端補上獨立的REWARD_BANK_ENCRYPTION_KEYS與REWARD_BANK_ACTIVE_KEY_ID，不共用Preview金鑰；完成安全備份、歷史解密／rotation演練及Git自動部署後驗證，未完成不得放行銀行資料／提領功能 |
 | 10 Worker隔離 | BLOCKED | A/B未選、secret/runtime未配置；service role廣能力限制須決策 |
 | 11 正式LINE/Email | NOT VERIFIED | 本階段只Mock，sender／可達性／tokens配置另准 |
 | 12 管理員名單 | BLOCKED | 正式明確Email名單未確認／配置 |
