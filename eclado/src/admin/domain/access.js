@@ -57,6 +57,7 @@ export function hasBackofficePermission(access, permission) {
 }
 
 export function canAccessBackofficePage(access, page) {
+  if (page === 'reward_management') return ['rewards','withdrawals','reward_notifications','reward_reconciliation'].some(id=>canAccessBackofficePage(access,id));
   if (page === 'reward_notifications') return ['admin','super_admin'].includes(access?.role) && hasBackofficePermission(access,BACKOFFICE_PERMISSIONS.REWARD_WITHDRAWALS_READ);
   if (page === 'reward_reconciliation') return ['admin','super_admin'].includes(access?.role) && hasBackofficePermission(access,BACKOFFICE_PERMISSIONS.ORDERS_READ) && hasBackofficePermission(access,BACKOFFICE_PERMISSIONS.MEMBERS_READ);
   if (page === 'withdrawals') return ['admin','super_admin'].includes(access?.role) && hasBackofficePermission(access,BACKOFFICE_PERMISSIONS.REWARD_WITHDRAWALS_READ);

@@ -12,6 +12,20 @@ async function setup(page:Page,role='instructor',permissions?:string[]){
     ...(permissions?{backofficeAccess:{role:'admin',permissions}}:{})});
 }
 async function rewards(page:Page){await page.goto('/account');await page.getByRole('tab',{name:'師資返饋金',exact:true}).click();return page.getByRole('region',{name:'師資返饋金',exact:true});}
+test('teacher summary emphasizes available rewards and expands financial details',async({page})=>{
+  await setup(page);
+  await page.route('**/rest/v1/rpc/get_my_instructor_reward_report',r=>r.fulfill({json:{...report,summary:{...report.summary,reserved_balance:200,withdrawal_reserved_balance:300}}}));
+  const panel=await rewards(page),summary=panel.locator('.reward-balance-summary');
+  await expect(summary.getByText('可用返饋金',{exact:true})).toBeVisible();
+  await expect(summary.getByText('累計已入帳',{exact:true})).not.toBeVisible();
+  await expect(summary.getByText('另有 NT$ 200 購物付款處理中。',{exact:true})).toBeVisible();
+  await expect(summary.getByText('另有 NT$ 300 提領處理中。',{exact:true})).toBeVisible();
+  await summary.getByText('查看金額明細',{exact:true}).click();
+  await expect(summary.getByText('累計已入帳',{exact:true})).toBeVisible();
+  await expect(summary.getByText('帳戶餘額',{exact:true})).toBeVisible();
+  await summary.getByText('查看金額明細',{exact:true}).click();
+  await expect(summary.getByText('累計已入帳',{exact:true})).not.toBeVisible();
+});
 test('teacher scoped report, debt and separate pagination; focus refresh uses no caller teacher ID',async({page})=>{
   await setup(page);const args:any[]=[];
   await page.route('**/rest/v1/rpc/get_my_instructor_reward_report',r=>{const a=r.request().postDataJSON();args.push(a);return r.fulfill({json:{...report,orders:a.p_offset?[{...report.orders[0],order_id:'NEXT-PAGE'}]:report.orders}});});
@@ -42,12 +56,12 @@ test('admin reads named account history through limited RPC only',async({page})=
   // mock setup routes are registered last, override after setup.
   await page.route('**/rest/v1/rpc/get_admin_instructor_reward_accounts',r=>r.fulfill({json:{total:1,accounts:[{id:'teacher-history',name:'帳務老師',balance:-12,pending_balance:100,student_count:0,inconsistent:true}]}}));
   let args:any;await page.route('**/rest/v1/rpc/get_admin_instructor_reward_report',r=>{args=r.request().postDataJSON();return r.fulfill({json:report});});
-  await page.locator('.app-sidebar button:not(.sidebar-star)').filter({hasText:'師資返饋帳務'}).click();
+  await page.locator('.app-sidebar button:not(.sidebar-star)').filter({hasText:'師資返饋管理'}).click();
   await page.getByRole('button',{name:/帳務老師/}).click();await expect(page.getByText('帳務需查核',{exact:false})).toBeVisible();await expect(page.getByText('HISTORICAL-OLD-TEACHER · 歷史學生',{exact:true})).toBeVisible();
   expect(args).toEqual({p_instructor_id:'teacher-history',p_offset:0,p_limit:20,p_ledger_offset:0});
 });
 test('backoffice entrance requires both read permissions and admin role',async({page})=>{
-  await admin(page,['orders.read']);await expect(page.locator('.app-sidebar button').filter({hasText:'師資返饋帳務'})).toHaveCount(0);
+  await admin(page,['orders.read']);await expect(page.locator('.app-sidebar button').filter({hasText:'師資返饋管理'})).toHaveCount(0);
   for(const permissions of [['members.read'],['orders.read'],[]])expect(canAccessBackofficePage({role:'admin',permissions},'rewards')).toBe(false);
   expect(canAccessBackofficePage({role:'catalog_editor',permissions:['orders.read','members.read']},'rewards')).toBe(false);
   expect(canAccessBackofficePage({role:'admin',permissions:['orders.read','members.read']},'rewards')).toBe(true);

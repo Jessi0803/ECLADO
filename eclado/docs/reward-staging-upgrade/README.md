@@ -37,7 +37,7 @@
 
 正式指定會員優惠券quote/create差異會原樣帶入test，用於重現，尚未獲獨立修補批准。
 
-Preview／本機產品程式仍硬編正式Supabase／付款URL；安裝test DB不會自動把網站切過來。需另行最小參數化與隔離 API／Auth／付款／通知設計；不部署／push。真登入帳號、銀行金鑰、完整銀行休假表、worker／sender與管理員收件名單另行設定，不能複製正式通知設定避免誤寄。
+Preview／本機產品程式仍硬編正式Supabase／付款URL；安裝test DB不會自動把網站切過來。需另行最小參數化與隔離 API／Auth／付款／通知設計；不部署／push。真登入帳號、銀行金鑰、worker／sender與管理員收件名單另行設定，不能複製正式通知設定避免誤寄。提領日期不再依賴年度銀行休假表，假日實際順延由管理員處理且不改變批次名單。
 
 本次的正式7B／7C仍未開始。實際雲端步驟及最終驗證結果另存 evidence/reward-staging-upgrade，不將本機通過當作雲端安裝完成。
 
@@ -50,7 +50,7 @@ Preview／本機產品程式仍硬編正式Supabase／付款URL；安裝test DB�
 
 最終重新讀取：0 Auth會員／profiles／orders／snapshots／返饋accounts／Ledger／withdrawals／Outbox／Storage物件；唯一原商品保留且所有原欄位逐一相同。開關OFF/version0。Sequence可能因回滾測試產生正常缺號，不視為留下財務交易，也未重設流水號。
 
-本次只讓test DB具備後續驗收基礎，不代表前端可立即登入驗收：尚無可登入帳號，Preview與本機產品程式尚未切連test，金鑰／真Auth/PostgREST／銀行休假表／獨立模擬付款及通知環境另行處理。沒有在本次改URL、Vercel、付款伺服器、commit/push或正式DB。正式基線來源為10/13擷取；使用者暫停期間在正式DB所做的其他修改未自動再同步，避免覆蓋test新增函式。
+本次只讓test DB具備後續驗收基礎，不代表前端可立即登入驗收：尚無可登入帳號，Preview與本機產品程式尚未切連test，金鑰／真Auth/PostgREST／獨立模擬付款及通知環境另行處理。沒有在本次改URL、Vercel、付款伺服器、commit/push或正式DB。正式基線來源為10/13擷取；使用者暫停期間在正式DB所做的其他修改未自動再同步，避免覆蓋test新增函式。
 
 實際證據：../evidence/reward-staging-upgrade/cloud-steps.json、cloud-final-inventory.json、cloud-foundation-verify.json、cloud-nine-verify-result.txt、cloud-rollback-smoke-result.json與summary.json。
 
@@ -61,6 +61,8 @@ Preview／本機產品程式仍硬編正式Supabase／付款URL；安裝test DB�
 本機 `vite --mode test` 已連至 test Supabase，畫面固定顯示 TEST 環境及銀行付款停用。學生價 OFF 時 100ml／200ml 分別為1000／1600；使用者批准只在 test 執行 `05-enable-test-student-pricing.sql` 後，價格為900／1440。先前以1600加入的4件200ml購物車會重新報價為5760，含運總額5880；建立付款單由 test runtime阻擋，當下資料庫 `orders=0`。
 
 `06-test-reward-order-fixture.sql` 只接受上述三個 test Auth 帳號、有效綁定及 `reward-system-test-product`，透過正式 quote/create RPC 建立4件200ml的一般訂單，再由 test 管理員明確模擬確認收款並更新為delivered。首次以1件執行時被既有pro最低5000拒絕且全交易回滾；4件結果為小計5760、運費120、返饋快照1280、credited、老師餘額1280。`real_bank=false`、`notification_provider_called=false`，沒有連線永豐、LINE或Email。
+
+指定會員優惠券相容修補使用 `supabase-coupon-member-create-compat.sql`，只將一般建單核心的舊 `audience_roles` 判斷對齊既有 `coupon_campaign_allows_identity` helper，保留函式 owner／ACL。`07-test-coupon-member-create-compat.sql` 只接受 test 學生／老師及 test 商品，透過目前雙錢包 quote/create 入口驗證指定學生可建單、非指定老師被拒絕，最後整筆 `ROLLBACK`，不得留下測試優惠券、訂單或帳務資料。
 
 實際登入畫面驗證：學生會員中心只見自己的訂單，老師會員中心顯示歷史學生訂單、待入帳及正式入帳Ledger，帳戶／可用餘額1280。另以authenticated＋READ ONLY交易驗證學生呼叫老師報表回傳42501；管理員受限RPC可讀到balance1280、1筆訂單及2筆Ledger。
 

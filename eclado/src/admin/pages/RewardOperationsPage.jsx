@@ -4,7 +4,8 @@ import { getRewardNotifications, getRewardReconciliation, runRewardReconciliatio
 
 const statuses = { pending: '待發送', sending: '處理中', retry: '等待重試', sent: '服務商已接受', failed: '發送失敗', unknown: '結果待查核', blocked: '待設定／無可用管道' };
 const events = { requested: '提領申請成立', paid: '已匯款', failed: '未匯款並返還', unknown: '匯款待查核', correction: '更正說明' };
-export default function RewardOperationsPage({ mode, adminUserId, canManage }) {
+export default function RewardOperationsPage({ mode, adminUserId, canManage, embedded=false }) {
+  const Heading=embedded?'h2':'h1';
   const [data, setData] = useState(null), [error, setError] = useState(''), [offset, setOffset] = useState(0), [revision, setRevision] = useState(0), [busy, setBusy] = useState(false);
   const lock = useRef(false), pending = useRef(null);
   const notices = mode === 'notifications';
@@ -41,7 +42,7 @@ export default function RewardOperationsPage({ mode, adminUserId, canManage }) {
     if (reason?.trim()) request({ type: 'retry', id: n.id, newVersion, reason: reason.trim() });
   }
   return <div className="reward-view">
-    <div className="procurement-header reward-admin-header"><div><h1>{notices ? '返饋金通知紀錄' : '返饋金財務對帳'}</h1><p>{notices ? '送達狀態表示服務商接受，不保證本人已讀。LINE 5xx 改寄 Email 可能造成雙管道重複。' : '只核對並記錄異常，不修正餘額、Ledger 或銀行結果；负餘額本身是合法狀態。'}</p></div></div>
+    <div className="procurement-header reward-admin-header"><div><Heading>{notices ? '返饋金通知紀錄' : '返饋金財務對帳'}</Heading><p>{notices ? '送達狀態表示服務商接受，不保證本人已讀。LINE 5xx 改寄 Email 可能造成雙管道重複。' : '只核對並記錄異常，不修正餘額、Ledger 或銀行結果；负餘額本身是合法狀態。'}</p></div></div>
     <div className="reward-actions"><button className="reward-button" onClick={() => setRevision(v => v + 1)}>重新整理</button>
       {!notices && canManage && <button className="reward-button reward-button--primary" disabled={busy} onClick={() => { if (window.confirm('執行全範圍返饋對帳？只寫入對帳及異常紀錄，不改帳。')) request({ type: 'run' }); }}>執行財務對帳</button>}
       {pending.current && <button className="reward-button" disabled={busy} onClick={execute}>重送原操作</button>}

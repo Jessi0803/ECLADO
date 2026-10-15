@@ -36,14 +36,11 @@ create unique index reward_ledger_withdrawal_event_idx on public.instructor_rewa
 
 create table public.instructor_reward_bank_profiles(
  user_id uuid primary key,cipher jsonb not null,masked jsonb not null,version bigint not null default 1,updated_at timestamptz not null default now());
-create table public.instructor_reward_bank_calendar_versions(
- id bigint generated always as identity primary key,year integer not null check(year between 2026 and 2200),version integer not null,
- holidays date[] not null,source_url text not null,published_by uuid not null,published_at timestamptz not null default now(),unique(year,version));
 create table public.instructor_reward_withdrawals(
  id uuid primary key default extensions.gen_random_uuid(),user_id uuid not null,request_key uuid not null,
  amount bigint not null check(amount>15),fee bigint not null default 15 check(fee=15),net_amount bigint not null check(net_amount=amount-15),
  bank_cipher jsonb not null,bank_masked jsonb not null,bank_version bigint not null,
- batch_date date not null,scheduled_date date not null,calendar_versions jsonb not null,
+ batch_date date not null,scheduled_date date not null,
  status text not null default 'pending' check(status in('pending','processing','paid','failed','unknown')),
  version bigint not null default 1,processor_id uuid,processing_key uuid,
  transfer_date date,transfer_reference text,transferred_amount bigint,
@@ -59,13 +56,12 @@ create table public.instructor_reward_withdrawal_events(
  id bigint generated always as identity primary key,withdrawal_id uuid not null,event_key uuid not null,event_type text not null,
  actor_user_id uuid not null,details jsonb not null default '{}',created_at timestamptz not null default now(),unique(withdrawal_id,event_key));
 do $$ declare t text;begin
- foreach t in array array['instructor_reward_bank_profiles','instructor_reward_bank_calendar_versions','instructor_reward_withdrawals','instructor_reward_withdrawal_events'] loop
+ foreach t in array array['instructor_reward_bank_profiles','instructor_reward_withdrawals','instructor_reward_withdrawal_events'] loop
  execute format('alter table public.%I enable row level security',t);
  execute format('revoke all on public.%I from public,anon,authenticated,service_role',t);end loop;
 end $$;
-revoke all on sequence public.instructor_reward_bank_calendar_versions_id_seq,public.instructor_reward_withdrawal_events_id_seq from public,anon,authenticated,service_role;
+revoke all on sequence public.instructor_reward_withdrawal_events_id_seq from public,anon,authenticated,service_role;
 create trigger reward_withdrawal_events_immutable before update or delete on public.instructor_reward_withdrawal_events for each row execute function public.reject_instructor_reward_history_changes();
-create trigger reward_calendar_history_immutable before update or delete on public.instructor_reward_bank_calendar_versions for each row execute function public.reject_instructor_reward_history_changes();
 
 -- Dedicated capabilities: preserve every existing CHECK member, not a stale
 -- replacement of the base permission list.
@@ -111,25 +107,11 @@ returns jsonb language plpgsql security definer set search_path='' as $$ declare
  insert into public.instructor_reward_withdrawal_events(withdrawal_id,event_key,event_type,actor_user_id) values(w.id,extensions.gen_random_uuid(),'bank_snapshot_read',p_actor);
  return jsonb_build_object('user_id',w.user_id,'cipher',w.bank_cipher,'version',w.bank_version);end $$;
 
-create or replace function public.publish_reward_bank_calendar(p_year integer,p_holidays date[],p_source_url text)
-returns void language plpgsql security definer set search_path='' as $$ declare v integer;begin
- perform public.assert_reward_withdrawal_admin(true);
- if p_year is null or p_holidays is null or p_source_url is null or p_source_url !~ '^https://(www\.)?ba\.org\.tw/' or exists(select 1 from unnest(p_holidays) d where d is null or extract(year from d)<>p_year) then raise exception 'Invalid bank calendar' using errcode='22023';end if;
- perform pg_advisory_xact_lock(18505,p_year);
- select coalesce(max(version),0)+1 into v from public.instructor_reward_bank_calendar_versions where year=p_year;
- insert into public.instructor_reward_bank_calendar_versions(year,version,holidays,source_url,published_by) values(p_year,v,p_holidays,p_source_url,auth.uid());end $$;
 create or replace function public.reward_withdrawal_schedule(p_at timestamptz)
-returns jsonb language plpgsql stable security definer set search_path='' as $$ declare local_at timestamp:=p_at at time zone 'Asia/Taipei';batch date;day date;c public.instructor_reward_bank_calendar_versions%rowtype;versions jsonb:='{}';begin
+returns jsonb language plpgsql stable security definer set search_path='' as $$ declare local_at timestamp:=p_at at time zone 'Asia/Taipei';batch date;begin
  batch:=(date_trunc('month',local_at)+interval '9 days')::date;
  if local_at>=batch::timestamp then batch:=(batch+interval '1 month')::date;end if;
- day:=batch;
- loop
- select * into c from public.instructor_reward_bank_calendar_versions where year=extract(year from day) order by version desc limit 1;
- if not found then raise exception '年度銀行休假資料尚未確認，暫不可申請提領' using errcode='55000';end if;
- versions:=versions||jsonb_build_object(c.year::text,c.version);
- exit when extract(isodow from day)<6 and not day=any(c.holidays);
- day:=day+1;if day>batch+370 then raise exception 'Invalid calendar coverage';end if;
- end loop;return jsonb_build_object('batch_date',batch,'scheduled_date',day,'calendar_versions',versions);end $$;
+ return jsonb_build_object('batch_date',batch,'scheduled_date',batch);end $$;
 create or replace function public.quote_my_reward_withdrawal()
 returns jsonb language plpgsql stable security definer set search_path='' as $$ declare a public.instructor_reward_accounts%rowtype;b public.instructor_reward_bank_profiles%rowtype;s jsonb;begin
  if auth.uid() is null or not exists(select 1 from public.profiles where id=auth.uid() and role='instructor') then raise exception '師資資格不足' using errcode='42501';end if;
@@ -174,8 +156,8 @@ returns jsonb language plpgsql security definer set search_path='' as $$ declare
  perform 1 from public.instructor_reward_bank_profiles where user_id=auth.uid() for share;
  q:=public.quote_my_reward_withdrawal();
  if q is distinct from p_expected_quote then raise exception '餘額、銀行資料或批次已變更，請重新確認' using errcode='40001';end if;
- insert into public.instructor_reward_withdrawals(user_id,request_key,amount,net_amount,bank_cipher,bank_masked,bank_version,batch_date,scheduled_date,calendar_versions)
- select auth.uid(),p_request_key,(q->>'amount')::bigint,(q->>'net_amount')::bigint,cipher,masked,version,(q->>'batch_date')::date,(q->>'scheduled_date')::date,q->'calendar_versions' from public.instructor_reward_bank_profiles where user_id=auth.uid() returning * into w;
+ insert into public.instructor_reward_withdrawals(user_id,request_key,amount,net_amount,bank_cipher,bank_masked,bank_version,batch_date,scheduled_date)
+ select auth.uid(),p_request_key,(q->>'amount')::bigint,(q->>'net_amount')::bigint,cipher,masked,version,(q->>'batch_date')::date,(q->>'scheduled_date')::date from public.instructor_reward_bank_profiles where user_id=auth.uid() returning * into w;
  perform public.post_reward_withdrawal(w.id,'withdraw_reserve');
  insert into public.instructor_reward_withdrawal_events(withdrawal_id,event_key,event_type,actor_user_id) values(w.id,p_request_key,'requested',auth.uid());
  return jsonb_build_object('id',w.id,'status',w.status);end $$;
@@ -234,9 +216,7 @@ returns jsonb language plpgsql stable security definer set search_path='' as $$ 
  perform public.assert_reward_withdrawal_admin(false);if p_offset is null or p_offset<0 then raise exception 'Invalid offset';end if;
  return jsonb_build_object('total',(select count(*) from public.instructor_reward_withdrawals),
  'withdrawals',coalesce((select jsonb_agg(public.reward_withdrawal_projection(id) order by created_at desc,id) from
- (select id,created_at from public.instructor_reward_withdrawals order by created_at desc,id limit 20 offset p_offset) q),'[]'),
- 'calendars',coalesce((select jsonb_agg(jsonb_build_object('year',year,'version',version,'source_url',source_url)) from
- (select distinct on(year) year,version,source_url from public.instructor_reward_bank_calendar_versions order by year,version desc) c),'[]'));end $$;
+ (select id,created_at from public.instructor_reward_withdrawals order by created_at desc,id limit 20 offset p_offset) q),'[]'));end $$;
 
 -- Keep every existing financial row's running reserve snapshot accurate.
 do $$ declare d text;begin
@@ -258,11 +238,11 @@ returns trigger language plpgsql security definer set search_path='' as $$ begin
  delete from public.instructor_reward_bank_profiles where user_id=old.id;return old;end $$;
 create trigger reward_bank_profile_delete after delete on public.profiles for each row execute function public.delete_reward_bank_profile_on_member_delete();
 revoke all on function public.assert_reward_withdrawal_admin(boolean),public.save_reward_bank_profile(uuid,jsonb,jsonb,bigint),public.read_reward_bank_cipher(uuid,uuid),
- public.publish_reward_bank_calendar(integer,date[],text),public.reward_withdrawal_schedule(timestamptz),public.quote_my_reward_withdrawal(),public.guard_reward_withdrawal_history(),
+ public.reward_withdrawal_schedule(timestamptz),public.quote_my_reward_withdrawal(),public.guard_reward_withdrawal_history(),
  public.post_reward_withdrawal(uuid,text),public.request_my_reward_withdrawal(uuid,jsonb),public.manage_reward_withdrawal(uuid,uuid,text,bigint,jsonb),public.reward_withdrawal_projection(uuid),
  public.get_my_reward_withdrawals(integer),public.get_admin_reward_withdrawals(integer),public.delete_reward_bank_profile_on_member_delete() from public,anon,authenticated,service_role;
 grant execute on function public.save_reward_bank_profile(uuid,jsonb,jsonb,bigint),public.read_reward_bank_cipher(uuid,uuid) to service_role;
-grant execute on function public.publish_reward_bank_calendar(integer,date[],text),public.quote_my_reward_withdrawal(),public.request_my_reward_withdrawal(uuid,jsonb),
+grant execute on function public.quote_my_reward_withdrawal(),public.request_my_reward_withdrawal(uuid,jsonb),
  public.manage_reward_withdrawal(uuid,uuid,text,bigint,jsonb),public.get_my_reward_withdrawals(integer),public.get_admin_reward_withdrawals(integer) to authenticated;
 notify pgrst,'reload schema';
 $install5$;

@@ -10,10 +10,7 @@ const MENU_GROUPS = [
     items: [
       { id: 'dashboard', icon: 'dashboard', label: '儀表板' },
       { id: 'orders', icon: 'orders', label: '訂單管理' },
-      { id: 'withdrawals', icon: 'analytics', label: '師資提領管理' },
-      { id: 'reward_notifications', icon: 'analytics', label: '返饋金通知紀錄' },
-      { id: 'reward_reconciliation', icon: 'analytics', label: '返饋金財務對帳' },
-      { id: 'rewards', icon: 'analytics', label: '師資返饋帳務' },
+      { id: 'reward_management', icon: 'analytics', label: '師資返饋管理' },
     ],
   },
   {
@@ -136,7 +133,7 @@ export default function Sidebar({ page, setPage, open, onClose, adminEmail, back
               fontWeight: 500,
             }}>{group.title}</div>
             {group.items.map(item => {
-              const active = page === item.id;
+              const active = page === item.id || (item.id === 'reward_management' && ['rewards','withdrawals','reward_notifications','reward_reconciliation'].includes(page));
               const starred = favoriteIds.has(item.id);
               return (
                 <div key={item.id} className="sidebar-item" style={{

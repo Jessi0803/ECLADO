@@ -26,7 +26,7 @@ test('6: transactional outbox, fenced workers and read-only financial reconcilia
  const items=[{product_id:1,variant_id:1,qty:20}],q=await ordinaryQuote(items),income=await ordinaryCreate(items,q);
  await actor(admin);await db.query('select public.confirm_admin_instructor_reward_payment($1,true)',[income.order_id]);await status(income.order_id,'delivered');
  await worker();await db.query('select public.save_reward_bank_profile($1,$2::jsonb,$3::jsonb,0)',[teacher,JSON.stringify({kid:'test',iv:'iv',tag:'tag',data:'cipher'}),JSON.stringify({bank_code:'807',bank_name:'隔離銀行',branch:'分行',holder:'師*',account:'***1234'})]);await member();
- await actor(admin);await db.query("select public.publish_reward_bank_calendar(2026,array[]::date[],'https://www.ba.org.tw/consumerHoliday/index')");await db.query("select public.publish_reward_bank_calendar(2027,array[]::date[],'https://www.ba.org.tw/consumerHoliday/index')");
+ await actor(admin);
  await actor(teacher);const quote=await call('quote_my_reward_withdrawal');
  // Outbox failure prevents a committed request with missing events.
  const before=await c.account();

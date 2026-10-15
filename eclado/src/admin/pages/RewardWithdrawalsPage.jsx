@@ -1,10 +1,10 @@
 import '../../components/account/InstructorRewards.css';
 import React,{useEffect,useRef,useState} from 'react';
-import {getAdminWithdrawals,manageWithdrawal,bankRequest,publishBankCalendar} from '../../services/rewardWithdrawals.js';
+import {getAdminWithdrawals,manageWithdrawal,bankRequest} from '../../services/rewardWithdrawals.js';
 import {withdrawalStatus} from '../../components/account/RewardWithdrawalsPanel.jsx';
-export default function RewardWithdrawalsPage({adminUserId,canManage}){
+export default function RewardWithdrawalsPage({adminUserId,canManage,embedded=false}){
+ const Heading=embedded?'h2':'h1';
  const [data,setData]=useState(null),[error,setError]=useState(''),[offset,setOffset]=useState(0),[revision,setRevision]=useState(0),[busy,setBusy]=useState(false),[revealed,setRevealed]=useState(null);
- const [year,setYear]=useState(new Date().getFullYear()),[dates,setDates]=useState(''),[source,setSource]=useState('https://www.ba.org.tw/consumerHoliday/index');
  const lock=useRef(false),pending=useRef(null);
  useEffect(()=>{let alive=true;setData(null);setRevealed(null);getAdminWithdrawals(offset).then(v=>{if(alive)setData(v);}).catch(e=>{if(alive)setError(e.code==='PGRST202'?'提領管理尚未安裝。':e.message);});return()=>{alive=false;};},[adminUserId,offset,revision]);
  useEffect(()=>{pending.current=null;},[adminUserId]);
@@ -24,7 +24,7 @@ export default function RewardWithdrawalsPage({adminUserId,canManage}){
  pending.current={id:w.id,key:crypto.randomUUID(),type,version:w.version,details};await resend();
  }
  async function resend(){await run(async()=>{const p=pending.current;if(!p)return;try{await manageWithdrawal(p.id,p.key,p.type,p.version,p.details);pending.current=null;}catch(e){if(/^(22|23|40|42|55|P0002)/.test(e.code||''))pending.current=null;throw e;}});}
- return <div className="reward-view"><div className="procurement-header reward-admin-header"><div><h1>師資提領管理</h1><p>實際匯款於銀行端人工執行。後台紀錄是管理員提供的收款證據，不是銀行自動驗證。結果不明請查帳，勿再次匯款。</p></div></div>
+ return <div className="reward-view"><div className="procurement-header reward-admin-header"><div><Heading>師資提領管理</Heading><p>實際匯款於銀行端人工執行。預計日期固定為名目批次的每月 10 日；遇假日由管理員人工順延，原批次名單不變。結果不明請查帳，勿再次匯款。</p></div></div>
  <button className="reward-button" type="button" onClick={()=>setRevision(r=>r+1)}>重新整理提領管理</button>{pending.current&&<button className="reward-button" type="button" disabled={busy} onClick={resend}>重送原處理結果</button>}{error&&<p role="alert" className="reward-message">{error}</p>}
  {data&&<>{data.withdrawals.map(w=><article key={w.id} className="reward-card">
  <div className="reward-heading"><h3>{w.name||'已刪除會員'}</h3><span className="reward-status">{withdrawalStatus(w.status)}</span></div><p className="reward-meta">{w.id} · 申請 {w.created_at} · 預計 {w.scheduled_date}</p><p>申請 NT$ {w.amount} · 手續費 NT$ {w.fee} · 實匯 NT$ {w.net_amount}</p><p>{w.bank.bank_name} {w.bank.branch} {w.bank.holder} {w.bank.account}</p>
@@ -36,12 +36,6 @@ export default function RewardWithdrawalsPage({adminUserId,canManage}){
  </div>}{w.transfer_date&&<p>實際匯款 {w.transfer_date} · {w.reference} · NT$ {w.transferred_amount}</p>}{w.failure_reason&&<p>{w.failure_reason}</p>}
  {w.events.map((e,i)=><p className="reward-meta" key={i}>{e.at} · {e.type}{e.details?.reason?` · ${e.details.reason}`:''}</p>)}
  </article>)}<div className="reward-pager"><button className="reward-button" disabled={offset===0} type="button" onClick={()=>setOffset(Math.max(0,offset-20))}>管理提領上一頁</button><button className="reward-button" disabled={offset+20>=data.total} type="button" onClick={()=>setOffset(offset+20)}>管理提領下一頁</button></div>
- {canManage&&<form className="reward-card reward-calendar" onSubmit={e=>{e.preventDefault();run(async()=>{const holidays=dates.trim()?dates.trim().split(/[\s,]+/):[];if(!window.confirm(`已核對銀行公會 ${year} 年完整休假資料？發布不追改既有申請日期。`))return;await publishBankCalendar(Number(year),holidays,source);});}}>
- <h3>年度銀行休假資料</h3><p>需由管理員核對銀行公會資料後發布，週六／日自動排除。臨時停業異動請核對後追加版本。</p>
- <div className="reward-form-grid"><label className="reward-field">日曆年度<input aria-label="日曆年度" type="number" min="2026" max="2200" value={year} onChange={e=>setYear(e.target.value)}/></label>
- <label className="reward-field reward-field--wide">銀行休假日期<textarea aria-label="銀行休假日期" placeholder="YYYY-MM-DD，每行一筆；可空白但須確認全年無額外假日" value={dates} onChange={e=>setDates(e.target.value)}/></label>
- <label className="reward-field reward-field--wide">日曆來源<input aria-label="日曆來源" value={source} onChange={e=>setSource(e.target.value)}/></label></div><button className="reward-button reward-button--primary" type="submit" disabled={busy}>確認並發布年度日曆</button>
- {data.calendars.map(c=><p key={c.year}>{c.year} 年 · 版本 {c.version}</p>)}</form>}
  </>}
  </div>;
 }

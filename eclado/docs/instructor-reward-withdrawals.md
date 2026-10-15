@@ -11,14 +11,14 @@
 - `supabase-instructor-reward-checkout.sql:58` 的 `reward_credit_event` 在建單保留時減少 signed 可用 balance，購物保留存在 reserved_balance；`:205` 的 `create_order_with_wallets` 與版本確認已存在，不能再從 balance 重扣一次購物保留。
 - `supabase-instructor-reward-queries.sql:57` 的 `assert_instructor_reward_read_admin` 是兩 read 權限及 admin 身分；`:98` 本人 RPC 只目前 instructor。
 - `supabase-internal-staff-member.sql:84` 的 `set_member_role_with_membership` 鎖 profile，降級不刪返饋帳務；`api/admin-delete-member.js:136` 刪 Auth，DB guard 控制帳務限制。
-- 專案無老師收款銀行表、提領流程、銀行休假資料或可直接沿用的銀行資料加密金鑰。既有 `order_payment_instructions.atm_account` 是顧客繳款虛擬帳號，不能當老師收款帳號。
+- 專案原無老師收款銀行表、提領流程或可直接沿用的銀行資料加密金鑰。既有 `order_payment_instructions.atm_account` 是顧客繳款虛擬帳號，不能當老師收款帳號。
 - `api/professional-quarterly-notices.js` 已有台北時區、LINE優先／Resend備援與delivery key；`supabase-payment-notification-reliability.sql` 有訂單通知重試。階段5不呼叫或改寫通知，只保存 requested／paid／failed 等可供階段6取用的事件，不宣稱通知已實作。
 
 開始前重新執行隔離 PostgreSQL17.6 階段4測試：1通過、0跳過、deadlocks=0，未發現新的本機帳務一致性阻擋。正式銀行金額契約／Auth／Schema未驗證限制保留。估計含驗證32–48工程工時，非實際計時。
 
 使用者本次已確認五項：
 
-1. Asia/Taipei，每月10日00:00截止；10日當天列下月。10日遇假日順延不延後申請截止；週六／日及銀行業休假不匯。管理員每年核對銀行公會資料後匯入，缺年度資料拒絕申請。銀行公會確實提供年度[金融業休假日資料](https://www.ba.org.tw/consumerHoliday/index)；使用版本快照，不採政府辦公日曆直接推定銀行營業日。
+1. Asia/Taipei，每月10日00:00截止；10日00:00起列入下月。批次與預計日期固定保存名目上的每月10日；遇假日由管理員人工判斷實際順延日，順延不改變本月預計匯款名單。新申請不依賴年度銀行休假資料。
 2. 明確失敗且確認銀行未付款：全額返還、不收15元，原申請永久保留為failed、不重匯；老師維護銀行資料後新申請。結果不明仍保留，查帳後再處理，不能先返還。
 3. 申請前非instructor拒絕；已成立申請降級後履行。正餘額與歷史保留，恢復角色後恢復資格，不沒收。
 4. pending→processing→paid／failed／unknown；先由一人領取處理權。完成必填實際日期／銀行交易序號／實匯金額，不必圖片。終態不可覆寫，只追加更正／異常事件，不自動重匯退款。銀行已匯而後台失敗時重送同結果，先查帳、不再匯款。
@@ -35,7 +35,7 @@
 | src/services/rewardWithdrawals.js | quote／request／management／bank API契約 |
 | src/components/account/RewardWithdrawalsPanel.jsx | 銀行管理、預覽確認、全額申請、歷史與保留額 |
 | src/components/account/InstructorRewardsPanel.jsx | 提領子區塊與新Ledger事件 |
-| src/admin/pages/RewardWithdrawalsPage.jsx | 日曆管理、領取處理、凭證／失敗／查帳／更正 |
+| src/admin/pages/RewardWithdrawalsPage.jsx | 領取處理、憑證／失敗／查帳／更正；提示假日人工順延 |
 | src/admin/AdminApp.jsx | 受權限保護的頁面接點 |
 | src/admin/components/Sidebar.jsx | 提領選單 |
 | src/admin/domain/access.js | 專用read／manage能力 |
@@ -50,7 +50,7 @@
 
 ## 資料與安全設計
 
-四表：`instructor_reward_bank_profiles` 保存目前加密資料、遮蔽投影及version；`instructor_reward_bank_calendar_versions` 保存年度日期／來源／操作者及不可變版本；`instructor_reward_withdrawals` 保存UUID、本人request_key、金額／15元／實匯、銀行不可变cipher快照、原始批次／預定日／日曆版本、狀態與不可變終態結果；`instructor_reward_withdrawal_events` append-only操作及敏感快照查看稽核。
+三表：`instructor_reward_bank_profiles` 保存目前加密資料、遮蔽投影及version；`instructor_reward_withdrawals` 保存UUID、本人request_key、金額／15元／實匯、銀行不可變cipher快照、原始批次／名目預定日、狀態與不可變終態結果；`instructor_reward_withdrawal_events` append-only操作及敏感快照查看稽核。階段5尚未上正式，因此已直接移除年度休假表與 `calendar_versions` 欄位，不保留未使用的相容層。
 
 全部RLS、無客戶端policy、撤銷PUBLIC／anon／authenticated／service_role直接表與sequence權限，不增加cascading財務FK。snapshot、已完成／失敗結果禁止UPDATE／DELETE；更正只追加事件。現有profile刪除後清除目前bank_profile，但財務銀行快照保留；提領hold未結清時禁止刪戶。
 
@@ -60,7 +60,7 @@
 
 格式驗證是銀行代碼3位、帳號6–20位數字及必填長度／控制字元檢查；不是銀行帳戶存在、戶名一致或銀行代碼／名稱配對的外部驗證。人工匯款者仍應核對資料。本機純crypto實測；正式secret管理、備份／rotation／復原演練及真實serverless/Auth部署仍待驗證。
 
-公開authenticated RPC：`quote_my_reward_withdrawal()`、`request_my_reward_withdrawal(uuid,jsonb)`、`get_my_reward_withdrawals(integer)`；管理員同角色/專用能力檢查：`get_admin_reward_withdrawals(integer)`、`manage_reward_withdrawal(uuid,uuid,text,bigint,jsonb)`、`publish_reward_bank_calendar(integer,date[],text)`。service-only銀行cipher RPC：`save_reward_bank_profile(uuid,jsonb,jsonb,bigint)`、`read_reward_bank_cipher(uuid,uuid)`，不能從客戶端直呼。
+公開authenticated RPC：`quote_my_reward_withdrawal()`、`request_my_reward_withdrawal(uuid,jsonb)`、`get_my_reward_withdrawals(integer)`；管理員同角色/專用能力檢查：`get_admin_reward_withdrawals(integer)`、`manage_reward_withdrawal(uuid,uuid,text,bigint,jsonb)`。年度日曆發布 RPC 已移除。service-only銀行cipher RPC：`save_reward_bank_profile(uuid,jsonb,jsonb,bigint)`、`read_reward_bank_cipher(uuid,uuid)`，不能從客戶端直呼。
 
 其他schedule、posting、projection、guard均private EXECUTE，SECURITY DEFINER空search_path。權限CHECK擴充原表达式，保留現有permission；沒有改原orders.write／shopping-credit／S1授權。前端入口與後端權限一致。
 
@@ -76,7 +76,7 @@
 
 Ledger.order_id只對提領允許NULL，新增withdrawal_id；CHECK規定兩種來源只能擇一，不偽造訂單。原unique(order,event,cycle)不變；新unique(withdrawal,event)只處理提領。舊Ledger不UPDATE，新增欄位0預設；收入及購物事件也寫當下withdrawal_reserved_after，維持逐筆running sum。
 
-本人申請：Auth父列KEY SHARE→目前profile SHARE→帳戶FOR UPDATE→銀行profile SHARE→後端quote比較→insert immutable申請→post Ledger→requested event，同一交易。confirmation包含全額／fee／net、銀行version／masked、accountversion、批次／calendarversions。任何過期資料40001，重新報價確認，前端傳入額不作權威。不同key競爭相同可用額只一筆成功；相同本人key回原申請，不再扣。
+本人申請：Auth父列KEY SHARE→目前profile SHARE→帳戶FOR UPDATE→銀行profile SHARE→後端quote比較→insert immutable申請→post Ledger→requested event，同一交易。confirmation包含全額／fee／net、銀行version／masked、accountversion及名目10日批次。任何過期資料40001，重新報價確認，前端傳入額不作權威。不同key競爭相同可用額只一筆成功；相同本人key回原申請，不再扣。
 
 管理結果：先lock withdrawal→Auth父列→同account，既有收入／消費帳戶鎖序保持。claim用version只允許一個processor；沒有自動逾時移交或釋放（避免銀行已付卻重匯）。paid必填日期（不可未來）、reference與後端net額；屬管理員提供的銀行憑證記錄，沒有查銀行API，不冒稱銀行已驗證。failed須confirmed_unpaid=true才Ledger全額release；unknown維持hold。paid／failed終態只允許correction追加，不覆寫或觸發額外入帳。
 
@@ -88,7 +88,7 @@ Ledger.order_id只對提領允許NULL，新增withdrawal_id；CHECK規定兩種�
 
 實際SQL：PGlite十檔批次11通過0跳過；最新stage5單檔通過。PostgreSQL17.6 stage5單檔1通過0跳過，包含原stage4及1C/代客斷言，多連線deadlocks=0。15／16門檻用新師資、實際學生訂單一元逐項返饋產生真Ledger，整段隔離rollback，不直接seed余额。
 
-實測涵蓋0／15／16／負數／全額／fixed fee、缺銀行／缺calendar、10日邊界與週末／指定假日、bank更改不影響snapshot、paid／failed／unknown／更正與非法跳轉、同key、role downgrade履行、六角色資格／權限、terminal不可改、SQL同版本重跑、RLS/ACL、Ledger insert失败全交易回滾、帳戶sum(delta)與逐筆running sum、Auth拒刪及結清後成功刪除且snapshot保留。
+實測涵蓋0／15／16／負數／全額／fixed fee、缺銀行、10日00:00邊界、週末仍保存名目10日且不依賴calendar、bank更改不影響snapshot、paid／failed／unknown／更正與非法跳轉、同key、role downgrade履行、六角色資格／權限、terminal不可改、SQL同版本重跑、RLS/ACL、Ledger insert失敗全交易回滾、帳戶sum(delta)與逐筆running sum、Auth拒刪及結清後成功刪除且snapshot保留。
 
 PG實際獨立連線：兩提領、提領／購物折抵、提領／income reverse、提領／新income credit、多管理員claim；不宣稱所有排程窮盡。銀行crypto/API 7項通過：owner AAD／randomIV／竄改拒絕／key rotation／無key拒絕／真Authactor／假owner忽略／通用錯誤／masked；RPC／付款upstream mock，不實際匯款。
 
@@ -111,7 +111,7 @@ git diff --check
 
 - 順序：S1／1B／1C／既有購物金checkout基線相容核對→2A→2B→3→4→5→各verify；此次完全未讀正式DB或正式資料量，不重跑舊Migration覆蓋目前wrapper／S1。stage5同版本guard不修復任意半安裝或來源異形，正式前保存定義／ACL／CHECK／Trigger並核對窄幅patch。
 - 正式學生價保持OFF，2A～5正式尚未安裝，前端與serverless／PaymentAPI版本發布與rollback須按已批准的Git自動部署規範另准，不直接Vercel，不把Git push當正式功能已驗收。
-- 實際bank API keyring必須由正式secret store另設，不寫Git／SQL／前端；先backup、rotation／解密歷史演練與真Auth權限驗證。缺key服務失敗，不改存明碼完成畫面。年度銀行休假表要人工核對完整後發布；缺年拒絕，不推估假日。
+- 實際bank API keyring必須由正式secret store另設，不寫Git／SQL／前端；先backup、rotation／解密歷史演練與真Auth權限驗證。缺key服務失敗，不改存明碼完成畫面。實際匯款若遇假日由管理員人工順延；不得因此把新申請移入已截止的當月批次，也不得改寫既有申請快照。
 - 既有stage4元／分銀行金額兼容及真实失敗碼、stage3報表大資料負載、代客Auth刪除衝突與非返饋晚付款復活仍独立待辦。沒有修改價格、訂單、購物金、Sinopac金額、付款授權或原通知機制。
 - 已領取管理員失去權限時沒有自動移交／保留逾時返還；不能假設他未匯款。暫停並查帳；若要新增授權移交流程／規則需另批准。已記錯憑證的更正只追加紀錄，不自動改paid或bank資金。
 - 零額已結清刪戶後若又有原學生退貨可產生closed負債，保留UUID／帳務，不抹除；帳號恢復／債務營運處理不新增。跨年度假日調整不追改既有預定日，臨時停業另由管理員查核並保留原快照。

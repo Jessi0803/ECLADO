@@ -1,7 +1,8 @@
 import React,{useEffect,useState} from 'react';
 import {getAdminRewardAccounts} from '../../services/instructorRewards.js';
 import InstructorRewardsPanel from '../../components/account/InstructorRewardsPanel.jsx';
-export default function InstructorRewardsPage({adminUserId}){
+export default function InstructorRewardsPage({adminUserId,embedded=false}){
+  const Heading=embedded?'h2':'h1';
   const [data,setData]=useState(null),[error,setError]=useState(''),[offset,setOffset]=useState(0),[selected,setSelected]=useState(''),[revision,setRevision]=useState(0);
   useEffect(()=>{
     let alive=true;setData(null);setError('');setSelected('');
@@ -9,7 +10,7 @@ export default function InstructorRewardsPage({adminUserId}){
     return()=>{alive=false;};
   },[adminUserId,offset,revision]);
   useEffect(()=>{const focus=()=>setRevision(r=>r+1);window.addEventListener('focus',focus);return()=>window.removeEventListener('focus',focus);},[]);
-  return <div className="reward-view"><div className="procurement-header reward-admin-header"><div><h1>師資返饋帳務</h1><p>查看師資帳戶、歷史學生訂單及返饋異動。</p></div><button className="admin-secondary-btn" type="button" onClick={()=>setRevision(r=>r+1)}>重新整理帳戶</button></div>
+  return <div className="reward-view"><div className="procurement-header reward-admin-header"><div><Heading>師資返饋帳務</Heading><p>查看師資帳戶、歷史學生訂單及返饋異動。</p></div><button className="admin-secondary-btn" type="button" onClick={()=>setRevision(r=>r+1)}>重新整理帳戶</button></div>
     {error&&<p role="alert" className="reward-message">{error}</p>}
     {!data&&!error&&<p>正在載入返饋帳戶…</p>}
     {data&&<>

@@ -28,6 +28,10 @@
 .reward-metric > span { display: block; margin-bottom: 7px; font-size: 10px; letter-spacing: .08em; color: var(--reward-muted); }
 .reward-metric > strong { display: block; font-family: var(--font-display, inherit); font-size: 20px; font-weight: 300; font-variant-numeric: tabular-nums; line-height: 1.4; }
 .reward-metric--available > strong { font-size: 28px; }
+.reward-balance-summary { margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--reward-border); }
+.reward-balance-primary { grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 0; margin-bottom: 0; padding-bottom: 0; align-items: start; }
+.reward-balance-primary .reward-metric--available > strong { font-size: 32px; }
+.reward-balance-details { border-bottom: 0; padding-bottom: 0; margin: 16px 0 0; }
 .reward-subsection { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--reward-border); }
 .reward-entry { padding: 16px 0; border-top: 1px solid var(--reward-border); }
 .reward-entry-title { font-size: 13px; margin-bottom: 5px; }
@@ -47,6 +51,11 @@
 .reward-bank-info { display: grid; gap: 4px; padding: 16px 0; border-block: 1px solid var(--reward-border); margin-bottom: 20px; }
 .reward-bank-info > span { font-size: 10px; letter-spacing: .08em; color: var(--reward-muted); }
 .reward-bank-info > strong { font-size: 13px; font-weight: 400; }
+.reward-bank-current { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.reward-bank-current > div { min-width: 0; display: grid; gap: 4px; }
+.reward-bank-current > div > span { font-size: 10px; letter-spacing: .08em; color: var(--reward-muted); }
+.reward-bank-current > div > strong { font-size: 13px; font-weight: 400; }
+.reward-bank-current > button { flex-shrink: 0; }
 .reward-withdrawal-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 20px 0; }
 .reward-withdrawal-summary span { display: block; color: var(--reward-muted); font-size: 10px; margin-bottom: 6px; }
 .reward-withdrawal-summary strong { display: block; font-size: 18px; font-weight: 400; font-variant-numeric: tabular-nums; }
@@ -66,6 +75,11 @@
 .reward-admin-header { margin-bottom: 24px; }
 .reward-account-list { display: grid; gap: 10px; margin-bottom: 20px; }
 .reward-account-card { display: block; width: 100%; text-align: left; padding: 20px; border: 1px solid var(--border); background: var(--white); color: var(--dark); font: inherit; cursor: pointer; }
+.reward-management-tabs { display: flex; overflow-x: auto; border: 1px solid var(--border); background: var(--white); margin-bottom: 24px; }
+.reward-management-tabs button { flex-shrink: 0; padding: 10px 18px; border: 0; background: transparent; color: var(--mid); font: inherit; font-size: 12px; letter-spacing: .04em; cursor: pointer; }
+.reward-management-tabs button[aria-selected="true"] { background: var(--dark); color: #fff; }
+.reward-management-tabs button:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.reward-management .reward-admin-header h2 { margin: 0; font-size: 18px; font-weight: 500; }
 .reward-account-card > strong { display: block; margin-bottom: 4px; font-size: 13px; }
 .reward-account-card > div { margin-top: 4px; font-size: 12px; }
 .reward-account-card > .reward-meta { font-size: 10px; }

@@ -16,7 +16,7 @@
 | 10 Worker隔離 | BLOCKED | A/B未選、secret/runtime未配置；service role廣能力限制須決策 |
 | 11 正式LINE/Email | NOT VERIFIED | 本階段只Mock，sender／可達性／tokens配置另准 |
 | 12 管理員名單 | BLOCKED | 正式明確Email名單未確認／配置 |
-| 13 銀行休假表 | BLOCKED | 正式2026/2027銀行公會完整表尚未核對／匯入；測試表不替代 |
+| 13 提領批次／假日處理 | PASS（規則）／NOT VERIFIED正式 | 10日00:00台北時間切分，預計日固定名目10日；假日由人工順延且不得改變批次名單。正式函式尚未安裝 |
 | 14 排程／告警 | BLOCKED | 沒有reward正式timer；POST不能直接掛VercelGET cron |
 | 15 Git部署映射 | PASS前端／NOT VERIFIED PaymentAPI及worker | Vercel main Production、feature Preview實際確認；Vultr自動發布未確認 |
 | 16 Backup／回復 | PASS計畫／NOT VERIFIED執行 | schema證據非資料backup；獨立restore未演練 |

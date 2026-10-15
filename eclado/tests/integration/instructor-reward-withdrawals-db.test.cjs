@@ -4,6 +4,20 @@ test('5: encrypted bank snapshots, full withdrawals, immutable manual transfer a
  {skip:!process.env.PGLITE_MODULE&&!process.env.EMBEDDED_POSTGRES_MODULE,timeout:180000},()=>runRewardCheckoutDatabaseScenario(async c=>{
  const {db,read,one,actor,teacher,student,admin,ordinaryQuote,ordinaryCreate,status,account,walletQuote,create}=c;
  await db.exec(read('supabase-instructor-reward-withdrawals.sql'));
+ // Reproduce the pre-production calendar shape and verify the cleanup migration
+ // without relying on or preserving disposable test data.
+ await db.exec("create table public.instructor_reward_bank_calendar_versions(id bigint generated always as identity primary key);alter table public.instructor_reward_withdrawals add column calendar_versions jsonb not null default '{}';create function public.publish_reward_bank_calendar(integer,date[],text) returns void language plpgsql as 'begin null; end'");
+ const requestSignature="'public.request_my_reward_withdrawal(uuid,jsonb)'::regprocedure";
+ const oldRequest=(await one(`select pg_get_functiondef(${requestSignature}) definition`)).definition
+  .replace('batch_date,scheduled_date)','batch_date,scheduled_date,calendar_versions)')
+  .replace("(q->>'scheduled_date')::date from", "(q->>'scheduled_date')::date,q->'calendar_versions' from");
+ assert.match(oldRequest,/calendar_versions/);await db.exec(oldRequest);
+ const requestAccess=await one(`select proowner,proacl::text acl from pg_proc where oid=${requestSignature}`);
+ await db.exec(read('supabase-instructor-reward-nominal-batch-schedule.sql'));
+ assert.deepEqual(await one(`select proowner,proacl::text acl from pg_proc where oid=${requestSignature}`),requestAccess);
+ await db.exec(read('supabase-instructor-reward-nominal-batch-schedule.sql'));
+ const nominalVerify=await db.exec(read('supabase-instructor-reward-nominal-batch-schedule-verify.sql'));
+ assert.equal((Array.isArray(nominalVerify)?nominalVerify.find(r=>r.rows?.[0]?.verification):nominalVerify).rows[0].verification.calendar_artifacts_removed,true);
  await db.exec("insert into public.backoffice_role_permissions(role,permission) values('admin','orders.write'),('super_admin','orders.write') on conflict do nothing");
  await db.exec(c.fn('supabase-backoffice-permissions.sql','has_backoffice_permission').replaceAll('requested_permission','p'));
  const query=(sql,args=[])=>one(sql+' q',args).then(r=>r.q);
@@ -22,12 +36,10 @@ test('5: encrypted bank snapshots, full withdrawals, immutable manual transfer a
  const cipher={kid:'test',iv:'encrypted-iv',tag:'encrypted-tag',data:'ciphertext-only'};
  await db.query("select set_config('test.role','service_role',false)");
  await db.query('select public.save_reward_bank_profile($1,$2::jsonb,$3::jsonb,0)',[teacher,JSON.stringify(cipher),JSON.stringify(masked)]);
- await db.query("select set_config('test.role','authenticated',false)");await assert.rejects(quote(),/年度/);
- await actor(admin);await db.query("select public.publish_reward_bank_calendar(2026,array['2026-11-10'::date],'https://www.ba.org.tw/consumerHoliday/index')");
- await db.query("select public.publish_reward_bank_calendar(2027,array[]::date[],'https://www.ba.org.tw/consumerHoliday/index')");
- const before=(await query("select public.reward_withdrawal_schedule('2026-11-09 23:59:59+08')"));assert.equal(before.batch_date,'2026-11-10');assert.equal(before.scheduled_date,'2026-11-11');
+ await db.query("select set_config('test.role','authenticated',false)");
+ const before=(await query("select public.reward_withdrawal_schedule('2026-11-09 23:59:59+08')"));assert.equal(before.batch_date,'2026-11-10');assert.equal(before.scheduled_date,'2026-11-10');assert.equal(Object.hasOwn(before,'calendar_versions'),false);
  assert.equal((await query("select public.reward_withdrawal_schedule('2026-11-10 00:00:00+08')")).batch_date,'2026-12-10');
- const weekend=await query("select public.reward_withdrawal_schedule('2026-10-09 00:00:00+08')");assert.equal(weekend.scheduled_date,'2026-10-12');
+ const weekend=await query("select public.reward_withdrawal_schedule('2026-10-09 00:00:00+08')");assert.equal(weekend.scheduled_date,'2026-10-10');
  await actor(teacher);let q=await quote();const amount=Number(q.amount),key=crypto.randomUUID(),w=await request(q,key);
  assert.equal((await row(w.id)).amount,amount);assert.equal((await row(w.id)).net_amount,amount-15);assert.equal(Number((await account()).balance),0);
  assert.equal((await request(q,key)).id,w.id);await assert.rejects(request(q),e=>e.code==='22003');await consistent();
@@ -104,5 +116,5 @@ test('5: encrypted bank snapshots, full withdrawals, immutable manual transfer a
  await actor(admin);await db.exec('update public.student_pricing_feature_settings set enabled=false');await consistent();
  await db.exec(read('supabase-instructor-reward-withdrawals.sql'));
  const verify=await db.exec(read('supabase-instructor-reward-withdrawals-verify.sql'));for(const [name,value] of Object.entries((Array.isArray(verify)?verify.find(r=>r.rows?.[0]?.verification):verify).rows[0].verification))assert.equal(value,true,name);
- console.log('PASS stage 5 full withdrawal, negative balance, fixed fee, calendar cutoff, immutable snapshot, manual evidence, rollback and ACL');
+ console.log('PASS stage 5 full withdrawal, negative balance, fixed fee, nominal batch cutoff, immutable snapshot, manual evidence, rollback and ACL');
  }));

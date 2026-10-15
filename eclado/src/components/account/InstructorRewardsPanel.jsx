@@ -27,9 +27,19 @@ export default function InstructorRewardsPanel({userId,instructorId,admin=false}
     {loading&&<p role="status">正在載入返饋資料…</p>}
     {error&&<p role="alert" className="reward-message">{error}</p>}
     {report&&<>
-      <div className="reward-metrics">
+      {admin?<div className="reward-metrics">
         {[['提領保留',report.summary.withdrawal_reserved_balance||0],['購物保留',report.summary.reserved_balance||0],['待入帳',report.summary.pending_balance],['累計已入帳',report.summary.credited_total],['累計扣回',report.summary.reversed_total],['帳戶餘額',report.summary.balance],['可用餘額',report.summary.available_balance]].map(([label,value])=><div key={label} className={`reward-metric ${label==='可用餘額'?'reward-metric--available':''}`}><span>{label}</span><strong>{money(value)}</strong></div>)}
-      </div>
+      </div>:<div className="reward-balance-summary">
+        <div className="reward-metrics reward-balance-primary">
+          <div className="reward-metric reward-metric--available"><span>可用返饋金</span><strong>{money(report.summary.available_balance)}</strong></div>
+          <div className="reward-metric"><span>待入帳</span><strong>{money(report.summary.pending_balance)}</strong><p className="reward-note">學生訂單完成並確認收款後入帳。</p></div>
+        </div>
+        {Number(report.summary.reserved_balance)>0&&<p className="reward-note">另有 {money(report.summary.reserved_balance)} 購物付款處理中。</p>}
+        {Number(report.summary.withdrawal_reserved_balance)>0&&<p className="reward-note">另有 {money(report.summary.withdrawal_reserved_balance)} 提領處理中。</p>}
+        <details className="reward-details"><summary>查看金額明細</summary><div className="reward-metrics reward-balance-details">
+          {[['購物保留',report.summary.reserved_balance||0],['提領保留',report.summary.withdrawal_reserved_balance||0],['累計已入帳',report.summary.credited_total],['累計扣回',report.summary.reversed_total],['帳戶餘額',report.summary.balance]].map(([label,value])=><div className="reward-metric" key={label}><span>{label}</span><strong>{money(value)}</strong></div>)}
+        </div></details>
+      </div>}
       {Number(report.summary.balance)<0&&<p>帳戶為負餘額，後續入帳將抵銷負餘額。</p>}
       {(report.payment_exceptions||[]).map(entry=><p role="alert" key={entry.order_id}>{entry.order_id}：已收款但返饋金帳務異常，請聯繫管理員處理。</p>)}
       <h3>歷史學生訂單</h3>

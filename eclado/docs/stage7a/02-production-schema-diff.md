@@ -26,7 +26,6 @@
 | `instructor_reward_reservations` | B：尚未安裝 | 隔離SQL已建立／測試 |
 | `instructor_reward_payment_exceptions` | B：尚未安裝 | 隔離SQL已建立／測試 |
 | `instructor_reward_bank_profiles` | B：尚未安裝 | 隔離SQL已建立／測試 |
-| `instructor_reward_bank_calendar_versions` | B：尚未安裝 | 隔離SQL已建立／測試 |
 | `instructor_reward_withdrawals` | B：尚未安裝 | 隔離SQL已建立／測試 |
 | `instructor_reward_withdrawal_events` | B：尚未安裝 | 隔離SQL已建立／測試 |
 | `instructor_reward_notification_outbox` | B：尚未安裝 | 隔離SQL已建立／測試 |
