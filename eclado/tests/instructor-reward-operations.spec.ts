@@ -29,7 +29,7 @@ test('withdrawal-only administrator sees unified entrance without account or rec
 });
 test('shared refresh queries only active tab without running reconciliation; tabs fit their contents',async({page})=>{
  await setup(page);const counts=[0,0,0,0];let runs=0;
- const endpoints=['get_admin_instructor_reward_accounts','get_admin_reward_withdrawals','get_admin_reward_notifications','get_admin_reward_reconciliation'];
+ const endpoints=['get_admin_instructor_reward_accounts','get_admin_reward_withdrawal_queue','get_admin_reward_notifications','get_admin_reward_reconciliation'];
  for(const [i,name]of endpoints.entries())await page.route(`**/rest/v1/rpc/${name}`,r=>{counts[i]++;return r.fulfill({json:{total:0,accounts:[],withdrawals:[],notifications:[],runs:[],findings:[]}});});
  await page.route('**/rest/v1/rpc/run_reward_reconciliation',r=>{runs++;return r.fulfill({json:{}});});
  await open(page,'返饋金通知紀錄');

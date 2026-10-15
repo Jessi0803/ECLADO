@@ -83,3 +83,19 @@
 ## 四分頁說明白話化（2026-10-15）
 
 依使用者要求，返饋帳務、提領匯款、通知紀錄與財務對帳改用簡短用途說明，移除服務商、Ledger與LINE錯誤碼等工程措辭。提領保留每月10日批次、假日人工順延且名單不變，以及結果不明先查帳的提醒；對帳保留不自動修改金額的說明。不改任何帳務、通知或匯款行為。修改InstructorRewardsPage、RewardWithdrawalsPage、RewardOperationsPage及既有withdrawals測試的文字斷言。桌面／手機針對四分頁回歸8／8通過（API mock），test Build470模組通過（既有chunk警告）；首次沙盒內瀏覽器啟動受限，沙盒外重跑通過。使用者已確認畫面符合預期。未commit／push。
+
+## 老師端提領用語與確認畫面（2026-10-15）
+
+依使用者提出的四點調整：老師歷史提領「明確失敗」改為「匯款失敗（已全額退回）」、「待查帳」改為「匯款結果確認中」；會員中心及共用帳務摘要的「購物保留／提領保留」改成「購物付款處理中／提領處理中」。管理員提領狀態分類保持原樣。缺銀行及可用餘額<=15時顯示具體停用原因；銀行說明註明修改只適用新申請，已成立申請快照不受影響。
+
+移除老師端window.confirm，改用網站樣式的HTML dialog：逐欄顯示後端quote的申請額、手續費、實匯額、日期與銀行代碼／名稱／分行／戶名／帳號末四碼。沿用後端遮蔽資料，不新增完整銀行帳號讀取。確認後才產生request key並送出原RPC，返回／Esc不送出；網路不明沿用原key與quote重查，報價過期由原後端拒絕並重新確認。dialog原生焦點限制、背景不可操作、關閉回申請按鈕；畫面重新取得焦點時關閉舊確認並刷新。查報價成功不清除底層表單，避免焦點回復目標被重新建立。
+
+修改：src/components/account/RewardWithdrawalsPanel.jsx、InstructorRewardsPanel.jsx、InstructorRewards.css與tests/instructor-reward-withdrawals.spec.ts及本文件。不修改SQL、API、帳務、付款或提領資格。
+
+驗證：BASE_URL=http://127.0.0.1:5185 npx playwright test tests/instructor-reward-withdrawals.spec.ts tests/instructor-reward-queries.spec.ts --project=chromium --project=mobile-chrome --workers=1，48／48通過（API mock，非實際匯款）。首輪47／48，發現取消確認後焦點未回申請按鈕，修正後全檔重跑通過。最後新增視窗水平置中斷言，確認測試桌面／手機再跑2／2通過。npx vite build --mode test，470模組通過（既有chunk警告）；git diff --check通過。僅本機，未commit／push、部署或操作雲端DB。
+
+## 管理員批次匯出與匯款操作（2026-10-15）
+
+已依使用者確認的通用CSV與pending／processing範圍，新增後端批次搜尋、20筆分頁、跨頁批次合計、manage-only解密匯出及不可變稽核；paid改用日期選擇／金額驗證／保留草稿的單一表單。詳見 `docs/reward-withdrawal-operations.md` 的檔案、SQL、測試與套用／回復說明。PostgreSQL17.6兩個DB測試通過，verify另跑通過；API／CSV 9／9，桌面／手機最終62／62，本地真SQL＋模擬外部服務整條操作1／1通過，test Build471模組與diff check通過。僅本機，未套用雲端DB或commit／push。新版管理頁依賴新增operations SQL，下一次Preview發布前需先取得test Migration授權。
+
+2026-10-15後續放行：使用者已批准test安裝與commit／push。qqlgqasbmbicnmvnlqbr新operations SQL已成功安裝，唯讀verify七項全true，test原學生價ON保持不變；正式DB不動。證據與發布範圍見docs/reward-withdrawal-operations.md最新段落。

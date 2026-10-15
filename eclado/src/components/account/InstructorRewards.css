@@ -146,3 +146,18 @@
   .reward-pager { gap: 8px; }
   .reward-admin-header { align-items: flex-start; }
 }
+
+/* Teacher withdrawal review: native modal keeps focus inside the confirmation. */
+.reward-withdrawal-dialog { margin: auto; width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); box-sizing: border-box; padding: 28px; border: 1px solid var(--reward-border); background: var(--white); color: var(--reward-ink); overflow-y: auto; }
+.reward-withdrawal-dialog::backdrop { background: rgba(20,20,18,.48); }
+.reward-confirm-fields { margin: 20px 0; }
+.reward-confirm-fields > div { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.4fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--reward-border); }
+.reward-confirm-fields dt { color: var(--reward-muted); font-size: 12px; }
+.reward-confirm-fields dd { margin: 0; text-align: right; font-size: 14px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.reward-withdrawal-dialog .reward-actions { justify-content: flex-end; margin-top: 20px; }
+@media (max-width: 600px) { .reward-withdrawal-dialog { padding: 20px; } }
+
+.reward-withdrawal-filters { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,2fr) auto; align-items: end; gap: 16px; margin: 20px 0; }
+.reward-batch-summary { padding: 20px 0; border-block: 1px solid var(--reward-border); }
+.reward-withdrawal-dialog .reward-field { margin: 16px 0; }
+@media (max-width: 700px) { .reward-withdrawal-filters { grid-template-columns: minmax(0,1fr); } }

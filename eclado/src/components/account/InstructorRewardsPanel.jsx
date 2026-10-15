@@ -3,7 +3,7 @@ import RewardWithdrawalsPanel from './RewardWithdrawalsPanel.jsx';
 import React,{useEffect,useState} from 'react';
 import {getMyInstructorRewards,getAdminInstructorRewards} from '../../services/instructorRewards.js';
 const money=value=>`NT$ ${Number(value||0).toLocaleString('zh-TW')}`;
-const labels={pending:'待入帳',credited:'已入帳',cancelled:'已作廢',reversed:'已扣回',credit:'正式入帳',cancel:'待入帳作廢',reverse:'扣回',spend_reserve:'購物保留',spend_consume:'購物扣用',spend_release:'購物釋放',spend_refund:'購物返還',withdraw_reserve:'提領保留',withdraw_complete:'提領完成',withdraw_release:'提領退回'};
+const labels={pending:'待入帳',credited:'已入帳',cancelled:'已作廢',reversed:'已扣回',credit:'正式入帳',cancel:'待入帳作廢',reverse:'扣回',spend_reserve:'購物付款處理中',spend_consume:'購物扣用',spend_release:'購物釋放',spend_refund:'購物返還',withdraw_reserve:'提領處理中',withdraw_complete:'提領完成',withdraw_release:'提領退回'};
 const time=value=>new Date(value).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'});
 export default function InstructorRewardsPanel({userId,instructorId,admin=false,hideRefresh=false}){
   const [report,setReport]=useState(null),[error,setError]=useState(''),[loading,setLoading]=useState(true);
@@ -28,7 +28,7 @@ export default function InstructorRewardsPanel({userId,instructorId,admin=false,
     {error&&<p role="alert" className="reward-message">{error}</p>}
     {report&&<>
       {admin?<div className="reward-metrics">
-        {[['提領保留',report.summary.withdrawal_reserved_balance||0],['購物保留',report.summary.reserved_balance||0],['待入帳',report.summary.pending_balance],['累計已入帳',report.summary.credited_total],['累計扣回',report.summary.reversed_total],['帳戶餘額',report.summary.balance],['可用餘額',report.summary.available_balance]].map(([label,value])=><div key={label} className={`reward-metric ${label==='可用餘額'?'reward-metric--available':''}`}><span>{label}</span><strong>{money(value)}</strong></div>)}
+        {[['提領處理中',report.summary.withdrawal_reserved_balance||0],['購物付款處理中',report.summary.reserved_balance||0],['待入帳',report.summary.pending_balance],['累計已入帳',report.summary.credited_total],['累計扣回',report.summary.reversed_total],['帳戶餘額',report.summary.balance],['可用餘額',report.summary.available_balance]].map(([label,value])=><div key={label} className={`reward-metric ${label==='可用餘額'?'reward-metric--available':''}`}><span>{label}</span><strong>{money(value)}</strong></div>)}
       </div>:<div className="reward-balance-summary">
         <div className="reward-metrics reward-balance-primary">
           <div className="reward-metric reward-metric--available"><span>可用返饋金</span><strong>{money(report.summary.available_balance)}</strong></div>
@@ -37,7 +37,7 @@ export default function InstructorRewardsPanel({userId,instructorId,admin=false,
         {Number(report.summary.reserved_balance)>0&&<p className="reward-note">另有 {money(report.summary.reserved_balance)} 購物付款處理中。</p>}
         {Number(report.summary.withdrawal_reserved_balance)>0&&<p className="reward-note">另有 {money(report.summary.withdrawal_reserved_balance)} 提領處理中。</p>}
         <details className="reward-details"><summary>查看金額明細</summary><div className="reward-metrics reward-balance-details">
-          {[['購物保留',report.summary.reserved_balance||0],['提領保留',report.summary.withdrawal_reserved_balance||0],['累計已入帳',report.summary.credited_total],['累計扣回',report.summary.reversed_total],['帳戶餘額',report.summary.balance]].map(([label,value])=><div className="reward-metric" key={label}><span>{label}</span><strong>{money(value)}</strong></div>)}
+          {[['購物付款處理中',report.summary.reserved_balance||0],['提領處理中',report.summary.withdrawal_reserved_balance||0],['累計已入帳',report.summary.credited_total],['累計扣回',report.summary.reversed_total],['帳戶餘額',report.summary.balance]].map(([label,value])=><div className="reward-metric" key={label}><span>{label}</span><strong>{money(value)}</strong></div>)}
         </div></details>
       </div>}
       {Number(report.summary.balance)<0&&<p>帳戶為負餘額，後續入帳將抵銷負餘額。</p>}
@@ -55,7 +55,7 @@ export default function InstructorRewardsPanel({userId,instructorId,admin=false,
       {!report.entries.length&&<p>目前沒有帳務紀錄。</p>}
       {report.entries.map(entry=><div key={entry.id} className="reward-entry">
         <div className="reward-entry-title">{entry.withdrawal_id||entry.order_id} · {labels[entry.event_type]||entry.event_type} · {money(entry.amount)}</div>
-        <div className="reward-meta">{time(entry.created_at)} · 餘額 {money(entry.balance_after)} · 待入帳 {money(entry.pending_after)} · 購物保留 {money(entry.reserved_after||0)} · 提領保留 {money(entry.withdrawal_reserved_after||0)}</div>
+        <div className="reward-meta">{time(entry.created_at)} · 餘額 {money(entry.balance_after)} · 待入帳 {money(entry.pending_after)} · 購物付款處理中 {money(entry.reserved_after||0)} · 提領處理中 {money(entry.withdrawal_reserved_after||0)}</div>
       </div>)}
       {pager(ledgerOffset,setLedgerOffset,report.ledger_count,'帳務')}
     </>}

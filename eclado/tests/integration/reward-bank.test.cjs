@@ -30,3 +30,23 @@ test('bank endpoint derives actor from verified Auth, ignores forged caller owne
 test('unauthorized callers never reach bank storage',async()=>{const {res,calls}=await scenario({action:'save',bank},{valid:false});assert.equal(res.code,401);assert.equal(calls.length,1);});
 test('service RPC permission failures are generic, no crypto payload or account leakage',async()=>{const {res}=await scenario({action:'save',bank},{reject:true});assert.equal(res.code,403);assert.ok(!JSON.stringify(res.body).includes(bank.account));});
 test('bank endpoint validates before encrypting or storage',async()=>{const {res,calls}=await scenario({action:'save',bank:{...bank,branch:''}});assert.equal(res.code,400);assert.equal(calls.length,1);});
+
+test('CSV escapes text, prevents formulas, preserves account zeros and never exports ciphertext',()=>{
+ const old={...process.env};try{
+ process.env.REWARD_BANK_ACTIVE_KEY_ID='v1';process.env.REWARD_BANK_ENCRYPTION_KEYS=JSON.stringify({v1:key});
+ const {withdrawalCsv}=require('../../api/_reward-withdrawal-csv.js');const cipher=encryptBank('owner',{...bank,bank_code:'007',account:'00000123456789'});
+ const csv=withdrawalCsv({rows:[{id:'request',user_id:'owner',name:' =HYPERLINK("bad")',cipher,net_amount:'985',batch_date:'2026-11-10'}]});
+ assert.ok(csv.startsWith('\uFEFF'));assert.ok(csv.includes('"\'007"'));assert.ok(csv.includes('"\'00000123456789"'));assert.ok(csv.includes('"\' =HYPERLINK(""bad"")"'));assert.ok(!csv.includes(cipher.data));assert.throws(()=>withdrawalCsv({rows:[{user_id:'other',cipher}]}));
+ }finally{restore(old);}
+});
+test('export API uses verified actor, one server batch selection and no partial CSV on decryption failure',async()=>{
+ const old={...process.env},original=global.fetch;const calls=[];
+ try{
+ process.env.SUPABASE_URL='https://isolated.test';process.env.SUPABASE_ANON_KEY='isolated-anon';process.env.SUPABASE_SERVICE_KEY='isolated-service';process.env.REWARD_BANK_ACTIVE_KEY_ID='v1';process.env.REWARD_BANK_ENCRYPTION_KEYS=JSON.stringify({v1:key});
+ let corrupt=false,denied=false;
+ global.fetch=async(url,opts)=>{if(url.endsWith('/auth/v1/user'))return new Response(JSON.stringify({id:'actual-admin'}));calls.push(JSON.parse(opts.body));return new Response(JSON.stringify(denied?{code:'42501'}:{export_id:'audit',rows:[{id:'request',user_id:corrupt?'wrong':'owner',name:'老師',cipher:encryptBank('owner',bank),net_amount:'985',batch_date:'2026-11-10'}]}),{status:denied?403:200});};
+ async function invoke(batchDate='2026-11-10'){const res={code:200,headers:{},setHeader(k,v){this.headers[k]=v;},status(v){this.code=v;return this;},json(v){this.body=v;return this;},send(v){this.body=v;return this;}};await handler({method:'POST',headers:{authorization:'Bearer verified'},body:{action:'export',batchDate,userId:'victim',ids:['forged']}},res);return res;}
+ const success=await invoke();assert.equal(success.code,200);assert.equal(success.headers['X-Reward-Export-Id'],'audit');assert.equal(success.headers['Cache-Control'],'no-store');assert.deepEqual(calls[0],{p_actor:'actual-admin',p_batch_date:'2026-11-10'});assert.ok(success.body.includes(bank.account));
+ denied=true;assert.equal((await invoke()).code,403);denied=false;corrupt=true;const failed=await invoke();assert.equal(failed.code,503);assert.ok(!JSON.stringify(failed.body).includes(bank.account));assert.equal(failed.headers['Content-Type'],undefined);assert.equal((await invoke('2026-13-10')).code,400);
+ }finally{global.fetch=original;restore(old);}
+});

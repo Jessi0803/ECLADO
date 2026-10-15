@@ -1,4 +1,5 @@
 const {normalizeBank,encryptBank,decryptBank,maskBank}=require('./_reward-bank-crypto.js');
+const {withdrawalCsv}=require('./_reward-withdrawal-csv.js');
 module.exports=async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
  if(req.method!=='POST')return res.status(405).json({error:'Method not allowed'});
@@ -12,6 +13,16 @@ module.exports=async function handler(req,res){
  let user;try{user=await request('/auth/v1/user',{apikey:anon,Authorization:authorization});if(!user?.id)throw new Error();}catch{return res.status(401).json({error:'Unauthorized'});}
  try{
  const headers={apikey:service,Authorization:`Bearer ${service}`};
+ if(req.body?.action==='export'){
+ if(!/^\d{4}-(0[1-9]|1[0-2])-10$/.test(req.body.batchDate||''))return res.status(400).json({error:'請選擇匯款批次'});
+ const result=await request('/rest/v1/rpc/export_reward_withdrawal_batch',headers,{p_actor:user.id,p_batch_date:req.body.batchDate});
+ const csv=withdrawalCsv(result);
+ res.setHeader('Content-Type','text/csv; charset=utf-8');
+ res.setHeader('Content-Disposition',`attachment; filename="reward-withdrawals-${req.body.batchDate}.csv"`);
+ res.setHeader('X-Content-Type-Options','nosniff');
+ res.setHeader('X-Reward-Export-Id',result.export_id);
+ return res.status(200).send(csv);
+ }
  if(req.body?.action==='save'){
  let bank;try{bank=normalizeBank(req.body.bank);}catch{return res.status(400).json({error:'請填寫完整且格式正確的銀行資料'});}
  const result=await request('/rest/v1/rpc/save_reward_bank_profile',headers,{p_actor:user.id,p_cipher:encryptBank(user.id,bank),p_masked:maskBank(bank),p_expected_version:req.body.expectedVersion});
