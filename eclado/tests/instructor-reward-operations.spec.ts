@@ -27,16 +27,42 @@ test('withdrawal-only administrator sees unified entrance without account or rec
  await expect(page.getByRole('tab',{name:'提領匯款',exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:'確認另寄新版本'})).toHaveCount(0);
 });
-test('notification report is masked and uses original responsive styles',async({page})=>{
- await setup(page);await open(page,'返饋金通知紀錄');await expect(page.getByRole('heading',{name:'返饋金通知紀錄'})).toBeVisible();await expect(page.getByText(/t\*\*\*@example.test/)).toBeVisible();await expect(page.getByText(/Email 嘗試 6 次/)).toBeVisible();
+test('shared refresh queries only active tab without running reconciliation; tabs fit their contents',async({page})=>{
+ await setup(page);const counts=[0,0,0,0];let runs=0;
+ const endpoints=['get_admin_instructor_reward_accounts','get_admin_reward_withdrawals','get_admin_reward_notifications','get_admin_reward_reconciliation'];
+ for(const [i,name]of endpoints.entries())await page.route(`**/rest/v1/rpc/${name}`,r=>{counts[i]++;return r.fulfill({json:{total:0,accounts:[],withdrawals:[],notifications:[],runs:[],findings:[]}});});
+ await page.route('**/rest/v1/rpc/run_reward_reconciliation',r=>{runs++;return r.fulfill({json:{}});});
+ await open(page,'返饋金通知紀錄');
+ for(const [i,label]of ['返饋帳務','提領匯款','通知紀錄','財務對帳'].entries()){
+  await page.getByRole('tab',{name:label,exact:true}).click();await expect.poll(()=>counts[i]).toBeGreaterThan(0);
+  const before=[...counts];await expect(page.getByRole('button',{name:'重新整理',exact:true})).toHaveCount(1);
+  await page.getByRole('button',{name:'重新整理',exact:true}).click();await expect.poll(()=>counts[i]).toBe(before[i]+1);
+  expect(counts.filter((_,j)=>j!==i)).toEqual(before.filter((_,j)=>j!==i));
+ }
+ expect(runs).toBe(0);
+ const size=await page.getByRole('tablist',{name:'師資返饋管理功能'}).evaluate(el=>({width:el.getBoundingClientRect().width,buttons:[...el.children].reduce((sum,child)=>sum+child.getBoundingClientRect().width,0)}));
+ expect(size.width).toBeLessThanOrEqual(size.buttons+3);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+test('notification report is masked and uses original responsive styles',async({page})=>{
+ await setup(page);await open(page,'返饋金通知紀錄');await expect(page.getByRole('heading',{name:'返饋金通知紀錄'})).toBeVisible();await expect(page.getByText(/t\*\*\*@example.test/)).toBeVisible();await expect(page.getByText(/Email 嘗試 6 次/)).not.toBeVisible();
+ await expect(page.getByRole('button',{name:'重試原通知'})).toBeVisible();
+ await page.getByText('詳細資料與重試紀錄',{exact:true}).click();await expect(page.getByText(/Email 嘗試 6 次/)).toBeVisible();
+ await page.getByText('詳細資料與重試紀錄',{exact:true}).click();await expect(page.getByText(/Email 嘗試 6 次/)).not.toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+test('pending notice remains compact with no resend controls and retains detailed attempts',async({page})=>{
+ await setup(page);await page.route('**/rest/v1/rpc/get_admin_reward_notifications',r=>r.fulfill({json:{total:1,notifications:[{...notification,status:'pending',last_attempt_at:'2026-10-15T01:00:00Z'}],attempts:[{notification_id:'notice',created_at:'2026-10-15T01:00:00Z',action:'manual:retry',result:'queued'}],corrections:[]}}));
+ await open(page,'返饋金通知紀錄');await expect(page.getByRole('button',{name:'重試原通知'})).toHaveCount(0);await expect(page.getByRole('button',{name:'確認另寄新版本'})).toHaveCount(0);
+ await expect(page.getByText(/最後嘗試.*09:00:00/)).toBeVisible();await expect(page.getByText(/人工補發.*queued/)).not.toBeVisible();
+ await page.getByText('詳細資料與重試紀錄',{exact:true}).click();await expect(page.getByText(/人工補發.*queued/)).toBeVisible();
 });
 test('read-only permissions hide supplement and correction actions',async({page})=>{
  await setup(page,['orders.read','members.read','rewards.withdrawals.read']);await open(page,'返饋金通知紀錄');await expect(page.getByRole('button',{name:'確認另寄新版本'})).toHaveCount(0);await expect(page.getByRole('button',{name:'確認發送更正說明'})).toHaveCount(0);
 });
 test('manual supplement retries same key after unknown response',async({page})=>{
  await setup(page);const args:any[]=[];await page.route('**/rest/v1/rpc/retry_reward_notification',r=>{args.push(r.request().postDataJSON());return args.length===1?r.fulfill({status:503,json:{code:'503',message:'mock unknown'}}):r.fulfill({json:'notice2'});});await open(page,'返饋金通知紀錄');
- page.on('dialog',d=>d.accept(d.type()==='prompt'?'隔離補發':' '));await page.getByRole('button',{name:'確認另寄新版本'}).click();await page.getByRole('button',{name:'重送原操作'}).click();await expect.poll(()=>args.length).toBe(2);expect(args[0]).toEqual(args[1]);expect(args[0].p_new_version).toBe(true);
+ page.on('dialog',d=>d.accept(d.type()==='prompt'?'隔離補發':' '));await page.getByRole('button',{name:'確認另寄新版本'}).click();await expect(page.getByRole('button',{name:'重送原操作'})).toBeVisible();await page.getByRole('button',{name:'重新整理',exact:true}).click();await page.getByRole('button',{name:'重送原操作'}).click();await expect.poll(()=>args.length).toBe(2);expect(args[0]).toEqual(args[1]);expect(args[0].p_new_version).toBe(true);
 });
 test('explicit correction sends only immutable event ID and request key',async({page})=>{
  await setup(page);let args:any;await page.route('**/rest/v1/rpc/queue_reward_correction_notice',r=>{args=r.request().postDataJSON();return r.fulfill({json:'correction_notice'});});await open(page,'返饋金通知紀錄');page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'確認發送更正說明'}).click();await expect.poll(()=>args?.p_event_id).toBe(1);expect(Object.keys(args).sort()).toEqual(['p_event_id','p_key']);

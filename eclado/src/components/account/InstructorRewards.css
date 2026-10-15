@@ -56,11 +56,28 @@
 .reward-bank-current > div > span { font-size: 10px; letter-spacing: .08em; color: var(--reward-muted); }
 .reward-bank-current > div > strong { font-size: 13px; font-weight: 400; }
 .reward-bank-current > button { flex-shrink: 0; }
+.reward-bank-snapshot { margin: 16px 0; padding: 20px; border: 1px solid var(--reward-border); }
+.reward-bank-snapshot .reward-heading { margin-bottom: 16px; }
+.reward-bank-snapshot .reward-heading h4 { margin: 0; }
+.reward-bank-snapshot-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; margin: 0; }
+.reward-bank-snapshot-fields dt { font-size: 10px; color: var(--reward-muted); margin-bottom: 4px; }
+.reward-bank-snapshot-fields dd { margin: 0; font-size: 14px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+@media (max-width: 600px) { .reward-bank-snapshot-fields { grid-template-columns: minmax(0, 1fr); } }
 .reward-withdrawal-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 20px 0; }
 .reward-withdrawal-summary span { display: block; color: var(--reward-muted); font-size: 10px; margin-bottom: 6px; }
 .reward-withdrawal-summary strong { display: block; font-size: 18px; font-weight: 400; font-variant-numeric: tabular-nums; }
 .reward-note { color: var(--reward-muted); font-size: 10px !important; line-height: 1.8 !important; margin-top: 12px !important; }
 .reward-card { padding: 20px; border: 1px solid var(--reward-border); background: var(--white); margin-bottom: 12px; min-width: 0; }
+.reward-view .reward-notice { padding: 14px 18px; margin-bottom: 8px; }
+.reward-notice-summary { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto; align-items: center; gap: 8px 20px; }
+.reward-notice-event { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.reward-notice-event h3 { margin: 0; font-size: 13px; }
+.reward-notice-recipient { font-size: 12px; }
+.reward-notice .reward-notice-details { margin-top: 6px; }
+.reward-notice-details summary { padding: 4px 0; font-size: 11px; }
+.reward-notice-details[open] summary { margin-bottom: 8px; }
+.reward-notice .reward-notice-actions { margin-top: 8px; }
+@media (max-width: 900px) { .reward-notice-summary { grid-template-columns: minmax(0, 1fr); gap: 5px; } }
 .reward-status { display: inline-flex; padding: 4px 8px; border: 1px solid var(--reward-border); font-size: 10px; font-weight: 400; line-height: 1.4; color: var(--reward-muted); white-space: nowrap; }
 .reward-calendar { margin-top: 28px; }
 .reward-details { margin-top: 16px; font-size: 12px; }
@@ -75,7 +92,7 @@
 .reward-admin-header { margin-bottom: 24px; }
 .reward-account-list { display: grid; gap: 10px; margin-bottom: 20px; }
 .reward-account-card { display: block; width: 100%; text-align: left; padding: 20px; border: 1px solid var(--border); background: var(--white); color: var(--dark); font: inherit; cursor: pointer; }
-.reward-management-tabs { display: flex; overflow-x: auto; border: 1px solid var(--border); background: var(--white); margin-bottom: 24px; }
+.reward-management-tabs { display: flex; width: max-content; max-width: 100%; box-sizing: border-box; overflow-x: auto; border: 1px solid var(--border); background: var(--white); margin-bottom: 24px; }
 .reward-management-tabs button { flex-shrink: 0; padding: 10px 18px; border: 0; background: transparent; color: var(--mid); font: inherit; font-size: 12px; letter-spacing: .04em; cursor: pointer; }
 .reward-management-tabs button[aria-selected="true"] { background: var(--dark); color: #fff; }
 .reward-management-tabs button:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
@@ -83,7 +100,10 @@
 .reward-account-card > strong { display: block; margin-bottom: 4px; font-size: 13px; }
 .reward-account-card > div { margin-top: 4px; font-size: 12px; }
 .reward-account-card > .reward-meta { font-size: 10px; }
-.reward-account-card:hover, .reward-account-card[aria-pressed="true"] { border-color: var(--gold); }
+.reward-account-card:hover, .reward-account-card[aria-expanded="true"] { border-color: var(--gold); }
+.reward-account-drawer { background: var(--white); border: 1px solid var(--border); padding: 24px; }
+.reward-account-drawer > .reward-heading h3 { margin: 0; }
+.reward-account-drawer > .reward-panel { border: 0; padding: 0; margin-bottom: 0; }
 .reward-settings { max-width: 720px; margin-top: 24px; }
 .reward-settings .reward-field { font-size: 13px; }
 .reward-settings .reward-fold { max-width: 200px; display: flex; align-items: center; gap: 8px; }

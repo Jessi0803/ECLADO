@@ -5,7 +5,7 @@ import {getMyInstructorRewards,getAdminInstructorRewards} from '../../services/i
 const money=value=>`NT$ ${Number(value||0).toLocaleString('zh-TW')}`;
 const labels={pending:'待入帳',credited:'已入帳',cancelled:'已作廢',reversed:'已扣回',credit:'正式入帳',cancel:'待入帳作廢',reverse:'扣回',spend_reserve:'購物保留',spend_consume:'購物扣用',spend_release:'購物釋放',spend_refund:'購物返還',withdraw_reserve:'提領保留',withdraw_complete:'提領完成',withdraw_release:'提領退回'};
 const time=value=>new Date(value).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'});
-export default function InstructorRewardsPanel({userId,instructorId,admin=false}){
+export default function InstructorRewardsPanel({userId,instructorId,admin=false,hideRefresh=false}){
   const [report,setReport]=useState(null),[error,setError]=useState(''),[loading,setLoading]=useState(true);
   const [offset,setOffset]=useState(0),[ledgerOffset,setLedgerOffset]=useState(0),[revision,setRevision]=useState(0);
   useEffect(()=>{setOffset(0);setLedgerOffset(0);},[userId,instructorId,admin]);
@@ -23,7 +23,7 @@ export default function InstructorRewardsPanel({userId,instructorId,admin=false}
     <button className="reward-button" type="button" disabled={loading||value+20>=total} onClick={()=>setter(value+20)} aria-label={`${label}下一頁`}>下一頁</button>
   </div>;
   return <section aria-label="師資返饋金" className="reward-view reward-panel">
-    <div className="reward-heading"><h2>師資返饋金</h2><button className="reward-button" type="button" disabled={loading} onClick={()=>setRevision(r=>r+1)}>重新整理</button></div>
+    <div className="reward-heading"><h2>師資返饋金</h2>{!hideRefresh&&<button className="reward-button" type="button" disabled={loading} onClick={()=>setRevision(r=>r+1)}>重新整理</button>}</div>
     {loading&&<p role="status">正在載入返饋資料…</p>}
     {error&&<p role="alert" className="reward-message">{error}</p>}
     {report&&<>

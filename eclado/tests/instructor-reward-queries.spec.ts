@@ -58,7 +58,27 @@ test('admin reads named account history through limited RPC only',async({page})=
   let args:any;await page.route('**/rest/v1/rpc/get_admin_instructor_reward_report',r=>{args=r.request().postDataJSON();return r.fulfill({json:report});});
   await page.locator('.app-sidebar button:not(.sidebar-star)').filter({hasText:'師資返饋管理'}).click();
   await page.getByRole('button',{name:/帳務老師/}).click();await expect(page.getByText('帳務需查核',{exact:false})).toBeVisible();await expect(page.getByText('HISTORICAL-OLD-TEACHER · 歷史學生',{exact:true})).toBeVisible();
+  const dialog=page.getByRole('dialog',{name:'師資返饋帳務明細'});await expect(dialog).toBeVisible();
+  await expect(dialog.getByText('HISTORICAL-OLD-TEACHER · 歷史學生',{exact:true})).toBeVisible();
+  await dialog.getByRole('button',{name:'關閉師資帳務明細'}).click();await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole('button',{name:/帳務老師/})).toBeFocused();
   expect(args).toEqual({p_instructor_id:'teacher-history',p_offset:0,p_limit:20,p_ledger_offset:0});
+});
+test('twenty-account list opens drawer in viewport and preserves page and position on close',async({page})=>{
+  await admin(page,['orders.read','members.read','catalog.read']);const offsets:number[]=[];
+  await page.route('**/rest/v1/rpc/get_admin_instructor_reward_accounts',r=>{const offset=r.request().postDataJSON().p_offset;offsets.push(offset);return r.fulfill({json:{total:40,accounts:Array.from({length:20},(_,i)=>({id:`teacher-${offset+i+1}`,name:`帳務老師 ${offset+i+1}`,balance:100,pending_balance:0,student_count:1}))}});});
+  await page.route('**/rest/v1/rpc/get_admin_instructor_reward_report',r=>r.fulfill({json:report}));
+  await page.locator('.app-sidebar button:not(.sidebar-star)').filter({hasText:'師資返饋管理'}).click();
+  await expect(page.locator('.reward-account-card')).toHaveCount(20);
+  await page.getByRole('button',{name:'下一頁帳戶'}).click();await expect.poll(()=>offsets.at(-1)).toBe(20);
+  const trigger=page.locator('.reward-account-card').filter({hasText:'帳務老師 21'});await expect(trigger).toBeVisible();await trigger.scrollIntoViewIfNeeded();const position=await page.evaluate(()=>scrollY),requests=offsets.length;
+  await trigger.click();const dialog=page.getByRole('dialog',{name:'師資返饋帳務明細'});await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('heading',{name:'帳務老師 21 · 返饋帳務'})).toBeInViewport();
+  expect(await dialog.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
+  if((page.viewportSize()?.width||0)<=900){const width=await dialog.evaluate(el=>el.getBoundingClientRect().width);expect(width).toBeCloseTo(page.viewportSize()!.width,0);await dialog.getByRole('button',{name:'← 返回'}).click();}
+  else await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);await expect(trigger).toBeFocused();expect(offsets.length).toBe(requests);expect(offsets.at(-1)).toBe(20);expect(await page.evaluate(()=>scrollY)).toBeCloseTo(position,0);
+  await trigger.click();await expect(dialog).toBeVisible();await page.goBack();await expect(dialog).toHaveCount(0);
 });
 test('backoffice entrance requires both read permissions and admin role',async({page})=>{
   await admin(page,['orders.read']);await expect(page.locator('.app-sidebar button').filter({hasText:'師資返饋管理'})).toHaveCount(0);

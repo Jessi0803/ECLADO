@@ -29,17 +29,29 @@ test('authorized administrator claims once; processing ownership is required',as
  await admin(page,['orders.read','rewards.withdrawals.read','rewards.withdrawals.manage']);let args:any;await page.route('**/rest/v1/rpc/manage_reward_withdrawal',r=>{args=r.request().postDataJSON();return r.fulfill({json:{id:w.id,status:'processing',version:2}});});
  await page.getByRole('button',{name:'領取處理'}).click();await expect.poll(()=>args?.p_action).toBe('claim');expect(args.p_expected_version).toBe(1);
 });
+test('shared refresh retains withdrawal pagination',async({page})=>{
+ await admin(page,['orders.read','rewards.withdrawals.read']);const offsets:number[]=[];
+ await page.route('**/rest/v1/rpc/get_admin_reward_withdrawals',r=>{offsets.push(r.request().postDataJSON().p_offset);return r.fulfill({json:{total:41,withdrawals:[w]}});});
+ await page.getByRole('button',{name:'重新整理',exact:true}).click();await expect.poll(()=>offsets.length).toBe(1);
+ await page.getByRole('button',{name:'管理提領下一頁'}).click();await expect.poll(()=>offsets.at(-1)).toBe(20);
+ const count=offsets.length;await page.getByRole('button',{name:'重新整理',exact:true}).click();await expect.poll(()=>offsets.length).toBe(count+1);expect(offsets.at(-1)).toBe(20);
+});
 test('withdrawal management uses nominal monthly batch without annual bank calendar controls',async({page})=>{await admin(page,['orders.read','rewards.withdrawals.read','rewards.withdrawals.manage']);await expect(page.getByText(/預計日期固定為名目批次的每月 10 日/)).toBeVisible();await expect(page.getByRole('heading',{name:'年度銀行休假資料'})).toHaveCount(0);});
 test('withdrawal access requires dedicated read capability and administrator role',()=>{expect(canAccessBackofficePage({role:'admin',permissions:['orders.read','members.read']},'withdrawals')).toBe(false);expect(canAccessBackofficePage({role:'catalog_editor',permissions:['rewards.withdrawals.read']},'withdrawals')).toBe(false);});
 test('manual paid record supplies actual date reference amount; unresolved write retries same event key',async({page})=>{
  await admin(page,['orders.read','rewards.withdrawals.read','rewards.withdrawals.manage']);
- await page.route('**/rest/v1/rpc/get_admin_reward_withdrawals',r=>r.fulfill({json:{total:1,withdrawals:[{...w,status:'processing',version:2,processor_id:uid}]}}));await page.getByRole('button',{name:'重新整理提領管理'}).click();
+ await page.route('**/rest/v1/rpc/get_admin_reward_withdrawals',r=>r.fulfill({json:{total:1,withdrawals:[{...w,status:'processing',version:2,processor_id:uid}]}}));await page.getByRole('button',{name:'重新整理',exact:true}).click();
  const args:any[]=[];await page.route('**/rest/v1/rpc/manage_reward_withdrawal',r=>{args.push(r.request().postDataJSON());return args.length===1?r.fulfill({status:503,json:{code:'503',message:'隔離網路結果不明'}}):r.fulfill({json:{id:w.id,status:'paid',version:3}});});
  const answers=['2026-10-12','BANK-ISOLATED-001','985'];page.on('dialog',d=>d.accept(answers.shift()));
  await page.getByRole('button',{name:'記錄已匯款'}).click();await expect(page.getByRole('button',{name:'重送原處理結果'})).toBeVisible();
+ await page.getByRole('button',{name:'重新整理',exact:true}).click();await expect(page.getByRole('button',{name:'重送原處理結果'})).toBeVisible();
  await page.getByRole('button',{name:'重送原處理結果'}).click();await expect.poll(()=>args.length).toBe(2);expect(args[0]).toEqual(args[1]);expect(args[0].p_details).toEqual({transfer_date:'2026-10-12',reference:'BANK-ISOLATED-001',amount:985});
 });
 test('manager bank snapshot is temporary and clears on page focus',async({page})=>{
  await admin(page,['orders.read','rewards.withdrawals.read','rewards.withdrawals.manage']);await page.route('**/api/reward-bank',r=>r.fulfill({json:{bank:{...bank,holder:'測試老師',account:'12345678901234'}}}));
- await page.getByRole('button',{name:'查看匯款銀行快照'}).click();await expect(page.getByText(/12345678901234/)).toBeVisible();await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await expect(page.getByText(/12345678901234/)).toHaveCount(0);expect(await page.evaluate(()=>JSON.stringify({...localStorage}))).not.toContain('12345678901234');
+ await page.getByRole('button',{name:'查看匯款銀行快照'}).click();const snapshot=page.getByRole('region',{name:'匯款銀行快照',exact:true});
+ for(const [label,value] of [['銀行代碼','807'],['銀行名稱','隔離銀行'],['分行名稱','測試分行'],['收款戶名','測試老師'],['收款帳號','12345678901234']]){await expect(snapshot.locator('dl > div').filter({has:page.locator('dt',{hasText:label})}).locator('dd')).toHaveText(value);}
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await snapshot.getByRole('button',{name:'隱藏銀行資料'}).click();await expect(snapshot).toHaveCount(0);
+ await page.getByRole('button',{name:'查看匯款銀行快照'}).click();await expect(snapshot).toBeVisible();await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await expect(page.getByText(/12345678901234/)).toHaveCount(0);expect(await page.evaluate(()=>JSON.stringify({...localStorage}))).not.toContain('12345678901234');
 });
