@@ -1728,7 +1728,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       });
       return json(route, {
         ok: true,
-        order: { id: request.orderNo, status: 'unpaid', total: 3980 },
+        order: orders.find(order => order.id === request.orderNo) || { id: request.orderNo, status: 'unpaid', total: 3980 },
         response: {
           Status: 'S',
           Description: '重新付款單建立成功',

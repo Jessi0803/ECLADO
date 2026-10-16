@@ -24,9 +24,11 @@ import {
   updateMemberInvoiceDefaults,
 } from '../services/membership.js';
 import { fetchAccountOrders } from '../services/accountOrders.js';
+import { getOrderPaymentAmounts } from '../domain/orderPaymentAmounts.js';
+import { assistedLink, getMyAssistedLink } from '../services/assistedOrders.js';
 import { fetchProfessionalApplicationStatus } from '../services/professionalApplications.js';
 import { getMemberPaymentInstructions, getMemberPaymentSummaries, retrySinopacPayment } from '../services/paymentApi.js';
-import { getPendingPayment, savePendingPayment } from '../services/pendingPayment.js';
+import { savePendingPayment } from '../services/pendingPayment.js';
 import { fetchMyProfessionalSales } from '../services/professionalSales.js';
 import { normalizeRenewalPayload } from '../domain/professionalRenewals.js';
 import { fetchMyProfessionalRenewal } from '../services/professionalRenewals.js';
@@ -154,10 +156,6 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
     setOpeningPaymentOrder(order.id);
     setPaymentErrors(current => ({ ...current, [order.id]: '' }));
     try {
-      if (getPendingPayment(order.id)) {
-        setPage('checkout');
-        return;
-      }
       const result = await getMemberPaymentInstructions(order.id);
       if (result.paymentState === 'failed') {
         await retryFailedPayment(order, result.instruction);
@@ -168,11 +166,18 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
       const subtotal = Number(authoritativeOrder.subtotal ?? order.subtotal) || 0;
       const discount = Number(authoritativeOrder.discount ?? order.discount) || 0;
       const shipping = Number(authoritativeOrder.shipping ?? order.shipping) || 0;
-      const total = Number(authoritativeOrder.total ?? order.total) || 0;
+      const { total, shoppingCreditAmount, rewardCreditAmount, paymentAmount } = getOrderPaymentAmounts(authoritativeOrder);
+      const listedAmounts = getOrderPaymentAmounts(order);
+      if (total !== listedAmounts.total
+        || rewardCreditAmount !== listedAmounts.rewardCreditAmount
+        || shoppingCreditAmount !== listedAmounts.shoppingCreditAmount
+        || paymentAmount !== listedAmounts.paymentAmount) {
+        throw new Error('訂單付款資料前後不一致，請勿付款並聯繫客服確認。');
+      }
       const saved = savePendingPayment({
         orderNo: order.id,
         accessType: 'member',
-        amount: total,
+        amount: paymentAmount,
         method: instruction.payment_method || authoritativeOrder.payment_method || order.payment_method || 'atm',
         paymentLink: instruction.payment_url || '',
         paymentDeadline: paymentDeadlineFromIso(instruction.payment_due_at || authoritativeOrder.payment_due_at),
@@ -189,6 +194,9 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
           finalSubtotal: subtotal - discount,
           shipping,
           total,
+          shoppingCreditAmount,
+          rewardCreditAmount,
+          paymentTotal: paymentAmount,
           fulfillmentMethod: authoritativeOrder.fulfillment_method || order.fulfillment_method || 'delivery',
           promotion: authoritativeOrder.promotion_name
             ? { id: `order-${order.id}`, name: authoritativeOrder.promotion_name }
@@ -208,21 +216,44 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
     }
   }
 
+  async function openAssistedPayment(order) {
+    setOpeningPaymentOrder(order.id);
+    setPaymentErrors(current => ({ ...current, [order.id]: '' }));
+    try {
+      const link = await getMyAssistedLink(order.id);
+      window.location.assign(assistedLink(link));
+    } catch (paymentError) {
+      setPaymentErrors(current => ({
+        ...current,
+        [order.id]: paymentError?.message || '訂單確認連結無法載入，請稍後再試。',
+      }));
+      setOpeningPaymentOrder('');
+    }
+  }
+
   async function retryFailedPayment(order, instruction = {}) {
     setOpeningPaymentOrder(order.id);
     setPaymentErrors(current => ({ ...current, [order.id]: '' }));
     try {
+      getOrderPaymentAmounts(order);
       const result = await retrySinopacPayment({ orderNo:order.id });
       const authoritativeOrder = result.order || order;
       const subtotal = Number(authoritativeOrder.subtotal ?? order.subtotal) || 0;
       const discount = Number(authoritativeOrder.discount ?? order.discount) || 0;
       const shipping = Number(authoritativeOrder.shipping ?? order.shipping) || 0;
-      const total = Number(authoritativeOrder.total ?? order.total) || 0;
+      const { total, shoppingCreditAmount, rewardCreditAmount, paymentAmount } = getOrderPaymentAmounts(authoritativeOrder);
+      const listedAmounts = getOrderPaymentAmounts(order);
+      if (total !== listedAmounts.total
+        || rewardCreditAmount !== listedAmounts.rewardCreditAmount
+        || shoppingCreditAmount !== listedAmounts.shoppingCreditAmount
+        || paymentAmount !== listedAmounts.paymentAmount) {
+        throw new Error('訂單付款資料前後不一致，請勿付款並聯繫客服確認。');
+      }
       const saved = savePendingPayment({
         orderNo:order.id,
         accessType:'member',
         resultAccessToken:result.resultAccessToken,
-        amount:total,
+        amount:paymentAmount,
         method:instruction.payment_method || paymentSummaries[order.id]?.payment_method || 'card',
         paymentLink:result.paymentLink,
         paymentDueAt:authoritativeOrder.payment_due_at || order.payment_due_at,
@@ -233,6 +264,9 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
           finalSubtotal:subtotal - discount,
           shipping,
           total,
+          shoppingCreditAmount,
+          rewardCreditAmount,
+          paymentTotal:paymentAmount,
           fulfillmentMethod:authoritativeOrder.fulfillment_method || order.fulfillment_method || 'delivery',
           promotion:authoritativeOrder.promotion_name ? { id:`order-${order.id}`, name:authoritativeOrder.promotion_name } : null,
           items:Array.isArray(authoritativeOrder.items) ? authoritativeOrder.items : [],
@@ -553,6 +587,7 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
               {orders.map(order => {
                 const items = Array.isArray(order.items) ? order.items : [];
                 const isHistorical = order.order_source === 'historical_manual';
+                const isAssisted = order.order_source === 'admin_assisted';
                 const paymentDueTime = new Date(order.payment_due_at || '').getTime();
                 const paymentExpired = Number.isFinite(paymentDueTime) && paymentDueTime <= Date.now();
                 const paymentSummary = paymentSummaries[order.id];
@@ -562,7 +597,7 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
                     : ['awaiting_confirm', 'unpaid'].includes(order.status)
                       ? 'pending'
                       : order.status === 'cancelled' ? 'cancelled' : '');
-                const canRetryPayment = paymentSummary?.can_retry === true;
+                const canRetryPayment = !isAssisted && paymentSummary?.can_retry === true;
                 const canResumePayment = ['awaiting_confirm', 'unpaid'].includes(order.status)
                   && !paymentExpired
                   && !canRetryPayment;
@@ -617,15 +652,26 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
                       </div>
                       <div style={{ textAlign:isMobile ? 'left' : 'right' }}>
                         <div style={{ fontSize:12, color:'var(--dark)', marginBottom:5 }}>{order.transaction_date || order.date || order.created_at?.slice(0, 10) || ''}</div>
-                        <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'var(--black)' }}>NT$ {Number(order.total || 0).toLocaleString()}</div>
+                        {Number(order.shopping_credit_amount) > 0 || Number(order.reward_credit_amount) > 0 ? <>
+                          <div style={{ fontSize:12, color:'var(--dark)' }}>訂單總額 NT$ {Number(order.total || 0).toLocaleString()}</div>
+                          {Number(order.shopping_credit_amount) > 0 && <div style={{ fontSize:12, color:'var(--dark)', marginTop:4 }}>購物金折抵 −NT$ {Number(order.shopping_credit_amount).toLocaleString()}</div>}
+                          {Number(order.reward_credit_amount) > 0 && <div style={{ fontSize:12, color:'var(--dark)', marginTop:4 }}>返饋金折抵 −NT$ {Number(order.reward_credit_amount).toLocaleString()}</div>}
+                          <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'var(--black)', marginTop:6 }}>
+                            {order.payment_amount == null
+                              || !Number.isFinite(Number(order.payment_amount))
+                              || Math.abs(Number(order.total) - Number(order.shopping_credit_amount || 0) - Number(order.reward_credit_amount || 0) - Number(order.payment_amount)) > 0.001
+                              ? '尚需付款金額待確認'
+                              : `尚需付款 NT$ ${Number(order.payment_amount).toLocaleString()}`}
+                          </div>
+                        </> : <div style={{ fontFamily:'var(--font-display)', fontSize:20, color:'var(--black)' }}>NT$ {Number(order.total || 0).toLocaleString()}</div>}
                         {(canResumePayment || canRetryPayment) && (
                           <button
                             type="button"
-                            onClick={() => canRetryPayment ? retryFailedPayment(order) : openPendingPayment(order)}
+                            onClick={() => isAssisted ? openAssistedPayment(order) : canRetryPayment ? retryFailedPayment(order) : openPendingPayment(order)}
                             disabled={openingPaymentOrder === order.id}
                             style={{ marginTop:12, border:'1px solid var(--black)', background:'var(--black)', color:'var(--white)', padding:'9px 12px', fontSize:11, letterSpacing:'0.08em', cursor:openingPaymentOrder === order.id ? 'wait' : 'pointer', fontFamily:'inherit', opacity:openingPaymentOrder === order.id ? 0.65 : 1 }}
                           >
-                            {openingPaymentOrder === order.id ? (canRetryPayment ? '正在建立付款單…' : '正在讀取…') : (canRetryPayment ? '重新付款' : '查看付款資訊')}
+                            {openingPaymentOrder === order.id ? (isAssisted ? '正在開啟…' : canRetryPayment ? '正在建立付款單…' : '正在讀取…') : (isAssisted ? '確認明細與付款' : canRetryPayment ? '重新付款' : '查看付款資訊')}
                           </button>
                         )}
                         {paymentExpired && ['awaiting_confirm', 'unpaid'].includes(order.status) && (

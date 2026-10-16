@@ -335,7 +335,7 @@ async function getSupabaseOrderPaymentState(orderNo) {
   }
   const params = new URLSearchParams({
     id: `eq.${orderNo}`,
-    select: 'id,user_id,member,email,phone,address,invoice_type,invoice_company_name,invoice_tax_id,order_source,public_lookup_code,status,fulfillment_method,total,shopping_credit_amount,payment_amount,subtotal,discount,promotion_name,coupon_name,coupon_code_mask,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
+    select: 'id,user_id,member,email,phone,address,invoice_type,invoice_company_name,invoice_tax_id,order_source,public_lookup_code,status,fulfillment_method,total,shopping_credit_amount,reward_credit_amount,payment_amount,subtotal,discount,promotion_name,coupon_name,coupon_code_mask,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
     limit: '1',
   });
   const response = await fetch(`${supabaseUrl}/rest/v1/orders?${params}`, {
@@ -423,7 +423,7 @@ function verifyGuestAccessToken(token, orderNo) {
 async function getSupabaseGuestOrderByLookup(lookupCode) {
   const params = new URLSearchParams({
     public_lookup_code: `eq.${lookupCode}`,
-    select: 'id,user_id,member,email,phone,public_lookup_code,status,fulfillment_method,total,shopping_credit_amount,payment_amount,subtotal,discount,promotion_name,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
+    select: 'id,user_id,member,email,phone,public_lookup_code,status,fulfillment_method,total,shopping_credit_amount,reward_credit_amount,payment_amount,subtotal,discount,promotion_name,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
     limit: '1',
   });
   const response = await fetch(`${supabaseUrl}/rest/v1/orders?${params}`, {
@@ -448,6 +448,7 @@ function toPublicOrderPaymentState(order) {
     status: order.status,
     total,
     shopping_credit_amount: Number(order.shopping_credit_amount) || 0,
+    reward_credit_amount: Number(order.reward_credit_amount) || 0,
     payment_amount: Number(order.payment_amount ?? order.total) || 0,
     subtotal,
     discount,
@@ -928,6 +929,20 @@ function getWebhookPaymentState(payment) {
 async function buildAuthoritativeCreateBody(input) {
   if (!input?.orderNo) throw new Error('orderNo is required');
   if (!input?.paymentToken) throw new Error('paymentToken is required');
+  // Read the immutable tender snapshot before claiming the order. Older
+  // claim_order_payment definitions may return the gross total in `total`;
+  // that value must never become the bank's amount when credit was reserved.
+  const paymentOrder = await getSupabaseOrderPaymentState(String(input.orderNo));
+  const grossTotal = Number(paymentOrder.total);
+  const creditAmount = Number(paymentOrder.shopping_credit_amount ?? 0);
+  const rewardCreditAmount = Number(paymentOrder.reward_credit_amount ?? 0);
+  const gatewayAmount = Number(paymentOrder.payment_amount);
+  if (!Number.isFinite(grossTotal) || !Number.isFinite(creditAmount)
+    || !Number.isFinite(rewardCreditAmount) || rewardCreditAmount < 0
+    || !Number.isFinite(gatewayAmount) || gatewayAmount < 1
+    || creditAmount < 0 || Math.abs(grossTotal - creditAmount - rewardCreditAmount - gatewayAmount) > 0.001) {
+    throw new Error('Order payment snapshot is inconsistent');
+  }
   const order = await claimSupabaseOrder(String(input.orderNo), String(input.paymentToken));
   const productName = Array.isArray(order.items) && order.items.length
     ? `${order.items[0].name || order.items[0].nameZh || 'ECLADO訂單'}${order.items.length > 1 ? ` 等 ${order.items.length} 項商品` : ''}`
@@ -937,7 +952,7 @@ async function buildAuthoritativeCreateBody(input) {
   return buildCreateBody({
     ...input,
     orderNo: order.provider_order_no || input.orderNo,
-    amount: Number(order.total),
+    amount: gatewayAmount,
     prdtName: productName,
     expireDate: deadline.expireDate,
     expireTime: deadline.expireTime,

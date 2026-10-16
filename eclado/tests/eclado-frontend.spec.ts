@@ -1944,6 +1944,18 @@ test('付款回站即使沒有原分頁 session，仍可用限時結果憑證確
   expect(queryBody).toMatchObject({ orderNo:'ECL-CROSS-TAB-001', resultAccessToken:'signed-result-token' });
 });
 
+test('付款結果頁顯示購物金後的實際銀行付款金額', async ({ page }) => {
+  await mockEcladoApis(page, { paymentQueryStatus: 'paid' });
+  await page.route('https://pay.ecladotaiwan.com/api/sinopac/query-payment', route => route.fulfill({ json: {
+    ok: true, paymentState: 'paid', order: { id: 'ECL-CREDIT-RESULT-001', status: 'paid',
+      total: 6168, shopping_credit_amount: 300, payment_amount: 5868 },
+    response: { OrderList: [{ PayStatus: '1C400' }] },
+  } }));
+  await page.goto('/payment-result?orderNo=ECL-CREDIT-RESULT-001&result=paid&resultToken=signed-result-token');
+  await expect(page.getByRole('heading', { name: '付款成功' })).toBeVisible();
+  await expect(page.getByText('付款金額：')).toContainText('NT$ 5,868');
+});
+
 test('付款回站遇到通知時間差會自動重查直到成功', async ({ page }) => {
   await mockEcladoApis(page, { paymentQueryStatus: 'pending' });
   let queryCount = 0;
@@ -2348,6 +2360,187 @@ test('會員可從我的訂單安全返回尚未付款的原付款單', async ({
   ));
   expect(saved?.accessType).toBe('member');
   expect(saved?.paymentToken).toBe('');
+});
+
+test('一般訂單使用購物金後，會員中心與重新開啟的付款單維持原折抵與銀行應付額', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: authUser('member@example.com'), profiles: [profile('consumer')],
+    paymentQueryStatus: 'pending',
+    orders: [{
+      id: 'ECL-CREDIT-RETURN-001', user_id: TEST_USER_ID, member: 'E2E 會員',
+      items: [{ name: '積雪草泥膜', qty: 8, price: 756 }],
+      subtotal: 6048, discount: 0, shipping: 120, total: 6168,
+      shopping_credit_amount: 300, payment_amount: 5868,
+      status: 'awaiting_confirm', payment_method: 'atm',
+      payment_due_at: '2099-01-01T00:00:00.000Z', created_at: '2026-10-13T00:00:00.000Z',
+    }],
+  });
+  await page.goto('/');
+  // Reproduce a payment record written by the old client that lost its tender fields.
+  await page.evaluate(() => sessionStorage.setItem('eclado_pending_payment', JSON.stringify({
+    version: 2, orderNo: 'ECL-CREDIT-RETURN-001', accessType: 'member', amount: 6168,
+    method: 'atm', summary: { subtotal: 6048, discount: 0, shipping: 120, total: 6168, items: [] },
+  })));
+  await page.goto('/account');
+  await expect(page.getByText('訂單總額 NT$ 6,168')).toBeVisible();
+  await expect(page.getByText('購物金折抵 −NT$ 300')).toBeVisible();
+  await expect(page.getByText('尚需付款 NT$ 5,868')).toBeVisible();
+  await page.getByRole('button', { name: '查看付款資訊' }).click();
+  await expect(page).toHaveURL(/\/checkout$/);
+  await expect(page.getByText('購物金支付', { exact: true })).toBeVisible();
+  await expect(page.getByText('−NT$ 300', { exact: true })).toBeVisible();
+  await expect(page.getByText('NT$ 5,868', { exact: true }).first()).toBeVisible();
+  const saved = await page.evaluate(() => JSON.parse(sessionStorage.getItem('eclado_pending_payment') || 'null'));
+  expect(saved).toMatchObject({
+    amount: 5868, summary: { total: 6168, shoppingCreditAmount: 300, paymentTotal: 5868 },
+  });
+  await page.reload();
+  await expect(page.getByText('購物金支付', { exact: true })).toBeVisible();
+  await expect(page.getByText('NT$ 5,868', { exact: true }).first()).toBeVisible();
+});
+
+test('舊分頁付款暫存缺購物金欄位時，以訂單權威資料恢復折抵', async ({ page }) => {
+  await mockEcladoApis(page, { authUser: authUser('member@example.com'), profiles: [profile('consumer')] });
+  await page.route('https://pay.ecladotaiwan.com/api/sinopac/query-payment', route => route.fulfill({ json: {
+    ok: true, paymentState: 'pending', response: { Status: 'S', ATMParam: { AtmPayNo: '8079988776655443' } },
+    order: { id: 'ECL-CREDIT-LEGACY-001', status: 'awaiting_confirm', total: 6168,
+      shopping_credit_amount: 300, payment_amount: 5868, payment_due_at: '2099-01-01T00:00:00.000Z' },
+  } }));
+  await page.goto('/');
+  await page.evaluate(() => sessionStorage.setItem('eclado_pending_payment', JSON.stringify({
+    version: 2, orderNo: 'ECL-CREDIT-LEGACY-001', accessType: 'member', amount: 6168, method: 'atm',
+    summary: { subtotal: 6048, discount: 0, shipping: 120, total: 6168, items: [] },
+  })));
+  await page.goto('/checkout');
+  await expect(page.getByText('購物金支付', { exact: true })).toBeVisible();
+  await expect(page.getByText('−NT$ 300', { exact: true })).toBeVisible();
+  await expect(page.getByText('NT$ 5,868', { exact: true }).first()).toBeVisible();
+  const saved = await page.evaluate(() => JSON.parse(sessionStorage.getItem('eclado_pending_payment') || 'null'));
+  expect(saved).toMatchObject({ amount: 5868, summary: { shoppingCreditAmount: 300, paymentTotal: 5868 } });
+});
+
+test('購物金與應付額不一致時會員中心不開啟付款資訊', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: authUser('member@example.com'), profiles: [profile('consumer')],
+    orders: [{
+      id: 'ECL-CREDIT-MISMATCH-001', user_id: TEST_USER_ID, member: 'E2E 會員',
+      items: [], subtotal: 6048, total: 6168, shopping_credit_amount: 300,
+      payment_amount: 6168, status: 'awaiting_confirm', payment_method: 'atm',
+      payment_due_at: '2099-01-01T00:00:00.000Z', created_at: '2026-10-13T00:00:00.000Z',
+    }],
+  });
+  await page.goto('/account');
+  await expect(page.getByText('尚需付款金額待確認')).toBeVisible();
+  await page.getByRole('button', { name: '查看付款資訊' }).click();
+  await expect(page).toHaveURL(/\/account$/);
+  await expect(page.getByRole('alert')).toContainText('訂單付款金額與購物金資料不一致');
+});
+
+test('付款 API 回傳舊版未帶購物金資料時不顯示原價付款單', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: authUser('member@example.com'), profiles: [profile('consumer')],
+    orders: [{
+      id: 'ECL-CREDIT-OLD-API-001', user_id: TEST_USER_ID, member: 'E2E 會員',
+      items: [], subtotal: 6048, total: 6168, shopping_credit_amount: 300,
+      payment_amount: 5868, status: 'awaiting_confirm', payment_method: 'atm',
+      payment_due_at: '2099-01-01T00:00:00.000Z', created_at: '2026-10-13T00:00:00.000Z',
+    }],
+  });
+  await page.route('https://pay.ecladotaiwan.com/api/orders/payment-instructions', route => route.fulfill({ json: {
+    ok: true, paymentState: 'pending',
+    order: { id: 'ECL-CREDIT-OLD-API-001', subtotal: 6048, total: 6168 },
+    instruction: { payment_method: 'atm', atm_account: '8079988776655443' },
+  } }));
+  await page.goto('/account');
+  await page.getByRole('button', { name: '查看付款資訊' }).click();
+  await expect(page).toHaveURL(/\/account$/);
+  await expect(page.getByRole('alert')).toContainText('訂單付款資料前後不一致');
+});
+
+test('購物金訂單信用卡失敗後重試保留銀行應付額', async ({ page }) => {
+  let retryRequest: Record<string, unknown> | null = null;
+  await mockEcladoApis(page, {
+    authUser: authUser('member@example.com'), profiles: [profile('consumer')],
+    paymentQueryStatus: 'failed',
+    orders: [{
+      id: 'ECL-CREDIT-RETRY-001', user_id: TEST_USER_ID, member: 'E2E 會員',
+      items: [{ name: '積雪草泥膜', qty: 8, price: 756 }],
+      subtotal: 6048, discount: 0, shipping: 120, total: 6168,
+      shopping_credit_amount: 300, payment_amount: 5868,
+      status: 'unpaid', payment_method: 'card',
+      payment_due_at: '2099-01-01T00:00:00.000Z', created_at: '2026-10-13T00:00:00.000Z',
+    }],
+  });
+  await page.route('https://pay.ecladotaiwan.com/api/sinopac/retry-payment', route => {
+    retryRequest = route.request().postDataJSON();
+    return route.fulfill({ json: {
+      ok: true, order: { id: 'ECL-CREDIT-RETRY-001', status: 'unpaid',
+        subtotal: 6048, discount: 0, shipping: 120, total: 6168,
+        shopping_credit_amount: 300, payment_amount: 5868,
+        payment_due_at: '2099-01-01T00:00:00.000Z' },
+      response: { Status: 'S' }, paymentLink: 'https://sandbox.sinopac.test/retry-pay',
+      resultAccessToken: 'retry-result-access-token',
+    } });
+  });
+  await page.route('https://sandbox.sinopac.test/retry-pay', route => route.fulfill({
+    status: 200, contentType: 'text/html', body: '<title>永豐 Sandbox</title>',
+  }));
+  await page.goto('/account');
+  await page.getByRole('button', { name: '重新付款' }).click();
+  await expect(page).toHaveURL('https://sandbox.sinopac.test/retry-pay');
+  expect(retryRequest).toMatchObject({ orderNo: 'ECL-CREDIT-RETRY-001' });
+  await page.goto('/');
+  const saved = await page.evaluate(() => JSON.parse(sessionStorage.getItem('eclado_pending_payment') || 'null'));
+  expect(saved).toMatchObject({ amount: 5868, summary: {
+    total: 6168, shoppingCreditAmount: 300, paymentTotal: 5868,
+  } });
+});
+
+test('會員代客訂單顯示購物金與銀行應付額，從本人連結確認後再付款', async ({ page }) => {
+  const instructionRequests: string[] = [];
+  const linkRequests: Array<{ orderId:string; authorization:string }> = [];
+  await mockEcladoApis(page, {
+    authUser: authUser('member@example.com'), profiles:[profile('consumer')],
+    onPaymentInstructionRequest:request => instructionRequests.push(request.orderNo),
+    orders:[{
+      id:'ECL-ASSISTED-MEMBER-001', user_id:TEST_USER_ID, order_source:'admin_assisted',
+      member:'E2E 會員', items:[{ name:'完美潔面卸妝膏', qty:1, price:5000 }],
+      subtotal:5000, shipping:120, total:5120, shopping_credit_amount:400, payment_amount:4720,
+      status:'awaiting_confirm', payment_due_at:'2099-01-01T00:00:00.000Z', created_at:'2026-10-13T00:00:00.000Z',
+    }],
+  });
+  await page.route('**/rest/v1/rpc/get_my_assisted_order_link', route => {
+    linkRequests.push({orderId:route.request().postDataJSON().p_order_id,authorization:route.request().headers().authorization || ''});
+    return route.fulfill({json:{order_id:'ECL-ASSISTED-MEMBER-001',link_token:'a'.repeat(64)}});
+  });
+  await page.route('**/api/orders/assisted-details', route => route.fulfill({json:{
+    ok:true,paymentMethod:'atm',creditConsentRecorded:false,
+    order:{id:'ECL-ASSISTED-MEMBER-001',member:'E2E 會員',phone:'0911111111',email:'member@example.com',address:'台北市',invoice_type:'personal',status:'awaiting_confirm',subtotal:5000,shipping:120,total:5120,shopping_credit_amount:400,payment_amount:4720,payment_due_at:'2099-01-01',is_member:true,items:[{name:'完美潔面卸妝膏',qty:1,unit_price:5000,line_total:5000}]},
+    instruction:null,
+  }}));
+
+  await page.goto('/account');
+  await expect(page.getByText('訂單總額 NT$ 5,120')).toBeVisible();
+  await expect(page.getByText('購物金折抵 −NT$ 400')).toBeVisible();
+  await expect(page.getByText('尚需付款 NT$ 4,720')).toBeVisible();
+  await page.getByRole('button',{name:'確認明細與付款'}).click();
+  await expect(page).toHaveURL(/\/order-payment#order=ECL-ASSISTED-MEMBER-001&token=/);
+  await expect(page.getByRole('heading',{name:'訂單確認與付款'})).toBeVisible();
+  await expect(page.getByRole('checkbox',{name:/同意本訂單使用購物金/})).toBeVisible();
+  expect(instructionRequests).toEqual([]);
+  expect(linkRequests).toEqual([{orderId:'ECL-ASSISTED-MEMBER-001',authorization:'Bearer mock-access-token'}]);
+});
+
+test('會員無法取得代客訂單連結時停留在原頁並顯示錯誤', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser:authUser('member@example.com'), profiles:[profile('consumer')],
+    orders:[{id:'ECL-ASSISTED-002',user_id:TEST_USER_ID,order_source:'admin_assisted',member:'E2E 會員',items:[],total:5120,status:'unpaid',payment_due_at:'2099-01-01T00:00:00.000Z',created_at:'2026-10-13T00:00:00.000Z'}],
+  });
+  await page.route('**/rest/v1/rpc/get_my_assisted_order_link',route=>route.fulfill({status:403,json:{code:'42501',message:'此訂單無法繼續付款，請重新整理訂單狀態或聯繫客服'}}));
+  await page.goto('/account');
+  await page.getByRole('button',{name:'確認明細與付款'}).click();
+  await expect(page).toHaveURL(/\/account$/);
+  await expect(page.getByRole('alert')).toContainText('此訂單無法繼續付款');
 });
 
 test('會員可從我的訂單以本人登入憑證重新付款且保留原訂單', async ({ page }) => {

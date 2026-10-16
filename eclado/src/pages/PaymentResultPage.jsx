@@ -45,7 +45,7 @@ export default function PaymentResultPage({ setPage }) {
       for (let attempt = 0; attempt < PAYMENT_RESULT_QUERY_ATTEMPTS && !cancelled; attempt += 1) {
         try {
           const result = await querySinopacPayment(paymentAccess);
-          const confirmedAmount = Number(result?.order?.total);
+          const confirmedAmount = Number(result?.order?.payment_amount ?? result?.order?.total);
           if (Number.isFinite(confirmedAmount) && confirmedAmount > 0) setAmount(confirmedAmount);
           nextStatus = result.paymentState || getPaymentResultStatus(result.response);
           if (nextStatus !== 'pending') break;
@@ -80,7 +80,7 @@ export default function PaymentResultPage({ setPage }) {
         paymentToken: '',
         resultAccessToken: result.resultAccessToken || resultAccessToken,
         paymentLink: result.paymentLink,
-        amount: Number(result.order?.total) || amount,
+        amount: Number(result.order?.payment_amount ?? result.order?.total) || amount,
         response: result.response,
       });
       window.location.assign(result.paymentLink);

@@ -34,7 +34,9 @@ test('released-wallet success is persisted then blocks activation; definite fail
 test('authoritative double-wallet net payment reaches bank as cents, caller amount ignored',async()=>{
  const {buildAuthoritativeCreateBody}=require('./server');const original=global.fetch;
  try{
-  global.fetch=async()=>new Response(JSON.stringify({id:'O1',total:1,order_total:5600,shopping_credit_amount:300,reward_credit_amount:5299,items:[],payment_due_at:'2099-01-01T00:00:00Z'}),{status:200});
+  global.fetch=async(url)=>new Response(JSON.stringify(String(url).includes('/rest/v1/orders?')
+    ? [{id:'O1',total:5600,shopping_credit_amount:300,reward_credit_amount:5299,payment_amount:1}]
+    : {id:'O1',total:1,order_total:5600,shopping_credit_amount:300,reward_credit_amount:5299,items:[],payment_due_at:'2099-01-01T00:00:00Z'}),{status:200});
   const body=await buildAuthoritativeCreateBody({orderNo:'O1',paymentToken:'isolated-token',amount:99999,payType:'C'});
   assert.equal(body.Amount,100);
  }finally{global.fetch=original;}

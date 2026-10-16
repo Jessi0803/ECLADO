@@ -27,12 +27,13 @@ export async function uploadProfessionalAwardEvidence(userId, values, file) {
   try {
     optimizedImage = await optimizeDocumentImageFile(file);
   } catch (optimizationError) {
-    return { data: null, error: new Error(`獎狀圖片轉換失敗：${optimizationError.message || '請稍後再試'}`) };
+    return { data: null, error: new Error(`獎狀圖片處理失敗：${optimizationError.message || '請重新選擇圖片後重試'}`) };
   }
-  const storagePath = `${userId}/${evidenceId}/award.webp`;
+  const extension = optimizedImage.file.type === 'image/jpeg' ? 'jpg' : 'webp';
+  const storagePath = `${userId}/${evidenceId}/award.${extension}`;
   const upload = await supabase.storage.from(PROFESSIONAL_RENEWAL_EVIDENCE_BUCKET)
-    .upload(storagePath, optimizedImage.file, { contentType: 'image/webp', upsert: false });
-  if (upload.error) return upload;
+    .upload(storagePath, optimizedImage.file, { contentType: optimizedImage.file.type, upsert: false });
+  if (upload.error) return { data: null, error: new Error(`獎狀圖片上傳失敗：${upload.error.message || '請確認網路及登入狀態後重試'}`) };
 
   const saved = await supabase.rpc('save_professional_award_evidence', {
     p_evidence_id: null,
@@ -41,7 +42,7 @@ export async function uploadProfessionalAwardEvidence(userId, values, file) {
     p_award_number: values.awardNumber,
     p_storage_path: storagePath,
     p_original_name: file.name,
-    p_mime_type: 'image/webp',
+    p_mime_type: optimizedImage.file.type,
     p_file_size: optimizedImage.file.size,
     p_consent_acknowledged: values.consentAcknowledged,
   });

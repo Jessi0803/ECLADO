@@ -1,7 +1,15 @@
 import { expect, test } from '@playwright/test';
 import { mockEcladoApis } from './support/eclado-mocks';
 
-test('新獎狀上傳 WebP 並以新增模式呼叫 RPC', async ({ page }) => {
+for (const fallback of [false, true]) {
+test(`新獎狀上傳 ${fallback ? 'JPEG 備援' : 'WebP'} 並以新增模式呼叫 RPC`, async ({ page }) => {
+  if (fallback) await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.toBlob;
+    HTMLCanvasElement.prototype.toBlob = function(callback, type, quality) {
+      if (type === 'image/webp') return original.call(this, callback, 'image/png');
+      return original.call(this, callback, type, quality);
+    };
+  });
   await mockEcladoApis(page);
   let uploadPath = '';
   let payload: Record<string, unknown> = {};
@@ -26,8 +34,9 @@ test('新獎狀上傳 WebP 並以新增模式呼叫 RPC', async ({ page }) => {
   });
   expect(result.error).toBeNull();
   expect(payload.p_evidence_id).toBeNull();
-  expect(payload.p_mime_type).toBe('image/webp');
+  expect(payload.p_mime_type).toBe(fallback ? 'image/jpeg' : 'image/webp');
   expect(payload.p_original_name).toBe('award.png');
-  expect(payload.p_storage_path).toMatch(/^aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\/[0-9a-f-]{36}\/award\.webp$/);
+  expect(payload.p_storage_path).toMatch(new RegExp(`^aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/[0-9a-f-]{36}/award\\.${fallback ? 'jpg' : 'webp'}$`));
   expect(uploadPath).toContain(String(payload.p_storage_path));
 });
+}

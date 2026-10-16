@@ -314,9 +314,15 @@ test('buildCreateBody: ATM 帶 ATMParam；金額為 0 應拋錯', () => {
   assert.throws(() => server.buildCreateBody({ orderNo: 'X', amount: 0, payType: 'A' }), /amount/);
 });
 
-test('buildAuthoritativeCreateBody: 忽略呼叫端 amount，使用資料庫訂單 total', async () => {
+test('buildAuthoritativeCreateBody: 忽略呼叫端 amount，使用資料庫實際應付額', async () => {
   const originalFetch = global.fetch;
   global.fetch = async (url, options) => {
+    if (String(url).includes('/rest/v1/orders?')) {
+      assert.match(String(url), /id=eq\.ECL-AUTH-001/);
+      return new Response(JSON.stringify([{
+        id: 'ECL-AUTH-001', total: 3980, shopping_credit_amount: 0, payment_amount: 3980,
+      }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
     assert.match(String(url), /rpc\/claim_order_payment$/);
     assert.equal(options.headers.apikey, process.env.SUPABASE_SERVICE_ROLE_KEY);
     assert.equal(options.headers.Authorization, `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`);
@@ -350,6 +356,75 @@ test('buildAuthoritativeCreateBody: 忽略呼叫端 amount，使用資料庫訂�
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+test('buildAuthoritativeCreateBody: 舊版 claim 回傳原價時仍以購物金後應付額向銀行建單', async () => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    if (String(url).includes('/rest/v1/orders?')) {
+      return new Response(JSON.stringify([{
+        id: 'ECL-CREDIT-001', total: 6168, shopping_credit_amount: 300, payment_amount: 5868,
+      }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    assert.match(String(url), /rpc\/claim_order_payment$/);
+    return new Response(JSON.stringify({
+      id: 'ECL-CREDIT-001', total: 6168, status: 'awaiting_confirm',
+      items: [{ name: '積雪草泥膜', qty: 8 }], payment_due_at: '2026-10-15T09:00:00.000Z',
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  };
+  try {
+    const body = await server.buildAuthoritativeCreateBody({
+      orderNo: 'ECL-CREDIT-001', paymentToken: 'payment-token', amount: 6168, payType: 'A',
+    });
+    assert.equal(body.Amount, 586800);
+    assert.equal(calls.length, 2);
+  } finally { global.fetch = originalFetch; }
+});
+
+test('buildAuthoritativeCreateBody: 購物金與應付額不相符時，未 claim 即停止建單', async () => {
+  const originalFetch = global.fetch;
+  let claimed = false;
+  global.fetch = async (url) => {
+    if (String(url).includes('/rpc/claim_order_payment')) claimed = true;
+    return new Response(JSON.stringify([{
+      id: 'ECL-CREDIT-BAD', total: 6168, shopping_credit_amount: 300, payment_amount: 6168,
+    }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  };
+  try {
+    await assert.rejects(server.buildAuthoritativeCreateBody({
+      orderNo: 'ECL-CREDIT-BAD', paymentToken: 'payment-token', payType: 'A',
+    }), /payment snapshot is inconsistent/);
+    assert.equal(claimed, false);
+  } finally { global.fetch = originalFetch; }
+});
+
+test('buildAuthoritativeCreateBody: 雙錢包只向銀行收取快照應付額，拒絕不一致快照', async () => {
+  const originalFetch = global.fetch;
+  let reward = 200;
+  let payment = 5668;
+  let claims = 0;
+  global.fetch = async (url) => {
+    if (String(url).includes('/rest/v1/orders?')) {
+      assert.match(String(url), /reward_credit_amount/);
+      return new Response(JSON.stringify([{id:'DUAL-WALLET',total:6168,shopping_credit_amount:300,reward_credit_amount:reward,payment_amount:payment}]), {status:200});
+    }
+    claims++;
+    return new Response(JSON.stringify({id:'DUAL-WALLET',total:6168,status:'awaiting_confirm',items:[],payment_due_at:'2026-10-20T00:00:00Z'}), {status:200});
+  };
+  try {
+    const input = {orderNo:'DUAL-WALLET',paymentToken:'test-token',amount:6168,payType:'A',rewardCreditAmount:0};
+    assert.equal((await server.buildAuthoritativeCreateBody(input)).Amount, 566800);
+    assert.equal(claims, 1);
+    for (const invalid of [-1, 'invalid', 300]) {
+      reward = invalid;
+      await assert.rejects(server.buildAuthoritativeCreateBody(input), /payment snapshot is inconsistent/);
+      assert.equal(claims, 1);
+    }
+    reward = 5867; payment = 1;
+    assert.equal((await server.buildAuthoritativeCreateBody(input)).Amount, 100);
+  } finally { global.fetch = originalFetch; }
 });
 
 test('formatSinopacDeadline: 將權威截止時間轉為台灣日期與時間', () => {
