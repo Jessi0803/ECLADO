@@ -1981,11 +1981,11 @@ test('活動指定商品可全選及全取消', async ({ page }) => {
 
   await page.getByRole('button', { name:'全選', exact:true }).click();
   await expect(page.getByText(`指定商品（已選 ${adminProductRows.length}）`)).toBeVisible();
-  await expect(page.locator('input[type="checkbox"]:checked')).toHaveCount(adminProductRows.length);
+  await expect(page.locator('input[type="checkbox"]:checked')).toHaveCount(adminProductRows.length + 6);
 
   await page.getByRole('button', { name:'全取消', exact:true }).click();
   await expect(page.getByText('指定商品（已選 0）')).toBeVisible();
-  await expect(page.locator('input[type="checkbox"]:checked')).toHaveCount(0);
+  await expect(page.locator('input[type="checkbox"]:checked')).toHaveCount(6);
 });
 
 test('優惠券方案可打包多個優惠券專用活動', async ({ page }) => {
@@ -3119,4 +3119,42 @@ test('操作紀錄可依資料類型篩選並查看不可竄改的前後差異',
   await expect(drawer.getByText('awaiting_confirm')).toBeVisible();
   await expect(drawer.getByText('paid')).toBeVisible();
   await expect(drawer.getByText('11111111-1111-4111-8111-111111111111')).toBeVisible();
+});
+
+
+test('自動活動可多選會員身分與訪客，優惠券專用活動沿用方案對象', async ({ page }) => {
+  const saves: Record<string, unknown>[] = [];
+  await mockAdminApis(page, { onDiscountPromotionSave: payload => saves.push(payload) });
+  await page.goto('/admin'); await openAdminSection(page, /活動管理/);
+  await page.getByRole('button', { name:'+ 新增優惠活動' }).click();
+  await page.getByPlaceholder('例：秋季保養 9 折').fill('專業會員活動');
+  const audience = page.getByTestId('promotion-audience');
+  for (const label of ['一般會員','師資','經銷商','內部人員','允許訪客']) await audience.getByLabel(label, { exact:true }).uncheck();
+  await page.getByRole('button', { name:'建立活動' }).click();
+  await expect.poll(() => saves.length).toBe(1);
+  expect(saves[0]).toMatchObject({ audience_roles:['pro'], allow_guest:false });
+  await page.getByRole('button', { name:'+ 新增優惠活動' }).click();
+  await page.getByPlaceholder('例：秋季保養 9 折').fill('優惠券活動');
+  await page.getByLabel('啟用方式').selectOption('coupon_only');
+  await expect(page.getByTestId('promotion-audience')).toHaveCount(0);
+  await page.getByRole('button', { name:'建立活動' }).click();
+  await expect.poll(() => saves.length).toBe(2);
+  expect(saves[1]).not.toHaveProperty('audience_roles');
+});
+
+test('自動活動拒絕空白對象並允許僅訪客', async ({ page }) => {
+  const saves: Record<string, unknown>[] = [];
+  await mockAdminApis(page, { onDiscountPromotionSave: payload => saves.push(payload) });
+  await page.goto('/admin'); await openAdminSection(page, /活動管理/);
+  await page.getByRole('button', { name:'+ 新增優惠活動' }).click();
+  await page.getByPlaceholder('例：秋季保養 9 折').fill('訪客活動');
+  const audience = page.getByTestId('promotion-audience');
+  for (const checkbox of await audience.getByRole('checkbox').all()) await checkbox.uncheck();
+  await page.getByRole('button', { name:'建立活動' }).click();
+  await expect(page.getByText('請至少選擇一種會員身分或允許訪客')).toBeVisible();
+  expect(saves).toHaveLength(0);
+  await audience.getByLabel('允許訪客').check();
+  await page.getByRole('button', { name:'建立活動' }).click();
+  await expect.poll(() => saves.length).toBe(1);
+  expect(saves[0]).toMatchObject({ audience_roles:[], allow_guest:true });
 });

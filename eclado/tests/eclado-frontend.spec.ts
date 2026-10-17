@@ -2639,3 +2639,37 @@ test('手機版購物到結帳建立付款單可完成', async ({ page, isMobile
   await expect(page.getByText('付款單已建立')).toBeVisible();
   await expect(page.getByText('8071234567890123')).toBeVisible();
 });
+
+test('未符合身分與訪客資格時不顯示自動活動或購物車折扣', async ({ page }) => {
+  await mockEcladoApis(page, { promotions:[{...activePromotion,audience_roles:['pro'],allow_guest:false}] });
+  await page.goto('/shop');
+  await expect(page.getByText('活動中', {exact:true})).toHaveCount(0);
+  await page.getByText('胜肽修護精華液').first().click();
+  await expect(page.getByText('限時優惠')).toHaveCount(0);
+  await page.getByRole('button', {name:/加入購物車/}).click();
+  const cartDrawer=await openCart(page);
+  await expect(cartDrawer.getByText(activePromotion.name)).toHaveCount(0);
+  await expect(cartDrawer.getByText(/活動指定商品/)).toHaveCount(0);
+  await expect(cartDrawer.getByText('NT$ 3,980').last()).toBeVisible();
+});
+
+test('活動資格依目前身分判斷，訪客開關與會員身分各自獨立', async ({ page }) => {
+  await page.goto('/shop');
+  const results=await page.evaluate(async()=>{
+    const modulePath='/src/domain/promotions.js';
+    const {promotionAllowsUser,calculateDiscount,getPromoDisplayPrice}=await import(modulePath);
+    const p={id:'target',active:true,product_ids:[1],discount_rate:0.9,discount_amount:0,audience_roles:['pro','instructor'],allow_guest:false};
+    const product={id:1,price:1000,proPrice:1000,qty:1};
+    const roles=['consumer','pro','instructor','distributor','staff','pending'];
+    return {
+      eligibility:roles.map(role=>promotionAllowsUser(p,{role})),
+      guest:promotionAllowsUser(p,null),
+      guestOnly:[promotionAllowsUser({...p,audience_roles:[],allow_guest:true},null),promotionAllowsUser({...p,audience_roles:[],allow_guest:true},{role:'consumer'})],
+      legacy:roles.map(role=>promotionAllowsUser({}, {role})),
+      rejected:calculateDiscount([product],[p],{role:'consumer'}).discount,
+      accepted:calculateDiscount([product],[p],{role:'pro'}).discount,
+      display:getPromoDisplayPrice(product,{role:'consumer'},[p]),
+    };
+  });
+  expect(results).toEqual({eligibility:[false,true,true,false,false,false],guest:false,guestOnly:[true,false],legacy:[true,true,true,true,true,true],rejected:0,accepted:100,display:null});
+});

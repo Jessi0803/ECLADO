@@ -19,7 +19,7 @@ export default function ProductCard({ product, user, onAdd, onSelect, promotions
   const showPrice = getMemberPrice(product, user);
   const hasTierPrice = canAccessProfessionalCatalog(user) && showPrice !== product.price;
   const priceLabel = getProductPriceLabel(product, user);
-  const onPromo = promotions.some(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));
+  const onPromo = promotions.some(p => isPromotionLive(p, user) && normProductIds(p).includes(Number(product.id)));
   const promoDisplay = getPromoDisplayPrice(product, user, promotions);
   const productHref = `${routeBase}/${getProductSlug(product)}`;
   return (

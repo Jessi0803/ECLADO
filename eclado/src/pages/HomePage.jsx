@@ -32,7 +32,7 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
   const [slide, setSlide] = useState(0);
   const [animating, setAnimating] = useState(false);
   const isMobile = useIsMobile();
-  const livePromos = promotions.filter(isPromotionLive);
+  const livePromos = promotions.filter(p => isPromotionLive(p, user));
   const topProducts = getPopularProducts(products, salesStats);
 
   useEffect(() => {
