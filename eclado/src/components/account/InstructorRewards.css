@@ -158,6 +158,7 @@
 @media (max-width: 600px) { .reward-withdrawal-dialog { padding: 20px; } }
 
 .reward-withdrawal-filters { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,2fr) auto; align-items: end; gap: 16px; margin: 20px 0; }
-.reward-batch-summary { padding: 20px 0; border-block: 1px solid var(--reward-border); }
+.reward-batch-summary { padding: 0 0 20px; margin-bottom: 20px; border-bottom: 1px solid var(--reward-border); }
+.reward-batch-export { margin-top: 16px; }
 .reward-withdrawal-dialog .reward-field { margin: 16px 0; }
 @media (max-width: 700px) { .reward-withdrawal-filters { grid-template-columns: minmax(0,1fr); } }

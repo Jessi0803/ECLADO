@@ -99,3 +99,9 @@
 已依使用者確認的通用CSV與pending／processing範圍，新增後端批次搜尋、20筆分頁、跨頁批次合計、manage-only解密匯出及不可變稽核；paid改用日期選擇／金額驗證／保留草稿的單一表單。詳見 `docs/reward-withdrawal-operations.md` 的檔案、SQL、測試與套用／回復說明。PostgreSQL17.6兩個DB測試通過，verify另跑通過；API／CSV 9／9，桌面／手機最終62／62，本地真SQL＋模擬外部服務整條操作1／1通過，test Build471模組與diff check通過。僅本機，未套用雲端DB或commit／push。新版管理頁依賴新增operations SQL，下一次Preview發布前需先取得test Migration授權。
 
 2026-10-15後續放行：使用者已批准test安裝與commit／push。qqlgqasbmbicnmvnlqbr新operations SQL已成功安裝，唯讀verify七項全true，test原學生價ON保持不變；正式DB不動。證據與發布範圍見docs/reward-withdrawal-operations.md最新段落。
+
+## 批次合計與CSV匯出同區（2026-10-16）
+
+依使用者確認，匯出按鈕與說明移入批次合計section，移除原匯出reward-subsection的頂線與空白；批次區只保留整區內容之後的一條底線。修改RewardWithdrawalsPage.jsx及InstructorRewards.css，匯出權限、篩選、合計與下載流程不變。既有下載／唯讀權限桌面與手機4／4通過，test Build471模組及git diff --check通過（既有chunk警告）。未commit／push，現有Preview仍是舊版。
+
+2026-10-17提交前重新驗證：匯出／唯讀管理桌面與手機4／4通過；test mode Build472模組通過（既有chunk警告）。本次僅提交排版調整，未修改資料庫或匯出權限。
