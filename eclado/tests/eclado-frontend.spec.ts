@@ -548,7 +548,7 @@ test('後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序', async 
   await page.locator('#productImageFiles').setInputFiles({
     name: 'new-detail.webp',
     mimeType: 'image/webp',
-    buffer: Buffer.from('eclado-image-test'),
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+AvzvAAAAAElFTkSuQmCC', 'base64'),
   });
   await expect(page.getByText('待上傳', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '設為首圖' }).nth(2).click();
@@ -594,7 +594,7 @@ for (const scenario of [
   });
 }
 
-test('內部人員以專業價五折購買院線商品、固定免運且不顯示追加訂單規則', async ({ page }) => {
+test('內部人員以專業價五折購買院線商品、最低五千且固定免運、不使用追加規則', async ({ page }) => {
   await mockEcladoApis(page, {
     authUser: authUser('staff@example.com'),
     profiles: [profile('staff', 'staff@example.com')],
@@ -607,12 +607,16 @@ test('內部人員以專業價五折購買院線商品、固定免運且不顯�
   await page.getByText('NK細胞活化安瓶').first().click();
   await expect(page.getByRole('button', { name: /加入購物車/ })).toBeVisible();
   await page.getByRole('button', { name: /加入購物車/ }).click();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('eclado_cart_v1') || '[]').length)).toBeGreaterThan(0);
   await page.goto('/cart');
   await expect(page.getByText('免運', { exact: true })).toBeVisible();
-  await expect(page.getByRole('status')).toHaveCount(0);
+  await expect(page.getByTestId('cart-shipping-progress')).toContainText('內部人員固定免運');
+  await expect(page.getByText(/目前待出貨.*追加後/)).toHaveCount(0);
 
   await page.goto('/info');
-  await expect(page.getByRole('button', { name: '會員購物須知', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '會員購物須知', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '內部人員－購物規範' })).toBeVisible();
+  await expect(page.getByText(/最低 NT\$5,000/).first()).toBeVisible();
 });
 
 for (const role of ['instructor', 'distributor', 'staff']) {
@@ -2287,6 +2291,7 @@ test('師資會員專區的季度採購包含管理員補登的線下採購', as
   });
 
   await page.goto('/account');
+  await page.getByRole('tab', { name: '專業資格', exact: true }).click();
   const panel = page.getByRole('region', { name: '季度採購統計' });
   await expect(panel.getByText('NT$ 58,600')).toBeVisible();
   await expect(panel.getByText('含線下採購 NT$ 30,000')).toBeVisible();

@@ -1664,7 +1664,7 @@ test('商品管理可從本機上傳圖片並以規格 RPC 建立草稿', async 
   await panel.getByLabel('商品圖片').setInputFiles({
     name: 'e2e-product.png',
     mimeType: 'image/png',
-    buffer: Buffer.from('e2e-image-data'),
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+AvzvAAAAAElFTkSuQmCC', 'base64'),
   });
   await expect(panel.getByText('首圖', { exact: true })).toBeVisible();
   await panel.getByRole('button', { name: '建立草稿' }).click();
@@ -1681,7 +1681,7 @@ test('商品管理可從本機上傳圖片並以規格 RPC 建立草稿', async 
   });
   await expect.poll(() => savedImagesRequest).not.toBeNull();
   expect(savedImagesRequest?.p_images?.[0]).toMatchObject({
-    original_name: 'e2e-product.png', mime_type: 'image/png', is_primary: true,
+    original_name: 'e2e-product.png', mime_type: 'image/webp', is_primary: true,
   });
 });
 
@@ -1695,7 +1695,7 @@ test('新增商品缺少必填欄位時在編輯面板內顯示警示', async ({
   const panel = page.locator('.detail-panel');
   await panel.getByRole('button', { name: '建立草稿' }).click();
 
-  const alert = panel.getByRole('alert');
+  const alert = panel.getByRole('alert').filter({ hasText: '無法儲存商品' });
   await expect(alert).toBeVisible();
   await expect(alert).toContainText('無法儲存商品');
   await expect(alert).toContainText('請輸入中文名稱與英文名稱');
@@ -1773,7 +1773,7 @@ test('新增商品寫入失敗時顯示錯誤且不加入商品清單', async ({
   await panel.getByLabel('商品圖片').setInputFiles({
     name: 'product.png',
     mimeType: 'image/png',
-    buffer: Buffer.from('image'),
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+AvzvAAAAAElFTkSuQmCC', 'base64'),
   });
   await panel.getByRole('button', { name: '建立草稿' }).click();
 
