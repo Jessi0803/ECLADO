@@ -32,7 +32,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
   const priceLabel = getProductPriceLabel(displayProduct, user);
   const fulfillment = getFulfillmentInfo(displayProduct);
 
-  const livePromosForProduct = (promotions || []).filter(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)));
+  const livePromosForProduct = (promotions || []).filter(p => isPromotionLive(p, user) && normProductIds(p).includes(Number(product.id)));
   const primaryPromo = livePromosForProduct[0];
   const promoDisplay = getPromoDisplayPrice(displayProduct, user, promotions);
 

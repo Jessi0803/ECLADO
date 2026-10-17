@@ -111,7 +111,7 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
           {drawer && <button type="button" onClick={onClose} aria-label="關閉購物車" style={{ position:'absolute', top:16, right: isMobile ? 0 : -13, width:36, height:36, border:'1px solid var(--light)', background:'none', color:'var(--dark)', fontSize:24, lineHeight:1, cursor:'pointer' }}>×</button>}
         </div>
 
-        {cart.length > 0 && promotions.some(isPromotionLive) && discount === 0 && (
+        {cart.length > 0 && promotions.some(p => isPromotionLive(p, user)) && discount === 0 && (
           <div style={{ background:'var(--accent-tint)', border:'1px solid var(--accent)', padding:'14px 18px', marginBottom:24, fontSize:13, color:'var(--dark)', lineHeight:1.65 }}>
             目前有<strong>限時優惠</strong>，但購物車內還沒有「活動指定商品」，所以尚無折抵。
           </div>

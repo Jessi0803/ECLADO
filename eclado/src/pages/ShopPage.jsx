@@ -152,7 +152,7 @@ export default function ShopPage({
     selectView('category');
   }
 
-  const livePromosShop = promotions.filter(isPromotionLive);
+  const livePromosShop = promotions.filter(p => isPromotionLive(p, user));
   const filterTitle = activeFilter.view === 'series'
     ? (activeFilter.value === '所有系列' ? '所有系列' : `${activeFilter.value} 系列`)
     : (activeFilter.value === '所有產品' ? '全部商品' : activeFilter.value);

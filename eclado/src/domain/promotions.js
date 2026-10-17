@@ -1,4 +1,4 @@
-import { getMemberPrice } from './catalog.jsx';
+import { getMemberPrice, getMemberRole } from './catalog.jsx';
 
 export function normProductIds(p) {
   const raw = p?.product_ids;
@@ -13,11 +13,19 @@ export function normProductIds(p) {
   return [];
 }
 
-export function isPromotionLive(p) {
+export function promotionAllowsUser(p, user) {
+  // Rows created before audience targeting remain available to all identities.
+  if (!user) return p?.allow_guest ?? true;
+  const role = getMemberRole(user);
+  const effectiveRole = ['consumer', 'pro', 'instructor', 'distributor', 'staff'].includes(role) ? role : 'consumer';
+  return p?.audience_roles == null || p.audience_roles.includes(effectiveRole);
+}
+
+export function isPromotionLive(p, user) {
   const now = Date.now();
   const rate = Number(p?.discount_rate);
   const amount = Number(p?.discount_amount);
-  if (p?.active === false) return false;
+  if (p?.active === false || p?.archived_at || !promotionAllowsUser(p, user)) return false;
   if (String(p?.activation_type || 'automatic') !== 'automatic') return false;
   if (!Number.isFinite(rate) || rate < 0 || rate > 1) return false;
   if (!Number.isFinite(amount) || amount < 0) return false;
@@ -50,7 +58,7 @@ export function calculateDiscount(cart, promotions, user) {
     return { subtotal, discount: 0, finalSubtotal: subtotal, promotion: null };
   }
   const candidates = promotions
-    .filter(p => isPromotionLive(p))
+    .filter(p => isPromotionLive(p, user))
     .map(p => {
       const ids = new Set(normProductIds(p));
       const promoItems = cart.filter(i => ids.has(Number(i.id)));
@@ -91,7 +99,7 @@ export function calculateDiscount(cart, promotions, user) {
 export function getPromoDisplayPrice(product, user, promotions) {
   const basePrice = getMemberPrice(product, user);
   const candidates = (promotions || [])
-    .filter(p => isPromotionLive(p) && normProductIds(p).includes(Number(product.id)))
+    .filter(p => isPromotionLive(p, user) && normProductIds(p).includes(Number(product.id)))
     .map(p => {
       const rate = Number(p.discount_rate);
       const amount = Number(p.discount_amount);
