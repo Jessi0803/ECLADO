@@ -1,0 +1,35 @@
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const {runRewardCheckoutDatabaseScenario}=require('./instructor-reward-checkout-db.test.cjs');
+test('test-only withdrawal fixtures create 30 coherent states without changing original available funds',
+ {skip:!process.env.EMBEDDED_POSTGRES_MODULE,timeout:180000},()=>runRewardCheckoutDatabaseScenario(async c=>{
+ const {db,read,one,teacher,student,admin}=c;
+ await db.exec(read('supabase-instructor-reward-withdrawals.sql'));
+ await db.exec('alter table public.profiles add column if not exists email text,add column if not exists line_user_id text');
+ await db.exec(read('supabase-instructor-reward-notifications.sql'));
+ await db.exec(read('supabase-instructor-reward-reconciliation.sql'));
+ await db.exec("insert into public.backoffice_role_permissions(role,permission) values('super_admin','orders.write'),('super_admin','orders.read'),('super_admin','members.read') on conflict do nothing");
+ await db.exec(c.fn('supabase-backoffice-permissions.sql','has_backoffice_permission').replaceAll('requested_permission','p'));
+ await db.exec("alter table auth.users add column if not exists email text;alter table public.products add column if not exists name text,add column if not exists slug text,add column if not exists category text,add column if not exists series text,add column if not exists size text,add column if not exists price numeric,add column if not exists pro_price numeric,add column if not exists min_stock integer,add column if not exists description text,add column if not exists apply_tier_multiplier boolean;create sequence test_fixture_products start 1000;alter table public.products alter column id set default nextval('test_fixture_products');create sequence test_fixture_variants start 1000;alter table public.product_variants alter column id set default nextval('test_fixture_variants');update public.products set slug='reward-system-test-product' where id=1");
+ for(const [id,email] of [[teacher,'instructor.stage@eclado.test'],[student,'student.stage@eclado.test'],[admin,'admin.stage@eclado.test']])await db.query('update auth.users set email=$2 where id=$1',[id,email]);
+ await db.exec("create or replace function auth.uid() returns uuid language sql as $$select coalesce(nullif(current_setting('request.jwt.claim.sub',true),''),nullif(current_setting('test.uid',true),''))::uuid$$");
+ await db.query("select set_config('test.role','service_role',false)");
+ await db.query("select public.save_reward_bank_profile($1,'{\"kid\":\"fixture\",\"iv\":\"test\",\"tag\":\"test\",\"data\":\"cipher\"}','{\"bank_code\":\"007\",\"bank_name\":\"測試銀行\",\"branch\":\"測試分行\",\"holder\":\"師*\",\"account\":\"******1234\"}',0)",[teacher]);
+ await db.query("select set_config('test.role','authenticated',false)");
+ await db.exec('update public.student_pricing_feature_settings set enabled=true');
+ await db.exec('update public.product_variants set stock=100000 where id=1');await c.actor(student);const fundingItems=[{product_id:1,variant_id:1,qty:99}],fundingQuote=await c.ordinaryQuote(fundingItems),funding=await c.ordinaryCreate(fundingItems,fundingQuote);await c.actor(admin);await db.query('select public.confirm_admin_instructor_reward_payment($1,true)',[funding.order_id]);await c.status(funding.order_id,'delivered');
+ const original=await one('select balance,reserved_balance from public.instructor_reward_accounts where user_id=$1',[teacher]);
+ const originalStock=(await db.query('select id,stock,gift_stock from public.product_variants order by id')).rows;
+ await db.exec("create or replace function auth.role() returns text language sql as $$select coalesce(nullif(current_setting('request.jwt.claim.role',true),''),nullif(current_setting('test.role',true),''),'authenticated')$$;create function public.consume_rate_limit_internal(text,text,integer,integer) returns boolean language sql as $$select false$$");await db.exec(c.fn('supabase-fix-order-rate-limit-digest.sql','enforce_order_creation_rate_limit'));await db.exec('create trigger test_actual_member_rate_limit before insert on public.orders for each row execute function public.enforce_order_creation_rate_limit()');
+ await db.exec(read('docs/reward-staging-upgrade/08-test-withdrawal-mock-fixtures.sql'));
+ assert.deepEqual(await one('select balance,reserved_balance from public.instructor_reward_accounts where user_id=$1',[teacher]),original);
+ assert.deepEqual((await db.query('select id,stock,gift_stock from public.product_variants where id<1000 order by id')).rows,originalStock);
+ const statuses=(await db.query('select status,count(*)::int n from public.instructor_reward_withdrawals group by status order by status')).rows;
+ assert.deepEqual(statuses,[{status:'failed',n:7},{status:'paid',n:6},{status:'pending',n:5},{status:'processing',n:6},{status:'unknown',n:6}]);
+ assert.equal((await one("select count(*)::int n from public.instructor_reward_notification_outbox where next_retry_at<>'infinity'::timestamptz")).n,0);
+ assert.equal((await one("select count(*)::int n from public.products where slug='mock-withdrawal-fixture-20261015' and active=false")).n,1);
+ await db.query("select set_config('request.jwt.claim.sub',$1,false)",[admin]);
+ const report=(await one('select public.run_reward_reconciliation($1) q',[require('node:crypto').randomUUID()])).q;
+ const findings=(await db.query("select rule from public.instructor_reward_reconciliation_findings where present and rule<>'payment_unknown' and rule<>'withdrawal_unknown'")).rows;assert.deepEqual(findings,[]);
+ await assert.rejects(db.exec(read('docs/reward-staging-upgrade/08-test-withdrawal-mock-fixtures.sql')),/already exists/);await db.exec('rollback');
+ console.log('PASS 30 mock withdrawals, 3 batches, preserved original funds/stock, blocked notifications and no new accounting discrepancies');
+ }));

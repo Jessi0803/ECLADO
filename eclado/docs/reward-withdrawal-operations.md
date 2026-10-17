@@ -51,3 +51,16 @@ CSV是匯出當下的清單，不是凍結批次或匯款鎖；下載後可能�
 已執行supabase-instructor-reward-withdrawal-operations.sql，結果Success. No rows returned；再執行原唯讀verify，七項全部true：audit_rls、queue_no_anon、immutable_audit、empty_search_path、export_service_only、queue_authenticated、audit_no_direct_access。SQL Editor紀錄a91f5a73-119d-40a1-b1f6-14d9316a4277，證據docs/evidence/reward-withdrawal-operations-test-verification.png。未在雲端建立測試訂單、提領或銀行交易，也未匯出test帳號資料。本段取代前述開發期間「尚未授權／未套用test」的狀態。
 
 本次Git提交包含老師提領呈現及本補強程式／Migration／測試／文件，目標codex/instructor-student-rewards，推送由Git自動部署Preview；不合併main、不直接操作Vercel部署。三個無關檔案tests/admin.spec.ts、tests/eclado-frontend.spec.ts、.claude/launch.json排除。Preview實際登入／CSV下載仍待新版部署後驗收，不把本次Metadata驗證當成雲端完整流程驗收。
+
+
+## test MOCK 資料（2026-10-15）
+
+使用者批准建立多筆mock提領，已於test qqlgqasbmbicnmvnlqbr新增30筆，保留原1筆，Preview共31筆。全部歸TEST師資，使用既有假銀行快照以維持CSV可解密；不新增Auth帳號。批次2026-09-10／10-10／11-10；pending5、processing6、paid6、failed7、unknown6。requested事件包含MOCK_WITHDRAWALS_20261015_V1及MOCK測試編號，模擬匯款序號MOCK-NO-BANK-*。29筆專用商品來源訂單經原quote/create、管理員模擬收款、delivered正式入帳，再沿用post_reward_withdrawal／manage_reward_withdrawal完成保留與模擬終態；退回的假收入另由對應來源訂單returned抵銷。原有申請未更新；原可用餘額1280及普通購物金保留不變，新待處理申請的提領保留有對應Ledger。新MOCK商品建立後已隱藏，原商品規格庫存仍為6。
+
+首次test批次因會員每15分鐘8筆建單限制而整筆回滾；唯讀核對mock_rows=0、新商品不存在、餘額1280。修正版僅此postgres資料腳本以交易區域的既有service_role受信任路徑建立，未停用、修改或移除限流Trigger，也未改任何一般會員權限。加入真實限流Trigger後於隔離PostgreSQL17.6重跑1／1通過，含30筆三批次、五狀態、原餘額／原庫存、禁止重複執行、完整對帳無新增非預期異常（unknown本來就需人工查核）。
+
+僅本次MOCK提領通知設blocked／next_retry_at=infinity，避免通知老師或管理員，未發出銀行／LINE／Email請求。test查詢13c0989e-d42a-4bc3-8acf-5fcca006670c核對mock_count30、available_balance1280、mock_product_hidden=true、original_test_stock6、notification_delivery_paused=true；證據docs/evidence/reward-withdrawal-mock-fixtures-verification.png。Preview已刷新，11月批次列表11筆（含原1筆），其中pending／processing3筆，申請合計4480、手續費45、實匯4435。未在Preview執行匯款或下載完整銀行檔。
+
+新增test-only腳本docs/reward-staging-upgrade/08-test-withdrawal-mock-fixtures.sql及tests/integration/reward-withdrawal-mock-fixtures-db.test.cjs。不是正式Migration；未修改前端、正式DB、部署或commit／push。後續處理這批資料應保留帳務歷史，不自行刪除不可變Ledger或既有帳號。本次只新增資料與SQL驗證，無產品程式變更，沿用上一版已通過的Build結果，未另跑前端測試。
+
+2026-10-17提交前重新驗證：固定版本embedded-postgres@17.6.0-beta.15於隔離本機執行mock-fixtures測試1／1通過、0跳過；含30筆、三批次、五狀態、原可用金額／庫存保留、通知阻擋及重複執行拒絕，相依雙錢包併發deadlocks=0。本次未重跑任何雲端資料腳本；此檔仍為test-only資料準備工具，不列入正式Migration。
