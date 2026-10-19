@@ -29,7 +29,7 @@
 
 ## Git／Preview
 
-功能 commit `8ed87f0` 已推送 `codex/instructor-student-rewards`，未merge或push main。只走Git觸發Preview，未直接deploy/promote。Vercel已確認 `8ed87f0` 對應部署Ready，URL為 https://eclado-qsbrt5h0p-eclado-s-projects.vercel.app/ ，部署詳情 https://vercel.com/eclado-s-projects/eclado/7bopqYjLz6Uu29UV7AKwFPCDYTVr 。實際開啟可見TEST橫幅、銀行付款停用及test商品。Preview真實師資登入與CSV下載等UI驗收待完成；已請使用者於Chrome登入指定test師資，未重設或取得密碼。
+功能 commit `8ed87f0` 已推送 `codex/instructor-student-rewards`，未merge或push main。只走Git觸發Preview，未直接deploy/promote。Vercel已確認 `8ed87f0` 對應部署Ready，URL為 https://eclado-qsbrt5h0p-eclado-s-projects.vercel.app/ ，部署詳情 https://vercel.com/eclado-s-projects/eclado/7bopqYjLz6Uu29UV7AKwFPCDYTVr 。實際開啟可見TEST橫幅、銀行付款停用及test商品。後續已完成真實師資登入與CSV下載等UI驗收，詳見下節；未重設或取得密碼。
 
 ## 真實 Auth／PostgREST／serverless 驗收
 
@@ -44,4 +44,6 @@
 
 ### 驗收發現與修正
 
-8ed87f0師資送出申請後，下方提領面板已更新、上方總覽仍保留舊餘額。新增成功後通知父層重新讀總覽／帳本；同身分重整時保留面板實例，避免重整清掉未確定結果的重送鍵。切換身分仍清除舊報表。新增測試直接確認部分提領後上方可用20000及hold10000，桌面／手機全54項與正式建置通過。修正後的新Preview部署狀態另補；正式環境未改。
+8ed87f0師資送出申請後，下方提領面板已更新、上方總覽仍保留舊餘額。新增成功後通知父層重新讀總覽／帳本；同身分重整時保留面板實例，避免重整清掉未確定結果的重送鍵。切換身分仍清除舊報表。新增測試直接確認部分提領後上方可用20000及hold10000，桌面／手機全54項與正式建置通過。修正後的新Preview已Ready並完成下述同步重驗；正式環境未改。
+
+修正已提交並推送 `eac8b3d`，Vercel部署 `Bo5LX3aGRHYyqUn7h4iqdkRxxzdZ` 已確認Ready，commit相符。修正版單次網址：https://eclado-dhp5l8005-eclado-s-projects.vercel.app/ 。後續固定使用分支網址 https://eclado-git-codex-instructor-student-rewards-eclado-s-projects.vercel.app/ ，以避免每次部署切換origin而需要重新登入。新版真實師資登入後完成同步重驗：實際申請10000（ID `4f05eef9-fe84-438f-993c-3971aeacc639`，net9985），未手動重新整理，上方立即顯示可用20000及提領處理中10000，下方面板一致，同批次再次申請停用。其後以原manage RPC領取並確認未付款、全額退回，保留完整歷史。最終balance30000、hold0、withdrawals5、exports1、financial checks0、sendable notices0。第二步test／Preview驗收完成；尚未合併main或變更正式環境。
