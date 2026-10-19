@@ -1,6 +1,7 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');
 process.env.SUPABASE_URL='https://reward-isolated.test';
 process.env.SUPABASE_SERVICE_ROLE_KEY='isolated-service-key';
+process.env.SINOPAC_SHOP_NO='isolated-test-shop';
 const {persistVerifiedRewardPayment}=require('./server');
 test('verified reward receipt sends no caller amount and propagates persistence failure for retry',async()=>{
   const original=global.fetch;const calls=[];

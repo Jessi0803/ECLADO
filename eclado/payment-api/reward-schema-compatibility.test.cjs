@@ -4,6 +4,7 @@ const http = require('node:http');
 process.env.SUPABASE_URL = 'https://schema-compat.example.test';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'isolated-schema-key';
 process.env.GUEST_LOOKUP_SECRET = 'isolated-guest-secret';
+process.env.SINOPAC_SHOP_NO = 'isolated-test-shop';
 const server = require('./server');
 const missing = { code: '42703', message: 'column orders.reward_credit_amount does not exist' };
 const order = { id: 'LEGACY', user_id: null, phone: '0912345678', total: 1000, shopping_credit_amount: 100, payment_amount: 900, status: 'unpaid', items: [], payment_due_at: '2099-01-01T00:00:00Z' };
