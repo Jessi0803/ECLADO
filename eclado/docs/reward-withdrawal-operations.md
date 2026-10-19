@@ -64,3 +64,12 @@ CSV是匯出當下的清單，不是凍結批次或匯款鎖；下載後可能�
 新增test-only腳本docs/reward-staging-upgrade/08-test-withdrawal-mock-fixtures.sql及tests/integration/reward-withdrawal-mock-fixtures-db.test.cjs。不是正式Migration；未修改前端、正式DB、部署或commit／push。後續處理這批資料應保留帳務歷史，不自行刪除不可變Ledger或既有帳號。本次只新增資料與SQL驗證，無產品程式變更，沿用上一版已通過的Build結果，未另跑前端測試。
 
 2026-10-17提交前重新驗證：固定版本embedded-postgres@17.6.0-beta.15於隔離本機執行mock-fixtures測試1／1通過、0跳過；含30筆、三批次、五狀態、原可用金額／庫存保留、通知阻擋及重複執行拒絕，相依雙錢包併發deadlocks=0。本次未重跑任何雲端資料腳本；此檔仍為test-only資料準備工具，不列入正式Migration。
+
+
+## 提領稅費明細（2026-10-18，本機開發）
+
+使用者確認所得稅超過20,000元扣10%、補充保費達20,000元扣2.11%，以扣手續費前總額計算。新增增量migration `supabase-instructor-reward-withdrawal-deductions.sql`，須在階段5、6與本提領操作migration之後安裝；逐筆保存稅費及規則快照，既有紀錄不重算。頁面、確認視窗、匯款表單、批次合計、CSV及通知同步使用保存明細，對帳公式同步扣除稅費。詳細計算、取整、部署依賴及驗證見 `reward-withdrawal-deductions.md`。目前未套用test或正式環境，未部署。
+
+### 2026-10-18 自選金額與批次限制
+
+提領改為自選整數金額（最低16元）及全額帶入，每筆保留申請總額，其餘可用於購物。同一師資同一批次最多一筆非 failed 申請，paid 也占用名額；只有確認未付款、完整退回後才能重申。新 migration 與安裝／驗證方式見 [自選提領金額](reward-withdrawal-partial.md)。未部署或套用雲端資料庫。

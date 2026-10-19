@@ -10,6 +10,7 @@ export default function WithdrawalPaidDialog({draft,setDraft,onClose,onSubmit,re
  return <dialog ref={ref} className="reward-withdrawal-dialog reward-view" aria-labelledby="reward-paid-title" onCancel={e=>{e.preventDefault();onClose();}}>
  <h3 id="reward-paid-title">記錄匯款結果</h3><p>{draft.w.name||'已刪除會員'} · {draft.w.id}</p>
  <p>請於銀行實際匯款完成後填寫。這個操作只記錄結果，不會執行銀行匯款。</p>
+ <p>申請總額 NT$ {draft.w.amount} − 手續費 NT$ {draft.w.fee} − 預扣所得稅 NT$ {draft.w.income_tax??0} − 二代健保 NT$ {draft.w.supplementary_premium??0} ＝ 應匯 NT$ {draft.w.net_amount}。請依這筆申請的明細匯款。</p>
  <form onSubmit={submit}>
  <label className="reward-field">實際匯款日期<input autoFocus type="date" required max={today} value={draft.date} onChange={e=>setDraft({...draft,date:e.target.value})}/></label>
  <label className="reward-field">銀行交易序號<input required maxLength={120} value={draft.reference} onChange={e=>setDraft({...draft,reference:e.target.value})}/></label>

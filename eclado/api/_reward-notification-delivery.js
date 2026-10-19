@@ -14,9 +14,9 @@ function rewardNoticeMessage(payload, audience) {
   if (!title) throw new Error('Unsupported notice event');
   const lines = [audience === 'admin' ? '收到新的師資提領申請。' : title, '', `提領編號：${payload.withdrawal_id}`, `${payload.event_type === 'requested' ? '申請日期' : '通知事件時間'}：${date}`];
   if (audience === 'admin') lines.push(`老師識別：${payload.user_id}`);
-  if (payload.event_type === 'requested') lines.push(`申請金額：${money(payload.amount)}`, `手續費：${money(payload.fee)}`, `預計實匯金額：${money(payload.net_amount)}`, `預定匯款日期：${payload.scheduled_date}`, '申請狀態：待匯款');
-  if (payload.event_type === 'paid') lines.push(`實際匯款日期：${payload.transfer_date}`, `實際匯款金額：${money(payload.transferred_amount)}`, '提領狀態：已匯款');
-  if (payload.event_type === 'failed') lines.push('提領狀態：明確未匯款', `已返還返饋金：${money(payload.returned_amount)}`, '本次未收手續費。請確認並更新收款銀行資料後重新申請。');
+  if (payload.event_type === 'requested') lines.push(`申請金額：${money(payload.amount)}`, `手續費：${money(payload.fee)}`, `預扣所得稅：${money(payload.income_tax??0)}`, `二代健保補充保費：${money(payload.supplementary_premium??0)}`, `預計實匯金額：${money(payload.net_amount)}`, `預定匯款日期：${payload.scheduled_date}`, '申請狀態：待匯款');
+  if (payload.event_type === 'paid') lines.push(`預扣所得稅：${money(payload.income_tax??0)}`, `二代健保補充保費：${money(payload.supplementary_premium??0)}`, `實際匯款日期：${payload.transfer_date}`, `實際匯款金額：${money(payload.transferred_amount)}`, '提領狀態：已匯款');
+  if (payload.event_type === 'failed') lines.push('提領狀態：明確未匯款', `已返還返饋金：${money(payload.returned_amount)}`, '本次未收手續費或扣取所得稅、二代健保補充保費。請確認並更新收款銀行資料後重新申請。');
   if (payload.event_type === 'unknown') lines.push('匯款結果待查核，尚未確認成功或失敗。返饋金仍保留，請勿重複申請。查帳完成後將另行通知。');
   if (payload.event_type === 'correction') lines.push('管理員已追加更正／說明紀錄，原提領結果與金額未變更。請聯繫客服確認詳細說明；此通知不代表再次匯款或退款。');
   lines.push('', audience === 'admin' ? '請登入管理後台處理：https://ecladotaiwan.com/admin' : 'ECLADO Taiwan');

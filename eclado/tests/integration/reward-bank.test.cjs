@@ -50,3 +50,14 @@ test('export API uses verified actor, one server batch selection and no partial 
  denied=true;assert.equal((await invoke()).code,403);denied=false;corrupt=true;const failed=await invoke();assert.equal(failed.code,503);assert.ok(!JSON.stringify(failed.body).includes(bank.account));assert.equal(failed.headers['Content-Type'],undefined);assert.equal((await invoke('2026-13-10')).code,400);
  }finally{global.fetch=original;restore(old);}
 });
+
+test('taxed CSV and notification use frozen deductions and actual net amount',()=>{
+ const old={...process.env};try{
+ process.env.REWARD_BANK_ACTIVE_KEY_ID='v1';process.env.REWARD_BANK_ENCRYPTION_KEYS=JSON.stringify({v1:key});
+ const {withdrawalCsv}=require('../../api/_reward-withdrawal-csv.js');const {rewardNoticeMessage}=require('../../api/_reward-notification-delivery.js');
+ const row={id:'taxed',user_id:'owner',name:'老師',cipher:encryptBank('owner',bank),amount:'30000',fee:'15',income_tax:'3000',supplementary_premium:'633',net_amount:'26352',batch_date:'2026-11-10'};
+ const csv=withdrawalCsv({rows:[row]});assert.match(csv,/預扣所得稅/);assert.match(csv,/二代健保補充保費/);assert.match(csv,/"30000","15","3000","633","26352"/);
+ const message=rewardNoticeMessage({...row,at:'2026-10-18T00:00:00Z',withdrawal_id:row.id,event_type:'requested',scheduled_date:row.batch_date},'teacher');
+ assert.match(message.text,/預扣所得稅：NT\$ 3,000/);assert.match(message.text,/補充保費：NT\$ 633/);assert.match(message.text,/實匯金額：NT\$ 26,352/);
+ }finally{restore(old);}
+});

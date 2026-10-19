@@ -1,7 +1,7 @@
 import {supabase} from './supabase.js';
 async function rpc(name,args={}){const {data,error}=await supabase.rpc(name,args);if(error)throw error;return data;}
 export const getMyWithdrawals=(offset=0)=>rpc('get_my_reward_withdrawals',{p_offset:offset});
-export const quoteMyWithdrawal=()=>rpc('quote_my_reward_withdrawal');
+export async function quoteMyWithdrawal(amount){const quote=await rpc('quote_my_reward_withdrawal',amount==null?{}:{p_amount:amount});if(quote?.selection_policy!=='single_per_batch_v1'||quote?.deduction_policy_version!=='tw_withdrawal_v2'||!Number.isSafeInteger(Number(quote.income_tax))||!Number.isSafeInteger(Number(quote.supplementary_premium)))throw new Error('提領金額與批次規則更新尚未安裝，請聯繫管理員。');return quote;}
 export const requestMyWithdrawal=(key,quote)=>rpc('request_my_reward_withdrawal',{p_request_key:key,p_expected_quote:quote});
 export const getAdminWithdrawals=(offset=0)=>rpc('get_admin_reward_withdrawals',{p_offset:offset});
 export const getAdminWithdrawalQueue=(offset=0,filters={})=>rpc('get_admin_reward_withdrawal_queue',{p_offset:offset,p_batch_date:filters.batch||null,p_status:filters.status||'',p_search:filters.search||''});
