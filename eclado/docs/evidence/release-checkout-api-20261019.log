@@ -1,0 +1,61 @@
+✔ cancel expired orders - rejects forged x-vercel-cron header without bearer secret (1.5445ms)
+✔ cancel expired orders - cancels awaiting_confirm and unpaid orders past payment_due_at (35.107875ms)
+✔ cancel expired orders - rejects unsupported methods (0.324583ms)
+✔ cancel expired orders - returns zero when no expired orders exist (0.529459ms)
+✔ cancel expired orders - returns 500 when service key is missing (0.804208ms)
+✔ cancel expired orders - returns 500 when Supabase update fails (1.0725ms)
+✔ cancel expired orders - does not report cancellation when order becomes paid during the race window (0.39225ms)
+(node:981) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/chun/Documents/GitHub/ECLADO/eclado/src/domain/orderPaymentAmounts.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/chun/Documents/GitHub/ECLADO/eclado/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ payment snapshot: shopping 0, reward 0, bank 1000 (2.861042ms)
+✔ payment snapshot: shopping 300, reward 0, bank 700 (0.223834ms)
+✔ payment snapshot: shopping 0, reward 200, bank 800 (0.162833ms)
+✔ payment snapshot: shopping 300, reward 200, bank 500 (1.543708ms)
+✔ payment snapshot: shopping 300, reward 699, bank 1 (0.084375ms)
+✔ legacy order without wallet fields retains total fallback (0.41725ms)
+✔ reject missing, negative, nonnumeric or inconsistent wallet snapshots (0.190125ms)
+✔ __test helpers are exported (1.338209ms)
+✔ AES key derives to 32 bytes and AES-256 round-trips (regression: aes-128 would throw) (3.088125ms)
+✔ signString sorts case-insensitively and drops empty/object values (9.893166ms)
+✔ isFailedPayment treats explicit failure values as failed, success as not (0.21375ms)
+✔ getAmount / amountsMatch handle dollar and cent amounts (0.121292ms)
+✔ payment payload summary exposes presence but never PayToken/card values (0.141333ms)
+✔ real BackendURL {ShopNo, PayToken} resolves order via OrderPayQuery (AES-256) and marks paid (9.682292ms)
+[sinopac notify] amount mismatch {
+  orderId: 'ORDER-AMOUNT-MISMATCH',
+  orderTotal: 3980,
+  expectedPaymentAmount: 3980,
+  notifiedAmount: 100,
+  payload: {
+    keys: [ 'Amount', 'OrderNo', 'Status' ],
+    orderId: 'ORDER-AMOUNT-MISMATCH',
+    shopNo: undefined,
+    payType: undefined,
+    payStatus: undefined,
+    hasPayToken: false
+  }
+}
+✔ Sinopac notify rejects missing or incorrect payment notification secret (0.78875ms)
+✔ Sinopac notify marks order paid and sends LINE payment notice (17.538084ms)
+✔ Sinopac notify does not resend LINE notice for already paid orders (0.281417ms)
+✔ Sinopac notify accepts cent-based amount from mobile payments (1.713542ms)
+✔ Sinopac notify resolves mobile payment by PayToken when OrderNo is absent (0.786709ms)
+✔ Sinopac notify accepts OrderNo from backendUrl query for PayToken-only mobile notices (0.426708ms)
+✔ Sinopac notify queries OrderPayQuery for credit card PayToken-only notices (0.850542ms)
+✔ Sinopac notify sends payment email when member has no LINE binding (0.36625ms)
+✔ Sinopac notify retries customer notice for an already-paid order that has no delivery receipt (0.403917ms)
+✔ Sinopac notify records delivery failure and asks caller to retry (0.388041ms)
+✔ Sinopac notify ignores explicit failed payment notices (0.101375ms)
+✔ Sinopac notify rejects amount mismatch without changing order or sending notices (0.816083ms)
+✔ Sinopac notify returns 404 for an unknown order without creating one (0.166958ms)
+✔ Sinopac notify returns 500 and sends no notice when paid status update fails (0.198125ms)
+ℹ tests 35
+ℹ suites 0
+ℹ pass 35
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 148.117333

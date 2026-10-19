@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-19",
+  "commit": "d49fdf0c267ce35930c3a87ae1a013af147d9636",
+  "branch": "codex/instructor-student-rewards",
+  "deployment": "8pm3K1gas6mmSsTquUTCyS3e86wb",
+  "url": "https://eclado-joi9oqga8-eclado-s-projects.vercel.app",
+  "environment": "Preview",
+  "status": "Ready",
+  "buildDurationSeconds": 19,
+  "vercelDisplayedTimestampTaipei": "2026-10-19 20:07:19 GMT+8",
+  "browserChecks": {
+    "testEnvironmentBanner": true,
+    "bankPaymentDisabledBanner": true,
+    "homeLoads": true,
+    "testProductListLoads": true,
+    "variant100mlPrice": 1200,
+    "variant200mlPrice": 2000,
+    "accountRequiresLogin": true,
+    "adminRequiresLogin": true
+  },
+  "limitations": [
+    "Admin read-only and instructor checkout presentation checked; create/hold/payment lifecycle and dual-wallet combination not exercised in Preview",
+    "Environment banner and test product are visible signals, not a new complete network isolation audit",
+    "No checkout, order, payment, bank-save, withdrawal or notification operations performed"
+  ],
+  "productionDeploymentPerformed": false,
+  "adminAuthenticatedChecks": {
+    "userLoggedInTestAdmin": true,
+    "rewardsAccountList": true,
+    "accountDetailSidePanel": true,
+    "accountBalance": 30000,
+    "pendingBalance": 0,
+    "availableBalance": 30000,
+    "studentHistoryAndLedgerLoaded": true,
+    "withdrawalRecordsLoaded": 5,
+    "novemberBatchRecords": 4,
+    "novemberEligibleProcessingCount": 0,
+    "notificationRecordsLoaded": 15,
+    "notificationStatus": "configuration_or_no_channel",
+    "latestNotificationAttempt": null,
+    "reconciliationPageLoaded": true,
+    "reconciliationReportsVisible": 0,
+    "mutatingOperationsPerformed": 0
+  },
+  "instructorCheckoutPreview": {
+    "userLoggedInTestInstructor": true,
+    "productUnitPrice": 700,
+    "cartQuantity": 8,
+    "merchandise": 5600,
+    "shipping": 120,
+    "shoppingCreditAvailable": 0,
+    "rewardCreditAvailable": 30000,
+    "rewardCreditApplied": 5600,
+    "displayedBankPayable": 120,
+    "usedSyntheticContactFields": true,
+    "ordersCreated": 0,
+    "paymentRequests": 0,
+    "finalSubmitClicked": false
+  }
+}

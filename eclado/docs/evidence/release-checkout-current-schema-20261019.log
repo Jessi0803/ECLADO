@@ -1,0 +1,12 @@
+APPLIED LOCAL supabase-coupon-member-create-compat.sql
+APPLIED LOCAL supabase-student-reward-snapshots.sql
+APPLIED LOCAL supabase-instructor-reward-ledger.sql
+APPLIED LOCAL supabase-instructor-reward-queries.sql
+APPLIED LOCAL supabase-instructor-reward-checkout.sql
+APPLIED LOCAL supabase-instructor-reward-withdrawals.sql
+APPLIED LOCAL supabase-instructor-reward-notifications.sql
+APPLIED LOCAL supabase-instructor-reward-reconciliation.sql
+APPLIED LOCAL supabase-instructor-reward-withdrawal-operations.sql
+APPLIED LOCAL supabase-instructor-reward-withdrawal-deductions.sql
+APPLIED LOCAL supabase-instructor-reward-withdrawal-partial.sql
+PASS offline production-catalog migration replay {"migrations":11,"verify":10,"pricingFunctions":7}

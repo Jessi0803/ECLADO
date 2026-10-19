@@ -60,3 +60,17 @@
 36項：付款金額、銀行API／AES／CSV、通知mock、host worker；全部通過、0跳過。付款API全套65/65通過，合計101/101；首輪受sandbox禁止loopback listen影響，取得權限後重跑成功，不計首輪為PASS。付款使用mock／假設定，不是真銀行交易。`vite build --mode test` 472 modules通過，既有large chunk警告；node／bash語法及git diff檢查通過。另有既有Node module-type警告。本次未重跑Playwright或Production完整 `npm run build`（含SEO預渲染），不把test Vite Build等同正式全流程建置；正式Git部署仍需核對完整Build結果。
 
 未新增產品邏輯、未執行DB寫入、未發通知或啟動服務；本輪health誤查loopback3001失敗後以正確公開HTTPS health確認正常，不能把未確認的埠當服務故障。檢查結果保存 `docs/evidence/reward-release-check-20261019.json`。
+
+## Git Preview 已確認（接續 d49fdf0）
+
+32檔發布準備已提交／push為 `d49fdf0c267ce35930c3a87ae1a013af147d9636`。Vercel唯讀Deployment Details確認同一分支／SHA、Environment Preview、Ready，建置19秒；網址 https://eclado-joi9oqga8-eclado-s-projects.vercel.app 。未操作任何部署按鈕。首頁與商品頁有TEST／銀行付款停用標示，測試商品100ml為1200、切200ml為2000；未登入會員專區及後台皆要求登入。這是未登入smoke，不是已登入老師／管理員或結帳全流程驗收，也不是新一輪完整網路隔離稽核。已開啟新Preview後台登入頁供後續驗收。證據 `docs/evidence/reward-preview-d49fdf0-smoke-20261019.json` 及同前綴Ready／登入畫面。main／Production未變，學生價與worker未啟用。
+
+使用者其後登入test管理員，四頁籤唯讀檢查完成：老師列表／側邊明細、歷史學生訂單與Ledger可讀；測試老師餘額／可用30000、待入帳0。提領共5筆，11月批次4筆皆失敗，待處理合計0（排除終態）符合契約。通知15筆待設定／無可用管道、最後派送空，僅驗證載入，不宣稱test通知派送可用。財務對帳頁可載入但目前無報告；未按執行、補發、匯出、銀行快照或匯款異動。仍待老師端及結帳／寫入流程驗收，正式環境未操作。證據已補入相同smoke JSON，管理畫面 `docs/evidence/reward-preview-d49fdf0-admin-rewards-20261019.jpg`。
+
+使用者回報已在外部完成師資端檢查（屬使用者回報，不視為Codex重驗），並於Preview登入測試老師後，已檢查商品師資單價700、8件商品5600／運費120、可用返饋30000、畫面折抵5600後尚需付款120，未折運費。只填假收件資料到付款確認步驟，未按建立付款單、未建單／保留／付款；購物金餘額0，雙錢包組合尚未由此帳號驗證。`CheckoutPage.jsx:388` 的停用guard在quote/create前返回，故Preview付款OFF也阻止建單；不能視為建單／錢包生命週期雲端驗收。後續應沿用隔離工具補驗，不接正式銀行或等正式才測。畫面 `docs/evidence/reward-preview-d49fdf0-checkout-wallet-20261019.jpg`，結果補入smoke JSON。
+
+## 隔離結帳補驗已完成
+
+使用者批准繼續後，已用真實本機PostgreSQL17.6通過4個情境（含多連線、deadlocks0），最新正式catalog離線11檔／10verify通過，付款金額／回呼／逾時API mock35/35，桌面手機結帳與代客UI mock60/60（各30）。一般／兩種單錢包／雙錢包、NT$1、促銷優惠券、保留扣用釋放返還、付款retry及舊回呼、併發一致性均有隔離證據。只修臨時測試設定的啟動cwd，沒有產品修改；未改Preview開關或建立雲端訂單／銀行交易。
+
+這解除「缺本輪隔離結帳證據」待辦，不解除正式銀行交易、銀行API部署金鑰、Outbox／排程監測與回復演練限制。真PG與UI mock分層驗證，非單一UI→真DB→付款API全鏈路。完整指令、結果、隔離方式及風險見 `reward-checkout-isolated-acceptance-2026-10-19.md`，數量與log hash見 `docs/evidence/reward-checkout-isolated-20261019.json`。本批Preview／隔離補驗文件與證據尚未commit／push。

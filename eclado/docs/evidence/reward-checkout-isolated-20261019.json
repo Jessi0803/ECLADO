@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-19",
+  "environment": "local only",
+  "postgresVersion": "17.6",
+  "cloudDatabaseWrites": 0,
+  "bankTransactions": 0,
+  "productionChanges": 0,
+  "files": [
+    {
+      "kind": "db",
+      "file": "docs/evidence/release-checkout-db-20261019.log",
+      "sha256": "a8e6ae2c35644f78a37ea9c116b4bbb55b1c5c8926e46700bfce85a14d2e9f69"
+    },
+    {
+      "kind": "api",
+      "file": "docs/evidence/release-checkout-api-20261019.log",
+      "sha256": "aaf2e68a1a6673f4a4cd41151080b220950491096b00a8fe21494e68501aa3d8"
+    },
+    {
+      "kind": "ui",
+      "file": "docs/evidence/release-checkout-ui-20261019.log",
+      "sha256": "5d398347b8465873d1d5aa5e5ab362b2a7cc152144378d341d27795155278e11"
+    },
+    {
+      "kind": "schema",
+      "file": "docs/evidence/release-checkout-current-schema-20261019.log",
+      "sha256": "cc2ed3381603178815b9827c2ea9b792bec3fcdc5390964b96175802d399897c"
+    }
+  ],
+  "results": {
+    "postgresScenarioTests": {
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "deadlocks": 0
+    },
+    "apiMockTests": {
+      "passed": 35,
+      "failed": 0,
+      "skipped": 0
+    },
+    "playwrightMockTests": {
+      "passed": 60,
+      "failed": 0,
+      "skipped": 0,
+      "desktop": 30,
+      "mobile": 30
+    },
+    "latestSchemaReplay": {
+      "migrations": 11,
+      "verifications": 10,
+      "passed": true
+    }
+  },
+  "limitations": [
+    "Database scenarios use real PostgreSQL with fake Auth and simulated receipt evidence",
+    "Playwright uses mock Auth/database/payment APIs; not a single real UI-to-PostgreSQL-to-gateway end-to-end run",
+    "No actual Sinopac transactions or production wallet writes",
+    "Temporary Playwright server directory error corrected before 60-test successful run"
+  ]
+}

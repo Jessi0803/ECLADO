@@ -1,0 +1,31 @@
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS PostgreSQL independent manager/buyer sessions: uncommitted type isolation, stale creation rollback, no deadlocks
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+PASS PostgreSQL two-wallet reserve race, paid/cancel, retry/old callback, credit/spend and reversal/spend; deadlocks=0
+PASS stage 4 reserve/consume/refund, late success exceptions, role downgrade, caps and bank amount contract
+✔ 4: double wallet pricing, lifecycle and authoritative gateway contracts (3876.509333ms)
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS PostgreSQL independent manager/buyer sessions: uncommitted type isolation, stale creation rollback, no deadlocks
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+PASS real PostgreSQL: simultaneous receipt/fulfillment, duplicate refunds and receipt/cancel; exactly-once ledger, deadlocks=0
+PASS 2B verified bank/admin evidence, immutable ledger, terminals, debt arithmetic, deletion guard and unchanged existing SQL
+✔ 2B: reward ledger, verified evidence, terminal lifecycle and concurrent reconciliation (3600.773875ms)
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS PostgreSQL independent manager/buyer sessions: uncommitted type isolation, stale creation rollback, no deadlocks
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+✔ 1C: real existing engines plus student prices and AUTO/MANUAL (3204.108541ms)
+PASS assisted benefits: real custom-price discount/gift/coupon/credit engines, consent and cancellation
+PASS PostgreSQL independent manager/buyer sessions: uncommitted type isolation, stale creation rollback, no deadlocks
+PASS 1C existing engines, OFF role regression, student variants, AUTO/MANUAL, stale rollback and recovery
+PASS PostgreSQL independent sessions: type/unbind/OFF/Auth DELETE writers wait, mid-create price race rolls back, simultaneous assisted recovery has one snapshot; deadlocks=0
+KNOWN EXISTING CONFLICT: Auth deletion with owned assisted orders is blocked by protect_assisted_order; 2A does not alter it
+PASS 2A ordinary/assisted snapshots, benefits independence, recovery, immutability, ACL and OFF
+✔ 2A: private immutable snapshots in existing ordinary/assisted transactions (3587.362709ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3962.251083
