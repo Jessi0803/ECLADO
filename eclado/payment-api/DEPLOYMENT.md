@@ -1,5 +1,7 @@
 # Payment API Git 發布流程
 
+**歷史提案，已停止採用。** 使用者2026-10-19明確指定付款API不用GitHub管理；現行以 [主機更新紀錄](HOST-DEPLOYMENT.md) 為準。以下內容保留供理解原提案，不代表正式啟用或仍需建立GitHub Secrets／Environment。
+
 狀態：發布工具已準備，尚未在正式主機初始化／啟用。工作流程不在push時自動執行；只有手動指定完整commit SHA、經 `payment-production` 環境門檻後才可部署。
 
 本次主機的具體差異、專用帳號／SSH授權範圍與首次切換，依 [初始化計畫](INITIALIZATION-PLAN.md) 執行；新增存取權及切換窗口尚待確認。其專用帳號方案取代下述通用初始化中的root環境檔symlink方式。

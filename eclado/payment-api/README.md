@@ -73,4 +73,4 @@ npm test               # 跑單元測試（node --test）
 
 ## 正式發布
 
-使用 [GitHub Actions 發布與回復流程](DEPLOYMENT.md)。完整發布包包含server、代客付款模組、返饋付款證據模組及鎖定依賴，不能只複製server.js。首次需完成主機版本目錄初始化及GitHub受保護環境設定；尚未完成時部署腳本會拒絕啟用。現有主機 `.env` 不納入發布包。
+依使用者2026-10-19決策，付款API沿用主機管理，不使用GitHub Actions部署。依 [主機更新與回復紀錄](HOST-DEPLOYMENT.md) 先備份、驗證候選，再更新配套程式與模組並重啟原PM2應用。現有 `.env` 與依賴須獨立保留，不能只複製server.js而漏掉其require模組。GitHub發布工具為未採用提案，不是正式部署前置條件。

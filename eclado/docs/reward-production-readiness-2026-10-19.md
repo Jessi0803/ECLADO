@@ -37,3 +37,29 @@ Linux CI補證：GitHub compare頁及Actions job顯示96eea55的 `Payment API re
 GitHub connector建立草稿PR被403 Resource not accessible by integration拒絕；Chrome GitHub顯示Sign in，因此尚未建立PR。獨立分支比較頁已確認1 commit／5 files changed／Able to merge：https://github.com/Jessi0803/ECLADO/compare/main...codex/payment-api-release-pipeline?expand=1 。需使用者登入後再建立草稿；main沒有變動。
 
 使用者登入GitHub後，已透過瀏覽器成功建立 Draft PR #1：https://github.com/Jessi0803/ECLADO/pull/1 ，base main、head codex/payment-api-release-pipeline，1 commit／5 files changed，頁面確認Draft、無衝突且Merge按鈕停用。PR已附加至本次任務；未請求reviewer、未標示Ready、未合併或觸發正式部署。建立當下pull_request測試排隊中，push的Linux verify已成功。
+
+## 使用者更新：付款API沿用主機管理
+
+使用者明確指定「付款API不用走github管理的方式」，停止將GitHub Environment／Secrets／部署workflow視為此次付款API上線前置條件；不繼續要求GitHub管理員登入。既有Draft PR不代表已採用或批准正式啟用。
+
+2026-10-19唯讀核對 `/opt/eclado-payment-api`（排除node_modules與.env內容）找到26份server備份／歷史副本，沒有任一份與當下server.js的SHA256相同。最新為 `backups/server-before-dcc6bcf-20261013.js`，65348bytes，SHA256 `140d5f368a16ecfe431c2dc080a94bf7babf5985fc2948bd6a184af7a5478868`；當下server.js為66120bytes、`a62f4d183127f81ec1ec43153bfce25f888f63a0ffa856a832b9b545cea0de53`。因此既有備份確實存在，但最新一份是10/13更新前版本，不能當作目前版本的完整備份。
+
+另有 `backups/assisted-20261009-0155`、`backups/benefits-20261011-e7624a3`，後者incoming/assisted-orders.js與現行模組雜湊一致。所查backups目錄沒有package.json／package-lock.json／node_modules完整備份。root的PM2 dump與bak皆指向 `/opt/eclado-payment-api/server.js`、fork mode，可辨認原啟動路徑；未重載dump或驗證完整復原。最新server備份及incoming代客模組均通過node --check。
+
+正式API仍PID1860848，loopback health回傳ok=true。此次只讀／語法檢查，未重啟、更新或恢復服務，未動正式DB。後續只需在實際發布前補一份現行程式、完整依賴與啟動設定的受限備份，再沿用主機更新／回復方式；不因此重建GitHub部署工程。
+
+## 現行付款API完整備份已完成
+
+使用者明確批准「OK備份」後，於台北時間2026-10-19 15:05建立主機本機備份：`/opt/eclado-payment-api/backups/current-20261019-070550Z`。目錄root／0700，全部備份檔0600，未下載環境設定至本機或上傳GitHub。
+
+- runtime.tar.gz包含當下server.js、assisted-orders.js、package.json、package-lock.json、.env與完整node_modules，共619個一般檔案，壓縮檔751769bytes。當下沒有reward-payment-evidence.cjs，沒有以候選模組混入舊版備份。
+- 另保存當下單一付款應用的PM2 live狀態、舊dump中該應用設定、可供審查的ecosystem.restore.cjs、Node/npm/PM2版本、pm2-root.service內容及RESTORE.txt。沒有重載PM2 dump或其他服務。
+- runtime-manifest逐檔記錄SHA256／權限／擁有者；完整讀取壓縮檔核對每一檔內容及metadata，與備份前及備份後原始runtime皆相同。backup-checksums再次核對所有備份組件，完成後寫入COMPLETE.json。
+- runtime.tar.gz SHA256：`1df08714c33e0d9657aaf6f27444744d1a8e5612fa4a31763e57d1c593d464e3`。對壓縮檔內的程式副本與restore設定完成node --check，通過。
+- 原付款PID1860848、PM2啟動時間及重啟計數未變，health ok=true。未更新／重啟／恢復API，未動正式資料庫。這是現行runtime完整性校驗，沒有實際執行服務還原，也不是異地主機或整台VPS災難復原備份。
+
+下一步才是依主機管理方式更新配套付款API；本次備份授權未直接延伸為更新或重啟授權。仍需先確認與當下正式DB相容，返饋SQL上線後不得直接使用舊API備份回復而忽略新金融義務。
+
+## 配套付款API已在主機更新
+
+使用者其後授權「繼續下一步」。發布前發現原候選直接SELECT尚未存在的reward_credit_amount，已補精確缺欄錯誤才降回舊投影的相容處理；本機及主機隔離假設定、現有依賴環境均65項通過。依使用者要求以主機管理方式，只更新server.js及返饋付款模組、重啟原root PM2應用，PID1860848→1983124；原依賴與.env核對不變。內外health及新版程式對正式舊DB的唯讀相容探測通過，非GET請求0；未執行正式SQL或銀行測試交易。詳見payment-api/HOST-DEPLOYMENT.md。下一步為正式資料庫備份與SQL安裝前條件核對，並非此刻已完成整套師資功能上線。
