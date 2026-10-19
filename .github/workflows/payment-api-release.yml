@@ -1,0 +1,104 @@
+name: Payment API release
+
+on:
+  pull_request:
+    paths:
+      - 'eclado/payment-api/**'
+      - '.github/workflows/payment-api-release.yml'
+  push:
+    paths:
+      - 'eclado/payment-api/**'
+      - '.github/workflows/payment-api-release.yml'
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: Full 40-character commit SHA to release
+        required: true
+      expected_current:
+        description: Full SHA of the currently active release
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: payment-api-${{ github.event_name == 'workflow_dispatch' && 'production' || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate immutable references
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          REVISION: ${{ inputs.revision }}
+          EXPECTED_CURRENT: ${{ inputs.expected_current }}
+        run: |
+          [[ "$REVISION" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$EXPECTED_CURRENT" =~ ^[0-9a-f]{40}$ ]]
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.revision }}
+          fetch-depth: 0
+      - name: Require current main ancestry
+        if: github.event_name == 'workflow_dispatch'
+        run: git merge-base --is-ancestor origin/main HEAD
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: eclado/payment-api/package-lock.json
+      - run: npm ci
+        working-directory: eclado/payment-api
+      - run: npm test
+        working-directory: eclado/payment-api
+      - name: Package runtime only
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          tar -czf payment-api.tgz -C eclado/payment-api server.js assisted-orders.js reward-payment-evidence.cjs package.json package-lock.json
+          sha256sum payment-api.tgz > payment-api.tgz.sha256
+          cp eclado/payment-api/deploy-release.sh deploy-release.sh
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          name: payment-api-release
+          path: |
+            payment-api.tgz
+            payment-api.tgz.sha256
+            deploy-release.sh
+          retention-days: 14
+  deploy:
+    if: github.event_name == 'workflow_dispatch'
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: payment-production
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: payment-api-release
+      - name: Deploy verified release
+        env:
+          SSH_KEY: ${{ secrets.PAYMENT_DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.PAYMENT_DEPLOY_KNOWN_HOSTS }}
+          SSH_HOST: ${{ vars.PAYMENT_DEPLOY_HOST }}
+          SSH_USER: ${{ vars.PAYMENT_DEPLOY_USER }}
+          REVISION: ${{ inputs.revision }}
+          EXPECTED_CURRENT: ${{ inputs.expected_current }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$REVISION" =~ ^[0-9a-f]{40}$ && "$EXPECTED_CURRENT" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$SSH_HOST" =~ ^[a-zA-Z0-9.-]+$ && "$SSH_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
+          test -n "$SSH_KEY" && test -n "$KNOWN_HOSTS"
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/payment_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          trap 'rm -f ~/.ssh/payment_key' EXIT
+          SSH_ARGS=(-i ~/.ssh/payment_key -o BatchMode=yes -o StrictHostKeyChecking=yes)
+          TARGET="$SSH_USER@$SSH_HOST"
+          UPLOAD="/tmp/eclado-payment-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          ssh "${SSH_ARGS[@]}" "$TARGET" "umask 077; mkdir '$UPLOAD'"
+          scp "${SSH_ARGS[@]}" payment-api.tgz payment-api.tgz.sha256 deploy-release.sh "$TARGET:$UPLOAD/"
+          ssh "${SSH_ARGS[@]}" "$TARGET" "bash '$UPLOAD/deploy-release.sh' '$REVISION' '$EXPECTED_CURRENT' '$UPLOAD'"
