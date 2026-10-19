@@ -2,6 +2,8 @@
 
 狀態：發布工具已準備，尚未在正式主機初始化／啟用。工作流程不在push時自動執行；只有手動指定完整commit SHA、經 `payment-production` 環境門檻後才可部署。
 
+本次主機的具體差異、專用帳號／SSH授權範圍與首次切換，依 [初始化計畫](INITIALIZATION-PLAN.md) 執行；新增存取權及切換窗口尚待確認。其專用帳號方案取代下述通用初始化中的root環境檔symlink方式。
+
 ## 已核對的正式基準（2026-10-19）
 
 Vultr主機Node20.20.2、npm10.8.2、PM2 7.0.1；現行程序為fork mode、watch=false、無額外node_args，cwd `/opt/eclado-payment-api`、script同目錄server.js。PM2環境未包含所核對的銀行／Supabase／通知金鑰，服務使用原目錄.env。PID1860848。檔案SHA256 `a62f4d183127f81ec1ec43153bfce25f888f63a0ffa856a832b9b545cea0de53`等於2026-10-19 origin/main；新模組尚未上線。
@@ -58,4 +60,4 @@ CI與主機自動檢查不呼叫銀行建單／query，也不寫正式資料庫�
 
 ## 驗證範圍
 
-新增部署測試使用真實暫存目錄、tar、SHA256及shell，模擬PM2、npm安裝與HTTP：未初始化／版本不符拒絕、完整發布、候選健康失敗自動回復。Linux CI會使用真flock及mv -T；macOS本機只模擬這兩項Linux工具。尚未完成真Linux主機初始化、真PM2切換與GitHub Secret連線演練，不可宣稱正式發布已驗收。
+新增部署測試使用真實暫存目錄、tar、SHA256及shell，模擬PM2、npm安裝與HTTP：未初始化／版本不符拒絕、完整發布、候選健康失敗自動回復。Linux CI使用真flock及mv -T，push及PR檢查已通過；macOS本機只模擬這兩項Linux工具。尚未完成真Linux主機初始化、真PM2切換與GitHub Secret連線演練，不可宣稱正式發布已驗收。
