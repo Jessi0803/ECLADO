@@ -35,3 +35,5 @@
 Linux CI補證：GitHub compare頁及Actions job顯示96eea55的 `Payment API release / verify (push)` Successful in12s；`deploy (push)` Skipped；Vercel與Preview comments亦成功。Run https://github.com/Jessi0803/ECLADO/actions/runs/39188863082 ，verify job https://github.com/Jessi0803/ECLADO/actions/runs/39188863082/job/117857008311 。這已驗證Linux測試job執行成功，未登入狀態無法展開完整logs，未宣稱真PM2或正式啟用已驗收。
 
 GitHub connector建立草稿PR被403 Resource not accessible by integration拒絕；Chrome GitHub顯示Sign in，因此尚未建立PR。獨立分支比較頁已確認1 commit／5 files changed／Able to merge：https://github.com/Jessi0803/ECLADO/compare/main...codex/payment-api-release-pipeline?expand=1 。需使用者登入後再建立草稿；main沒有變動。
+
+使用者登入GitHub後，已透過瀏覽器成功建立 Draft PR #1：https://github.com/Jessi0803/ECLADO/pull/1 ，base main、head codex/payment-api-release-pipeline，1 commit／5 files changed，頁面確認Draft、無衝突且Merge按鈕停用。PR已附加至本次任務；未請求reviewer、未標示Ready、未合併或觸發正式部署。建立當下pull_request測試排隊中，push的Linux verify已成功。
