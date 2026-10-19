@@ -8,9 +8,9 @@ const time=value=>new Date(value).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'
 export default function InstructorRewardsPanel({userId,instructorId,admin=false,hideRefresh=false}){
   const [report,setReport]=useState(null),[error,setError]=useState(''),[loading,setLoading]=useState(true);
   const [offset,setOffset]=useState(0),[ledgerOffset,setLedgerOffset]=useState(0),[revision,setRevision]=useState(0);
-  useEffect(()=>{setOffset(0);setLedgerOffset(0);},[userId,instructorId,admin]);
+  useEffect(()=>{setReport(null);setOffset(0);setLedgerOffset(0);},[userId,instructorId,admin]);
   useEffect(()=>{
-    let alive=true;setReport(null);setError('');setLoading(true);
+    let alive=true;setError('');setLoading(true);
     const load=admin?getAdminInstructorRewards(instructorId,offset,ledgerOffset):getMyInstructorRewards(offset,ledgerOffset);
     load.then(data=>{if(alive)setReport(data);}).catch(e=>{if(alive)setError(e.code==='PGRST202'?'返饋查詢尚未安裝。':e.message||'返饋資料暫時無法載入。');})
       .finally(()=>{if(alive)setLoading(false);});
@@ -59,6 +59,6 @@ export default function InstructorRewardsPanel({userId,instructorId,admin=false,
       </div>)}
       {pager(ledgerOffset,setLedgerOffset,report.ledger_count,'帳務')}
     </>}
-    {!admin&&report&&<RewardWithdrawalsPanel key={userId} userId={userId}/>}
+    {!admin&&report&&<RewardWithdrawalsPanel key={userId} userId={userId} onWithdrawalChanged={()=>setRevision(r=>r+1)}/>}
   </section>;
 }

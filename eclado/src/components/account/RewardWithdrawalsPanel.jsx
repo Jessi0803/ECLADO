@@ -18,7 +18,7 @@ function WithdrawalConfirmation({quote,busy,onClose,onConfirm,returnFocus}){
 }
 const emptyBank={bank_code:'',bank_name:'',branch:'',holder:'',account:''};
 const fields={bank_code:'銀行代碼',bank_name:'銀行名稱',branch:'分行名稱',holder:'收款戶名',account:'收款帳號'};
-export default function RewardWithdrawalsPanel({userId}){
+export default function RewardWithdrawalsPanel({userId,onWithdrawalChanged}){
  const [data,setData]=useState(null),[error,setError]=useState(''),[revision,setRevision]=useState(0),[offset,setOffset]=useState(0),[bank,setBank]=useState(emptyBank),[busy,setBusy]=useState(false);
  const lock=useRef(false),retry=useRef(null),withdrawButton=useRef(null);
  const [amount,setAmount]=useState(null),[preview,setPreview]=useState(null);
@@ -27,7 +27,7 @@ export default function RewardWithdrawalsPanel({userId}){
  useEffect(()=>{setAmount(null);setPreview(null);setBank(emptyBank);setEditingBank(false);setConfirmation(null);retry.current=null;},[userId]);
  useEffect(()=>{const focus=()=>{setConfirmation(null);setBank(emptyBank);setRevision(r=>r+1);};window.addEventListener('focus',focus);return()=>window.removeEventListener('focus',focus);},[]);
  async function operation(fn,refresh=true){if(lock.current)return;lock.current=true;setBusy(true);setError('');try{await fn();if(refresh)setRevision(r=>r+1);}catch(e){setError(e.message||'操作失敗，請重新確認');if(/^(22|23|40|42|55|P0002)/.test(e.code||''))retry.current=null;setRevision(r=>r+1);}finally{lock.current=false;setBusy(false);}}
- async function submitWithdrawal(){await operation(async()=>{const pending=retry.current;if(!pending)return;await requestMyWithdrawal(pending.key,pending.quote);retry.current=null;setAmount(null);});}
+ async function submitWithdrawal(){await operation(async()=>{const pending=retry.current;if(!pending)return;await requestMyWithdrawal(pending.key,pending.quote);retry.current=null;setAmount(null);onWithdrawalChanged?.();});}
  const selected=amount??String(data?.available_balance??'');
  const validAmount=/^[0-9]+$/.test(selected)&&Number.isSafeInteger(Number(selected))&&Number(selected)>15&&Number(selected)<=Number(data?.available_balance);
  const previewKey=`${selected}:${data?.bank?.version}:${data?.available_balance}:${revision}`;

@@ -121,6 +121,7 @@ test('taxed admin totals and paid dialog enforce the frozen net transfer',async(
 
 test('custom amount previews on backend, full amount fills and partial submission locks current batch',async({page})=>{
  await setup(page);let blocked=false,sent:any;const amount=30000;
+ await page.route('**/rest/v1/rpc/get_my_instructor_reward_report',r=>r.fulfill({json:{summary:{balance:blocked?20000:amount,available_balance:blocked?20000:amount,pending_balance:0,credited_total:amount,reversed_total:0,withdrawal_reserved_balance:blocked?10000:0},order_count:0,ledger_count:0,orders:[],entries:[]}}));
  await page.route('**/rest/v1/rpc/get_my_reward_withdrawals',r=>r.fulfill({json:{...summary,balance:blocked?20000:amount,available_balance:blocked?20000:amount,withdrawal_estimate:{...quote,amount,net_amount:26352,income_tax:3000,supplementary_premium:633},withdrawal_batch:{...summary.withdrawal_batch,blocked}}}));
  const previews:number[]=[];await page.route('**/rest/v1/rpc/quote_my_reward_withdrawal',r=>{const a=r.request().postDataJSON().p_amount;previews.push(a);return r.fulfill({json:{...quote,amount:a,net_amount:a-15}});});
  await page.route('**/rest/v1/rpc/request_my_reward_withdrawal',r=>{sent=r.request().postDataJSON();blocked=true;return r.fulfill({json:{id:'partial'}});});
@@ -129,7 +130,7 @@ test('custom amount previews on backend, full amount fills and partial submissio
  expect(previews).toHaveLength(0);await input.fill('10000');await expect(p.locator('.reward-withdrawal-summary').getByText('NT$ 9,985',{exact:true})).toBeVisible();expect(previews.at(-1)).toBe(10000);
  await p.getByRole('button',{name:'全額帶入'}).click();await expect(input).toHaveValue('30000');await expect(p.locator('.reward-withdrawal-summary').getByText('NT$ 26,352',{exact:true})).toBeVisible();
  await input.fill('10000');await expect(button).toBeEnabled();await button.click();const d=page.getByRole('dialog',{name:'確認提領',exact:true});await expect(d.getByText('NT$ 10,000',{exact:true})).toBeVisible();await d.getByRole('button',{name:'確認申請提領'}).click();
- await expect.poll(()=>sent?.p_expected_quote.amount).toBe(10000);await expect(p.getByText(/本批次（2026-11-10）已有提領申請/)).toBeVisible();await expect(button).toBeDisabled();await expect(input).toBeDisabled();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await expect.poll(()=>sent?.p_expected_quote.amount).toBe(10000);await expect(p.getByText(/本批次（2026-11-10）已有提領申請/)).toBeVisible();await expect(button).toBeDisabled();await expect(input).toBeDisabled();await expect(page.locator('.reward-balance-primary .reward-metric--available strong')).toHaveText('NT$ 20,000');await expect(page.getByText('另有 NT$ 10,000 提領處理中。',{exact:true})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 
 test('batch restriction comes from server across pagination; failed batch can be reapplied',async({page})=>{
