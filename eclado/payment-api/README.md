@@ -71,17 +71,6 @@ npm test               # 跑單元測試（node --test）
 `PAYMENT_INTEGRATION_CARD_ORDER_NO`／`PAYMENT_INTEGRATION_CARD_TOKEN`，最後以
 `RUN_PAYMENT_INTEGRATION=1` 執行整合測試。每組 token 只能用於原本那張訂單。
 
-## 部署到 Vultr（手動，一行）
+## 正式發布
 
-> 主機上的 `.env` 不在 repo 內，部署只覆蓋程式碼，不動 `.env`。
-
-```bash
-scp payment-api/server.js root@202.182.120.159:/opt/eclado-payment-api/server.js \
-  && ssh root@202.182.120.159 'cd /opt/eclado-payment-api && node --check server.js && pm2 restart eclado-payment-api'
-```
-
-部署後確認：
-
-```bash
-ssh root@202.182.120.159 'curl -s http://127.0.0.1:3000/health'
-```
+使用 [GitHub Actions 發布與回復流程](DEPLOYMENT.md)。完整發布包包含server、代客付款模組、返饋付款證據模組及鎖定依賴，不能只複製server.js。首次需完成主機版本目錄初始化及GitHub受保護環境設定；尚未完成時部署腳本會拒絕啟用。現有主機 `.env` 不納入發布包。
