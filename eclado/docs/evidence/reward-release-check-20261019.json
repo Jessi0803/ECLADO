@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-19",
+  "branch": "codex/instructor-student-rewards",
+  "head": "5006797",
+  "fetchedMain": "b267571",
+  "mainOnlyCommits": 0,
+  "branchOnlyCommits": 33,
+  "tests": {
+    "paymentAmountsBankNotificationWorker": {"passed": 36, "failed": 0, "skipped": 0, "mockedExternalServices": true},
+    "paymentApi": {"passed": 65, "failed": 0, "skipped": 0, "mockedExternalServices": true, "initialSandboxLoopbackFailure": true, "rerunOutsideSandboxPassed": true},
+    "testViteBuild": {"passed": true, "modules": 472, "existingChunkWarning": true},
+    "nodeAndBashSyntax": "passed",
+    "playwrightThisPass": "not_run",
+    "fullProductionBuildWithSeoThisPass": "not_run"
+  },
+  "host": {"workerEnabled": false, "timersEnabled": false, "timersActive": false, "bankKeysInWorker": false, "paymentPublicHealth": "ok", "paymentServerSha256": "485150d4e6bd6a99f4a1514ce71448587f4723a763efdc8e3c3810fa6ea963b3", "initialUnconfirmedLoopbackPort3001CheckFailed": true},
+  "thisPass": {"databaseWrites": 0, "notificationSends": 0, "websiteDeployments": 0, "commits": 0, "pushes": 0},
+  "decision": "pending_release_scope_and_remaining_validation_acceptance",
+  "limitations": ["Historical production schema verification is not a new live catalog query", "Student pricing OFF does not disable wallet or withdrawal entrypoints", "Production keyring configured but deployment loading not verified", "Outbox and fallback production integration not verified", "Restore drill and monitoring remain incomplete"]
+}

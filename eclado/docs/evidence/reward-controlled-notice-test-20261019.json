@@ -1,0 +1,29 @@
+{
+  "startedAt": "2026-10-19T11:51:01.283Z",
+  "purpose": "user_approved_controlled_provider_test",
+  "workerEnabled": false,
+  "financialWrites": 0,
+  "email": {
+    "httpStatus": 200,
+    "status": "provider_accepted"
+  },
+  "line": {
+    "httpStatus": 200,
+    "status": "provider_accepted"
+  },
+  "scope": "One clearly labelled test per approved channel; no outbox processing or financial events",
+  "recipientReceiptConfirmed": false,
+  "limitations": [
+    "Provider acceptance is not recipient receipt or read confirmation",
+    "Worker outbox lifecycle and fallback not exercised by this controlled connectivity test"
+  ],
+  "userReceiptReport": {
+    "email": "received",
+    "line": "not_received"
+  },
+  "lineProfileCheck": {
+    "httpStatus": 200,
+    "profileAccessible": true,
+    "notificationRequests": 0
+  }
+}

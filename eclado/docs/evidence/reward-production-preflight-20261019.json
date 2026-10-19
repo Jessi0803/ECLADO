@@ -1,0 +1,134 @@
+{
+  "date": "2026-10-19",
+  "source": "saved read-only catalog; no production row data",
+  "catalog_sha256": "601c221d1e8da5751d3c84fc72036ae26d0d5a770a0dcd5dc266520b17500ddc",
+  "cloudExecuted": false,
+  "steps": [
+    {
+      "order": 1,
+      "file": "supabase-coupon-member-create-compat.sql",
+      "sha256": "6456ec7359f69025cbb1d47c8c405eb579b27a39611fa14508c6fea46f01584a"
+    },
+    {
+      "order": 2,
+      "file": "supabase-student-reward-snapshots.sql",
+      "sha256": "a561ac6d6d99be4b30daa0b74cfc145b780e1c4a883c9d490bdf4a79eae19164"
+    },
+    {
+      "order": 3,
+      "file": "supabase-instructor-reward-ledger.sql",
+      "sha256": "ea46aee7ef32e3f632db98800a43125a4203f228dcb0d7344717f8d04af17808"
+    },
+    {
+      "order": 4,
+      "file": "supabase-instructor-reward-queries.sql",
+      "sha256": "7bef89e919abda64d0f4740f10a6e956ed334fa62f46bc95bfd7c315901e99fa"
+    },
+    {
+      "order": 5,
+      "file": "supabase-instructor-reward-checkout.sql",
+      "sha256": "5eba6f84815ca6df2d2edf4beff34e9ad3789fa47a9b0477dd031a158126fb92"
+    },
+    {
+      "order": 6,
+      "file": "supabase-instructor-reward-withdrawals.sql",
+      "sha256": "83ffe95048bb98d34799dde7118fc7de6303d3f6eb471695f66562235562a175"
+    },
+    {
+      "order": 7,
+      "file": "supabase-instructor-reward-notifications.sql",
+      "sha256": "5fe6a7f3c1e4caaf38055d51bbe3bc068234e75b100e6b0cf76a68a0c93471a2"
+    },
+    {
+      "order": 8,
+      "file": "supabase-instructor-reward-reconciliation.sql",
+      "sha256": "c155a544b66b13b75037b535653924020abe92057f3a408275da56f5a29d5669"
+    },
+    {
+      "order": 9,
+      "file": "supabase-instructor-reward-withdrawal-operations.sql",
+      "sha256": "6841808d3943423412963c18a13b3032d758d4ef019d861162b8659f4015bc70"
+    },
+    {
+      "order": 10,
+      "file": "supabase-instructor-reward-withdrawal-deductions.sql",
+      "sha256": "6d2f5cbd3889980ca1188cb14cae5e578194ab3ed2fb24347fdc34ba422c8552"
+    },
+    {
+      "order": 11,
+      "file": "supabase-instructor-reward-withdrawal-partial.sql",
+      "sha256": "41d9cc6fb2515f9b7d1cbd0e740beec541a057a12ce024821d4f46b51a11680b"
+    }
+  ],
+  "verify": [
+    {
+      "file": "supabase-student-reward-snapshots-verify.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase-instructor-reward-ledger-verify.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase-instructor-reward-queries-verify.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase-instructor-reward-checkout-verify.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase-instructor-reward-withdrawals-verify.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase-instructor-reward-operations-verify.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase-instructor-reward-withdrawal-operations-verify.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase-instructor-reward-withdrawal-deductions-verify.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase-instructor-reward-withdrawal-partial-verify.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase-instructor-reward-withdrawal-deductions-verify.sql",
+      "passed": true
+    }
+  ],
+  "postgres": "PostgreSQL 17.6 on x86_64-apple-darwin23.6.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.6), 64-bit",
+  "claim_payment_amount_occurrences": 2,
+  "originalFunctionOwnerAclPreserved": 208,
+  "changedOriginalFunctions": [
+    "create_assisted_order(uuid,jsonb)",
+    "create_order_with_pricing_discount_v2(jsonb,text,text,text,text,text,text,text,text)",
+    "quote_assisted_order(jsonb)",
+    "claim_order_payment(text,text)",
+    "begin_order_payment_retry(text)",
+    "set_order_payment_amount_defaults()"
+  ],
+  "unchangedPricingFunctions": [
+    "automatic_promotion_allows_identity(uuid,text,uuid)",
+    "coupon_campaign_allows_identity(uuid,text)",
+    "promotion_item_matches_scope(uuid,jsonb,text)",
+    "quote_order_pricing_internal_20260916(jsonb,text)",
+    "resolve_product_price_multiplier(products,text,numeric)",
+    "save_discount_promotion(jsonb)",
+    "save_discount_promotion_before_audience_20261017(jsonb)"
+  ],
+  "authSimulation": "Local auth.users and JWT claims; signup trigger simulated, not real Supabase Auth",
+  "rollbackOrderSmoke": true,
+  "activityAudienceRuntime": true,
+  "studentPricing": {
+    "enabled": false,
+    "version": "0"
+  },
+  "directLedgerReadDenied": true,
+  "orders": 0
+}

@@ -1,0 +1,11 @@
+{
+  "read_only": "on",
+  "captured_at": "2026-10-19T11:12:14.125926+00:00",
+  "changed_functions": [],
+  "pending_order_count": 1,
+  "reward_column_absent": true,
+  "reward_tables_absent": true,
+  "student_price_enabled": false,
+  "student_price_version": 0,
+  "compared_function_count": 208
+}

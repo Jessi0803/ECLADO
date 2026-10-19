@@ -1,0 +1,10 @@
+{
+  "startedAt": "2026-10-19T11:55:17.413Z",
+  "purpose": "user_requested_replacement_line_recipient_test",
+  "recipientFormatValid": true,
+  "httpStatus": 400,
+  "status": "not_accepted_no_auto_retry",
+  "workerEnabled": false,
+  "financialWrites": 0,
+  "limitations": ["No delivery; exact push error body not retained; no automatic resend"]
+}

@@ -1,0 +1,9 @@
+# Proposed cadence only. Do not enable before deployment approval.
+[Unit]
+Description=ECLADO daily reward reconciliation (Taipei)
+[Timer]
+OnCalendar=*-*-* 03:00:00 Asia/Taipei
+Persistent=false
+Unit=eclado-reward-reconcile.service
+[Install]
+WantedBy=timers.target

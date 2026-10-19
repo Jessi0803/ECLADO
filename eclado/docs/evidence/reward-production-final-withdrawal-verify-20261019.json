@@ -1,0 +1,10 @@
+{
+  "partial": {
+    "success": true,
+    "result": "partial withdrawal verification passed"
+  },
+  "deductions": {
+    "success": true,
+    "result": "withdrawal deduction verification passed"
+  }
+}

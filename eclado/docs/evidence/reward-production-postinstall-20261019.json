@@ -1,0 +1,15 @@
+{
+  "no_bank_profiles": true,
+  "no_financial_rows": true,
+  "reward_tables_rls": true,
+  "reward_table_count": 15,
+  "student_prices_off": true,
+  "pending_order_count": 1,
+  "no_financial_findings": true,
+  "old_orders_reward_zero": true,
+  "no_notifications_queued": true,
+  "partial_quote_installed": true,
+  "no_direct_financial_access": true,
+  "all_reward_tables_installed": true,
+  "existing_activity_pricing_unchanged": true
+}

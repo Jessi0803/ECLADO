@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-19T11:46:09.100Z",
+  "method": "GET_only_no_messages",
+  "workerEnabled": false,
+  "line": {
+    "httpStatus": 200,
+    "valid": true,
+    "displayName": "ECLADO TAIWAN",
+    "basicId": "@379sdyrk"
+  },
+  "resend": {
+    "httpStatus": 200,
+    "credentialAccepted": true,
+    "domain": "ecladotaiwan.com",
+    "domainFound": true,
+    "domainStatus": "verified"
+  },
+  "notificationRequests": 0,
+  "limitations": ["No LINE push or Email send performed", "Recipient delivery and inbox placement not verified"]
+}

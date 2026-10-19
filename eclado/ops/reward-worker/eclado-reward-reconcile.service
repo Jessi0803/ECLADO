@@ -1,0 +1,24 @@
+[Unit]
+Description=ECLADO reward reconcile (disabled until approved)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=eclado-reward-worker
+Group=eclado-reward-worker
+WorkingDirectory=/opt/eclado-reward-worker/runtime
+EnvironmentFile=/etc/eclado-reward-worker/worker.env
+ExecStart=/usr/bin/node /opt/eclado-reward-worker/runtime/scripts/reward-worker-host.cjs reconcile
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+RestrictSUIDSGID=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+InaccessiblePaths=-/opt/eclado-payment-api -/opt/eclado-payment-api-staging -/var/lib/eclado-payment
+UMask=0077
+MemoryMax=192M
+CPUQuota=25%
+TimeoutStartSec=110s

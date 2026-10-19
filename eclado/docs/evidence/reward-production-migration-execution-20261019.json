@@ -1,0 +1,178 @@
+{
+  "project": "ilvdvlkdpntwmaijncaz",
+  "studentPricingEnabled": false,
+  "workerEnabled": false,
+  "stages": [
+    {
+      "order": 1,
+      "file": "supabase-coupon-member-create-compat.sql",
+      "sha256": "6456ec7359f69025cbb1d47c8c405eb579b27a39611fa14508c6fea46f01584a",
+      "status": "installed",
+      "at": "2026-10-19T11:18:11.178Z",
+      "verification": {
+        "helper_present": true,
+        "legacy_removed": true,
+        "student_prices_off": true
+      }
+    },
+    {
+      "order": 2,
+      "file": "supabase-student-reward-snapshots.sql",
+      "sha256": "a561ac6d6d99be4b30daa0b74cfc145b780e1c4a883c9d490bdf4a79eae19164",
+      "status": "installed",
+      "at": "2026-10-19T11:18:42.399Z",
+      "verification": {
+        "snapshot_rls": true,
+        "immutable_trigger": true,
+        "student_prices_off": true,
+        "no_snapshot_policies": true,
+        "no_direct_helper_access": true,
+        "no_cascading_foreign_keys": true,
+        "assisted_capture_and_persist": true,
+        "ordinary_capture_and_persist": true,
+        "no_client_or_service_table_access": true
+      }
+    },
+    {
+      "order": 3,
+      "file": "supabase-instructor-reward-ledger.sql",
+      "sha256": "ea46aee7ef32e3f632db98800a43125a4203f228dcb0d7344717f8d04af17808",
+      "status": "installed",
+      "at": "2026-10-19T11:19:50.002Z",
+      "verification": {
+        "private_tables": true,
+        "triggers_enabled": true,
+        "bank_service_only": true,
+        "student_prices_off": true,
+        "no_orphan_snapshots": true,
+        "account_ledger_agrees": true,
+        "internal_posting_closed": true,
+        "ledger_projections_agree": true,
+        "ledger_running_balances_agree": true
+      }
+    },
+    {
+      "order": 4,
+      "file": "supabase-instructor-reward-queries.sql",
+      "sha256": "7bef89e919abda64d0f4740f10a6e956ed334fa62f46bc95bfd7c315901e99fa",
+      "status": "installed",
+      "at": "2026-10-19T11:20:22.958Z",
+      "verification": {
+        "anon_denied": true,
+        "helpers_private": true,
+        "student_prices_off": true,
+        "tables_still_private": true,
+        "public_queries_authenticated": true
+      }
+    },
+    {
+      "order": 5,
+      "file": "supabase-instructor-reward-checkout.sql",
+      "sha256": "5eba6f84815ca6df2d2edf4beff34e9ad3789fa47a9b0477dd031a158126fb92",
+      "status": "installed",
+      "at": "2026-10-19T11:21:41.323Z",
+      "verification": {
+        "s1_preserved": true,
+        "private_events": true,
+        "private_tables": true,
+        "payment_contract": true,
+        "reservations_agree": true,
+        "student_prices_off": true,
+        "failure_service_only": true,
+        "account_ledger_agrees": true,
+        "running_balances_agree": true
+      }
+    },
+    {
+      "order": 6,
+      "file": "supabase-instructor-reward-withdrawals.sql",
+      "sha256": "83ffe95048bb98d34799dde7118fc7de6303d3f6eb471695f66562235562a175",
+      "status": "installed",
+      "at": "2026-10-19T11:22:07.683Z",
+      "verification": {
+        "s1_closed": true,
+        "rls_enabled": true,
+        "private_tables": true,
+        "posting_private": true,
+        "sources_explicit": true,
+        "bank_service_only": true,
+        "student_prices_off": true,
+        "account_ledger_agrees": true,
+        "ledger_running_agrees": true,
+        "withdrawal_reserve_agrees": true
+      }
+    },
+    {
+      "order": 7,
+      "file": "supabase-instructor-reward-notifications.sql",
+      "sha256": "5fe6a7f3c1e4caaf38055d51bbe3bc068234e75b100e6b0cf76a68a0c93471a2",
+      "status": "installed",
+      "at": "2026-10-19T11:23:02.731Z",
+      "verification": {
+        "outbox_rls": true,
+        "attempts_rls": true,
+        "enqueue_enabled": true,
+        "claim_service_only": true
+      }
+    },
+    {
+      "order": 8,
+      "file": "supabase-instructor-reward-reconciliation.sql",
+      "sha256": "c155a544b66b13b75037b535653924020abe92057f3a408275da56f5a29d5669",
+      "status": "installed",
+      "at": "2026-10-19T11:24:26.395Z",
+      "verification": {
+        "admin_acl": true,
+        "worker_acl": true,
+        "no_policies": true,
+        "rls_enabled": true,
+        "s1_preserved": true,
+        "helper_private": true,
+        "private_tables": true,
+        "empty_search_path": true,
+        "ledger_consistent": true,
+        "student_prices_off": true
+      }
+    },
+    {
+      "order": 9,
+      "file": "supabase-instructor-reward-withdrawal-operations.sql",
+      "sha256": "6841808d3943423412963c18a13b3032d758d4ef019d861162b8659f4015bc70",
+      "status": "installed",
+      "at": "2026-10-19T11:24:50.547Z",
+      "verification": {
+        "audit_rls": true,
+        "queue_no_anon": true,
+        "immutable_audit": true,
+        "empty_search_path": true,
+        "export_service_only": true,
+        "queue_authenticated": true,
+        "audit_no_direct_access": true
+      }
+    },
+    {
+      "order": 10,
+      "file": "supabase-instructor-reward-withdrawal-deductions.sql",
+      "sha256": "6d2f5cbd3889980ca1188cb14cae5e578194ab3ed2fb24347fdc34ba422c8552",
+      "status": "installed",
+      "at": "2026-10-19T11:25:05.659Z",
+      "verification": {
+        "success": true,
+        "result": "withdrawal deduction verification passed"
+      }
+    },
+    {
+      "order": 11,
+      "file": "supabase-instructor-reward-withdrawal-partial.sql",
+      "sha256": "41d9cc6fb2515f9b7d1cbd0e740beec541a057a12ce024821d4f46b51a11680b",
+      "status": "installed",
+      "at": "2026-10-19T11:26:14.778Z",
+      "verification": {
+        "success": true,
+        "result": "partial withdrawal verification passed"
+      }
+    }
+  ],
+  "pending": null,
+  "status": "all_11_installed_and_verified"
+}

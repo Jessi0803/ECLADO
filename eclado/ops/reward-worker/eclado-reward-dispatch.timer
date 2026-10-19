@@ -1,0 +1,10 @@
+# Proposed cadence only. Do not enable before deployment approval.
+[Unit]
+Description=ECLADO reward notices every minute
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=60s
+AccuracySec=5s
+Unit=eclado-reward-dispatch.service
+[Install]
+WantedBy=timers.target

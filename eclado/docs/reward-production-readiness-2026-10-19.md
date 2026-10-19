@@ -1,6 +1,6 @@
 # 師資返饋金正式發布前核對（2026-10-19）
 
-結論：第三步唯讀盤點完成，尚未具備直接合併main上線的條件。未執行正式migration、修改環境變數、重啟服務、建立正式訂單或發送通知。
+最新結論（2026-10-19）：正式11檔增量已依批准安裝／驗證，付款API主機更新完成、Production銀行keyring已儲存但未部署載入、獨立worker已配置且停用，指定LINE／Email測試已確認收件。尚未合併main／發布網站／啟用學生價或排程。完整最新檢查與門檻見 `reward-release-checklist-2026-10-19.md`；下列早期盤點保留為歷史，不代表目前仍未安裝。
 
 ## 當下證據
 
@@ -63,3 +63,33 @@ GitHub connector建立草稿PR被403 Resource not accessible by integration拒�
 ## 配套付款API已在主機更新
 
 使用者其後授權「繼續下一步」。發布前發現原候選直接SELECT尚未存在的reward_credit_amount，已補精確缺欄錯誤才降回舊投影的相容處理；本機及主機隔離假設定、現有依賴環境均65項通過。依使用者要求以主機管理方式，只更新server.js及返饋付款模組、重啟原root PM2應用，PID1860848→1983124；原依賴與.env核對不變。內外health及新版程式對正式舊DB的唯讀相容探測通過，非GET請求0；未執行正式SQL或銀行測試交易。詳見payment-api/HOST-DEPLOYMENT.md。下一步為正式資料庫備份與SQL安裝前條件核對，並非此刻已完成整套師資功能上線。
+
+## 正式SQL離線重演完成（接續主機更新後）
+
+2026-10-19以當日已保存正式catalog於隔離PostgreSQL17.6重建並成功執行「優惠券＋10份返饋增量」共11檔，10次verify通過。原208函式owner／ACL不變；只6個預期wrapper定義改動，活動身份／儲存及定價核心保持一致，四種活動／五角色／訪客／代客真SQL測試及一般／代客快照、入帳、錢包付款退款回滾smoke通過。最新扣款／自選提領2個隔離併發整合測試通過，deadlocks=0，test Build通過。
+
+先前「target_order.payment_amount只能出現一次」是自製檢查誤判；Migration實際只要求存在，當日來源2次，實際執行與付款契約驗證通過。安裝清單不含舊年曆清理補丁，partial放最後；完整hash、verify及限制見 `reward-production-migration-plan-2026-10-19.md` 與 `docs/evidence/reward-production-preflight-20261019.json`。
+
+本次只本機工具／假資料重演及文件，正式DB、金鑰／worker設定、網站皆未變更；未commit／push／merge。尚缺正式金鑰及安全備份、隔離worker與指定通知名單、維護窗口／未結付款盤點／受控入口及正式安裝批准，整體發布仍No-Go。Private catalog不提交。
+
+## Worker環境與通知名單已確認
+
+使用者已選定既有VPS上的獨立worker，並再次確認管理員通知Email為ecladotaiwan@gmail.com。唯讀主機盤點完成，未建立帳號、修改secret或啟動timer／寄信。安裝方式及剩餘門檻見 `reward-worker-host-plan-2026-10-19.md`；排程頻率／sender／憑證來源／主機CLI安裝及正式啟用仍待處理，不把環境選擇當作已安裝。
+
+本機worker啟動適配器、停用環境範本及systemd範本已備妥，與既有通知mock測試合計19/19通過；並未上傳／安裝主機或配置正式憑證。排程頻率仍待確認，Linux單元檔／權限／真投遞未驗收。
+
+## 正式金鑰已設定／worker停用安裝完成
+
+使用者批准Production專用金鑰及私有備份後，已產生獨立32-byte key，新增Vercel eclado專案Production範圍的REWARD_BANK_ENCRYPTION_KEYS及REWARD_BANK_ACTIVE_KEY_ID；既有Preview兩筆未改。UI回覆儲存成功、需新deployment才生效；未按Redeploy或部署。私有JSON備份mode0600且Git忽略，已用假銀行資料驗證加密／還原與錯誤owner拒絕，未儲存假銀行cipher或使用正式會員資料。尚未在正式已部署API上驗證key可用，也尚無異地秘密備份還原演練。證據docs/evidence/reward-production-bank-key-scopes-20261019.jpg，不含key值。
+
+VPS worker已以無sudo獨立帳號安裝，worker flag=false、timer disabled／inactive、沒有正式provider或DB憑證，Linux mock19/19與systemd verify通過，付款程序與hash未變；細節見worker主機文件。
+
+正式SQL執行前另外完成READ ONLY＋ROLLBACK核對：台北19:12時208原函式定義相同，owner／ACL另查亦0差異，返饋表／欄位皆尚不存在，學生價OFF/version0；未付款狀態(unpaid／awaiting_confirm)聚合1筆，未讀會員／訂單明細或金額。此計數不是所有銀行義務完整稽核。唯讀證據docs/evidence/reward-production-install-readonly-20261019.json與reward-production-acl-readonly-20261019.json。正式11檔Migration仍尚未執行，已向使用者提出具體清單、鎖等待／備份限制及執行前確認；未把按規劃繼續當作瀏覽器正式權限寫入的逐項確認。
+
+## 最新正式安裝及發布前整理
+
+使用者明確批准11檔清單後已逐步安裝與驗證；執行hash／時間／verify見 `docs/evidence/reward-production-migration-execution-20261019.json`，最終15張返饋表受RLS保護、208個原函式owner／ACL無差異、活動定價核心不變。安裝後學生價OFF/version0、原待付款聚合1筆、舊訂單reward折抵0、銀行／新財務資料／通知佇列皆空。付款API對新欄位只做GET相容探測通過，未建銀行交易。此段取代上段「尚未執行」狀態；原證據保留，不重跑Migration。
+
+worker已安全配置正式Supabase、LINE及Email憑證，不持有銀行key。兩timer disabled／inactive、flag=false。本次指定收件人連線測試經使用者確認LINE與Email皆收到；沒有正式假提領／假訂單，也沒有自動派送。銀行Production key設定仍須新Git部署才載入。完整範圍與未覆蓋情境見 `reward-worker-host-plan-2026-10-19.md`。
+
+發布前重新fetch main，`b267571`已是目前HEAD祖先，main-only0／分支-only33。學生價OFF不阻止老師看返饋／銀行／提領入口，亦不阻止合法錢包操作；發布時公開入口或另做受控停用方案需使用者確認。實際收件不等於Outbox／備援／重試／對帳正式全流程通過。回復演練與告警亦有缺口，因此仍不直接放行main／學生價／worker。最新順序、程式位置與回復界線見 `reward-release-checklist-2026-10-19.md`。本輪只文件與本機／唯讀核對，沒有commit／push／merge／部署或啟用。

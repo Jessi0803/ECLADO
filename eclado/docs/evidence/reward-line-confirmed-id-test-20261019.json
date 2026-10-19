@@ -1,0 +1,14 @@
+{
+  "startedAt": "2026-10-19T11:57:43.829Z",
+  "purpose": "user_supplied_developer_user_id_test",
+  "httpStatus": 200,
+  "status": "provider_accepted",
+  "workerEnabled": false,
+  "financialWrites": 0,
+  "recipientReceiptConfirmed": true,
+  "limitations": [
+    "Direct provider connectivity test; outbox lifecycle and fallback not exercised",
+    "No outbox or membership binding changes"
+  ],
+  "confirmationSource": "User confirmed LINE receipt and updated ignored notification test env"
+}
