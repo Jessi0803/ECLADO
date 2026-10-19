@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-19",
+  "reportedError": "銀行資料服務尚未設定",
+  "source": "api/reward-bank.js:8",
+  "observedProductionBefore": ["SUPABASE_SERVICE_KEY"],
+  "addedProductionConfig": ["SUPABASE_URL", "SUPABASE_ANON_KEY"],
+  "valueSource": "Existing production public defaults from api/_supabase-env.js; no Preview values",
+  "savedAndScopeVerifiedInUi": true,
+  "secretRotation": false,
+  "previewChanged": false,
+  "productCodeChanged": false,
+  "databaseChanges": false,
+  "bankFormResubmittedByAgent": false,
+  "deploymentMethod": "Git main push; no direct Vercel deployment",
+  "postDeploymentProbe": "pending",
+  "bankEncryptionRoundtrip": "pending_user_retry"
+}

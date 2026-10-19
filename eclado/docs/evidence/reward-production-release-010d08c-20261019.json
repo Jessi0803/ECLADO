@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-19",
+  "releaseCommit": "010d08cffbe0876554650e9e47a9dec6a69b0442",
+  "previousMain": "b2675714ef6001c2b73de33955cbc0f045ceecdc",
+  "mergeMethod": "fast_forward",
+  "deploymentMethod": "Git main push auto-deployment only",
+  "deploymentId": "8dYn2kD3i8NWGbxBLxGnJ3CNuWN7",
+  "deploymentUrl": "https://eclado-1mac066nq-eclado-s-projects.vercel.app",
+  "domain": "https://ecladotaiwan.com",
+  "environment": "Production",
+  "status": "Ready",
+  "buildDurationSeconds": 18,
+  "vercelDisplayedTimestampTaipei": "2026-10-19 20:28:04 GMT+8",
+  "prePushGuards": {"remoteMainContainedInCandidate": true, "candidatePreviewReady": true, "studentPricingEnabled": false, "studentPricingVersion": 0, "workerEnabled": false, "paymentBackupPresent": true},
+  "postReadyChecks": {
+    "homeStatus": 200,
+    "shopStatus": 200,
+    "accountStatus": 200,
+    "checkoutStatus": 200,
+    "bankGetStatus": 405,
+    "workerGetStatus": 405,
+    "bankUnauthenticatedReadStatus": 401,
+    "paymentHealthStatus": 200,
+    "paymentHealthOk": true,
+    "productionCatalogVisible": true,
+    "testBannerVisible": false
+  },
+  "thisRelease": {"migrationExecutions": 0, "ordersCreated": 0, "bankTransactions": 0, "notificationSends": 0, "workerEnabled": false, "studentPricingEnabled": false},
+  "limitations": ["Requests made while deployment was building still saw old API404; after Ready both new GET endpoints returned405", "No authenticated production banking read/save or cryptographic roundtrip", "Keyring deployment loading is not validated by unauthenticated401 or method405", "No production checkout/payment, Outbox, retry, or reconciliation execution", "Restore rehearsal and monitoring remain outstanding"]
+}

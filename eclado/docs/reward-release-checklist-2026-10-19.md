@@ -1,6 +1,8 @@
 # 正式發布前檢查｜2026-10-19 最新狀態
 
-本文件優先於當日早期「尚未安裝」紀錄。**本次只核對及整理，尚未授權 main 合併、Git push、網站部署、學生價或 worker 啟用。**
+本文件保留分次核對紀錄。**最新狀態：使用者要求接續合併／發布步驟後，main已快轉至010d08c並由Git自動Production部署Ready；學生價與worker仍OFF。** 最新正式發布結果及未驗證限制見 `reward-production-release-2026-10-19.md`，下列尚未發布的敘述屬先前時間點紀錄。
+
+正式登入後銀行儲存發現Production缺少SUPABASE_URL／SUPABASE_ANON_KEY，使用者已批准補齊並以Git自動部署載入；不修改產品碼或資料庫。根因與未完成驗收見 `reward-bank-production-config-fix-2026-10-19.md`。早期401／405只能證明未登入／方法保護，不能宣稱銀行服務設定與加密驗收已通過。
 
 ## 發布判斷
 
