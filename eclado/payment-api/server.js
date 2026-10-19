@@ -329,6 +329,30 @@ async function authorizePaymentAccess(orderNo, paymentToken) {
   if (authorized !== true) throw new Error('Invalid payment authorization');
 }
 
+async function fetchOrderRowsWithRewardCompatibility(params, errorLabel) {
+  const read = async query => {
+    const response = await fetch(`${supabaseUrl}/rest/v1/orders?${query}`, {
+      headers: { apikey: supabaseServiceKey, Authorization: `Bearer ${supabaseServiceKey}` },
+    });
+    return { response, text: await response.text() };
+  };
+  let result = await read(params);
+  if (!result.response.ok) {
+    let error;
+    try { error = JSON.parse(result.text); } catch { error = {}; }
+    const missingRewardColumn =
+      (error.code === '42703' && /^column (?:orders\.)?reward_credit_amount does not exist$/i.test(error.message || ''))
+      || (error.code === 'PGRST204' && /^Could not find the ['"]reward_credit_amount['"] column of ['"]orders['"] in the schema cache$/i.test(error.message || ''));
+    if (missingRewardColumn && params.get('select')?.split(',').includes('reward_credit_amount')) {
+      const legacy = new URLSearchParams(params);
+      legacy.set('select', legacy.get('select').split(',').filter(name => name !== 'reward_credit_amount').join(','));
+      result = await read(legacy);
+    }
+  }
+  if (!result.response.ok) throw new Error(`${errorLabel}: ${result.response.status} ${result.text}`);
+  return result.text ? JSON.parse(result.text) : [];
+}
+
 async function getSupabaseOrderPaymentState(orderNo) {
   if (!supabaseUrl || !supabaseServiceKey) {
     throw new Error('Missing env: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
@@ -338,15 +362,7 @@ async function getSupabaseOrderPaymentState(orderNo) {
     select: 'id,user_id,member,email,phone,address,invoice_type,invoice_company_name,invoice_tax_id,order_source,public_lookup_code,status,fulfillment_method,total,shopping_credit_amount,reward_credit_amount,payment_amount,subtotal,discount,promotion_name,coupon_name,coupon_code_mask,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
     limit: '1',
   });
-  const response = await fetch(`${supabaseUrl}/rest/v1/orders?${params}`, {
-    headers: {
-      apikey: supabaseServiceKey,
-      Authorization: `Bearer ${supabaseServiceKey}`,
-    },
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`Supabase order lookup failed: ${response.status} ${text}`);
-  const rows = text ? JSON.parse(text) : [];
+  const rows = await fetchOrderRowsWithRewardCompatibility(params, 'Supabase order lookup failed');
   if (!Array.isArray(rows) || !rows[0]?.id) throw new Error(`Order not found: ${orderNo}`);
   return rows[0];
 }
@@ -426,15 +442,7 @@ async function getSupabaseGuestOrderByLookup(lookupCode) {
     select: 'id,user_id,member,email,phone,public_lookup_code,status,fulfillment_method,total,shopping_credit_amount,reward_credit_amount,payment_amount,subtotal,discount,promotion_name,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
     limit: '1',
   });
-  const response = await fetch(`${supabaseUrl}/rest/v1/orders?${params}`, {
-    headers: {
-      apikey: supabaseServiceKey,
-      Authorization: `Bearer ${supabaseServiceKey}`,
-    },
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`Guest order lookup failed: ${response.status} ${text}`);
-  const rows = text ? JSON.parse(text) : [];
+  const rows = await fetchOrderRowsWithRewardCompatibility(params, 'Guest order lookup failed');
   return Array.isArray(rows) ? rows[0] || null : null;
 }
 
