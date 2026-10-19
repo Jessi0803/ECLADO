@@ -834,6 +834,30 @@ test('訂單詳情顯示優惠券名稱與遮罩代碼', async ({ page }) => {
   await expect(page.getByText('優惠券折抵（新客複合券 · WEL****）')).toBeVisible();
 });
 
+for (const wallets of [
+  { name:'僅返饋金', shopping:0, reward:1320, payment:4300 },
+  { name:'雙錢包', shopping:300, reward:1320, payment:4000 },
+  { name:'舊單無錢包', shopping:0, reward:undefined, payment:5620 },
+]) {
+  test(`訂單詳情錢包明細：${wallets.name}`, async ({ page }) => {
+    await mockAdminApis(page, { orders:[{
+      ...adminOrderRows[0], id:'E2E-REWARD-TENDER', subtotal:5500, discount:0, shipping:120,
+      total:5620, shopping_credit_amount:wallets.shopping,
+      reward_credit_amount:wallets.reward, payment_amount:wallets.payment,
+    }] });
+    await page.goto('/admin');
+    await openAdminSection(page, /訂單管理/);
+    await page.getByText('E2E-REWARD-TENDER', { exact:true }).click();
+    const panel=page.getByRole('dialog', { name:'訂單詳情' });
+    await expect(panel.getByText('師資返饋金支付', { exact:true })).toHaveCount(wallets.reward ? 1 : 0);
+    await expect(panel.getByText('購物金支付', { exact:true })).toHaveCount(wallets.shopping ? 1 : 0);
+    if(wallets.reward) await expect(panel.getByText('−NT$ 1,320', { exact:true })).toBeVisible();
+    if(wallets.shopping) await expect(panel.getByText('−NT$ 300', { exact:true })).toBeVisible();
+    await expect(panel.getByText(`NT$ ${wallets.payment.toLocaleString('en-US')}`, { exact:true })).toBeVisible();
+    await expect(panel.getByText('尚需付款', { exact:true })).toHaveCount(wallets.reward || wallets.shopping ? 1 : 0);
+  });
+}
+
 test('訂單詳情分開顯示訂單總額、購物金支付與尚需付款', async ({ page }) => {
   await mockAdminApis(page, {
     orders: [{

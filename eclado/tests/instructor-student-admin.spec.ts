@@ -64,7 +64,8 @@ test('會員詳情可設定老師類型並確認清空，保留學生', async ({
   expect(typeBox).not.toBeNull();expect(saveBox).not.toBeNull();expect(saveBox!.height).toBeCloseTo(typeBox!.height,0);
   await panel.getByLabel('老師學生價格類型').selectOption('student_1');
   await panel.getByRole('button',{ name:'儲存老師類型' }).click();
-  await expect(panel.getByRole('status')).toContainText('商品售價不變');
+  await expect(panel.getByRole('status')).toContainText('學生下次報價時會重新確認適用價格');
+  await expect(panel.getByText('學生A · 資格符合', { exact:true })).toBeVisible();
   expect(writes[0]).toEqual({ p_instructor_id:'teacher-a',p_student_price_type:'student_1',p_expected_version:0 });
   await panel.getByLabel('老師學生價格類型').selectOption('');
   page.once('dialog',dialog=>dialog.dismiss());
@@ -95,6 +96,7 @@ test('學生建立、換綁、解除只送RPC，確認取消不寫入', async ({
   await section.getByLabel('選擇綁定老師').selectOption('teacher-a');
   await section.getByRole('button',{ name:'建立師生綁定' }).click();
   await expect(section.getByRole('status')).toContainText('建立綁定已完成');
+  await expect(section).not.toContainText('價格未啟用');
   expect(writes[0]).toEqual({p_student_id:'student-a',p_instructor_id:'teacher-a',p_expected_binding_id:null,p_action:'bind'});
   await section.getByLabel('搜尋綁定老師').fill('老師B');
   await section.getByLabel('選擇綁定老師').selectOption('teacher-b');

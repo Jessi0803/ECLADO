@@ -10,16 +10,18 @@ async function open(page:Page,write=true){
   await page.getByText('E2E-ORDER-001',{exact:true}).click();
   return page.getByRole('dialog',{name:'訂單詳情'});
 }
-test('manual reward receipt requires explicit confirmation; refusal does not write',async({page})=>{
+test('paid status requires explicit reward receipt confirmation; refusal does not write',async({page})=>{
   const panel=await open(page);let writes=0;let received:any;
   await page.route('**/rest/v1/rpc/get_admin_reward_payment_requirement',r=>r.fulfill({json:{applicable:true,confirmed:false}}));
   await page.route('**/rest/v1/rpc/confirm_admin_instructor_reward_payment',r=>{writes++;received=r.request().postDataJSON();return r.fulfill({json:{applicable:true,confirmed:true}});});
   const dismissed=new Promise<void>(resolve=>page.once('dialog',async d=>{await d.dismiss();resolve();}));
-  await panel.getByRole('button',{name:'確認人工收款'}).click();await dismissed;
+  await expect(panel.getByRole('button',{name:'確認人工收款'})).toHaveCount(0);
+  const status=panel.locator('select').filter({has:page.locator('option[value="paid"]')});
+  await status.selectOption('paid');await dismissed;
   expect(writes).toBe(0);
   const accepted=new Promise<void>(resolve=>page.once('dialog',async d=>{await d.accept();resolve();}));
-  await panel.getByRole('button',{name:'確認人工收款'}).click();await accepted;
-  await expect(page.getByText('已保存收款確認紀錄。')).toBeVisible();expect(writes).toBe(1);
+  await status.selectOption('paid');await accepted;
+  await expect(status).toHaveValue('paid');expect(writes).toBe(1);
   expect(received).toEqual({p_order_id:'E2E-ORDER-001',p_confirmed:true});
 });
 test('read-only backoffice cannot see the manual payment confirmation action',async({page})=>{
@@ -29,6 +31,6 @@ test('installed dependency errors cannot silently become pre-2B compatibility',a
   const panel=await open(page);let writes=0;
   await page.route('**/rest/v1/rpc/get_admin_reward_payment_requirement',r=>r.fulfill({status:400,json:{code:'42883',message:'isolated dependency failure'}}));
   await page.route('**/rest/v1/rpc/confirm_admin_instructor_reward_payment',r=>{writes++;return r.fulfill({json:{}});});
-  await panel.getByRole('button',{name:'確認人工收款'}).click();
-  await expect(page.getByText('收款確認失敗：isolated dependency failure')).toBeVisible();expect(writes).toBe(0);
+  await panel.locator('select').filter({has:page.locator('option[value="paid"]')}).selectOption('paid');
+  await expect(page.getByText('訂單狀態更新失敗：isolated dependency failure')).toBeVisible();expect(writes).toBe(0);
 });

@@ -129,7 +129,6 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
   const [assistedUrl,setAssistedUrl] = useState('');
   const [assistedRecord,setAssistedRecord] = useState(null);
   const [assistedError,setAssistedError] = useState('');
-  const manualReceiptInFlight=useRef(false);
   useEffect(()=>{setAssistedUrl('');setAssistedError('');},[focusOrderId]);
   const [selected, setSelected] = useState(null);
   useEffect(()=>{setAssistedUrl('');setAssistedError('');setAssistedRecord(null);},[selected?.id]);
@@ -380,20 +379,6 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
     if (shouldNotifyShipment) {
       await sendShipmentNotice({ ...order, status, tracking: shipmentTracking });
     }
-  }
-
-  async function confirmManualPayment(){
-    if(!selected || manualReceiptInFlight.current)return;
-    manualReceiptInFlight.current=true;
-    setLineNotice('');
-    try{
-      const requirement=await rewardPaymentRequirement(selected.id);
-      if(!requirement?.applicable){setLineNotice('此筆訂單不需額外收款確認。');return;}
-      if(requirement.confirmed){setLineNotice('此筆訂單已確認收款。');return;}
-      if(!window.confirm('請確認已實際收到此訂單的全額應付款項。確認後將保留收款金額、操作者及時間，是否確認收款？'))return;
-      await confirmRewardPayment(selected.id);setLineNotice('已保存收款確認紀錄。');
-    }catch(error){setLineNotice('收款確認失敗：'+(error.message||'請稍後再試'));}
-    finally{manualReceiptInFlight.current=false;}
   }
 
   async function permanentlyDeleteCancelledOrder() {
@@ -980,14 +965,17 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
               <span>運費</span>
               <span>{selected.shipping === 0 ? '免運' : `NT$ ${Number(selected.shipping).toLocaleString()}`}</span>
             </div>
-            {selected.shoppingCreditDiscount > 0 ? (
+            {selected.shoppingCreditDiscount > 0 || selected.rewardCreditAmount > 0 ? (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 8, borderTop: '1px solid var(--border)', paddingTop: 10, color: 'var(--mid)' }}>
                   <span>訂單總額</span><span>NT$ {Number(selected.total).toLocaleString()}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 6, color: 'var(--red)' }}>
+                {selected.shoppingCreditDiscount > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 6, color: 'var(--red)' }}>
                   <span>購物金支付</span><span>−NT$ {Number(selected.shoppingCreditDiscount).toLocaleString()}</span>
-                </div>
+                </div>}
+                {selected.rewardCreditAmount > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 6, color: 'var(--red)' }}>
+                  <span>師資返饋金支付</span><span>−NT$ {Number(selected.rewardCreditAmount).toLocaleString()}</span>
+                </div>}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, marginTop: 8, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
                   <span>尚需付款</span><span>NT$ {Number(selected.paymentAmount).toLocaleString()}</span>
                 </div>
@@ -998,9 +986,6 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
               </div>
             )}
           </div>
-          {canConfirmPayments && selected.orderSource!=='historical_manual' && !['cancelled','returned'].includes(selected.status) && (
-            <button type="button" onClick={confirmManualPayment} style={{padding:'9px 18px',border:'1px solid var(--border)',background:'var(--white)',color:'var(--dark)',fontSize:12,cursor:'pointer',marginBottom:12}}>確認人工收款</button>
-          )}
           {selected.status !== 'cancelled' && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button

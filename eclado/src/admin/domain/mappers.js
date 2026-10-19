@@ -117,6 +117,7 @@ export function normalizeOrder(row) {
       ?? pricingSnapshot?.store_credit_discount
       ?? 0,
   );
+  const rewardCreditAmount = Number(row.reward_credit_amount ?? 0);
   return {
     id: row.id,
     member: row.member,
@@ -159,7 +160,8 @@ export function normalizeOrder(row) {
     shoppingCreditDiscount: Number.isFinite(shoppingCreditDiscount)
       ? Math.max(0, shoppingCreditDiscount)
       : 0,
-    paymentAmount: Number(row.payment_amount ?? (Number(row.total || 0) - shoppingCreditDiscount)),
+    rewardCreditAmount: Number.isFinite(rewardCreditAmount) ? Math.max(0, rewardCreditAmount) : 0,
+    paymentAmount: Number(row.payment_amount ?? (Number(row.total || 0) - shoppingCreditDiscount - rewardCreditAmount)),
     studioName: row.studio_name_snapshot
       || row.studio_name
       || pricingSnapshot?.studio_name

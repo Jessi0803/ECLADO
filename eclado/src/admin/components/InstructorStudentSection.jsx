@@ -38,7 +38,7 @@ export default function InstructorStudentSection({ member, members, canManage })
     try {
       const result = await saveInstructorStudentType(member.id, type, data.instructor_settings?.version ?? 0);
       if (result.error) throw result.error;
-      setData(result.data); setMessage('老師學生類型已儲存，商品售價不變。');
+      setData(result.data); setMessage('老師學生類型已儲存，學生下次報價時會重新確認適用價格。');
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }
@@ -52,7 +52,7 @@ export default function InstructorStudentSection({ member, members, canManage })
       const result = await saveInstructorStudentBinding({ studentId:member.id, instructorId:action === 'unbind' ? null : teacherId,
         bindingId:data.context?.binding_id, action });
       if (result.error) throw result.error;
-      setData(result.data); setTeacherId(''); setMessage(`${labels[action]}已完成，商品售價不變。`);
+      setData(result.data); setTeacherId(''); setMessage(`${labels[action]}已完成，學生下次報價時會重新確認適用價格。`);
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }
@@ -61,7 +61,7 @@ export default function InstructorStudentSection({ member, members, canManage })
     && `${row.name} ${row.id}`.toLowerCase().includes(search.toLowerCase()));
   return <section aria-label="師生綁定設定" className="reward-view reward-binding">
     <div className="reward-binding-header"><h4>師生綁定與學生類型</h4><button type="button" onClick={reload} disabled={busy} className="reward-button">重新載入師生設定</button></div>
-    <p className="reward-note">此階段只管理資料，學生價格與返饋金尚未啟用。</p>
+    <p className="reward-note">管理師生綁定與學生價格類型。資格符合時，仍須開啟全站學生價才會套用學生價格。</p>
     {busy && <p>處理中…</p>}
     {error && <p role="alert" style={{ color:'var(--red)' }}>{error}</p>}
     {message && <p role="status" style={{ color:'var(--green)' }}>{message}</p>}
@@ -76,12 +76,12 @@ export default function InstructorStudentSection({ member, members, canManage })
         </form>
         <p>目前名下學生：{data.students?.length || 0} 位</p>
         {(data.students || []).map(student => <div key={student.binding_id} style={{ padding:'6px 0' }}>
-          {student.student_name || student.student_id} · {student.context.student_pricing_eligible ? '資格符合（價格未啟用）' : '資格暫停'}
+          {student.student_name || student.student_id} · {student.context.student_pricing_eligible ? '資格符合' : '資格暫停'}
         </div>)}
       </div>}
       {(member.type === 'pro' || context?.has_binding) && <div className="reward-details">
         <p>目前老師：{context?.has_binding ? context.instructor_name || context.instructor_id : '未綁定'}</p>
-        {context?.has_binding && <p>類型：{context.student_price_type || '未設定'} · {context.student_pricing_eligible ? '資格符合（價格未啟用）' : '資格暫停'}
+        {context?.has_binding && <p>類型：{context.student_price_type || '未設定'} · {context.student_pricing_eligible ? '資格符合' : '資格暫停'}
           {!context.student_role_eligible && '；學生目前不是 pro'}{!context.instructor_role_eligible && '；老師目前不是 instructor'}{!context.instructor_type_set && '；老師尚未設定類型'}
         </p>}
         {canManage && <>
