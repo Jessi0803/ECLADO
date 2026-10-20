@@ -1,6 +1,7 @@
 import type { Page, Route } from '@playwright/test';
 import { buildMonthlyRevenue } from '../../src/admin/domain/analytics.js';
 import { normalizeOrder, normalizeProduct } from '../../src/admin/domain/mappers.js';
+import { getOrderInventoryState } from '../../src/admin/domain/orderInventory.js';
 
 export const mockProducts = [
   { id: 1, name: 'Deep Cleansing Foam', name_zh: '深層清潔泡沫洗面乳', category: '清潔', size: '200ml', stock: 48, is_pro_only: false, price: 1280, pro_price: 960, series: 'Deep', image_url: 'https://example.com/mock-product-1.jpg', description: '溫和清潔肌膚並維持水潤。', skin_type: '全膚質、敏感肌', ingredients: '胺基酸系界面活性劑、綠茶萃取', features: ['溫和低刺激配方', '洗後保濕不緊繃'], active: true },
@@ -289,7 +290,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   const couponCampaigns = options.couponCampaigns || [];
   const couponPromotions = options.couponPromotions || [];
   const couponCampaignMembers = options.couponCampaignMembers || [];
-  const orders = options.orders || [];
+  const orders = (options.orders || []).map(order => ({ ...order }));
   const profiles = [...(options.profiles || [])];
   const applications = (options.applications || []).map(application => ({ ...application }));
   const auditLogs = options.auditLogs || [];
@@ -531,7 +532,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       .map(order => ({ order_id: order.id, payment_method: order.payment_method })),
   ));
 
-  await page.route('**/rest/v1/rpc/get_admin_order_payment_details', async route => json(route,
+  const mockPaymentDetails = () => (
     orders
       .filter(order => order.payment_method)
       .flatMap(order => order.id === 'E2E-ORDER-001' ? [
@@ -551,8 +552,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         provider_status: ['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(String(order.status)) ? '1C400' : '1C200',
         provider_description: ['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(String(order.status)) ? '交易成功' : '等待付款',
         created_at: order.created_at, updated_at: order.created_at,
-      }]),
-  ));
+      }])
+  );
+  await page.route('**/rest/v1/rpc/get_admin_order_payment_details', async route => json(route, mockPaymentDetails()));
 
   await page.route('**/rest/v1/rpc/ship_shipping_group', async route => {
     const request = route.request().postDataJSON() || {};
@@ -704,6 +706,62 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   });
 
   const memberNotes = (options.memberNotes || []).map(note => ({ ...note }));
+  function detailedOrder(row: Record<string, any>) {
+    const attempts = mockPaymentDetails().filter(attempt => attempt.order_id === row.id).sort((a,b) => a.attempt_no - b.attempt_no);
+    const latest = attempts.at(-1) || {};
+    const shippingGroup = (options.shippingGroups || []).find(group => group.order_id === row.id)?.shipping_group;
+    return {
+      ...row,
+      payment_method: latest.payment_method || row.payment_method || '',
+      payment_state: latest.payment_state || '',
+      payment_attempt_count: attempts.length, payment_attempts: attempts,
+      payment_updated_at: latest.updated_at || latest.created_at || null,
+      provider_status: latest.provider_status || '', provider_description: latest.provider_description || '',
+      inventory_allocations: inventoryAllocations.filter(a => a.order_id === row.id),
+      shipping_group: shippingGroup || null,
+      admin_note: orderNotes.find(note => note.order_id === row.id)?.note || '',
+    };
+  }
+  await page.route('**/rest/v1/rpc/get_admin_orders_page', async route => {
+    const { p_page=1, p_page_size=50, p_status='all', p_inventory='all', p_search='' } = route.request().postDataJSON() || {};
+    const all = orders.map(row => {
+      const normalized = normalizeOrder(detailedOrder(row));
+      return { ...normalized,
+        memberNote: memberNotes.find(note => note.user_id === row.user_id)?.note || '',
+        inventoryState: getOrderInventoryState(normalized),
+        searchText: [row.id,row.member,row.email,row.phone,row.tracking].join(' ').toLowerCase(),
+      };
+    }).filter(row => row.searchText.includes(String(p_search).trim().toLowerCase()));
+    const byStatus = all.filter(row => p_status === 'all' ? row.status !== 'cancelled'
+      : p_status === 'shipped' ? ['shipped','ready_for_pickup'].includes(row.status)
+      : p_status === 'delivered' ? ['delivered','picked_up'].includes(row.status) : row.status === p_status);
+    const filtered = byStatus.filter(row => p_inventory === 'all' || row.inventoryState === p_inventory);
+    const actualPage = Math.min(p_page,Math.max(1,Math.ceil(filtered.length/p_page_size)));
+    return json(route, {
+      page: actualPage, pageSize:p_page_size, total:filtered.length,
+      statusCounts: { awaiting_confirm:all.filter(row=>row.status==='awaiting_confirm').length, unpaid:all.filter(row=>row.status==='unpaid').length },
+      inventoryCounts: {
+        eligible:byStatus.filter(row=>row.orderSource!=='historical_manual' && (['paid','preparing','ready_for_pickup','picked_up','shipped','delivered'].includes(row.status) || (row.orderSource==='admin_assisted' && ['unpaid','awaiting_confirm'].includes(row.status)))).length,
+        in_stock:byStatus.filter(row=>row.inventoryState==='in_stock').length,
+        backordered:byStatus.filter(row=>row.inventoryState==='backordered').length,
+      },
+      orders:filtered.slice((actualPage-1)*p_page_size,actualPage*p_page_size).map(row=>({
+        id:row.id,member:row.member,type:row.type,total:row.total,status:row.status,date:row.date,user_id:row.user_id,
+        order_source:row.orderSource,fulfillment_method:row.fulfillmentMethod,created_at:row.createdAt,
+        payment_method:row.paymentMethod,payment_state:row.paymentState,note:row.note,member_note:row.memberNote,inventory_state:row.inventoryState,
+      })),
+    });
+  });
+  await page.route('**/rest/v1/rpc/get_admin_order_detail', async route => {
+    const id = route.request().postDataJSON()?.p_order_id;
+    const row = orders.find(row => row.id === id);
+    if (!row) return json(route, { message:'Order not found', code:'P0002' },404);
+    return json(route, {
+      order:detailedOrder(row), memberNote:memberNotes.find(note=>note.user_id===row.user_id)?.note || '',
+      linkedMemberExists:(!options.backofficeAccess || options.backofficeAccess.permissions.includes('members.read')) && profiles.some(profile=>profile.id===row.user_id),
+    });
+  });
+
   await page.route('**/rest/v1/rpc/get_admin_member_notes', async route => json(route, memberNotes));
   await page.route('**/rest/v1/rpc/save_member_admin_note', async route => {
     const request = route.request().postDataJSON() || {};
@@ -1596,6 +1654,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       const body = route.request().postDataJSON();
       options.onOrderUpdate?.(body, route.request().url());
       if (options.orderWriteError) return json(route, { message: options.orderWriteError }, 400);
+      const targetId = new URL(route.request().url()).searchParams.get('id')?.replace(/^eq\./,'');
+      const saved = orders.find(row => row.id === targetId);
+      if (saved) Object.assign(saved,body);
       return json(route, [{ ...body }]);
     }
     return json(route, []);

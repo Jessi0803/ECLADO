@@ -9,19 +9,11 @@ import usePanelHistory from '../hooks/usePanelHistory.js';
 import { shipShippingGroup } from '../../services/shippingGroups.js';
 import { getAssistedLink,assistedLink } from '../../services/assistedOrders.js';
 import {rewardPaymentRequirement,confirmRewardPayment} from '../../services/rewardPayment.js';
+import { ADMIN_ORDER_PAGE_SIZE, fetchAdminOrdersPage, fetchAdminOrderDetail, fetchOrderAssignmentMembers } from '../../services/adminOrders.js';
 
-const INVENTORY_ACTIVE_STATUSES = new Set([
-  'paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered',
-]);
+import { INVENTORY_ACTIVE_STATUSES, getOrderInventoryState } from '../domain/orderInventory.js';
 
-function getOrderInventoryState(order) {
-  if (order?.orderSource === 'historical_manual') return null;
-  if (!INVENTORY_ACTIVE_STATUSES.has(order?.status) && !(order?.orderSource==='admin_assisted'&&['unpaid','awaiting_confirm'].includes(order.status))) return null;
-  if (!Array.isArray(order.items) || order.items.length === 0) return null;
-  if (order.items.some(item => Number(item.inventoryAllocation?.backorderQty) > 0)) return 'backordered';
-  if (order.items.every(item => item.inventoryAllocation?.allocatedQty != null)) return 'in_stock';
-  return null;
-}
+const ORDER_ACTION_STYLE = { padding: '8px 14px', border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--dark)', fontSize: 12, cursor: 'pointer' };
 
 function getPaymentMethodLabel(method) {
   return PAYMENT_METHODS[method]?.label || '—';
@@ -125,12 +117,36 @@ function NoteBox({ kind, text }) {
   );
 }
 
-export default function Orders({ orders, members = [], persistOrderPatch, onSaveInvoiceNumber, onDeleteCancelledOrder, onCancelHistoricalOrder, onAssignGuestOrder, defaultFilter = 'all', memberNotes = {}, focusOrderId = '', backToMember = null, onOpenMember, onClearCrossLink, onCreateAssistedOrder, canConfirmPayments = false }) {
+export default function Orders({ refreshVersion = 0, persistOrderPatch: persistOrderPatchRemote, onSaveInvoiceNumber, onDeleteCancelledOrder, onCancelHistoricalOrder, onAssignGuestOrder, defaultFilter = 'all', focusOrderId = '', backToMember = null, onOpenMember, onClearCrossLink, onCreateAssistedOrder, canConfirmPayments = false }) {
   const [assistedUrl,setAssistedUrl] = useState('');
   const [assistedRecord,setAssistedRecord] = useState(null);
   const [assistedError,setAssistedError] = useState('');
   useEffect(()=>{setAssistedUrl('');setAssistedError('');},[focusOrderId]);
   const [selected, setSelected] = useState(null);
+  const [selectedId, setSelectedId] = useState('');
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
+  const [revision, setRevision] = useState(0);
+  const [pageIndex, setPageIndex] = useState(1);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [listState, setListState] = useState({});
+  const [members, setMembers] = useState([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [actionOrderId, setActionOrderId] = useState('');
+  const detailRequest = useRef(0);
+  const actionLock = useRef(false);
+  const invalidateOrders = () => setRevision(value => value + 1);
+  const openDetail = id => {
+    if (id === selectedId) return;
+    setSelected(null); setDetailError(''); setSelectedId(id);
+  };
+  async function persistOrderPatch(id, patch) {
+    const result = await persistOrderPatchRemote(id, patch);
+    invalidateOrders();
+    return result;
+  }
+
   useEffect(()=>{setAssistedUrl('');setAssistedError('');setAssistedRecord(null);},[selected?.id]);
   const [filter, setFilter] = useState(defaultFilter);
   const [stockFilter, setStockFilter] = useState('all');
@@ -148,7 +164,73 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
   const [assignmentNotice, setAssignmentNotice] = useState('');
   const [printOrder, setPrintOrder] = useState(null);
   const focusedOrderRef = useRef('');
-  const closeDetails = usePanelHistory(!!selected, () => { setSelected(null); onClearCrossLink?.(); });
+  const closeDetails = usePanelHistory(!!selectedId, () => {
+    detailRequest.current += 1; setSelected(null); setSelectedId(''); setDetailError(''); onClearCrossLink?.();
+  });
+
+  useEffect(() => {
+    if (searchInput.trim() === search) return undefined;
+    const timer = setTimeout(() => { setSearch(searchInput.trim()); setPageIndex(1); }, 250);
+    return () => clearTimeout(timer);
+  }, [searchInput, search]);
+
+  const queryKey = JSON.stringify([pageIndex, filter, stockFilter, search, refreshVersion, revision]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchAdminOrdersPage({ page: pageIndex, status: filter, inventory: stockFilter, search }, controller.signal)
+      .then(data => { if (!controller.signal.aborted) setListState({ key: queryKey, data }); })
+      .catch(error => {
+        if (!controller.signal.aborted) {
+          console.error('orders page failed', error);
+          setListState({ key: queryKey, error: '無法載入訂單列表，請重新載入。' });
+        }
+      });
+    return () => controller.abort();
+  }, [queryKey]);
+  const pageData = listState.key === queryKey ? listState.data : null;
+  const listError = listState.key === queryKey ? listState.error : '';
+  const listLoading = !pageData && !listError;
+  const orders = pageData?.orders || [];
+
+  useEffect(() => {
+    if (!selectedId) return undefined;
+    const controller = new AbortController();
+    const request = ++detailRequest.current;
+    setDetailLoading(true); setDetailError('');
+    fetchAdminOrderDetail(selectedId, controller.signal).then(order => {
+      if (!controller.signal.aborted && request === detailRequest.current) setSelected(order);
+    }).catch(error => {
+      if (!controller.signal.aborted && request === detailRequest.current) {
+        console.error('order detail failed', error);
+        setDetailError(error.code === 'P0002' ? '訂單不存在或已刪除。' : '無法載入訂單詳情，請重新載入。');
+      }
+    }).finally(() => {
+      if (!controller.signal.aborted && request === detailRequest.current) setDetailLoading(false);
+    });
+    return () => controller.abort();
+  }, [selectedId, revision, refreshVersion]);
+
+  async function loadAssistedRecord() {
+    setAssistedUrl(''); setAssistedError(''); setAssistedRecord(null);
+    try {
+      const record = await getAssistedLink(selected.id);
+      let actorEmail = '';
+      if (onOpenMember && record.actor_user_id) {
+        const { data } = await supabase.from('profiles').select('email').eq('id', record.actor_user_id).maybeSingle();
+        actorEmail = data?.email || '';
+      }
+      setAssistedUrl(assistedLink(record)); setAssistedRecord({ ...record, actorEmail });
+    } catch (error) { setAssistedError(error.message); }
+  }
+
+  async function openAssignment() {
+    if (loadingMembers) return;
+    setLoadingMembers(true); setLineNotice('');
+    try { setMembers(await fetchOrderAssignmentMembers()); setAssignmentOpen(true); }
+    catch { setLineNotice('無法載入會員選單，請稍後重試。'); }
+    finally { setLoadingMembers(false); }
+  }
+
 
   useEffect(() => {
     setTrackingInput(selected?.tracking || '');
@@ -166,6 +248,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
     setInvoiceNotice('');
     try {
       const normalizedInvoiceNumber = await onSaveInvoiceNumber(selected.id, invoiceNumberInput);
+      invalidateOrders();
       setInvoiceNumberInput(normalizedInvoiceNumber || '');
       setSelected(current => current ? { ...current, invoiceNumber: normalizedInvoiceNumber || '' } : current);
       setInvoiceNotice(normalizedInvoiceNumber ? '發票號碼已儲存。' : '發票號碼已清除。');
@@ -182,29 +265,22 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
   useEffect(() => {
     setFilter(getStatusFilter(defaultFilter));
     setStockFilter('all');
-    setSelected(null);
+    setSelected(null); setSelectedId(''); setPageIndex(1);
   }, [defaultFilter]);
 
-  // 從會員詳情跳過來時直接開啟該訂單（同一筆只自動開一次）。
+  // Cross-links may refer to an order outside the current page or status filter.
   useEffect(() => {
     if (!focusOrderId || focusedOrderRef.current === focusOrderId) return;
-    const target = orders.find(order => order.id === focusOrderId);
-    if (!target) return;
     focusedOrderRef.current = focusOrderId;
-    setSelected(target);
-  }, [focusOrderId, orders]);
+    setSelected(null); setSelectedId(focusOrderId);
+  }, [focusOrderId]);
 
-  const byStatus = orders.filter(order => matchesStatusFilter(order, filter));
-  const showInventoryFilters = byStatus.some(order => (
-    order.orderSource !== 'historical_manual' && (INVENTORY_ACTIVE_STATUSES.has(order.status)
-      || (order.orderSource==='admin_assisted'&&['unpaid','awaiting_confirm'].includes(order.status)))
-  ));
-  const filtered = stockFilter === 'all' || !showInventoryFilters ? byStatus
-    : byStatus.filter(order => getOrderInventoryState(order) === stockFilter);
-  const awaitingCount = orders.filter(o => o.status === 'awaiting_confirm').length;
-  const unpaidCount = orders.filter(o => o.status === 'unpaid').length;
-  const preorderCount = byStatus.filter(order => getOrderInventoryState(order) === 'backordered').length;
-  const inStockCount = byStatus.filter(order => getOrderInventoryState(order) === 'in_stock').length;
+  const showInventoryFilters = (pageData?.inventoryCounts.eligible || 0) > 0;
+  const filtered = orders;
+  const awaitingCount = pageData?.statusCounts.awaiting_confirm || 0;
+  const unpaidCount = pageData?.statusCounts.unpaid || 0;
+  const preorderCount = pageData?.inventoryCounts.backordered || 0;
+  const inStockCount = pageData?.inventoryCounts.in_stock || 0;
   const selectedHasPaidRecord = hasPaidOrderRecord(selected);
 
   async function pushLineOrderNotice(order, type, extra = {}) {
@@ -309,7 +385,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
     try {
       await persistOrderPatch(order.id, patch);
       if (selected?.id === order.id) {
-        setSelected(current => ({
+        setSelected(current => current?.id === order.id ? ({
           ...current,
           ...(result.ok ? {
             shipmentNotificationSentAt: patch.shipment_notification_sent_at,
@@ -318,7 +394,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
           } : {
             shipmentNotificationError: patch.shipment_notification_error,
           }),
-        }));
+        }) : current);
       }
     } catch (error) {
       setLineNotice(
@@ -341,7 +417,11 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
 
   async function updateStatus(id, status) {
     setLineNotice('');
-    const order = orders.find(o => o.id === id);
+    if (actionLock.current) return;
+    actionLock.current = true;
+    setActionOrderId(id);
+    try {
+    const order = selected?.id === id ? selected : await fetchAdminOrderDetail(id);
     const shouldNotifyPaid = order && order.status !== 'paid' && status === 'paid';
     const typedTracking = selected?.id === id ? trackingInput.trim() : '';
     const shipmentTracking = typedTracking || order?.tracking;
@@ -362,12 +442,14 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
       if (order?.orderSource === 'historical_manual' && status === 'cancelled') {
         if (!onCancelHistoricalOrder) throw new Error('歷史訂單取消功能尚未啟用');
         await onCancelHistoricalOrder(id);
+        invalidateOrders();
       } else {
         await persistOrderPatch(id, patch);
       }
-      if (selected?.id === id) setSelected(s => ({ ...s, ...patch }));
+      if (selected?.id === id) setSelected(s => s?.id === id ? { ...s, ...patch } : s);
       setStockFilter('all');
       setFilter(getStatusFilter(status));
+      setPageIndex(1);
     } catch (error) {
       setLineNotice('訂單狀態更新失敗：' + (error?.message || '請稍後再試'));
       return;
@@ -378,6 +460,9 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
     if (shouldNotifyShipment) {
       await sendShipmentNotice({ ...order, status, tracking: shipmentTracking });
     }
+    invalidateOrders();
+    } catch (error) { setLineNotice('無法讀取訂單資料：' + (error?.message || '請稍後再試')); }
+    finally { actionLock.current = false; setActionOrderId(''); }
   }
 
   async function permanentlyDeleteCancelledOrder() {
@@ -391,9 +476,11 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
     setLineNotice('');
     try {
       await onDeleteCancelledOrder(selected.id);
+      invalidateOrders();
       closeDetails();
       setStockFilter('all');
       setFilter('cancelled');
+      setPageIndex(1);
     } catch (error) {
       const message = error?.message || '請稍後再試';
       if (/paid order records/i.test(message)) {
@@ -432,10 +519,9 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
     setBatchNotice('');
     try {
       const result = await shipShippingGroup(groupId, tracking);
-      const shippedOrders = result.shippedOrderIds
-        .map(id => orders.find(order => order.id === id))
-        .filter(Boolean);
-      const noticeTarget = shippedOrders.find(order => order.user_id) || shippedOrders[0];
+      const noticeId = result.shippedOrderIds.includes(selected.id) ? selected.id : result.shippedOrderIds[0];
+      // A combined-shipping member may have orders on another page.
+      const noticeTarget = noticeId ? await fetchAdminOrderDetail(noticeId) : null;
       let noticeResult = { ok: false, channel: '', error: '找不到可通知的訂單' };
       if (noticeTarget) {
         // 一則通知涵蓋這次出貨的所有訂單
@@ -458,6 +544,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
       ).catch(() => null)));
       setBatchTrackingInput('');
       setStockFilter('all');
+      invalidateOrders();
       setBatchNotice([
         `已批次出貨 ${result.shippedOrderIds.length} 張訂單`,
         result.skippedOrderIds.length ? `，跳過已出貨 ${result.skippedOrderIds.length} 張` : '',
@@ -499,6 +586,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
       setSelected(shipmentOrder);
       setStockFilter('all');
       setFilter(getStatusFilter(newStatus));
+      setPageIndex(1);
       if (isNewShipment) {
         await sendShipmentNotice(shipmentOrder);
       }
@@ -510,7 +598,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
   }
 
   return (
-    <div className={'detail-grid' + (selected ? '' : ' no-panel')}>
+    <div className={'detail-grid' + (selectedId ? '' : ' no-panel')}>
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
           <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400 }}>訂單管理</h1>
@@ -518,7 +606,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
         </div>
           <div aria-label="訂單狀態篩選" style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', background: 'var(--white)', flexWrap: 'wrap', width:'fit-content', marginBottom:16 }}>
             {[['all','全部'], ['awaiting_confirm','等待匯款'], ['unpaid','未付款'], ['paid','已付款'], ['preparing','備貨中'], ['shipped','已出貨'], ['delivered','已到貨'], ['returned','退貨'], ['cancelled','已取消']].map(([val, label]) => (
-              <button key={val} aria-pressed={filter === val} onClick={() => { setFilter(val); setStockFilter('all'); }} style={{
+              <button key={val} aria-pressed={filter === val} onClick={() => { setFilter(val); setStockFilter('all'); setPageIndex(1); }} style={{
                 padding: '8px 16px', border: 'none', fontSize: 12, letterSpacing: '0.04em',
                 background: filter === val ? 'var(--dark)' : 'transparent',
                 color: filter === val ? '#fff' : 'var(--mid)',
@@ -539,6 +627,14 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
               </button>
             ))}
           </div>
+        <div style={{ marginBottom: 16 }}>
+          <input aria-label="搜尋訂單" type="search" maxLength={200} value={searchInput}
+            onChange={event => setSearchInput(event.target.value)} placeholder="搜尋訂單編號、訂購人、Email、電話或托運單號"
+            style={{ width: '100%', maxWidth: 520, padding: '10px 12px', border: '1px solid var(--border)', fontSize: 13, background: 'var(--white)' }} />
+        </div>
+        {listLoading && <div role="status" style={{ marginBottom: 12 }}>載入訂單列表中…</div>}
+        {listError && <div role="alert" style={{ marginBottom: 12 }}>{listError} <button type="button" style={ORDER_ACTION_STYLE} onClick={invalidateOrders}>重新載入列表</button></div>}
+        {lineNotice && !selectedId && <div role="status" style={{ marginBottom: 12 }}>{lineNotice}</div>}
         {/* 只有已進入庫存配置流程的訂單才顯示庫存篩選。 */}
         {showInventoryFilters && <div style={{ display: 'flex', gap: 0, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{ fontSize: 11, color: 'var(--mid)', letterSpacing: '0.08em', marginRight: 10, whiteSpace: 'nowrap' }}>庫存狀態</span>
@@ -546,7 +642,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
             const count = val === 'in_stock' ? inStockCount
               : val === 'backordered' ? preorderCount : null;
             return (
-              <button key={val} onClick={() => setStockFilter(val)} style={{
+              <button key={val} onClick={() => { setStockFilter(val); setPageIndex(1); }} style={{
                 padding: '6px 14px', border: '1px solid var(--border)', borderRight: 'none', fontSize: 11,
                 background: stockFilter === val ? 'var(--dark)' : 'var(--white)',
                 color: stockFilter === val ? '#fff' : 'var(--mid)',
@@ -576,20 +672,20 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && (
+              {!listLoading && !listError && filtered.length === 0 && (
                 <tr>
                   <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: 'var(--mid)', fontSize: 13 }}>目前沒有訂單</td>
                 </tr>
               )}
               {filtered.map(o => (
-                <tr key={o.id} onClick={() => setSelected(o)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: selected?.id === o.id ? 'var(--off)' : 'transparent', transition: 'background 0.1s' }}
-                onMouseEnter={e => { if (selected?.id !== o.id) e.currentTarget.style.background = 'var(--off)'; }}
-                onMouseLeave={e => { if (selected?.id !== o.id) e.currentTarget.style.background = 'transparent'; }}>
+                <tr key={o.id} onClick={() => openDetail(o.id)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: selectedId === o.id ? 'var(--off)' : 'transparent', transition: 'background 0.1s' }}
+                onMouseEnter={e => { if (selectedId !== o.id) e.currentTarget.style.background = 'var(--off)'; }}
+                onMouseLeave={e => { if (selectedId !== o.id) e.currentTarget.style.background = 'transparent'; }}>
                   <td data-label="訂單編號" style={{ padding: '13px 14px', fontSize: 12, fontWeight: 500, color: 'var(--dark)', whiteSpace: 'nowrap' }}>{o.id}</td>
                   <td data-label="訂購人" style={{ padding: '13px 14px', fontSize: 13 }}>
                     {o.member}
-                    {o.user_id && memberNotes[String(o.user_id)]?.note && (
-                      <NoteTag kind="member" text={memberNotes[String(o.user_id)].note} />
+                    {o.user_id && o.memberNote && (
+                      <NoteTag kind="member" text={o.memberNote} />
                     )}
                     {o.note && <NoteTag kind="customer" text={o.note} />}
                   </td>
@@ -612,7 +708,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
                   <td data-label="訂單狀態" style={{ padding: '13px 14px' }}>
                     {o.orderSource === 'historical_manual'
                       ? <span style={{ fontSize:11, color:o.status === 'cancelled' ? 'var(--mid)' : 'var(--green)', fontWeight:500 }}>{o.status === 'cancelled' ? '已取消' : '已完成'}</span>
-                      : <StatusSelect status={o.status} paymentMethod={o.paymentMethod} fulfillmentMethod={o.fulfillmentMethod} onChange={ns => updateStatus(o.id, ns)} />}
+                      : <StatusSelect disabled={!!actionOrderId || listLoading} status={o.status} paymentMethod={o.paymentMethod} fulfillmentMethod={o.fulfillmentMethod} onChange={ns => updateStatus(o.id, ns)} />}
                   </td>
                   <td data-label="日期" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)', whiteSpace: 'nowrap' }}>{o.date}</td>
                 </tr>
@@ -620,8 +716,24 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
             </tbody>
           </table>
         </div>
+        {pageData && <nav aria-label="訂單分頁" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 16, fontSize: 12 }}>
+          <span>共 {pageData.total} 筆 · 第 {pageData.page} / {Math.max(1, Math.ceil(pageData.total / ADMIN_ORDER_PAGE_SIZE))} 頁</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" disabled={pageData.page <= 1} style={{ ...ORDER_ACTION_STYLE, opacity: pageData.page <= 1 ? 0.45 : 1 }} onClick={() => setPageIndex(pageData.page - 1)}>上一頁</button>
+            <button type="button" disabled={pageData.page * ADMIN_ORDER_PAGE_SIZE >= pageData.total} style={{ ...ORDER_ACTION_STYLE, opacity: pageData.page * ADMIN_ORDER_PAGE_SIZE >= pageData.total ? 0.45 : 1 }} onClick={() => setPageIndex(pageData.page + 1)}>下一頁</button>
+          </div>
+        </nav>}
       </div>
 
+      {selectedId && !selected && <>
+        <button type="button" className="detail-panel-backdrop" aria-label="關閉訂單詳情" onClick={closeDetails} />
+        <div className="detail-panel" role="dialog" aria-modal="true" aria-label="訂單詳情" style={{ padding: 24, background: 'var(--white)' }}>
+          <button type="button" style={ORDER_ACTION_STYLE} onClick={closeDetails}>← 返回</button>
+          <h3 style={{ margin: '16px 0' }}>訂單詳情</h3>
+          {detailError ? <div role="alert">{detailError} <button type="button" style={ORDER_ACTION_STYLE} onClick={invalidateOrders}>重新載入詳情</button></div>
+            : <div role="status">載入訂單詳情中…</div>}
+        </div>
+      </>}
       {/* Order detail panel */}
       {selected && (
         <>
@@ -631,6 +743,9 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
             <div><button type="button" className="detail-panel-mobile-back" onClick={closeDetails}>← 返回</button><h3 style={{ fontSize: 15, fontWeight: 500 }}>訂單詳情</h3></div>
             <button type="button" className="hide-mobile" aria-label="關閉訂單詳情" onClick={closeDetails} style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--mid)', cursor: 'pointer', lineHeight: 1 }}>×</button>
           </div>
+          {detailLoading && <div role="status">更新訂單詳情中…</div>}
+          {detailError && <div role="alert">{detailError} <button type="button" style={ORDER_ACTION_STYLE} onClick={invalidateOrders}>重新載入詳情</button></div>}
+          <fieldset disabled={detailLoading || !!detailError || !!actionOrderId} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           {backToMember && selected.user_id === backToMember.id && (
             <button type="button" onClick={() => onOpenMember?.(backToMember.id, '')} style={{ background: 'none', border: 'none', padding: 0, marginBottom: 14, fontSize: 12, color: 'var(--blue)', cursor: 'pointer' }}>← 回到會員 {backToMember.name || ''}</button>
           )}
@@ -642,7 +757,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
             <button type="button" onClick={() => setPrintOrder(selected)} style={{ flex:'0 0 auto', padding:'8px 12px', border:'1px solid var(--dark)', background:'var(--white)', color:'var(--dark)', fontSize:11, whiteSpace:'nowrap' }}>列印訂單</button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>訂購人</div>{selected.user_id && onOpenMember && members.some(member => member.id === selected.user_id)
+            <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>訂購人</div>{selected.user_id && onOpenMember && selected.linkedMemberExists
               ? <button type="button" onClick={() => onOpenMember(selected.user_id, selected.id)} style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, color: 'var(--blue)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', textAlign: 'left' }}>{selected.member}</button>
               : <div style={{ fontSize: 13 }}>{selected.member}</div>}</div>
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>{selected.orderSource === 'historical_manual' ? '歷史交易日期' : '日期'}</div><div style={{ fontSize: 13 }}>{selected.transactionDate || selected.date}</div></div>
@@ -650,17 +765,17 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
             <div><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 4 }}>來源</div><div style={{ fontSize: 13 }}>{selected.orderSource === 'historical_manual' ? '歷史補登' : selected.orderSource === 'admin_assisted' ? '管理員代客開單' : '網站訂單'}</div></div>
           </div>
 
-          {selected.user_id && memberNotes[String(selected.user_id)]?.note && (
-            <NoteBox kind="member" text={memberNotes[String(selected.user_id)].note} />
+          {selected.user_id && selected.memberNote && (
+            <NoteBox kind="member" text={selected.memberNote} />
           )}
           {selected.note && <NoteBox kind="customer" text={selected.note} />}
           {selected.orderSource==='admin_assisted'&&onCreateAssistedOrder&&<div style={{marginBottom:16}}>
-            <button type="button" style={{padding:'9px 12px',border:'1px solid var(--dark)',background:'var(--white)',color:'var(--dark)',fontSize:12,lineHeight:1.6,maxWidth:'100%',textAlign:'left',cursor:'pointer'}} onClick={async()=>{setAssistedUrl('');setAssistedError('');setAssistedRecord(null);try{const record=await getAssistedLink(selected.id);setAssistedUrl(assistedLink(record));setAssistedRecord(record);}catch(error){setAssistedError(error.message);}}}>取得客戶付款連結／開單紀錄</button>
+            <button type="button" style={{padding:'9px 12px',border:'1px solid var(--dark)',background:'var(--white)',color:'var(--dark)',fontSize:12,lineHeight:1.6,maxWidth:'100%',textAlign:'left',cursor:'pointer'}} onClick={loadAssistedRecord}>取得客戶付款連結／開單紀錄</button>
             {assistedUrl&&<input aria-label="客戶付款連結" readOnly value={assistedUrl} style={{width:'100%',padding:'10px 12px',marginTop:8,border:'1px solid var(--border)',background:'var(--white)',color:'var(--dark)',fontSize:12,borderRadius:0}}/>}
             {assistedError&&<p role="alert" style={{fontSize:12,color:'var(--red)',lineHeight:1.7,marginTop:8}}>{assistedError}</p>}
             {assistedRecord&&<details style={{fontSize:12,marginTop:10,lineHeight:1.7,overflowWrap:'anywhere'}}><summary style={{fontSize:11,color:'var(--dark)',cursor:'pointer'}}>內部開單紀錄（不提供客戶）</summary>
               <p>建立時間：{new Date(assistedRecord.created_at).toLocaleString('zh-TW')}</p>
-              <p>建立者：{members.find(member=>member.id===assistedRecord.actor_user_id)?.email||assistedRecord.actor_user_id}</p>
+              <p>建立者：{assistedRecord.actorEmail||assistedRecord.actor_user_id}</p>
               {assistedRecord.minimum_reason&&<p>最低訂購額例外：{assistedRecord.minimum_reason}</p>}
               {assistedRecord.shipping_reason&&<p>運費異動原因：{assistedRecord.shipping_reason}</p>}
               {assistedRecord.pricing_context?.map(line=><p key={line.variant_id}>規格 #{line.variant_id}：適用價格 NT${Number(line.suggested_unit_price).toLocaleString()} → 成交單價 NT${Number(line.final_unit_price).toLocaleString()}</p>)}
@@ -676,7 +791,7 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
           {!selected.user_id && selected.orderSource!=='admin_assisted' && onAssignGuestOrder && (
             <div style={{ marginBottom: 20, padding: '12px', border: '1px solid var(--border)', background: 'var(--off)' }}>
               <div style={{ fontSize: 11, color: 'var(--mid)', lineHeight: 1.6, marginBottom: 9 }}>此訂單尚未綁定會員。確認訂購人身分後，可將訂單歸戶至既有會員。</div>
-              <button type="button" onClick={() => setAssignmentOpen(true)} style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--dark)', background: 'var(--white)', color: 'var(--dark)', cursor: 'pointer', fontSize: 12 }}>歸戶至會員</button>
+              <button type="button" disabled={loadingMembers} onClick={openAssignment} style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--dark)', background: 'var(--white)', color: 'var(--dark)', cursor: 'pointer', fontSize: 12 }}>歸戶至會員</button>
             </div>
           )}
           {assignmentNotice && <div style={{ marginBottom: 16, padding: '10px 12px', border: '1px solid var(--border)', background: 'var(--off)', color: 'var(--green)', fontSize: 12 }}>{assignmentNotice}</div>}
@@ -1016,11 +1131,13 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
               onClose={result => {
                 setAssignmentOpen(false);
                 if (!result?.ok) return;
-                setSelected(current => current ? { ...current, user_id: result.member_id } : current);
+                setSelected(current => current ? { ...current, user_id: result.member_id, linkedMemberExists: true } : current);
+                invalidateOrders();
                 setAssignmentNotice(`已將訂單歸戶至 ${result.member_name || result.member_email || '指定會員'}。`);
               }}
             />
           )}
+          </fieldset>
         </div>
         </>
       )}

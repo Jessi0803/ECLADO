@@ -76,6 +76,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
     }
   }
   const [orders, setOrders] = useState([]);
+  const [orderRefreshVersion, setOrderRefreshVersion] = useState(0);
   const [applications, setApplications] = useState([]);
   const [applicationsLoading, setApplicationsLoading] = useState(true);
   const [applicationsError, setApplicationsError] = useState('');
@@ -112,7 +113,16 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
   const [assistedOrderOpen,setAssistedOrderOpen] = useState(false);
   const [assistedInitialMember,setAssistedInitialMember] = useState(null);
   const canCreateAssistedOrder = canWriteOrders && canReadMembers && canReadCatalog;
-  function openAssistedOrder(member=null) { setAssistedInitialMember(member); setAssistedOrderOpen(true); }
+  async function openAssistedOrder(member=null) {
+    if (page === 'orders') await fetchAll({ includeOrders: false });
+    setAssistedInitialMember(member); setAssistedOrderOpen(true);
+  }
+
+  async function refreshCurrentData() {
+    if (page === 'orders') setOrderRefreshVersion(version => version + 1);
+    else if (page === 'dashboard') await fetchDashboard();
+    else await fetchAll();
+  }
 
   async function sendApplicationNotice(id) {
     try {
@@ -171,22 +181,22 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
     return { ...notice, updated: true };
   }
 
-  async function fetchAll() {
+  async function fetchAll({ includeOrders = true } = {}) {
     setApplicationsLoading(canReadMembers);
     try {
       const emptyResult = () => Promise.resolve({ data: [], error: null });
       const [ordersRes, profilesRes, catalogRes, applicationsRes, paymentMethodsRes, paymentDetailsRes, inventoryAllocationsRes, professionalSalesRes, memberNotesRes, shippingGroupsRes, orderNotesRes] = await Promise.all([
-        canReadOrders ? supabase.from('orders').select('*').order('created_at', { ascending: false }) : emptyResult(),
+        canReadOrders && includeOrders ? supabase.from('orders').select('*').order('created_at', { ascending: false }) : emptyResult(),
         canReadMembers ? supabase.from('profiles').select('*').order('created_at', { ascending: false }) : emptyResult(),
         canReadCatalog ? supabase.rpc('get_admin_catalog') : Promise.resolve({ data: { products: [], variants: [], images: [] }, error: null }),
         canReadMembers ? supabase.from('professional_applications').select('*, professional_application_certificates(*)').order('created_at', { ascending: false }) : emptyResult(),
-        canReadOrders ? supabase.rpc('get_admin_order_payment_methods') : emptyResult(),
-        canReadOrders ? supabase.rpc('get_admin_order_payment_details') : emptyResult(),
-        canReadOrders ? supabase.rpc('get_admin_inventory_allocations') : emptyResult(),
+        canReadOrders && includeOrders ? supabase.rpc('get_admin_order_payment_methods') : emptyResult(),
+        canReadOrders && includeOrders ? supabase.rpc('get_admin_order_payment_details') : emptyResult(),
+        canReadOrders && includeOrders ? supabase.rpc('get_admin_inventory_allocations') : emptyResult(),
         canReadMembers ? supabase.rpc('get_admin_professional_sales') : emptyResult(),
-        canReadMembers || canReadOrders ? supabase.rpc('get_admin_member_notes') : emptyResult(),
-        canReadOrders ? supabase.rpc('get_admin_shipping_groups') : emptyResult(),
-        canReadOrders ? supabase.rpc('get_admin_order_notes') : emptyResult(),
+        (canReadMembers || canReadOrders) ? supabase.rpc('get_admin_member_notes') : emptyResult(),
+        canReadOrders && includeOrders ? supabase.rpc('get_admin_shipping_groups') : emptyResult(),
+        canReadOrders && includeOrders ? supabase.rpc('get_admin_order_notes') : emptyResult(),
       ]);
       if (ordersRes.error) throw ordersRes.error;
       if (profilesRes.error) throw profilesRes.error;
@@ -218,7 +228,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
           .map(row => [String(row.order_id), row.note || '']),
       );
       if (orderNotesRes.error) console.error('order admin notes fetch failed', orderNotesRes.error);
-      const realOrders = (ordersRes.data || []).map(row => normalizeOrder({
+      const realOrders = includeOrders ? (ordersRes.data || []).map(row => normalizeOrder({
         ...row,
         admin_note: orderNoteByOrder.get(String(row.id)) || '',
         inventory_allocations: inventoryAllocationsByOrder.get(String(row.id)) || [],
@@ -237,8 +247,8 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
             provider_description: latest.provider_description || '',
           };
         })(),
-      }));
-      setOrders(realOrders);
+      })) : orders;
+      if (includeOrders) setOrders(realOrders);
       if (memberNotesRes.error) console.error('member notes fetch failed', memberNotesRes.error);
       setMemberNotes(Object.fromEntries((memberNotesRes.error ? [] : (memberNotesRes.data || [])).map(row => [
         String(row.user_id),
@@ -331,10 +341,12 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
   }
 
   const isDashboard = page === 'dashboard';
+  const dataMode = isDashboard ? 'dashboard' : page === 'orders' ? 'orders' : 'full';
   useEffect(() => {
     // Keep full order/member/catalog payloads off the dashboard startup path.
-    const refresh = isDashboard ? fetchDashboard : fetchAll;
-    refresh();
+    const refresh = isDashboard ? fetchDashboard : dataMode === 'orders'
+      ? () => setOrderRefreshVersion(version => version + 1) : fetchAll;
+    if (dataMode !== 'orders') refresh();
     let channel = supabase.channel('admin-realtime');
     if (canReadOrders) {
       channel = channel.on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => refresh());
@@ -352,14 +364,14 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
         .on('postgres_changes', { event: '*', schema: 'public', table: 'product_variants' }, () => refresh())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'product_images' }, () => refresh());
     }
-    if (isDashboard && canReadOrders) {
+    if ((isDashboard || dataMode === 'orders') && canReadOrders) {
       channel = channel
         .on('postgres_changes', { event: '*', schema: 'public', table: 'order_payment_attempts' }, () => refresh())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'order_payment_instructions' }, () => refresh());
     }
     channel.subscribe();
     return () => { dashboardRequest.current += 1; supabase.removeChannel(channel); };
-  }, [isDashboard, backofficeAccess?.role, backofficeAccess?.permissions?.join('|')]);
+  }, [dataMode, backofficeAccess?.role, backofficeAccess?.permissions?.join('|')]);
 
   useEffect(() => {
     if (!canAccessBackofficePage(backofficeAccess, page)) {
@@ -435,7 +447,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
       }
       return { ok: false, message: `訂單歸戶失敗：${message}` };
     }
-    await fetchAll();
+    await refreshCurrentData();
     return { ok: true, ...(data || {}), order_id: data?.order_id || orderId, member_id: data?.member_id || memberId };
   }
 
@@ -705,7 +717,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
     }
     switch (page) {
       case 'dashboard': return <Dashboard summary={dashboard} loading={dashboardLoading} error={dashboardError} onRetry={fetchDashboard} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;
-      case 'orders': return <Orders orders={orders} members={members} persistOrderPatch={persistOrderPatch} onSaveInvoiceNumber={saveOrderInvoiceNumber} onDeleteCancelledOrder={deleteCancelledOrder} onCancelHistoricalOrder={cancelHistoricalOrder} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={ordersDefaultFilter} memberNotes={memberNotes} focusOrderId={crossLink?.orderId || ''} backToMember={crossLink?.backMemberId ? { id: crossLink.backMemberId, name: crossLink.backMemberName } : null} onOpenMember={canReadMembers ? openMemberFromOrder : null} onClearCrossLink={() => setCrossLink(null)} onCreateAssistedOrder={canCreateAssistedOrder ? ()=>openAssistedOrder() : null} canConfirmPayments={canWriteOrders && ['admin','super_admin'].includes(backofficeAccess?.role)} />;
+      case 'orders': return <Orders refreshVersion={orderRefreshVersion} persistOrderPatch={persistOrderPatch} onSaveInvoiceNumber={saveOrderInvoiceNumber} onDeleteCancelledOrder={deleteCancelledOrder} onCancelHistoricalOrder={cancelHistoricalOrder} onAssignGuestOrder={canWriteOrders && canWriteMembers && canReadMembers ? assignGuestOrderToMember : null} defaultFilter={ordersDefaultFilter} focusOrderId={crossLink?.orderId || ''} backToMember={crossLink?.backMemberId ? { id: crossLink.backMemberId, name: crossLink.backMemberName } : null} onOpenMember={canReadMembers ? openMemberFromOrder : null} onClearCrossLink={() => setCrossLink(null)} onCreateAssistedOrder={canCreateAssistedOrder ? ()=>openAssistedOrder() : null} canConfirmPayments={canWriteOrders && ['admin','super_admin'].includes(backofficeAccess?.role)} />;
       case 'reward_management':
       case 'withdrawals':
       case 'reward_notifications':
@@ -759,7 +771,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
           </div>
         )}
         <Suspense fallback={<div role="status" style={{ padding: 32, color: 'var(--mid)' }}>載入頁面中…</div>}>{renderPage()}</Suspense>
-        {assistedOrderOpen&&canCreateAssistedOrder&&<Suspense fallback={<div role="status">載入代客訂單中…</div>}><AssistedOrderDialog members={members} products={products} initialMember={assistedInitialMember} onClose={()=>setAssistedOrderOpen(false)} onCreated={fetchAll}/></Suspense>}
+        {assistedOrderOpen&&canCreateAssistedOrder&&<Suspense fallback={<div role="status">載入代客訂單中…</div>}><AssistedOrderDialog members={members} products={products} initialMember={assistedInitialMember} onClose={()=>setAssistedOrderOpen(false)} onCreated={refreshCurrentData}/></Suspense>}
       </main>
     </div>
   );

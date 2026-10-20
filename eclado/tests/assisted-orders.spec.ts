@@ -2,9 +2,9 @@ import {expect,test,type Page} from '@playwright/test';
 import {mockEcladoApis,adminProductRows,adminProfileRows,adminOrderRows} from './support/eclado-mocks';
 const user={id:'admin-assisted',email:'admin@example.test',user_metadata:{name:'管理員'},app_metadata:{provider:'email'},aud:'authenticated',role:'authenticated',created_at:'2026-05-01'};
 const created={order_id:'ECL-ASSISTED-001',link_token:'a'.repeat(64)};
-async function setup(page:Page,allowed=true,memberRole='instructor'){
+async function setup(page:Page,allowed=true,memberRole='instructor',orderRows:Record<string,unknown>[]=[]) {
   const products=adminProductRows.map(product=>({...product,publication_status:'active',instructor_price_multiplier:0.88,distributor_price_multiplier:null,staff_price_multiplier:null,pricing_defaults:{instructor:0.7,distributor:0.65,staff:0.5}}));
-  await mockEcladoApis(page,{authUser:user,profiles:adminProfileRows.map(profile=>({...profile,role:profile.role==='pro'?memberRole:profile.role})),products,
+  await mockEcladoApis(page,{authUser:user,orders:orderRows,profiles:adminProfileRows.map(profile=>({...profile,role:profile.role==='pro'?memberRole:profile.role})),products,
     productVariants:[{id:101,product_id:1,sku:'A',size:'200ml',price:1280,pro_price:960,stock:48,is_default:true,sort_order:0,active:true}],
     backofficeAccess:{role:allowed?'admin':'catalog_editor',permissions:allowed?['orders.read','orders.write','members.read','catalog.read','shopping_credit.manage']:['orders.read','members.read','catalog.read']}});
   await page.route('**/rest/v1/rpc/get_admin_assisted_request',route=>route.fulfill({json:null}));
@@ -47,8 +47,7 @@ test('product search filters names and SKU without clearing chosen product or pr
   await search.fill('');expect(await select.locator('option').count()).toBeGreaterThan(1);
 });
 test('assisted order detail link action uses existing outlined button and field styles',async({page})=>{
-  await setup(page);
-  await page.route('**/rest/v1/orders*',route=>route.fulfill({json:[{...adminOrderRows[0],id:created.order_id,order_source:'admin_assisted'}]}));
+  await setup(page,true,'instructor',[{...adminOrderRows[0],id:created.order_id,order_source:'admin_assisted'}]);
   await page.route('**/rest/v1/rpc/get_admin_assisted_link',route=>route.fulfill({json:{...created,created_at:'2026-10-09T00:00:00Z',actor_user_id:user.id,pricing_context:[]}}));
   await open(page);await page.getByRole('button',{name:'關閉代客開單',exact:true}).click();
   await page.getByText(created.order_id,{exact:true}).first().click();

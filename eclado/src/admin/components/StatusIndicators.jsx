@@ -45,7 +45,7 @@ export function PaymentStateBadge({ state }) {
   return <span style={{ display:'inline-block', padding:'3px 8px', fontSize:10, fontWeight:500, letterSpacing:'0.05em', background:color + '18', color, borderRadius:2, whiteSpace:'nowrap' }}>{getPaymentStateLabel(state)}</span>;
 }
 
-export function StatusSelect({ status, onChange, size = 'sm', fulfillmentMethod = 'delivery', paymentMethod = '' }) {
+export function StatusSelect({ status, onChange, size = 'sm', fulfillmentMethod = 'delivery', paymentMethod = '', disabled = false }) {
   const item = STATUS_MAP[status] || { label:status, color:'var(--mid)' };
   if (status === 'cancelled') {
     return <Badge status="cancelled" />;
@@ -62,7 +62,7 @@ export function StatusSelect({ status, onChange, size = 'sm', fulfillmentMethod 
   const statusOptions = [pendingStatus, ...workflowOptions];
   return (
     <div style={{ position:'relative', display:'inline-block' }}>
-      <select value={status} onChange={event => onChange(event.target.value)} onClick={event => event.stopPropagation()} style={{ appearance:'none', WebkitAppearance:'none', MozAppearance:'none', padding, fontSize:size === 'lg' ? 13 : 11, fontWeight:500, letterSpacing:'0.06em', background:'transparent', color:item.color, border:'none', outline:'none', boxShadow:'none', borderRadius:0, cursor:'pointer', fontFamily:'inherit', minWidth:size === 'lg' ? 160 : 110 }}>
+      <select disabled={disabled} value={status} onChange={event => onChange(event.target.value)} onClick={event => event.stopPropagation()} style={{ appearance:'none', WebkitAppearance:'none', MozAppearance:'none', padding, fontSize:size === 'lg' ? 13 : 11, fontWeight:500, letterSpacing:'0.06em', background:'transparent', color:item.color, border:'none', outline:'none', boxShadow:'none', borderRadius:0, cursor:'pointer', fontFamily:'inherit', minWidth:size === 'lg' ? 160 : 110 }}>
         {statusOptions.map(option => <option key={option} value={option} style={{ background:'#fff', color:'var(--dark)' }}>{STATUS_MAP[option].label}</option>)}
       </select>
       <span style={{ position:'absolute', right:size === 'lg' ? 12 : 8, top:'50%', transform:'translateY(-50%)', pointerEvents:'none', fontSize:9, color:item.color }}>▼</span>

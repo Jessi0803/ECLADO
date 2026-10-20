@@ -1,0 +1,86 @@
+{
+  "dateTaipei": "2026-10-20",
+  "baselineCommit": "a26b1be031816b07e1cffcebb85d88125d36ac50",
+  "databaseProject": "ilvdvlkdpntwmaijncaz",
+  "databaseVersion": "17.6",
+  "installation": "Supabase SQL Editor; copied exact tested SQL file through native editor; transaction; no business data writes",
+  "functionMD5": {
+    "_admin_order_quantity": "b79c9d70f5d8cf32e80366d8834ab312",
+    "_admin_order_inventory_state": "c631b20638e72769e436e3efceafeb36",
+    "_admin_order_list_rows": "25d285e99a549172c51c906bb455a557",
+    "get_admin_orders_page": "fe5eaef78c2f706f56b87478f0e75ce9",
+    "get_admin_order_detail": "3ffd551f20d71854046b85ea79a12043"
+  },
+  "productionDefinitionMatchesDatabaseTest": true,
+  "helpersAnonymousAndAuthenticatedExecute": false,
+  "rpcAnonymousExecute": false,
+  "rpcAuthenticatedExecute": true,
+  "productionParity": {
+    "oldRows": 66,
+    "total": 66,
+    "pageLengths": [
+      50,
+      16
+    ],
+    "sameOrderIds": true,
+    "inventoryParity": true,
+    "statusParity": true,
+    "paymentParity": true,
+    "detailItemsParity": true,
+    "detailPricingParity": true,
+    "detailTotalParity": true,
+    "paymentDetailsSanitized": true,
+    "firstPageBytes": 19536,
+    "selectedDetailBytes": 4183
+  },
+  "validation": {
+    "isolatedDatabaseFixtureOrders": 120,
+    "isolatedDatabaseTest": "passed",
+    "majorAdminDesktopMobileTests": 100,
+    "additionalPermissionDesktopMobileTests": 2,
+    "assistedOrdersMappersAnalyticsDesktopMobileTests": 50,
+    "finalTargetedSmokeTests": 6
+  },
+  "timingMethod": "Same authenticated Chrome tab. Each trial reloads dashboard first, arms click capture, then clicks Orders navigation. MutationObserver detects populated .admin-orders-table, followed by two requestAnimationFrame callbacks. REST resource entries started after that click provide API count and last responseEnd. No business mutations.",
+  "before": [
+    {
+      "rowsVisibleMs": 1720,
+      "apiDoneMs": 1624,
+      "apiCount": 11,
+      "rowCount": 66
+    },
+    {
+      "rowsVisibleMs": 1365,
+      "apiDoneMs": 1218,
+      "apiCount": 11,
+      "rowCount": 66
+    },
+    {
+      "rowsVisibleMs": 1123,
+      "apiDoneMs": 1035,
+      "apiCount": 11,
+      "rowCount": 66
+    },
+    {
+      "rowsVisibleMs": 1117,
+      "apiDoneMs": 1005,
+      "apiCount": 11,
+      "rowCount": 66
+    },
+    {
+      "rowsVisibleMs": 1119,
+      "apiDoneMs": 1007,
+      "apiCount": 11,
+      "rowCount": 66
+    }
+  ],
+  "beforeMedianRowsVisibleMs": 1123,
+  "beforeMedianApiDoneMs": 1035,
+  "limitations": [
+    "Five trials per version, same browser and account, network can vary.",
+    "This measures dashboard-to-orders navigation, not page reload or authentication.",
+    "Before displays all 66 active orders; after intentionally displays first 50 and provides pagination for the rest.",
+    "Two animation frames approximate display readiness, not an externally recorded physical display timestamp.",
+    "New asset first load is retained in post-deployment trials."
+  ]
+}

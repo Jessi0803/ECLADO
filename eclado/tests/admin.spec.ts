@@ -105,7 +105,7 @@ test('後台登入權限：非管理員擋下，管理員可進入', async ({ pa
   await page.close();
 });
 
-test('儀表板只查摘要，等待期間不顯示零元並在切換頁面後讀取完整資料', async ({ page }) => {
+test('儀表板只查摘要，等待期間不顯示零元並在切換頁面後讀取訂單列表', async ({ page }) => {
   await mockAdminApis(page);
   const fullReads: string[] = [];
   page.on('request', request => {
@@ -130,7 +130,7 @@ test('儀表板只查摘要，等待期間不顯示零元並在切換頁面後�
   await openAdminSection(page, /訂單管理/);
   await expect(page.getByRole('heading', { name: '訂單管理', exact: true })).toBeVisible();
   await expect(page.getByText('E2E-ORDER-001')).toBeVisible();
-  expect(fullReads.some(path => path.endsWith('/orders'))).toBe(true);
+  expect(fullReads).toEqual([]);
   await openAdminSection(page, /儀表板/);
   await expect(page.getByTestId('dashboard-data')).toHaveAttribute('aria-busy', 'false');
 });
@@ -529,6 +529,8 @@ test('商品、訂單與會員列表響應式切換，詳情使用抽屜且不�
   const assertDrawer = async (label: string) => {
     const drawer = page.getByRole('dialog', { name: label });
     await expect(drawer).toBeVisible();
+    if (label === '訂單詳情') await expect(drawer.getByText('商品明細', { exact: true })).toBeVisible();
+    await expect(drawer).toHaveCSS('position', 'fixed');
     const layout = await drawer.evaluate(element => ({
       position: getComputedStyle(element).position,
       width: element.getBoundingClientRect().width,
@@ -542,6 +544,7 @@ test('商品、訂單與會員列表響應式切換，詳情使用抽屜且不�
 
   const assertResponsiveList = async () => {
     const table = page.locator('.responsive-admin-table').first();
+    await expect(table.locator('tbody tr').first()).toBeVisible();
     const layout = await table.evaluate(element => ({
       viewportWidth: window.innerWidth,
       headDisplay: getComputedStyle(element.querySelector('thead')!).display,
@@ -600,6 +603,7 @@ test('商品、訂單與會員列表響應式切換，詳情使用抽屜且不�
   await expect(page.getByRole('dialog', { name: '編輯商品' })).toHaveCount(0);
 
   await openAdminSection(page, /訂單管理/);
+  await expect(page.getByRole('heading', { name: '訂單管理', exact: true })).toBeVisible();
   await assertResponsiveList();
   await page.getByText('E2E-ORDER-001').first().click();
   await assertDrawer('訂單詳情');
@@ -612,6 +616,7 @@ test('商品、訂單與會員列表響應式切換，詳情使用抽屜且不�
   }
 
   await openAdminSection(page, /會員管理/);
+  await expect(page.getByRole('heading', { name: '會員管理', exact: true })).toBeVisible();
   await assertResponsiveList();
   await page.locator('.admin-members-table td[data-label="姓名"]').filter({ hasText: /^測試會員$/ }).click();
   await assertDrawer('會員詳情');
@@ -714,6 +719,92 @@ test('儀表板營業額與庫存警示固定上下排列，庫存內容獨立�
   }));
   expect(overflow.scrollWidth).toBeGreaterThan(overflow.clientWidth);
   expect(overflow.pageScrollWidth).toBeLessThanOrEqual(overflow.pageClientWidth);
+});
+
+test('訂單列表由伺服器分頁與搜尋，啟動不讀明細或完整資料', async ({ page }) => {
+  const rows = Array.from({length:63},(_,i)=>({...adminOrderRows[0], id:`PAGE-${String(i).padStart(3,'0')}`, status:'paid', payment_method:'atm'}));
+  await mockAdminApis(page,{orders:rows});
+  const queries: Record<string,any>[]=[];
+  let detailReads=0; let fullReads=0;
+  page.on('request',request=>{
+    const path=new URL(request.url()).pathname;
+    if(path.endsWith('/get_admin_orders_page')) queries.push(request.postDataJSON());
+    if(path.endsWith('/get_admin_order_detail')) detailReads++;
+    if(path==='/rest/v1/orders'||path==='/rest/v1/profiles'||/\/rpc\/get_admin_(order_payment_details|inventory_allocations|catalog|shipping_groups)$/.test(path))fullReads++;
+  });
+  await page.goto('/admin'); await openAdminSection(page,/訂單管理/);
+  const table=page.locator('.admin-orders-table tbody');
+  await expect(table.locator('tr')).toHaveCount(50);
+  await expect(page.getByRole('navigation',{name:'訂單分頁'})).toContainText('共 63 筆 · 第 1 / 2 頁');
+  expect(detailReads).toBe(0); expect(fullReads).toBe(0);
+  await page.getByRole('button',{name:'下一頁',exact:true}).click();
+  await expect(table.locator('tr')).toHaveCount(13);
+  await expect(page.getByText('PAGE-062',{exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'下一頁',exact:true})).toBeDisabled();
+  await page.getByLabel('搜尋訂單',{exact:true}).fill('PAGE-001');
+  await expect(table.locator('tr')).toHaveCount(1);
+  await expect(page.getByText('PAGE-001',{exact:true})).toBeVisible();
+  await expect(page.getByRole('navigation',{name:'訂單分頁'})).toContainText('第 1 / 1 頁');
+  expect(queries.at(-1)).toMatchObject({p_page:1,p_search:'PAGE-001'});
+  await page.getByText('PAGE-001',{exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'訂單詳情'}).getByText('商品明細',{exact:true})).toBeVisible();
+  expect(detailReads).toBe(1); expect(fullReads).toBe(0);
+});
+
+test('只有訂單權限時不讀取會員選單或顯示歸戶操作', async ({ page }) => {
+  await mockAdminApis(page, { backofficeAccess:{role:'admin',permissions:['orders.read','orders.write']},
+    orders:[{...adminOrderRows[0],user_id:null}] });
+  let profileReads=0;
+  page.on('request',request=>{if(new URL(request.url()).pathname==='/rest/v1/profiles')profileReads++;});
+  await page.goto('/admin'); await openAdminSection(page,/訂單管理/);
+  await page.getByText('E2E-ORDER-001',{exact:true}).click();
+  const panel=page.getByRole('dialog',{name:'訂單詳情'});
+  await expect(panel.getByText('商品明細',{exact:true})).toBeVisible();
+  await expect(panel.getByRole('button',{name:'歸戶至會員',exact:true})).toHaveCount(0);
+  expect(profileReads).toBe(0);
+});
+
+test('訂單明細慢回應在關閉或切換訂單後不會覆蓋目前詳情', async ({ page }) => {
+  await mockAdminApis(page);
+  let release!:()=>void; const gate=new Promise<void>(resolve=>{release=resolve;});
+  await page.route('**/rest/v1/rpc/get_admin_order_detail',async route=>{
+    if(route.request().postDataJSON()?.p_order_id==='E2E-ORDER-001')await gate;
+    await route.fallback();
+  });
+  await page.goto('/admin'); await openAdminSection(page,/訂單管理/);
+  await page.getByText('E2E-ORDER-001',{exact:true}).click();
+  const panel=page.getByRole('dialog',{name:'訂單詳情'});
+  await expect(panel.getByRole('status')).toHaveText('載入訂單詳情中…');
+  await panel.getByRole('button',{name:'← 返回',exact:true}).click();
+  await expect(panel).toHaveCount(0);
+  await page.getByText('E2E-ORDER-002',{exact:true}).click();
+  await expect(panel.getByText('商品明細',{exact:true})).toBeVisible();
+  await expect(panel.getByText('E2E-ORDER-002',{exact:true})).toBeVisible();
+  release();
+  await expect(panel.getByText('E2E-ORDER-001',{exact:true})).toHaveCount(0);
+  await page.goBack(); await expect(panel).toHaveCount(0);
+});
+
+test('訂單列表與明細失敗可各自重試且不顯示假空資料', async ({ page }) => {
+  await mockAdminApis(page); let listReads=0; let detailReads=0;
+  await page.route('**/rest/v1/rpc/get_admin_orders_page',route=>{
+    if(++listReads===1)return route.fulfill({status:500,json:{message:'Unavailable'}});
+    return route.fallback();
+  });
+  await page.route('**/rest/v1/rpc/get_admin_order_detail',route=>{
+    if(++detailReads===1)return route.fulfill({status:500,json:{message:'Unavailable'}});
+    return route.fallback();
+  });
+  await page.goto('/admin'); await openAdminSection(page,/訂單管理/);
+  await expect(page.getByRole('alert')).toContainText('無法載入訂單列表');
+  await expect(page.getByText('目前沒有訂單',{exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'重新載入列表'}).click();
+  await page.getByText('E2E-ORDER-001',{exact:true}).click();
+  const panel=page.getByRole('dialog',{name:'訂單詳情'});
+  await expect(panel.getByRole('alert')).toContainText('無法載入訂單詳情');
+  await expect(panel.getByRole('button',{name:'列印訂單'})).toHaveCount(0);
+  await panel.getByRole('button',{name:'重新載入詳情'}).click();
+  await expect(panel.getByText('商品明細',{exact:true})).toBeVisible();
 });
 
 test('訂單管理可查看明細並更新狀態', async ({ page }) => {
@@ -981,7 +1072,7 @@ test('訂單詳情顯示發票快照並可獨立儲存人工發票號碼', async
   await expect(panel.getByText('12345678', { exact:true })).toBeVisible();
   await panel.getByLabel('發票號碼').fill('ab12345678');
   await panel.getByRole('button', { name: '儲存', exact: true }).click();
-  await expect(panel.getByRole('status')).toHaveText('發票號碼已儲存。');
+  await expect(panel.getByRole('status').filter({ hasText: '發票號碼已儲存。' })).toBeVisible();
   expect(invoiceSaves).toEqual([{ orderId:'E2E-INVOICE-ORDER', invoiceNumber:'AB12345678' }]);
 });
 
