@@ -54,7 +54,11 @@ export default function AdminGate({ children }) {
     await supabase.auth.signOut();
   }
 
-  if (session === undefined || (session && backofficeAccess === undefined)) return null; // loading
+  if (session === undefined || (session && backofficeAccess === undefined)) return (
+    <div role="status" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'var(--sidebar)', color: '#fff', fontSize: 14 }}>
+      正在確認後台登入權限…
+    </div>
+  );
 
   const hasBackofficeAccess = session && backofficeAccess?.permissions?.length > 0;
   if (hasBackofficeAccess) return React.cloneElement(children, { adminEmail: session.user.email, adminUserId: session.user.id, backofficeAccess, onSignOut: signOut });

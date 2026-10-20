@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { supabase } from '../services/supabase.js';
 import { withProductImagePublicUrl } from '../services/catalogData.js';
 import { normalizeMember, normalizeOrder, normalizeProduct } from './domain/mappers.js';
@@ -11,22 +11,22 @@ import {
   setProfessionalMembershipStart,
   updateMemberRoleWithMembership,
 } from '../services/professionalSales.js';
-import RewardManagementPage from './pages/RewardManagementPage.jsx';
+const RewardManagementPage = lazy(() => import('./pages/RewardManagementPage.jsx'));
 import Sidebar from './components/Sidebar.jsx';
-import AIReorder from './pages/AIReorderPage.jsx';
-import Analytics from './pages/AnalyticsPage.jsx';
-import AuditLogsPage from './pages/AuditLogsPage.jsx';
-import Catalog from './pages/CatalogPage.jsx';
-import BackordersPage from './pages/BackordersPage.jsx';
-import InventoryCountsPage from './pages/InventoryCountsPage.jsx';
+const AIReorder = lazy(() => import('./pages/AIReorderPage.jsx'));
+const Analytics = lazy(() => import('./pages/AnalyticsPage.jsx'));
+const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage.jsx'));
+const Catalog = lazy(() => import('./pages/CatalogPage.jsx'));
+const BackordersPage = lazy(() => import('./pages/BackordersPage.jsx'));
+const InventoryCountsPage = lazy(() => import('./pages/InventoryCountsPage.jsx'));
 import Dashboard from './pages/DashboardPage.jsx';
-import Members from './pages/MembersPage.jsx';
-import Orders from './pages/OrdersPage.jsx';
-import AssistedOrderDialog from './components/AssistedOrderDialog.jsx';
-import ProcurementPage from './pages/ProcurementPage.jsx';
-import Promotions from './pages/PromotionsPage.jsx';
-import ProfessionalRenewalsPage from './pages/ProfessionalRenewalsPage.jsx';
-import MemberPricingPage from './pages/MemberPricingPage.jsx';
+const Members = lazy(() => import('./pages/MembersPage.jsx'));
+const Orders = lazy(() => import('./pages/OrdersPage.jsx'));
+const AssistedOrderDialog = lazy(() => import('./components/AssistedOrderDialog.jsx'));
+const ProcurementPage = lazy(() => import('./pages/ProcurementPage.jsx'));
+const Promotions = lazy(() => import('./pages/PromotionsPage.jsx'));
+const ProfessionalRenewalsPage = lazy(() => import('./pages/ProfessionalRenewalsPage.jsx'));
+const MemberPricingPage = lazy(() => import('./pages/MemberPricingPage.jsx'));
 import {
   BACKOFFICE_PERMISSIONS,
   canAccessBackofficePage,
@@ -729,8 +729,8 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
             ⚠ {loadError}
           </div>
         )}
-        {renderPage()}
-        {assistedOrderOpen&&canCreateAssistedOrder&&<AssistedOrderDialog members={members} products={products} initialMember={assistedInitialMember} onClose={()=>setAssistedOrderOpen(false)} onCreated={fetchAll}/>}
+        <Suspense fallback={<div role="status" style={{ padding: 32, color: 'var(--mid)' }}>載入頁面中…</div>}>{renderPage()}</Suspense>
+        {assistedOrderOpen&&canCreateAssistedOrder&&<Suspense fallback={<div role="status">載入代客訂單中…</div>}><AssistedOrderDialog members={members} products={products} initialMember={assistedInitialMember} onClose={()=>setAssistedOrderOpen(false)} onCreated={fetchAll}/></Suspense>}
       </main>
     </div>
   );

@@ -8,7 +8,7 @@ The goal is to complete useful work while helping the user internalize important
 
 ### Work classification
 
-In Implementation Mode, low-learning-value work may be completed directly. In the default Learning Mode, keep the learning step brief and proportional for:
+Implementation Mode is the default. Complete work directly unless the user explicitly requests Learning Mode. When Learning Mode is requested, keep the learning step brief and proportional for:
 
 - Boilerplate and repetitive CRUD
 - Formatting, renaming, and mechanical transformations
@@ -16,7 +16,7 @@ In Implementation Mode, low-learning-value work may be completed directly. In th
 - Unimportant one-off changes
 - Straightforward implementation with no meaningful design or safety decision
 
-High-learning-value work normally uses the Learning Mode workflow:
+When the user explicitly requests Learning Mode, these topics normally use its full workflow:
 
 - Architecture and system design
 - Concurrency, async behavior, actors, and data isolation
@@ -28,7 +28,7 @@ High-learning-value work normally uses the Learning Mode workflow:
 - Complex debugging
 - Inventory, order-state, promotion, and coupon architecture
 
-Use judgment. Do not classify a small change as high-value merely because it touches a large file or a domain named above. Enter Learning Mode when the task contains a meaningful concept, decision, failure mode, or transferable debugging lesson.
+Use judgment. Do not classify a small change as high-value merely because it touches a large file or a domain named above. Do not enter Learning Mode automatically based on the topic or learning value.
 
 ## Modes
 
@@ -40,7 +40,7 @@ Force Learning Mode when the user says any equivalent of:
 - `這題我想學`
 - `這個不要直接告訴我答案`
 
-Also enter it proactively for high-learning-value work unless the user explicitly requests Implementation Mode.
+Enter Learning Mode only when the user explicitly requests it.
 
 In Learning Mode:
 
@@ -71,7 +71,7 @@ If the same concept appears again, first ask the user to recall the earlier less
 
 ### Implementation Mode
 
-Prioritize completion only when the user explicitly says any equivalent of:
+Prioritize completion by default. The user may also explicitly confirm Implementation Mode with any equivalent of:
 
 - `implementation mode`
 - `直接幫我調整`
@@ -85,15 +85,14 @@ Do not force the Learning Mode question-and-wait loop in this mode. Still surfac
 
 When no mode is named:
 
-- Default to Learning Mode.
-- Investigate first, then ask the user for their reasoning before revealing the complete solution or implementing the change.
-- Briefly state that the default Learning Mode is active.
-- Keep the learning exchange proportional for low-learning-value work: use a short question and concise review instead of an unnecessarily long lesson.
-- Do not switch to Implementation Mode merely because the request contains action words such as “修正”, “新增”, or “調整”. Switch only when the user clearly asks for direct implementation, such as `直接幫我調整`, or explicitly names Implementation Mode.
+- Default to Implementation Mode and complete the requested work directly.
+- Do not ask the user to explain their reasoning or wait for a learning exchange before implementing.
+- Enter Learning Mode only when the user explicitly requests it.
+- Explain material findings, trade-offs, and verification concisely without requiring an Understanding Check.
 
 ## Integrating `LEARNING.md`
 
-Before a high-learning-value interaction, read the relevant competency entries and calibrate support:
+When Learning Mode is explicitly requested, read the relevant competency entries and calibrate support:
 
 - `Unassessed`: ask diagnostic questions; do not assume ability or inability.
 - `L0 Unknown`: provide more teaching, context, and small hints.

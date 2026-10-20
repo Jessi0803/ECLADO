@@ -105,6 +105,32 @@ test('後台登入權限：非管理員擋下，管理員可進入', async ({ pa
   await page.close();
 });
 
+test('後台重整等待權限時顯示狀態且不提前載入資料', async ({ page }) => {
+  await mockAdminApis(page);
+  let releaseAccess!: () => void;
+  const accessReady = new Promise<void>(resolve => { releaseAccess = resolve; });
+  let catalogReads = 0;
+  await page.route('**/rest/v1/rpc/get_admin_catalog', async route => {
+    catalogReads += 1;
+    await route.fallback();
+  });
+  await page.route('**/rest/v1/rpc/get_my_backoffice_access', async route => {
+    await accessReady;
+    await route.fallback();
+  });
+  await page.goto('/admin');
+  await expect(page.getByRole('status')).toHaveText('正在確認後台登入權限…');
+  await expect(page.locator('.app-sidebar')).toHaveCount(0);
+  expect(catalogReads).toBe(0);
+  releaseAccess();
+  await expect(page.getByRole('heading', { name: '儀表板' })).toBeVisible();
+  await expect(page.getByText('E2E-ORDER-001')).toBeVisible();
+  await page.reload();
+  await expect(page.getByText('E2E-ORDER-001')).toBeVisible();
+  await openAdminSection(page, /訂單管理/);
+  await expect(page.getByRole('heading', { name: '訂單管理', exact: true })).toBeVisible();
+});
+
 test('後台登入權限：管理員 session 可進入儀表板', async ({ page }) => {
   await mockAdminApis(page);
 
