@@ -2,6 +2,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {getAdminRewardAccounts} from '../../services/instructorRewards.js';
 import InstructorRewardsPanel from '../../components/account/InstructorRewardsPanel.jsx';
 import usePanelHistory from '../hooks/usePanelHistory.js';
+import RewardRedemptionExport from '../components/RewardRedemptionExport.jsx';
 export default function InstructorRewardsPage({adminUserId,embedded=false,refreshVersion=0}){
   const Heading=embedded?'h2':'h1';
   const [data,setData]=useState(null),[error,setError]=useState(''),[offset,setOffset]=useState(0),[selected,setSelected]=useState(''),[revision,setRevision]=useState(0);
@@ -33,6 +34,7 @@ export default function InstructorRewardsPage({adminUserId,embedded=false,refres
   useEffect(()=>{const focus=()=>setRevision(r=>r+1);window.addEventListener('focus',focus);return()=>window.removeEventListener('focus',focus);},[]);
   return <div className="reward-view"><div className="procurement-header reward-admin-header"><div><Heading>師資返饋帳務</Heading><p>查看老師的返饋餘額、學生訂單與帳務紀錄。</p></div>{!embedded&&<button className="admin-secondary-btn" type="button" onClick={()=>setRevision(r=>r+1)}>重新整理帳戶</button>}</div>
     {error&&<p role="alert" className="reward-message">{error}</p>}
+    <RewardRedemptionExport key={adminUserId}/>
     {!data&&!error&&<p>正在載入返饋帳戶…</p>}
     {data&&<>
       {!data.accounts.length&&<p>目前沒有師資帳戶。</p>}

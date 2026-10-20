@@ -12,6 +12,7 @@ process.env.REWARD_BANK_ACTIVE_KEY_ID='local-only';
 process.env.REWARD_BANK_ENCRYPTION_KEYS=JSON.stringify({'local-only':crypto.randomBytes(32).toString('base64')});
 await require('../tests/integration/instructor-reward-checkout-db.test.cjs').runRewardCheckoutDatabaseScenario(async c=>{
 const {db,read,one,actor,ordinaryQuote,ordinaryCreate,status}=c;
+await db.exec(read('supabase-instructor-reward-redemption-export.sql'));
 await db.exec(read('supabase-instructor-reward-withdrawals.sql'));
 await db.exec(read('supabase-instructor-reward-withdrawal-operations.sql'));
 await db.exec('alter table public.profiles add column email text,add column line_user_id text');
@@ -37,7 +38,7 @@ await db.query('select public.save_instructor_student_binding($1,$2,$3,$4)',[stu
 await db.exec("update public.products set instructor_price_multiplier=0.949 where id=1;update public.product_variants set stock=100000 where id=1");
 async function seed(amount){const qty=amount===15||amount===16?amount:10;await db.query("update public.products set instructor_price_multiplier=$1 where id=1",[amount===15||amount===16?0.949:0.95-amount/qty/800]);await actor(student);await db.exec('update public.student_pricing_feature_settings set enabled=true');try{const items=[{product_id:1,variant_id:1,qty}],q=await ordinaryQuote(items),order=await ordinaryCreate(items,q);await actor(admin);await db.query('select public.confirm_admin_instructor_reward_payment($1,true)',[order.order_id]);await status(order.order_id,'delivered');incomeOrders.push(order.order_id);return order;}finally{await db.exec('update public.student_pricing_feature_settings set enabled=false');}}
 await seed(1000);
-const whitelist=new Set(['get_my_reward_withdrawals','quote_my_reward_withdrawal','request_my_reward_withdrawal','get_admin_reward_withdrawals','get_admin_reward_withdrawal_queue','manage_reward_withdrawal','get_my_reward_credit','get_my_instructor_reward_report','get_admin_instructor_reward_report','get_admin_instructor_reward_accounts','get_admin_reward_notifications','get_admin_reward_reconciliation','run_reward_reconciliation','retry_reward_notification','queue_reward_correction_notice']);
+const whitelist=new Set(['export_admin_reward_redemptions','get_my_reward_withdrawals','quote_my_reward_withdrawal','request_my_reward_withdrawal','get_admin_reward_withdrawals','get_admin_reward_withdrawal_queue','manage_reward_withdrawal','get_my_reward_credit','get_my_instructor_reward_report','get_admin_instructor_reward_report','get_admin_instructor_reward_accounts','get_admin_reward_notifications','get_admin_reward_reconciliation','run_reward_reconciliation','retry_reward_notification','queue_reward_correction_notice']);
 const serviceNames=new Set(['export_reward_withdrawal_batch','save_reward_bank_profile','read_reward_bank_cipher','claim_reward_notifications','complete_reward_notification']);
 async function realRPC(name,args,service=false){
  if(!(service?serviceNames:whitelist).has(name))throw new Error('Local RPC is not allowed');

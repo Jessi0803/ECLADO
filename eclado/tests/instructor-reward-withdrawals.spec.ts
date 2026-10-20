@@ -7,6 +7,22 @@ const bank={bank_code:'807',bank_name:'隔離銀行',branch:'測試分行',holde
 const deductions={selection_policy:'single_per_batch_v1',income_tax:0,supplementary_premium:0,deduction_policy_version:'tw_withdrawal_v2'};
 const summary={selection_policy:'single_per_batch_v1',withdrawal_batch:{batch_date:'2026-11-10',scheduled_date:'2026-11-10',blocked:false},withdrawal_estimate:{...deductions,amount:1000,fee:15,net_amount:985},balance:1000,available_balance:1000,shopping_reserved_balance:200,withdrawal_reserved_balance:0,bank:{version:1,masked:bank},total:0,withdrawals:[]};
 const quote={...deductions,amount:1000,fee:15,net_amount:985,account_version:1,bank_version:1,bank,batch_date:'2026-11-10',scheduled_date:'2026-11-10'};
+test('invalid withdrawal shows entered zero and dashes; only in-flight preview is calculating',async({page})=>{
+ await setup(page);await page.route('**/rest/v1/rpc/get_my_reward_withdrawals',r=>r.fulfill({json:summary}));
+ let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve;});
+ await page.route('**/rest/v1/rpc/quote_my_reward_withdrawal',async r=>{await gate;await r.fulfill({json:{...quote,amount:100,net_amount:85}});});
+ const p=await panel(page),input=p.getByLabel('提領金額',{exact:true}),metrics=p.locator('.reward-withdrawal-summary');
+ await input.fill('0');await expect(metrics.getByText('NT$ 0',{exact:true})).toHaveCount(1);await expect(metrics.getByText('—',{exact:true})).toHaveCount(4);
+ await expect(p.getByText('請輸入至少 NT$16，且不超過可用餘額的整數金額。')).toBeVisible();
+ await expect(metrics.getByText(/待更新|試算中/)).toHaveCount(0);await expect(p.getByRole('button',{name:'申請提領',exact:true})).toBeDisabled();
+ const request=page.waitForRequest(r=>r.url().includes('quote_my_reward_withdrawal'));await input.fill('100');await request;
+ await expect(metrics.getByText('試算中…',{exact:true})).toHaveCount(4);release();
+ await expect(metrics.getByText('NT$ 85',{exact:true})).toBeVisible();await expect(metrics.getByText('NT$ 0',{exact:true})).toHaveCount(2);
+ await expect(metrics.getByText('試算中…',{exact:true})).toHaveCount(0);
+ await page.route('**/rest/v1/rpc/quote_my_reward_withdrawal',r=>r.fulfill({status:400,json:{code:'22023',message:'試算失敗，請重新確認'}}));
+ await input.fill('200');await expect(p.getByText('試算失敗，請重新確認',{exact:true})).toBeVisible();
+ await expect(metrics.getByText('—',{exact:true})).toHaveCount(4);await expect(metrics.getByText('試算中…',{exact:true})).toHaveCount(0);
+});
 async function setup(page:Page,permissions?:string[]){await mockEcladoApis(page,{authUser:user,products:adminProductRows,profiles:[{...adminProfileRows[0],id:uid,email:user.email,role:'instructor',name:'提領老師'}],...(permissions?{adminAccess:true,backofficeAccess:{role:'admin',permissions}}:{})});}
 async function panel(page:Page){await page.goto('/account');await page.getByRole('tab',{name:'師資返饋金',exact:true}).click();return page.getByRole('region',{name:'返饋金提領',exact:true});}
 test('full withdrawal uses authoritative preview and unique request key; bank remains masked',async({page})=>{

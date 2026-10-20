@@ -22,6 +22,7 @@ export default function RewardWithdrawalsPanel({userId,onWithdrawalChanged}){
  const [data,setData]=useState(null),[error,setError]=useState(''),[revision,setRevision]=useState(0),[offset,setOffset]=useState(0),[bank,setBank]=useState(emptyBank),[busy,setBusy]=useState(false);
  const lock=useRef(false),retry=useRef(null),withdrawButton=useRef(null);
  const [amount,setAmount]=useState(null),[preview,setPreview]=useState(null);
+ const [pendingPreviewKey,setPendingPreviewKey]=useState(null);
  const [editingBank,setEditingBank]=useState(false),[confirmation,setConfirmation]=useState(null);
  useEffect(()=>{let alive=true;setData(null);getMyWithdrawals(offset).then(d=>{if(alive)setData(d);}).catch(e=>{if(alive)setError(e.code==='PGRST202'?'提領功能尚未安裝。':e.message||'提領資料讀取失敗');});return()=>{alive=false;};},[userId,offset,revision]);
  useEffect(()=>{setAmount(null);setPreview(null);setBank(emptyBank);setEditingBank(false);setConfirmation(null);retry.current=null;},[userId]);
@@ -34,9 +35,12 @@ export default function RewardWithdrawalsPanel({userId,onWithdrawalChanged}){
  const fullAmount=Number(selected)===Number(data?.available_balance);
  const estimate=validAmount?(fullAmount?data?.withdrawal_estimate:preview?.key===previewKey?preview.quote:null):null;
  const previewError=preview?.key===previewKey?preview.error:null;
+ const previewPending=pendingPreviewKey===previewKey&&!estimate;
+ const enteredAmount=/^[0-9]+$/.test(selected)&&Number.isSafeInteger(Number(selected))?Number(selected):null;
  useEffect(()=>{
+  setPendingPreviewKey(null);
   if(!data||!validAmount||fullAmount||!data.bank||data.withdrawal_batch?.blocked||data.selection_policy!=='single_per_batch_v1')return;
-  let alive=true;const timer=setTimeout(()=>{quoteMyWithdrawal(Number(selected)).then(quote=>{if(alive)setPreview({key:previewKey,quote});}).catch(e=>{if(alive)setPreview({key:previewKey,error:e.message||'試算失敗，請重新確認'});});},300);
+  let alive=true;const timer=setTimeout(()=>{setPendingPreviewKey(previewKey);quoteMyWithdrawal(Number(selected)).then(quote=>{if(alive)setPreview({key:previewKey,quote});}).catch(e=>{if(alive)setPreview({key:previewKey,error:e.message||'試算失敗，請重新確認'});}).finally(()=>{if(alive)setPendingPreviewKey(null);});},300);
   return()=>{alive=false;clearTimeout(timer);};
  },[data,selected,validAmount,fullAmount,previewKey]);
  const disabledReasons=data&&!retry.current?[
@@ -44,8 +48,8 @@ export default function RewardWithdrawalsPanel({userId,onWithdrawalChanged}){
   ...(!data.bank?['請先設定收款銀行，才能申請提領。']:[]),
   ...(data.available_balance<=15?['可用返饋金須超過 NT$15，才能申請提領（每次手續費 NT$15）。']:[]),
   ...(data.withdrawal_batch?.blocked?[`本批次（${data.withdrawal_batch.batch_date}）已有提領申請，請於下一批次再申請。明確失敗並退回後可重新申請。`]:[]),
-  ...(!validAmount&&data.available_balance>15?['請輸入超過 NT$15 且不超過可用餘額的整數金額。']:[]),
-  ...(validAmount&&!fullAmount&&!estimate&&!data.withdrawal_batch?.blocked&&data.bank?[previewError||'正在更新提領試算…']:[])
+  ...(!validAmount?['請輸入至少 NT$16，且不超過可用餘額的整數金額。']:[]),
+  ...(validAmount&&!fullAmount&&!estimate&&!data.withdrawal_batch?.blocked&&data.bank?[previewError||(previewPending?'試算中…':'等待試算。')]:[])
  ]:[];
  return <section aria-label="返饋金提領" className="reward-view reward-panel">
  <div className="reward-heading"><h2>返饋金提領</h2><button className="reward-button" type="button" onClick={()=>setRevision(r=>r+1)}>重新整理提領</button></div>
@@ -61,7 +65,7 @@ export default function RewardWithdrawalsPanel({userId,onWithdrawalChanged}){
  <button className="reward-button reward-button--primary" disabled={busy} type="submit">儲存收款銀行</button></form>}
  <div className="reward-subsection"><h4>申請提領</h4>
  <div className="reward-form-grid"><label className="reward-field"><span>提領金額（含手續費及稅費）</span><input aria-label="提領金額" inputMode="numeric" value={selected} disabled={busy||!!retry.current||data.withdrawal_batch?.blocked} onChange={e=>{setAmount(e.target.value);setPreview(null);}}/></label><div className="reward-actions"><button className="reward-button" type="button" disabled={busy||!!retry.current||data.withdrawal_batch?.blocked} onClick={()=>{setAmount(String(data.available_balance));setPreview(null);}}>全額帶入</button></div></div>
- <div className="reward-withdrawal-summary">{[['本次申請金額',validAmount?Number(selected):null],['手續費',estimate?.fee],['預扣所得稅（10%）',estimate?.income_tax],['二代健保補充保費（2.11%）',estimate?.supplementary_premium],['預計實際匯款',estimate?.net_amount]].map(([label,value])=><div key={label}><span>{label}</span><strong>NT$ {(value==null?'待更新':Number(value).toLocaleString('zh-TW'))}</strong></div>)}</div>
+ <div className="reward-withdrawal-summary">{[['本次申請金額',enteredAmount],['手續費',estimate?.fee],['預扣所得稅（10%）',estimate?.income_tax],['二代健保補充保費（2.11%）',estimate?.supplementary_premium],['預計實際匯款',estimate?.net_amount]].map(([label,value])=><div key={label}><span>{label}</span><strong>{value==null?(previewPending?'試算中…':'—'):`NT$ ${Number(value).toLocaleString('zh-TW')}`}</strong></div>)}</div>
  <p className="reward-note">提領總額超過 NT$20,000 時，全額預扣 10% 所得稅（元以下捨去）；達 NT$20,000 時，全額扣取 2.11% 二代健保補充保費（四捨五入至元）。兩項以扣手續費前的總額計算。實匯金額＝提領總額－手續費 NT$15－所得稅－補充保費。</p>
  <p className="reward-note">可自行選擇提領金額，最低 NT$16，每筆手續費 NT$15。同一位師資每個匯款批次限一筆有效申請，已匯款也計入；明確失敗並退回後可重新申請。申請成立後不可自行取消或修改金額，剩餘餘額可用於購物或下一批次提領。</p>
  <button className="reward-button reward-button--primary" type="button" ref={withdrawButton} aria-describedby={disabledReasons.length?'reward-withdrawal-disabled':undefined} disabled={busy||disabledReasons.length>0} onClick={()=>{if(retry.current){submitWithdrawal();}else{operation(async()=>setConfirmation(await quoteMyWithdrawal(Number(selected))),false);}}}>{busy?'處理中…':retry.current?'重查提領申請結果':'申請提領'}</button>
