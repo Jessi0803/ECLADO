@@ -203,7 +203,6 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
     : byStatus.filter(order => getOrderInventoryState(order) === stockFilter);
   const awaitingCount = orders.filter(o => o.status === 'awaiting_confirm').length;
   const unpaidCount = orders.filter(o => o.status === 'unpaid').length;
-  const returnedCount = orders.filter(o => o.status === 'returned').length;
   const preorderCount = byStatus.filter(order => getOrderInventoryState(order) === 'backordered').length;
   const inStockCount = byStatus.filter(order => getOrderInventoryState(order) === 'in_stock').length;
   const selectedHasPaidRecord = hasPaidOrderRecord(selected);
@@ -536,13 +535,6 @@ export default function Orders({ orders, members = [], persistOrderPatch, onSave
                     minWidth: 18, height: 18, borderRadius: 9, padding: '0 6px',
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
                   }}>{unpaidCount}</span>
-                )}
-                {val === 'returned' && returnedCount > 0 && (
-                  <span style={{
-                    background: 'oklch(0.55 0.12 300)', color: '#fff', fontSize: 10, fontWeight: 600,
-                    minWidth: 18, height: 18, borderRadius: 9, padding: '0 6px',
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-                  }}>{returnedCount}</span>
                 )}
               </button>
             ))}
