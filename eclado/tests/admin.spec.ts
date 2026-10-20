@@ -3182,3 +3182,49 @@ test('自動活動拒絕空白對象並允許僅訪客', async ({ page }) => {
   await expect.poll(() => saves.length).toBe(1);
   expect(saves[0]).toMatchObject({ audience_roles:[], allow_guest:true });
 });
+
+test('買 X 送 Y 共用適用對象與範圍，支援重複且不需贈品庫存或上限', async ({ page }) => {
+  const saves: Record<string, unknown>[] = [];
+  await mockAdminApis(page, { onDiscountPromotionSave:payload => saves.push(payload) });
+  await page.goto('/admin'); await openAdminSection(page, /活動管理/);
+  await page.getByRole('button', { name:'+ 新增優惠活動' }).click();
+  await page.getByPlaceholder('例：秋季保養 9 折').fill('混搭買三送一');
+  await page.getByLabel('優惠類型').selectOption('buy_x_get_y');
+  await expect(page.getByLabel('買入件數 X')).toHaveValue('3');
+  await expect(page.getByLabel('免費件數 Y')).toHaveValue('1');
+  await expect(page.getByLabel('贈品庫存')).toHaveCount(0);
+  await expect(page.getByText('門檻類型', { exact:true })).toHaveCount(0);
+  await page.getByLabel('達標方式').selectOption('repeat');
+  await expect(page.getByTestId('buy-x-get-y-explanation')).toContainText('選滿 4 件');
+  await expect(page.getByTestId('buy-x-get-y-explanation')).toContainText('不另設每筆上限');
+  await page.getByLabel('允許訪客', { exact:true }).uncheck();
+  await page.getByLabel('指定商品', { exact:true }).check();
+  await page.getByRole('button', { name:'全選', exact:true }).click();
+  await page.getByRole('button', { name:'建立活動' }).click();
+  await expect.poll(() => saves.length).toBe(1);
+  expect(saves[0]).toMatchObject({benefit_type:'buy_x_get_y',buy_quantity:3,gift_quantity:1,
+    threshold_type:'quantity',threshold_value:4,gift_variant_id:null,repeat_mode:'repeat',
+    scope_type:'products',allow_guest:false,threshold_basis:null});
+  expect(saves[0].product_ids).not.toHaveLength(0);
+  expect(saves[0]).not.toHaveProperty('max_gift_quantity');
+});
+
+test('買 X 送 Y 編輯會還原件數與單次贈送，並可連結優惠券', async ({ page }) => {
+  const saves: Record<string, unknown>[] = [];
+  const bogo = {...activePromotion,id:'bogo-edit',name:'買二送二',benefit_type:'buy_x_get_y',activation_type:'coupon_only',
+    buy_quantity:2,gift_quantity:2,threshold_type:'quantity',threshold_value:4,repeat_mode:'once',gift_variant_id:null,archived_at:null};
+  await mockAdminApis(page, {promotions:[bogo],onDiscountPromotionSave:payload => saves.push(payload)});
+  await page.goto('/admin'); await openAdminSection(page, /活動管理/);
+  await expect(page.getByText('買 2 送 2 · 最低價免費 · 每筆只贈一次')).toBeVisible();
+  await page.getByRole('button', {name:'編輯',exact:true}).click();
+  await expect(page.getByLabel('買入件數 X')).toHaveValue('2');
+  await expect(page.getByLabel('免費件數 Y')).toHaveValue('2');
+  await expect(page.getByLabel('達標方式')).toHaveValue('once');
+  await page.getByLabel('全館一般商品', {exact:true}).check();
+  await page.getByRole('button', {name:'儲存變更'}).click();
+  await expect.poll(() => saves.length).toBe(1);
+  expect(saves[0]).toMatchObject({buy_quantity:2,gift_quantity:2,repeat_mode:'once',threshold_value:4});
+  await page.getByRole('button', {name:'優惠券方案',exact:true}).click();
+  await page.getByRole('button', {name:'+ 新增優惠券'}).click();
+  await expect(page.getByText(/買二送二 · 買 2 送 2/)).toBeVisible();
+});

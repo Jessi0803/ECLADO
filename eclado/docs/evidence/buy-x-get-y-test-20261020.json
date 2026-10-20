@@ -1,0 +1,85 @@
+{
+  "project": "qqlgqasbmbicnmvnlqbr",
+  "environment": "test",
+  "date": "2026-10-20",
+  "acceptance": {
+    "cases": [
+      {
+        "case": "mixed_8_second_cheapest",
+        "passed": true,
+        "discount": 3000
+      },
+      {
+        "case": "repeat_boundaries_3_4_7_8_12_96",
+        "passed": true
+      },
+      {
+        "case": "once_8_only_1_free",
+        "passed": true
+      },
+      {
+        "case": "buy_2_get_2_repeat",
+        "passed": true
+      },
+      {
+        "case": "product_scope",
+        "passed": true
+      },
+      {
+        "case": "member_roles_guest_and_guest_only",
+        "passed": true
+      },
+      {
+        "case": "activity_period",
+        "passed": true
+      },
+      {
+        "case": "best_automatic_discount",
+        "passed": true
+      },
+      {
+        "case": "storefront_creation_snapshot_and_wallet_wrapper",
+        "passed": true
+      },
+      {
+        "case": "assisted_creation_inventory_and_snapshot",
+        "passed": true
+      },
+      {
+        "case": "coupon_only_gift_and_all_stacking",
+        "passed": true
+      },
+      {
+        "case": "coupon_order_rounding_and_redemption",
+        "passed": true
+      },
+      {
+        "case": "original_four_benefits_regression",
+        "passed": true
+      },
+      {
+        "case": "invalid_counts_and_authorisation",
+        "passed": true
+      }
+    ],
+    "passed": true,
+    "bank_calls": 0,
+    "case_count": 14,
+    "original_order_count": 1,
+    "retained_test_orders": 0,
+    "all_public_table_rows_unchanged": true
+  },
+  "verification": {
+    "assisted_engine": true,
+    "storefront_engine": true,
+    "calculator_private": true,
+    "buy_quantity_installed": true,
+    "configuration_constraint": true,
+    "snapshots_accept_benefit": true,
+    "audience_editor_preserved": true,
+    "assisted_product_id_bounds": true,
+    "storefront_audience_preserved": true,
+    "storefront_persists_adjustment": true,
+    "assisted_customer_audience_preserved": true
+  }
+}

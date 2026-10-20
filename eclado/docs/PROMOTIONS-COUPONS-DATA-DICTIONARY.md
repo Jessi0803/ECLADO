@@ -206,7 +206,7 @@ orders
 | `order_id` | `text` | 是 | 對應 `orders.id`。 |
 | `promotion_id` | `uuid` | 否 | 對應實際套用活動。活動封存後仍保留關聯。 |
 | `coupon_campaign_id` | `uuid` | 否 | 由優惠券觸發時對應優惠券。 |
-| `adjustment_type` | `text` | 是 | percentage_discount、fixed_discount、amount_gift、quantity_gift 或 free_shipping。 |
+| `adjustment_type` | `text` | 是 | percentage_discount、fixed_discount、amount_gift、quantity_gift、buy_x_get_y 或 free_shipping。 |
 | `name_snapshot` | `text` | 是 | 建立訂單當下的活動顯示名稱。 |
 | `qualification_snapshot` | `jsonb` | 是 | 成立範圍、門檻、計算基準、符合金額／件數等快照。 |
 | `amount` | `numeric` | 是 | 此項價格折抵金額；贈品活動為 0。 |
@@ -232,14 +232,15 @@ orders
 
 | 欄位 | 用途 |
 |---|---|
-| `benefit_type` | percentage_discount、fixed_discount、amount_gift、quantity_gift。 |
+| `benefit_type` | percentage_discount、fixed_discount、amount_gift、quantity_gift、buy_x_get_y（買 X 送 Y，最低價免費）。 |
 | `activation_type` | automatic 或 coupon_only。 |
 | `threshold_value` | 滿額金額或滿件數量。折扣活動無門檻時可為空。 |
 | `threshold_type` | `amount` 或 `quantity`。既有折扣活動預設 `amount`，不改變原本計價。 |
 | `threshold_basis` | before_bundle_discount 或 after_bundle_discount。滿件活動不使用。 |
 | `gift_variant_id` | 贈品活動指定的唯一實體規格。 |
-| `gift_quantity` | 每次成立贈送數量。 |
-| `repeat_mode` | once 或 repeat；第一版後台可先固定 once。 |
+| `gift_quantity` | 每次成立贈送數量；buy_x_get_y 時代表免費件數 Y。 |
+| `buy_quantity` | 僅 buy_x_get_y 使用，買入件數 X；門檻由後端計算為 X＋Y。詳見 [買 X 送 Y](buy-x-get-y.md)。 |
+| `repeat_mode` | once 每筆一次，或 repeat 每滿一組再次贈送；買 X 送 Y 不另設每筆免費件數上限。 |
 | `exclusive_group` | 需要只取最優惠或最高門檻時的互斥群組。 |
 | `priority` | 同群組判斷與顯示順序。 |
 | `archived_at` | 已被使用的活動改為封存，不實體刪除。 |

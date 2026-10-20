@@ -1,0 +1,113 @@
+{
+  "project": "ilvdvlkdpntwmaijncaz",
+  "environment": "production",
+  "date": "2026-10-20",
+  "acceptance": {
+    "cases": [
+      {
+        "case": "mixed_8_second_cheapest",
+        "passed": true,
+        "discount": 3000
+      },
+      {
+        "case": "repeat_boundaries_3_4_7_8_12_96",
+        "passed": true
+      },
+      {
+        "case": "once_8_only_1_free",
+        "passed": true
+      },
+      {
+        "case": "buy_2_get_2_repeat",
+        "passed": true
+      },
+      {
+        "case": "product_scope",
+        "passed": true
+      },
+      {
+        "case": "member_roles_guest_and_guest_only",
+        "passed": true
+      },
+      {
+        "case": "activity_period",
+        "passed": true
+      },
+      {
+        "case": "best_automatic_discount",
+        "passed": true
+      },
+      {
+        "case": "disjoint_products_keep_order_wide_best_only",
+        "passed": true
+      },
+      {
+        "case": "storefront_creation_snapshot_and_wallet_wrapper",
+        "passed": true
+      },
+      {
+        "case": "assisted_creation_inventory_and_snapshot",
+        "passed": true
+      },
+      {
+        "case": "coupon_only_gift_and_all_stacking",
+        "passed": true
+      },
+      {
+        "case": "coupon_order_rounding_and_redemption",
+        "passed": true
+      },
+      {
+        "case": "original_four_benefits_regression",
+        "passed": true
+      },
+      {
+        "case": "invalid_counts_and_authorisation",
+        "passed": true
+      }
+    ],
+    "passed": true,
+    "bank_calls": 0,
+    "case_count": 15,
+    "original_order_count": 97,
+    "retained_test_orders": 0,
+    "all_public_table_rows_unchanged": true
+  },
+  "verification": {
+    "assisted_engine": true,
+    "storefront_engine": true,
+    "calculator_private": true,
+    "buy_quantity_installed": true,
+    "configuration_constraint": true,
+    "snapshots_accept_benefit": true,
+    "audience_editor_preserved": true,
+    "assisted_product_id_bounds": true,
+    "storefront_audience_preserved": true,
+    "storefront_persists_adjustment": true,
+    "assisted_customer_audience_preserved": true
+  },
+  "post_install": {
+    "orders": 97,
+    "promotions": 12,
+    "bogo_activities": 0,
+    "probe_products": 0,
+    "probe_orders": 0,
+    "changed_functions": [
+      "assisted_discount_quote(jsonb,text,text,text,uuid,boolean)",
+      "create_assisted_order(uuid,jsonb)",
+      "create_assisted_order_base_v1(uuid,jsonb)",
+      "create_order_with_pricing_discount_v2(jsonb,text,text,text,text,text,text,text,text)",
+      "quote_assisted_order(jsonb)",
+      "quote_order_pricing_discount_v2(jsonb,text,text,text)",
+      "save_discount_promotion_before_audience_20261017(jsonb)"
+    ],
+    "added_functions": [
+      "calculate_buy_x_get_y(uuid,jsonb)"
+    ],
+    "removed_functions": [],
+    "all_existing_function_owners_and_acls_preserved": true,
+    "all_other_function_definitions_unchanged": true,
+    "backup_sha256": "90b6ca3234d74bf6d39a327afa129ad262db22f4e4011d4a6c98a47de480615a",
+    "migration_sha256": "f923906433779087acd9227f2aaba96dc5ceefcd27baa68bcd4d62034da05961"
+  }
+}
