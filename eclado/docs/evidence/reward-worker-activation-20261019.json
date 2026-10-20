@@ -1,0 +1,18 @@
+{
+  "date": "2026-10-19",
+  "userApprovedActivation": true,
+  "workerEnabled": true,
+  "timers": {
+    "dispatch": {"unit": "eclado-reward-dispatch.timer", "enabled": true, "active": true, "interval": "approximately60s after completion; at most5 jobs"},
+    "reconcile": {"unit": "eclado-reward-reconcile.timer", "enabled": true, "active": true, "schedule": "03:00 Asia/Taipei daily", "nextUtc": "2026-10-19T19:00:00Z", "nextTaipei": "2026-10-20T03:00:00+08:00"}
+  },
+  "firstDispatch": {"status": "complete", "checked": 0, "accepted": 0},
+  "firstReconcile": {"status": "complete", "runKey": "8b57b5ca-30fd-5f1a-bbf2-a983a0d183ac", "checked": 0, "findings": 0, "snapshotAt": "2026-10-19T12:51:56.207286+00:00"},
+  "serviceResults": {"dispatch": {"result": "success", "exitStatus": 0}, "reconcile": {"result": "success", "exitStatus": 0}},
+  "databaseReadOnlyConfirmation": {"reconciliationRuns": 1, "latestStatus": "complete", "noticeTotal": 0, "withdrawalTotal": 0, "studentPricingEnabled": false},
+  "paymentHealthOk": true,
+  "notificationSendsDuringVerification": 0,
+  "financialTransactionsCreated": 0,
+  "initialMonitoring": "user daily manual review; no automatic alerting",
+  "limitations": ["Empty production queue tick does not verify real Outbox delivery, fallback or failure recovery", "First scheduled daily3am execution not yet observed; initial explicit run passed", "Journal retention period not separately verified"]
+}

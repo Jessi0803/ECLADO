@@ -1,0 +1,12 @@
+{
+  "read_only": "on",
+  "notice_due": 0,
+  "notice_total": 0,
+  "notice_sending": 0,
+  "notice_unknown": 0,
+  "withdrawal_open": 0,
+  "withdrawal_total": 0,
+  "reconciliation_runs": 0,
+  "student_prices_enabled": false,
+  "notice_pending_or_retry": 0
+}

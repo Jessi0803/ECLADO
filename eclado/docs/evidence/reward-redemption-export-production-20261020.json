@@ -1,0 +1,38 @@
+{
+  "project_ref": "ilvdvlkdpntwmaijncaz",
+  "verified_at": "2026-10-20T10:32:43.785930+08:00",
+  "migration": "supabase-instructor-reward-redemption-export.sql",
+  "source_sha256": "eee8291fa9dad7f2388a5f04c4e9faac0b7ffdfaaae490435eb678bd3a135a3a",
+  "installation": "success",
+  "preflight": {
+    "audit_table": false,
+    "rpc": false,
+    "dependencies_present": true,
+    "existing_access_guard_reviewed": true
+  },
+  "verification": {
+    "rls_enabled": true,
+    "direct_table_reads_denied_for": [
+      "anon",
+      "authenticated",
+      "service_role"
+    ],
+    "rpc_execute_granted_to": "authenticated",
+    "rpc_execute_denied_for": [
+      "anon",
+      "service_role"
+    ],
+    "anonymous_guard_denied": true,
+    "eligible_admin_export_executed": true,
+    "payload_count_matches_rows": true,
+    "audit_write_matches_export": true,
+    "audit_update_rejected": true,
+    "validation_transaction_rolled_back": true,
+    "persisted_export_audits_after_validation": 0
+  },
+  "limitations": [
+    "SQL-editor eligible-admin claims exercise; not an authenticated browser CSV download acceptance",
+    "No production payment, order, balance, withdrawal, feature switch or worker changes"
+  ],
+  "screenshot": "reward-redemption-export-production-20261020.png"
+}

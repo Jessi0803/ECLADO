@@ -859,7 +859,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                         </label>
                       )}
                       {shoppingCredit.error && <p role="alert" style={{ marginTop:9, fontSize:12, color:'#c0392b', lineHeight:1.6 }}>{shoppingCredit.error}</p>}
-                      <p style={{ marginTop:10, fontSize:10, color:'var(--dark)', lineHeight:1.6 }}>購物金僅支付商品金額，不影響已取得的免運資格。</p>
+                      <p style={{ marginTop:10, fontSize:10, color:'var(--dark)', lineHeight:1.6 }}>購物金僅可折抵商品金額，不影響已取得的免運資格。</p>
                     </div>
                   )}
 
@@ -867,7 +867,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                     <div className="reward-wallet-heading"><div><p className="reward-wallet-title">師資返饋金</p><p>{rewardCredit.loading?'正在載入可用餘額…':`可用 NT$ ${rewardCredit.available.toLocaleString()}，本次最多 NT$ ${maximumRewardCredit.toLocaleString()}`}</p></div>
                     <button className={`reward-button ${useRewardCredit?'reward-button--primary':''}`} type="button" role="switch" aria-label="使用返饋金" aria-checked={useRewardCredit} disabled={rewardCredit.loading||(!useRewardCredit&&maximumRewardCredit<=0)} onClick={()=>{const next=!useRewardCredit;setUseRewardCredit(next);setRewardCreditAmount(next?maximumRewardCredit:0);}}>{useRewardCredit?'已使用':'使用'}</button></div>
                     {useRewardCredit&&<label className="reward-wallet-amount">本次使用返饋金<input aria-label="返饋金使用金額" type="number" inputMode="numeric" min="0" max={maximumRewardCredit} step="1" value={rewardCreditAmount} onChange={e=>setRewardCreditAmount(e.target.value===''?'':Math.min(maximumRewardCredit,Math.max(0,Math.floor(Number(e.target.value)||0))))}/></label>}
-                    {rewardCredit.error&&<p role="alert" className="reward-message">{rewardCredit.error}</p>}<p className="reward-note">僅折抵商品金額，雙錢包合計後銀行付款至少 NT$1。</p>
+                    {rewardCredit.error&&<p role="alert" className="reward-message">{rewardCredit.error}</p>}<p className="reward-note">師資返饋金僅可折抵商品金額，可與購物金一起使用，結帳時仍需支付至少 NT$1。</p>
                   </div>}
 
                   <div>

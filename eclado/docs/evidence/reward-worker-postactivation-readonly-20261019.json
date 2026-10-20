@@ -1,0 +1,14 @@
+{
+  "read_only": "on",
+  "latest_run": {
+    "status": "complete",
+    "checked": 0,
+    "findings": 0,
+    "error_code": null,
+    "snapshot_at": "2026-10-19T12:51:56.207286+00:00"
+  },
+  "notice_total": 0,
+  "withdrawal_total": 0,
+  "reconciliation_runs": 1,
+  "student_prices_enabled": false
+}

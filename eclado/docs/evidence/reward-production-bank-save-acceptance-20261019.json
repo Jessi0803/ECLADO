@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-19",
+  "environment": "Production",
+  "deploymentCommit": "400e70d619a3de45e5a7783132ec8d521255ab20",
+  "userConfirmedBankSave": true,
+  "agentSubmittedBankForm": false,
+  "readOnlyUiVerification": {
+    "currentBankSummaryPresent": true,
+    "bankMissingMessage": false,
+    "editFormCollapsed": true,
+    "configurationError": false,
+    "serviceError": false,
+    "refreshWithdrawalsClicked": true,
+    "summaryPersistsAfterRefresh": true,
+    "loadingAfterRefresh": false,
+    "withdrawalButtonDisabledAfterRefresh": true
+  },
+  "bankDetailsCopiedOrRecorded": false,
+  "financialTransactionsInitiated": false,
+  "evidenceInterpretation": "User save and persisted masked summary confirmed; save API encrypts before storage; no direct ciphertext inspection or full decryption read performed",
+  "fullDecryptionRoundtrip": "not_executed",
+  "withdrawalAndPaymentTests": "not_executed"
+}

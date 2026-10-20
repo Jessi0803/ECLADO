@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-19",
+  "decision": {
+    "dispatch": "at most five jobs; approximately sixty seconds after each service completion",
+    "reconcile": "03:00 Asia/Taipei daily",
+    "initialMonitoring": "user checks notification and reconciliation pages daily",
+    "automaticAlerting": false,
+    "activationApproved": false
+  },
+  "hostReadOnlyChecks": {
+    "timers": {"enabled": false, "active": false, "nextElapsePresent": false},
+    "serviceUser": "eclado-reward-worker",
+    "serviceGroup": "eclado-reward-worker",
+    "protectSystem": "strict",
+    "noNewPrivileges": true,
+    "memoryMaxBytes": 201326592,
+    "timeoutSeconds": 110,
+    "previousDisabledServiceResult": "success",
+    "previousExecMainStatus": 0,
+    "envOwner": "root:eclado-reward-worker",
+    "envMode": "0640",
+    "check": "configuration_valid",
+    "checkNetworkRequests": 0,
+    "journalObserved": "previous disabled starts and exits only"
+  },
+  "thisPass": {"notificationSends": 0, "reconciliationExecutions": 0, "activation": false},
+  "liveQueueEvidence": "reward-worker-live-queue-readonly-20261019.json",
+  "liveQueueCheckedReadOnly": true,
+  "liveQueueAndWithdrawalsEmpty": true,
+  "pending": ["Explicit activation and event dispatch authorization", "First active service execution verification", "Journal retention period not verified"]
+}

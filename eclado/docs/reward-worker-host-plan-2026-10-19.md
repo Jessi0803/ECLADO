@@ -69,3 +69,16 @@
 經使用者更正收件 ID 後，19:57 的 LINE 單次測試回應 200，使用者明確確認已收到；先前 Email 亦已確認收件。LINE／Email 兩管道的受控連線與實際收件驗證均通過。使用者自行更新 `.env.notification-test`，唯讀比對 `NOTIFY_TEST_LINE_USER_ID` 與本次成功 ID 一致，檔案仍 Git 忽略；後續通知測試使用此檔現值，不沿用過去測試腳本寫死的舊收件人。不在公開文件保存完整收件 ID 或憑證。
 
 本確認僅適用後續已獲授權的通知測試，不代表自動發送授權、會員綁定異動、Outbox／備援全流程驗收或正式排程啟用。worker／timer 仍停用，學生價格 OFF，未發布網站。最新 LINE 收件證據：`docs/evidence/reward-line-confirmed-id-test-20261019.json`。
+
+## 正式發布與排程確認（啟用前歷史紀錄）
+
+網站已依Git發布至main（400e70d含銀行Production連線設定修正），使用者銀行儲存及遮蔽查詢確認完成。使用者另確認通知每次完成後約60秒／每批5件、每日台北03:00對帳，初期由本人每天查看後台，沒有自動告警。本次問題明示不立即啟用，故這是規格批准，不是啟用批准。
+
+VPS唯讀再次核對timer disabled/inactive、沙箱／0640／零網路check通過；沒有發送通知或執行對帳。實際啟用前須先核對當下正式佇列範圍，再取得啟用及可能真實派送的批准。每日操作／診斷／停用與未知結果處理見 `reward-worker-operations-runbook-2026-10-19.md`，聚合證據見 `docs/evidence/reward-worker-activation-preparation-20261019.json`。學生價仍OFF，日誌保留期限及即時告警仍有限制。
+
+其後已完成正式空佇列盤點並取得明確啟用批准，worker／兩timer實際已啟用，首輪空tick及一次正式對帳成功落庫，學生價仍OFF。以runbook文末及 `docs/evidence/reward-worker-activation-20261019.json` 為最新實際狀態；先前「尚未啟用」段落保留歷史。未發送通知或建立金融交易，第一次每日03:00排程及真Outbox事件仍待觀察。
+
+
+## 整理提交時的狀態說明（2026-10-20）
+
+上述OFF／尚未啟用敘述為各次檢查當時狀態。worker與兩timer已於2026-10-19批准啟用並完成首輪驗證；學生價其後亦另行批准啟用，詳見 `student-pricing-production-activation-2026-10-19.md` 與 `師資反饋金系統開發文件.md`。本次僅整理提交歷史證據，沒有重查主機、派送通知、執行對帳或改任何功能設定。

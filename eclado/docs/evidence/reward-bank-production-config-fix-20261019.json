@@ -2,8 +2,13 @@
   "date": "2026-10-19",
   "reportedError": "銀行資料服務尚未設定",
   "source": "api/reward-bank.js:8",
-  "observedProductionBefore": ["SUPABASE_SERVICE_KEY"],
-  "addedProductionConfig": ["SUPABASE_URL", "SUPABASE_ANON_KEY"],
+  "observedProductionBefore": [
+    "SUPABASE_SERVICE_KEY"
+  ],
+  "addedProductionConfig": [
+    "SUPABASE_URL",
+    "SUPABASE_ANON_KEY"
+  ],
   "valueSource": "Existing production public defaults from api/_supabase-env.js; no Preview values",
   "savedAndScopeVerifiedInUi": true,
   "secretRotation": false,
@@ -12,6 +17,21 @@
   "databaseChanges": false,
   "bankFormResubmittedByAgent": false,
   "deploymentMethod": "Git main push; no direct Vercel deployment",
-  "postDeploymentProbe": "pending",
-  "bankEncryptionRoundtrip": "pending_user_retry"
+  "postDeploymentProbe": {
+    "method": "POST read with invalid synthetic Bearer",
+    "httpStatus": 401,
+    "authRejected": true,
+    "missingConfigurationError": false,
+    "bankDataSubmitted": false
+  },
+  "bankEncryptionRoundtrip": "encrypted_save_and_masked_read_confirmed_full_decryption_not_tested",
+  "commit": "400e70d619a3de45e5a7783132ec8d521255ab20",
+  "deployment": {
+    "id": "EEFs1AkiFJ9i1eu3X2F5hChWi3ev",
+    "status": "Ready",
+    "environment": "Production",
+    "domain": "ecladotaiwan.com",
+    "durationSeconds": 24,
+    "displayedTimestampTaipei": "2026-10-19 20:38:17 GMT+8"
+  }
 }
