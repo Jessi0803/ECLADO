@@ -1,0 +1,73 @@
+{
+  "dateTaipei": "2026-10-20",
+  "baselineCommit": "cdd66dce33463245e2b52641fbfae752b6242170",
+  "baselineAsset": "admin-Dod3CJhk.js",
+  "databaseInstall": {
+    "projectRef": "ilvdvlkdpntwmaijncaz",
+    "version": "17.6",
+    "previousFunctionExisted": false,
+    "functionDefinitionMD5": "3ffc85f1c042e8258bfc2b721ad2d0df",
+    "matchesIsolatedDatabaseTest": true,
+    "anonExecute": false,
+    "authenticatedExecute": true,
+    "installationMethod": "Supabase SQL Editor, transaction, before frontend deployment",
+    "businessRowsWritten": 0
+  },
+  "productionParity": {
+    "monthlyRevenue": true,
+    "paidOrderCount": true,
+    "recentOrders": 5,
+    "lowStockCount": 16,
+    "pendingApplicationCount": 0,
+    "summaryBytesUtf8": 2887
+  },
+  "validation": {
+    "isolatedDatabaseTest": "passed",
+    "desktopMobileRegressionTests": 32,
+    "build": "passed"
+  },
+  "method": "Authenticated existing Chrome tab, normal Cmd+R, no agent-applied throttling/cache reset; PerformanceResourceTiming /rest/v1/ responseEnd maximum since navigation start. Native UI separately confirmed populated dashboard. Does not measure final paint.",
+  "before": [
+    {
+      "fcpMs": 356,
+      "accessEndMs": 1057,
+      "apiEndMs": 3002,
+      "apiCount": 13,
+      "lastAPI": "orders"
+    },
+    {
+      "fcpMs": 264,
+      "accessEndMs": 504,
+      "apiEndMs": 2204,
+      "apiCount": 13,
+      "lastAPI": "orders"
+    },
+    {
+      "fcpMs": 284,
+      "accessEndMs": 513,
+      "apiEndMs": 1662,
+      "apiCount": 13,
+      "lastAPI": "orders"
+    },
+    {
+      "fcpMs": 308,
+      "accessEndMs": 647,
+      "apiEndMs": 2084,
+      "apiCount": 13,
+      "lastAPI": "get_admin_catalog"
+    },
+    {
+      "fcpMs": 252,
+      "accessEndMs": 573,
+      "apiEndMs": 1556,
+      "apiCount": 13,
+      "lastAPI": "orders"
+    }
+  ],
+  "beforeMedianMs": 2084,
+  "limitations": [
+    "Small sample; network and authentication latency varies.",
+    "New build asset first download must be retained as an observation and distinguished from warm reloads.",
+    "Exact React paint completion is not measured."
+  ]
+}

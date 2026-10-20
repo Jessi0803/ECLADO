@@ -1,26 +1,32 @@
 import React from 'react';
 import { Badge, PaymentStateBadge } from '../components/StatusIndicators.jsx';
 import { MiniBarChart, StatCard } from '../components/DashboardWidgets.jsx';
-import { buildMonthlyRevenue, revenueGrowth } from '../domain/analytics.js';
+import { revenueGrowth } from '../domain/analytics.js';
 import { isHistoricalOrder } from '../../domain/sales.js';
 
-export default function Dashboard({ orders, products, members, applications = [], adminEmail, onGoToPendingMembers, onGoToOrders }) {
+export default function Dashboard({ summary, loading, error, onRetry, adminEmail, onGoToPendingMembers, onGoToOrders }) {
+  if (!summary) return (
+    <div>
+      <h1 style={{ fontSize: 28, fontWeight: 400, marginBottom: 24 }}>儀表板</h1>
+      {error ? <div role="alert">{error} <button type="button" onClick={onRetry}>重新載入</button></div>
+        : <div role="status">載入儀表板資料中…</div>}
+    </div>
+  );
   const today = new Date();
-  const monthlyRevenue = buildMonthlyRevenue(orders, today);
+  const { monthlyRevenue, lowStock, recentOrders: orders, paidOrderCount, pendingApplicationCount } = summary;
   const thisMonth = monthlyRevenue[monthlyRevenue.length - 1];
   const lastMonth = monthlyRevenue[monthlyRevenue.length - 2];
   const growth = revenueGrowth(thisMonth.revenue, lastMonth.revenue);
   const growthLabel = growth == null
     ? '上月無營業額，暫不計成長率'
     : `較上月 ${growth > 0 ? '+' : ''}${growth.toFixed(1)}%`;
-  const lowStock = products.filter(p => p.stock <= p.minStock);
-  const paidOrders = orders.filter(o => o.status === 'paid');
-  const pendingApplications = applications.filter(a => a.status === 'pending');
   const adminName = adminEmail ? adminEmail.split('@')[0] : '管理員';
   const todayLabel = new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' }).format(today);
 
   return (
-    <div>
+    <div data-testid="dashboard-data" aria-busy={loading}>
+      {error && <div role="alert">{error} <button type="button" onClick={onRetry}>重新載入</button></div>}
+      {loading && <div role="status">更新儀表板資料中…</div>}
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400, color: 'var(--dark)', marginBottom: 4 }}>儀表板</h1>
         <p style={{ fontSize: 13, color: 'var(--mid)' }}>{todayLabel} — 歡迎回來，{adminName}</p>
@@ -29,8 +35,8 @@ export default function Dashboard({ orders, products, members, applications = []
       {/* Stats grid */}
       <div className="stat-grid-4" style={{ marginBottom: 32 }}>
         <StatCard label="本月營業額" value={`NT$ ${thisMonth.revenue.toLocaleString()}`} sub={growthLabel} accent="var(--dark)" icon="◐" />
-        <StatCard label="已付款訂單" value={paidOrders.length} sub={paidOrders.length > 0 ? '可安排後續出貨' : '目前無已付款訂單'} accent={paidOrders.length > 0 ? 'var(--blue)' : 'var(--green)'} icon="◫" />
-        <StatCard label="待審核申請" value={pendingApplications.length} sub={pendingApplications.length > 0 ? '點擊前往會員管理審核' : '目前無待審核'} accent={pendingApplications.length > 0 ? 'var(--gold)' : 'var(--green)'} icon="◉" onClick={pendingApplications.length > 0 ? onGoToPendingMembers : undefined} />
+        <StatCard label="已付款訂單" value={paidOrderCount} sub={paidOrderCount > 0 ? '可安排後續出貨' : '目前無已付款訂單'} accent={paidOrderCount > 0 ? 'var(--blue)' : 'var(--green)'} icon="◫" />
+        <StatCard label="待審核申請" value={pendingApplicationCount} sub={pendingApplicationCount > 0 ? '點擊前往會員管理審核' : '目前無待審核'} accent={pendingApplicationCount > 0 ? 'var(--gold)' : 'var(--green)'} icon="◉" onClick={pendingApplicationCount > 0 ? onGoToPendingMembers : undefined} />
         <StatCard label="庫存警示" value={lowStock.length} sub="件商品庫存不足" accent={lowStock.length > 0 ? 'var(--red)' : 'var(--green)'} icon="◉" />
       </div>
 

@@ -105,6 +105,55 @@ test('後台登入權限：非管理員擋下，管理員可進入', async ({ pa
   await page.close();
 });
 
+test('儀表板只查摘要，等待期間不顯示零元並在切換頁面後讀取完整資料', async ({ page }) => {
+  await mockAdminApis(page);
+  const fullReads: string[] = [];
+  page.on('request', request => {
+    const path = new URL(request.url()).pathname;
+    if (/\/rest\/v1\/(orders|profiles|professional_applications)$/.test(path)
+      || /\/rpc\/get_admin_(catalog|order_payment_details|inventory_allocations|professional_sales|shipping_groups|member_notes|order_notes)$/.test(path)) fullReads.push(path);
+  });
+  let release!: () => void;
+  const ready = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/rest/v1/rpc/get_admin_dashboard', async route => {
+    await ready;
+    await route.fallback();
+  });
+  await page.goto('/admin');
+  await expect(page.getByText('載入儀表板資料中…')).toBeVisible();
+  await expect(page.getByText('NT$ 0', { exact: true })).toHaveCount(0);
+  expect(fullReads).toEqual([]);
+  release();
+  await expect(page.getByTestId('dashboard-data')).toHaveAttribute('aria-busy', 'false');
+  await expect(page.getByText('E2E-ORDER-001')).toBeVisible();
+  expect(fullReads).toEqual([]);
+  await openAdminSection(page, /訂單管理/);
+  await expect(page.getByRole('heading', { name: '訂單管理', exact: true })).toBeVisible();
+  await expect(page.getByText('E2E-ORDER-001')).toBeVisible();
+  expect(fullReads.some(path => path.endsWith('/orders'))).toBe(true);
+  await openAdminSection(page, /儀表板/);
+  await expect(page.getByTestId('dashboard-data')).toHaveAttribute('aria-busy', 'false');
+});
+
+test('儀表板摘要失敗可重試且不退回完整資料查詢', async ({ page }) => {
+  await mockAdminApis(page);
+  let attempts = 0;
+  let orderReads = 0;
+  page.on('request', request => { if (new URL(request.url()).pathname === '/rest/v1/orders') orderReads += 1; });
+  await page.route('**/rest/v1/rpc/get_admin_dashboard', async route => {
+    attempts += 1;
+    if (attempts === 1) return route.fulfill({ status: 500, json: { message: 'Unavailable' } });
+    return route.fallback();
+  });
+  await page.goto('/admin');
+  await expect(page.getByRole('alert')).toContainText('無法載入儀表板');
+  await expect(page.getByText('NT$ 0', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '重新載入', exact: true }).click();
+  await expect(page.getByText('E2E-ORDER-001')).toBeVisible();
+  expect(attempts).toBe(2);
+  expect(orderReads).toBe(0);
+});
+
 test('後台重整等待權限時顯示狀態且不提前載入資料', async ({ page }) => {
   await mockAdminApis(page);
   let releaseAccess!: () => void;

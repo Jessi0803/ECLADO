@@ -1,4 +1,6 @@
 import type { Page, Route } from '@playwright/test';
+import { buildMonthlyRevenue } from '../../src/admin/domain/analytics.js';
+import { normalizeOrder, normalizeProduct } from '../../src/admin/domain/mappers.js';
 
 export const mockProducts = [
   { id: 1, name: 'Deep Cleansing Foam', name_zh: '深層清潔泡沫洗面乳', category: '清潔', size: '200ml', stock: 48, is_pro_only: false, price: 1280, pro_price: 960, series: 'Deep', image_url: 'https://example.com/mock-product-1.jpg', description: '溫和清潔肌膚並維持水潤。', skin_type: '全膚質、敏感肌', ingredients: '胺基酸系界面活性劑、綠茶萃取', features: ['溫和低刺激配方', '洗後保濕不緊繃'], active: true },
@@ -489,6 +491,23 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       images: productImages().filter(image => (
         image.active !== false && eventProductIds.has(Number(image.product_id))
       )),
+    });
+  });
+
+  await page.route('**/rest/v1/rpc/get_admin_dashboard', async route => {
+    const permissions = options.backofficeAccess?.permissions;
+    const normalizedOrders = orders.map(order => normalizeOrder({
+      ...order,
+      payment_state: ['paid', 'preparing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(String(order.status)) ? 'paid' : 'pending',
+    }));
+    return json(route, {
+      monthlyRevenue: buildMonthlyRevenue(normalizedOrders),
+      paidOrderCount: normalizedOrders.filter(order => order.status === 'paid').length,
+      pendingApplicationCount: !permissions || permissions.includes('members.read')
+        ? applications.filter(app => app.status === 'pending').length : 0,
+      lowStock: !permissions || permissions.includes('catalog.read')
+        ? products().map(product => normalizeProduct(product)).filter(product => product.active && product.stock <= product.minStock) : [],
+      recentOrders: normalizedOrders.slice(0, 5),
     });
   });
 

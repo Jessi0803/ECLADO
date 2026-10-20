@@ -6,6 +6,7 @@ import { normalizeProfessionalSales } from '../domain/professionalSales.js';
 import { optimizeProductImageFile } from '../utils/imageOptimization.js';
 import { createHistoricalOrder } from '../services/historicalOrders.js';
 import { fetchSidebarFavorites, saveSidebarFavorites } from '../services/adminPreferences.js';
+import { fetchAdminDashboard } from '../services/adminDashboard.js';
 import {
   saveProfessionalSalesAdjustment,
   setProfessionalMembershipStart,
@@ -79,6 +80,26 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
   const [applicationsLoading, setApplicationsLoading] = useState(true);
   const [applicationsError, setApplicationsError] = useState('');
   const [loadError, setLoadError] = useState('');
+  const [dashboard, setDashboard] = useState(null);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState('');
+  const dashboardRequest = useRef(0);
+
+  async function fetchDashboard() {
+    const request = ++dashboardRequest.current;
+    setDashboardLoading(true);
+    setDashboardError('');
+    try {
+      const data = await fetchAdminDashboard();
+      if (request === dashboardRequest.current) setDashboard(data);
+    } catch (error) {
+      if (request === dashboardRequest.current) setDashboardError('無法載入儀表板，請稍後重試。');
+      console.error('dashboard fetch failed', error);
+    } finally {
+      if (request === dashboardRequest.current) setDashboardLoading(false);
+    }
+  }
+
   const hasPermission = permission => hasBackofficePermission(backofficeAccess, permission);
   const canReadOrders = hasPermission(BACKOFFICE_PERMISSIONS.ORDERS_READ);
   const canWriteOrders = hasPermission(BACKOFFICE_PERMISSIONS.ORDERS_WRITE);
@@ -309,28 +330,36 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
     }
   }
 
+  const isDashboard = page === 'dashboard';
   useEffect(() => {
-    fetchAll();
+    // Keep full order/member/catalog payloads off the dashboard startup path.
+    const refresh = isDashboard ? fetchDashboard : fetchAll;
+    refresh();
     let channel = supabase.channel('admin-realtime');
     if (canReadOrders) {
-      channel = channel.on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchAll());
+      channel = channel.on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => refresh());
     }
     if (canReadMembers) {
       channel = channel
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchAll())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'professional_applications' }, () => fetchAll())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'professional_memberships' }, () => fetchAll());
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => refresh())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'professional_applications' }, () => refresh())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'professional_memberships' }, () => refresh());
     }
     if (canReadCatalog) {
       channel = channel
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'membership_tiers' }, () => fetchAll())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchAll())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'product_variants' }, () => fetchAll())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'product_images' }, () => fetchAll());
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'membership_tiers' }, () => refresh())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => refresh())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'product_variants' }, () => refresh())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'product_images' }, () => refresh());
+    }
+    if (isDashboard && canReadOrders) {
+      channel = channel
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'order_payment_attempts' }, () => refresh())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'order_payment_instructions' }, () => refresh());
     }
     channel.subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [backofficeAccess?.role, backofficeAccess?.permissions?.join('|')]);
+    return () => { dashboardRequest.current += 1; supabase.removeChannel(channel); };
+  }, [isDashboard, backofficeAccess?.role, backofficeAccess?.permissions?.join('|')]);
 
   useEffect(() => {
     if (!canAccessBackofficePage(backofficeAccess, page)) {
@@ -675,7 +704,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
         : null;
     }
     switch (page) {
-      case 'dashboard': return <Dashboard orders={orders} products={activeProducts} members={members} applications={applications} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;
+      case 'dashboard': return <Dashboard summary={dashboard} loading={dashboardLoading} error={dashboardError} onRetry={fetchDashboard} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;
       case 'orders': return <Orders orders={orders} members={members} persistOrderPatch={persistOrderPatch} onSaveInvoiceNumber={saveOrderInvoiceNumber} onDeleteCancelledOrder={deleteCancelledOrder} onCancelHistoricalOrder={cancelHistoricalOrder} onAssignGuestOrder={assignGuestOrderToMember} defaultFilter={ordersDefaultFilter} memberNotes={memberNotes} focusOrderId={crossLink?.orderId || ''} backToMember={crossLink?.backMemberId ? { id: crossLink.backMemberId, name: crossLink.backMemberName } : null} onOpenMember={canReadMembers ? openMemberFromOrder : null} onClearCrossLink={() => setCrossLink(null)} onCreateAssistedOrder={canCreateAssistedOrder ? ()=>openAssistedOrder() : null} canConfirmPayments={canWriteOrders && ['admin','super_admin'].includes(backofficeAccess?.role)} />;
       case 'reward_management':
       case 'withdrawals':
