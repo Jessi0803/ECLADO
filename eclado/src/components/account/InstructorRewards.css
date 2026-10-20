@@ -82,6 +82,7 @@
 .reward-calendar { margin-top: 28px; }
 .reward-details { margin-top: 16px; font-size: 12px; }
 .reward-details summary { cursor: pointer; color: var(--reward-muted); padding: 8px 0; }
+.reward-history-content { margin-top: 12px; }
 .app-main .reward-view h2 { font-family: var(--font-d); font-size: 18px; font-weight: 500; }
 .app-main .reward-view h3 { font-size: 14px; font-weight: 500; }
 .app-main .reward-button { min-height: 38px; padding: 9px 18px; font-size: 12px; letter-spacing: .04em; }

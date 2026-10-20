@@ -47,8 +47,8 @@ export default function RewardWithdrawalsPanel({userId,onWithdrawalChanged}){
   ...(!validAmount&&data.available_balance>15?['請輸入超過 NT$15 且不超過可用餘額的整數金額。']:[]),
   ...(validAmount&&!fullAmount&&!estimate&&!data.withdrawal_batch?.blocked&&data.bank?[previewError||'正在更新提領試算…']:[])
  ]:[];
- return <section aria-label="返饋金提領" className="reward-view reward-subsection">
- <div className="reward-heading"><h3>銀行資料與返饋金提領</h3><button className="reward-button" type="button" onClick={()=>setRevision(r=>r+1)}>重新整理提領</button></div>
+ return <section aria-label="返饋金提領" className="reward-view reward-panel">
+ <div className="reward-heading"><h2>返饋金提領</h2><button className="reward-button" type="button" onClick={()=>setRevision(r=>r+1)}>重新整理提領</button></div>
  {error&&<p role="alert" className="reward-message">{error}</p>}
  {data&&<>
  <div className="reward-metrics">

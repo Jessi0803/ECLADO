@@ -16,6 +16,16 @@ test('teacher summary emphasizes available rewards and expands financial details
   await setup(page);
   await page.route('**/rest/v1/rpc/get_my_instructor_reward_report',r=>r.fulfill({json:{...report,summary:{...report.summary,reserved_balance:200,withdrawal_reserved_balance:300}}}));
   const panel=await rewards(page),summary=panel.locator('.reward-balance-summary');
+  const withdrawal=page.getByRole('region',{name:'返饋金提領',exact:true});
+  await expect(withdrawal).toBeVisible();
+  await expect(panel.getByRole('region',{name:'返饋金提領',exact:true})).toHaveCount(0);
+  await expect(panel.getByText('HISTORICAL-OLD-TEACHER · 歷史學生',{exact:true})).not.toBeVisible();
+  const ledger=panel.locator('details').filter({has:page.locator('summary').getByText('返饋帳務紀錄',{exact:true})});
+  await expect(ledger).not.toHaveAttribute('open');
+  await ledger.locator('summary').click();
+  await expect(ledger.getByText(/HISTORICAL-OLD-TEACHER · 扣回/)).toBeVisible();
+  await ledger.locator('summary').click();
+  await expect(ledger.getByText(/HISTORICAL-OLD-TEACHER · 扣回/)).not.toBeVisible();
   await expect(summary.getByText('可用返饋金',{exact:true})).toBeVisible();
   await expect(summary.getByText('累計已入帳',{exact:true})).not.toBeVisible();
   await expect(summary.getByText('另有 NT$ 200 購物付款處理中。',{exact:true})).toBeVisible();
@@ -29,7 +39,7 @@ test('teacher summary emphasizes available rewards and expands financial details
 test('teacher scoped report, debt and separate pagination; focus refresh uses no caller teacher ID',async({page})=>{
   await setup(page);const args:any[]=[];
   await page.route('**/rest/v1/rpc/get_my_instructor_reward_report',r=>{const a=r.request().postDataJSON();args.push(a);return r.fulfill({json:{...report,orders:a.p_offset?[{...report.orders[0],order_id:'NEXT-PAGE'}]:report.orders}});});
-  const panel=await rewards(page);await expect(panel.getByText('HISTORICAL-OLD-TEACHER · 歷史學生',{exact:true})).toBeVisible();
+  const panel=await rewards(page);await panel.locator('summary').getByText('歷史學生訂單',{exact:true}).click();await expect(panel.getByText('HISTORICAL-OLD-TEACHER · 歷史學生',{exact:true})).toBeVisible();
   await expect(panel.getByText('歷史商品 100ml × 2',{exact:false})).toBeVisible();await expect(panel.getByText('帳戶為負餘額',{exact:false})).toBeVisible();
   await panel.getByRole('button',{name:'訂單下一頁'}).click();await expect(panel.getByText('NEXT-PAGE',{exact:false}).first()).toBeVisible();
   expect(args.at(-1)).toEqual({p_offset:20,p_limit:20,p_ledger_offset:0});
@@ -38,14 +48,14 @@ test('teacher scoped report, debt and separate pagination; focus refresh uses no
 test('permission revocation clears previously loaded data; failed lookup cannot appear as zero balance',async({page})=>{
   await setup(page);let allowed=true;
   await page.route('**/rest/v1/rpc/get_my_instructor_reward_report',r=>allowed?r.fulfill({json:report}):r.fulfill({status:403,json:{code:'42501',message:'師資資格不足'}}));
-  const panel=await rewards(page);await expect(panel.getByText('HISTORICAL-OLD-TEACHER · 歷史學生',{exact:true})).toBeVisible();allowed=false;
+  const panel=await rewards(page);await panel.locator('summary').getByText('歷史學生訂單',{exact:true}).click();await expect(panel.getByText('HISTORICAL-OLD-TEACHER · 歷史學生',{exact:true})).toBeVisible();allowed=false;
   await panel.getByRole('button',{name:'重新整理',exact:true}).click();await expect(panel.getByRole('alert')).toHaveText('師資資格不足');
   await expect(panel.getByText('HISTORICAL-OLD-TEACHER · 歷史學生',{exact:true})).toHaveCount(0);await expect(panel.getByText('可用餘額',{exact:true})).toHaveCount(0);
 });
 test('empty and missing RPC are distinct; pro has no teacher query entrance',async({page})=>{
   await setup(page);let installed=true;
   await page.route('**/rest/v1/rpc/get_my_instructor_reward_report',r=>installed?r.fulfill({json:{...report,orders:[],entries:[],order_count:0,ledger_count:0}}):r.fulfill({status:404,json:{code:'PGRST202',message:'not installed'}}));
-  const panel=await rewards(page);await expect(panel.getByText('目前沒有返饋訂單紀錄。')).toBeVisible();installed=false;
+  const panel=await rewards(page);await panel.locator('summary').getByText('歷史學生訂單',{exact:true}).click();await expect(panel.getByText('目前沒有返饋訂單紀錄。')).toBeVisible();installed=false;
   await panel.getByRole('button',{name:'重新整理',exact:true}).click();await expect(panel.getByRole('alert')).toHaveText('返饋查詢尚未安裝。');
 });
 test('non instructor role cannot see rewards tab',async({page})=>{await setup(page,'pro');await page.goto('/account');await expect(page.getByRole('tab',{name:'師資返饋金'})).toHaveCount(0);});
