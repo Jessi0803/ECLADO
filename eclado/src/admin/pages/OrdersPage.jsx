@@ -725,27 +725,18 @@ export default function Orders({ refreshVersion = 0, persistOrderPatch: persistO
         </nav>}
       </div>
 
-      {selectedId && !selected && <>
-        <button type="button" className="detail-panel-backdrop" aria-label="關閉訂單詳情" onClick={closeDetails} />
-        <div className="detail-panel" role="dialog" aria-modal="true" aria-label="訂單詳情" style={{ padding: 24, background: 'var(--white)' }}>
-          <button type="button" style={ORDER_ACTION_STYLE} onClick={closeDetails}>← 返回</button>
-          <h3 style={{ margin: '16px 0' }}>訂單詳情</h3>
-          {detailError ? <div role="alert">{detailError} <button type="button" style={ORDER_ACTION_STYLE} onClick={invalidateOrders}>重新載入詳情</button></div>
-            : <div role="status">載入訂單詳情中…</div>}
-        </div>
-      </>}
-      {/* Order detail panel */}
-      {selected && (
+      {/* Keep the drawer mounted while its detail request resolves. */}
+      {selectedId && (
         <>
         <button type="button" className="detail-panel-backdrop" aria-label="關閉訂單詳情" onClick={closeDetails} />
         <div className="detail-panel" role="dialog" aria-modal="true" aria-label="訂單詳情" style={{ background: 'var(--white)', border: '1px solid var(--border)', padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <div><button type="button" className="detail-panel-mobile-back" onClick={closeDetails}>← 返回</button><h3 style={{ fontSize: 15, fontWeight: 500 }}>訂單詳情</h3></div>
+            <div><button type="button" className={selected ? 'detail-panel-mobile-back' : undefined} style={selected ? undefined : ORDER_ACTION_STYLE} onClick={closeDetails}>← 返回</button><h3 style={{ fontSize: 15, fontWeight: 500 }}>訂單詳情</h3></div>
             <button type="button" className="hide-mobile" aria-label="關閉訂單詳情" onClick={closeDetails} style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--mid)', cursor: 'pointer', lineHeight: 1 }}>×</button>
           </div>
-          {detailLoading && <div role="status">更新訂單詳情中…</div>}
+          {(!selected || detailLoading) && !detailError && <div role="status">{selected ? '更新訂單詳情中…' : '載入訂單詳情中…'}</div>}
           {detailError && <div role="alert">{detailError} <button type="button" style={ORDER_ACTION_STYLE} onClick={invalidateOrders}>重新載入詳情</button></div>}
-          <fieldset disabled={detailLoading || !!detailError || !!actionOrderId} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+          {selected && <fieldset disabled={detailLoading || !!detailError || !!actionOrderId} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           {backToMember && selected.user_id === backToMember.id && (
             <button type="button" onClick={() => onOpenMember?.(backToMember.id, '')} style={{ background: 'none', border: 'none', padding: 0, marginBottom: 14, fontSize: 12, color: 'var(--blue)', cursor: 'pointer' }}>← 回到會員 {backToMember.name || ''}</button>
           )}
@@ -1137,7 +1128,7 @@ export default function Orders({ refreshVersion = 0, persistOrderPatch: persistO
               }}
             />
           )}
-          </fieldset>
+          </fieldset>}
         </div>
         </>
       )}

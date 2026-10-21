@@ -764,6 +764,28 @@ test('只有訂單權限時不讀取會員選單或顯示歸戶操作', async ({
   expect(profileReads).toBe(0);
 });
 
+test('訂單明細載入完成沿用原側欄，不再次播放進場動畫', async ({ page }) => {
+  await mockAdminApis(page);
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/rest/v1/rpc/get_admin_order_detail', async route => {
+    await gate;
+    await route.fallback();
+  });
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByText('E2E-ORDER-001', { exact: true }).click();
+  const panel = page.getByRole('dialog', { name: '訂單詳情' });
+  await expect(panel.getByRole('status')).toHaveText('載入訂單詳情中…');
+  const originalPanel = await panel.elementHandle();
+  const backdrop = await page.getByRole('button', { name: '關閉訂單詳情', exact: true }).first().elementHandle();
+  release();
+  await expect(panel.getByText('商品明細', { exact: true })).toBeVisible();
+  expect(await originalPanel!.evaluate(node => node.isConnected && node === document.querySelector('[role="dialog"][aria-label="訂單詳情"]'))).toBe(true);
+  expect(await backdrop!.evaluate(node => node.isConnected)).toBe(true);
+  await expect(panel.getByRole('status')).toHaveCount(0);
+});
+
 test('訂單明細慢回應在關閉或切換訂單後不會覆蓋目前詳情', async ({ page }) => {
   await mockAdminApis(page);
   let release!:()=>void; const gate=new Promise<void>(resolve=>{release=resolve;});
