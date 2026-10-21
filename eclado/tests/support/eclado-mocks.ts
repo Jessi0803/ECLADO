@@ -240,6 +240,10 @@ export type MockEcladoApiOptions = {
   products?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
   productVariants?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
   productImages?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
+  siteAnnouncement?: { content:string; enabled:boolean };
+  siteAnnouncementReadError?: boolean;
+  siteAnnouncementSaveError?: boolean;
+  onSiteAnnouncementSave?: (payload: Record<string, unknown>) => void;
   promotions?: Record<string, unknown>[];
   promotionScopes?: Record<string, unknown>[];
   couponCampaigns?: Record<string, unknown>[];
@@ -1192,6 +1196,18 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       return json(route, []);
     }
     return json(route, []);
+  });
+
+  let siteAnnouncement = options.siteAnnouncement || {content:'', enabled:false};
+  await page.route('**/rest/v1/site_announcement**', route => options.siteAnnouncementReadError
+    ? json(route,{message:'Announcement unavailable'},500)
+    : json(route,siteAnnouncement));
+  await page.route('**/rest/v1/rpc/save_site_announcement', route => {
+    const payload = route.request().postDataJSON();
+    options.onSiteAnnouncementSave?.(payload);
+    if(options.siteAnnouncementSaveError) return json(route,{message:'Permission denied'},403);
+    siteAnnouncement = {content:payload.p_content, enabled:payload.p_enabled};
+    return json(route,siteAnnouncement);
   });
 
   await page.route('**/rest/v1/promotion_scopes**', async route => json(route, promotionScopes));

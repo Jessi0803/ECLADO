@@ -5,6 +5,8 @@ import { getPromotionPhase, PromoBadge } from '../components/StatusIndicators.js
 import PromotionLabel from '../../components/product/PromotionLabel.jsx';
 import { DEFAULT_PROMOTION_LABEL_COLOR, getPromotionLabelColor } from '../../domain/promotions.js';
 
+import SiteAnnouncementSettings from '../components/SiteAnnouncementSettings.jsx';
+
 const ROLES = [['consumer', '一般會員'], ['pro', '美容師'], ['instructor', '師資'], ['distributor', '經銷商'], ['staff', '內部人員']];
 const DEFAULT_AUDIENCE_ROLES = ROLES.filter(([role]) => role !== 'staff').map(([role]) => role);
 const inputStyle = { width:'100%', border:'none', borderBottom:'1px solid var(--border)', padding:'10px 0', fontSize:14, outline:'none', background:'none', boxSizing:'border-box' };
@@ -49,13 +51,13 @@ export default function Promotions({ products }) {
   return <div>
     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18, gap:16, flexWrap:'wrap' }}>
       <h1 style={{ fontFamily:'var(--font-d)', fontSize:28, fontWeight:400 }}>活動與優惠券</h1>
-      <button onClick={() => tab === 'promotions' ? setEditingPromotion('new') : setEditingCoupon('new')} style={{ padding:'10px 22px', background:'var(--dark)', color:'#fff', border:'none', fontSize:12, letterSpacing:'0.12em', cursor:'pointer' }}>+ {tab === 'promotions' ? '新增優惠活動' : '新增優惠券'}</button>
+      {tab !== 'announcement' && <button onClick={() => tab === 'promotions' ? setEditingPromotion('new') : setEditingCoupon('new')} style={{ padding:'10px 22px', background:'var(--dark)', color:'#fff', border:'none', fontSize:12, letterSpacing:'0.12em', cursor:'pointer' }}>+ {tab === 'promotions' ? '新增優惠活動' : '新增優惠券'}</button>}
     </div>
     <div style={{ display:'flex', gap:4, borderBottom:'1px solid var(--border)', marginBottom:24 }}>
-      {[['promotions','優惠活動'],['coupons','優惠券方案']].map(([value,label]) => <button key={value} onClick={() => setTab(value)} style={{ padding:'11px 20px', border:'none', borderBottom:tab === value ? '2px solid var(--dark)' : '2px solid transparent', background:'none', color:tab === value ? 'var(--dark)' : 'var(--mid)', cursor:'pointer', fontSize:13 }}>{label}</button>)}
+      {[['promotions','優惠活動'],['coupons','優惠券方案'],['announcement','全站公告']].map(([value,label]) => <button key={value} onClick={() => setTab(value)} style={{ padding:'11px 20px', border:'none', borderBottom:tab === value ? '2px solid var(--dark)' : '2px solid transparent', background:'none', color:tab === value ? 'var(--dark)' : 'var(--mid)', cursor:'pointer', fontSize:13 }}>{label}</button>)}
     </div>
-    {loadError && <div role="alert" style={{ marginBottom:16, color:'var(--red)', fontSize:13 }}>{loadError}</div>}
-    {loading ? <Empty text="載入中…" /> : tab === 'promotions' ? <PromotionList list={promotions} scopes={scopes} products={products} onEdit={setEditingPromotion} onReload={load} /> : <CouponList list={coupons} links={links} memberLinks={couponMembers} promotions={promotions} onEdit={setEditingCoupon} onReload={load} />}
+    {tab !== 'announcement' && loadError && <div role="alert" style={{ marginBottom:16, color:'var(--red)', fontSize:13 }}>{loadError}</div>}
+    {tab === 'announcement' ? <SiteAnnouncementSettings /> : loading ? <Empty text="載入中…" /> : tab === 'promotions' ? <PromotionList list={promotions} scopes={scopes} products={products} onEdit={setEditingPromotion} onReload={load} /> : <CouponList list={coupons} links={links} memberLinks={couponMembers} promotions={promotions} onEdit={setEditingCoupon} onReload={load} />}
   </div>;
 }
 

@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import useAuth from '../hooks/useAuth.js';
 import useProducts from '../hooks/useProducts.js';
 import usePromotions from '../hooks/usePromotions.js';
+import useSiteAnnouncement from '../hooks/useSiteAnnouncement.js';
+import AnnouncementMarquee from '../components/layout/AnnouncementMarquee.jsx';
+import { isAnnouncementVisible } from '../services/siteAnnouncement.js';
 import useSalesStats from '../hooks/useSalesStats.js';
 import {
   LINE_LOGIN_PENDING_KEY,
@@ -129,6 +132,7 @@ export default function App() {
   } = useProducts(user, setCart, authReady, includeEventCatalog);
   const { promotions, status: promoFetchStatus, errorText: promoFetchError } = usePromotions();
   const salesStats = useSalesStats();
+  const announcement = useSiteAnnouncement();
   const cartCount = cart.reduce((sum,i) => sum+i.qty, 0);
 
   useEffect(() => {
@@ -235,7 +239,9 @@ export default function App() {
   return (
     <>
       <BrowserDebugPanel />
-      {!authPage && <Nav setPage={setPage} onOpenCart={() => setCartOpen(true)} cartCount={cartCount} user={user} setUser={handleSignOut} page={page} />}
+      {!authPage && <Nav setPage={setPage} onOpenCart={() => setCartOpen(true)} cartCount={cartCount} user={user} setUser={handleSignOut} page={page} announcement={announcement} />}
+      {authPage && <div style={{ position:'fixed', top:0, left:0, right:0, zIndex:100 }}><AnnouncementMarquee announcement={announcement} /></div>}
+      {page !== 'home' && isAnnouncementVisible(announcement) && <div aria-hidden="true" data-testid="announcement-spacer" style={{ height:36 }} />}
       {showPromoBar && (
         <PromoDiagnosticBar status={promoFetchStatus} errorText={promoFetchError} />
       )}

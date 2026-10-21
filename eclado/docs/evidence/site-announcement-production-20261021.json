@@ -1,0 +1,35 @@
+{
+  "project_ref": "ilvdvlkdpntwmaijncaz",
+  "environment": "production",
+  "verified_at": "2026-10-21T09:38:55.185115Z",
+  "query_id": "b853d24a-5ef0-4cab-8378-ca6aed464f2e",
+  "sql_file": "supabase-site-announcement.sql",
+  "sql_sha256": "20346a021c3116e36cf260b8eda11ae71c54022726591d89a7e7d40fb1a04904",
+  "method": "Authenticated Supabase SQL Editor UI",
+  "preflight": {
+    "table_exists": false,
+    "save_function_exists": false,
+    "permission_function_exists": true,
+    "realtime_publication": true,
+    "promotion_hash": "089ac8f154841f325642b4a0d89b5a8b",
+    "scope_hash": "f72e9183ded239f795c0e5c1f05224b4"
+  },
+  "verification": {
+    "rls_enabled": true,
+    "anon_can_read": true,
+    "realtime_ready": true,
+    "anon_rpc_denied": true,
+    "scopes_unchanged": true,
+    "direct_writes_denied": true,
+    "promotions_unchanged": true,
+    "authenticated_can_read": true,
+    "default_disabled_blank": true,
+    "permission_guard_present": true,
+    "authenticated_rpc_allowed": true
+  },
+  "limits": [
+    "No announcement content entered or enabled.",
+    "No real authenticated save or cross-window Realtime delivery performed.",
+    "Frontend remains local and uncommitted."
+  ]
+}

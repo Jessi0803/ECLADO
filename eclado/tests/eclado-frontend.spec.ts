@@ -2702,3 +2702,45 @@ test('指定商品活動標籤與完整說明依範圍及狀態顯示', async ({
   await page.screenshot({path:testInfo.outputPath('promotion-detail.png'),fullPage:true});
   await expect(page.getByText(/不顯示/)).toHaveCount(0);
 });
+
+test('全站公告緊接導覽列並在首頁隨主列換色，各頁保留內容間距', async ({page},testInfo)=>{
+  await mockEcladoApis(page,{siteAnnouncement:{content:'任選2件即免運',enabled:true}});
+  await page.goto('/');
+  const banner=page.getByRole('region',{name:'全站公告',exact:true});
+  await expect(banner).toBeVisible();
+  await expect(banner).toHaveCSS('background-color','rgba(0, 0, 0, 0)');
+  const bounds=await banner.boundingBox();
+  expect(bounds?.y).toBe(68);expect(bounds?.height).toBe(36);
+  await page.screenshot({path:testInfo.outputPath('announcement-home.png')});
+  await page.evaluate(()=>window.scrollTo(0,500));
+  await expect(banner).toHaveCSS('background-color','rgb(250, 250, 249)');
+  for(const path of ['/shop','/products/peptide-fixed-url','/info','/login']){
+    await page.goto(path);
+    await expect(banner).toBeVisible();
+    await expect(banner).toHaveCSS('background-color','rgb(250, 250, 249)');
+    await expect(page.getByTestId('announcement-spacer')).toHaveCSS('height','36px');
+  }
+  await page.goto('/shop');
+  await expect(banner).toBeVisible();
+  if(testInfo.project.name==='mobile-chrome'){
+    await page.getByRole('button',{name:'開啟選單',exact:true}).click();
+    await expect(page.locator('.mobile-drawer')).toHaveCSS('top','104px');
+  }
+  await page.screenshot({animations:'disabled',path:testInfo.outputPath('announcement-shop.png')});
+});
+
+test('全站公告停用、空白或讀取失敗時不留空列，減少動態時改為靜態文字', async ({page})=>{
+  for(const setup of [{siteAnnouncement:{content:'已停用',enabled:false}},{siteAnnouncement:{content:' ',enabled:true}},{siteAnnouncementReadError:true}]){
+    await mockEcladoApis(page,setup);
+    await page.goto('/shop');
+    await expect(page.getByRole('region',{name:'全站公告',exact:true})).toHaveCount(0);
+    await expect(page.getByTestId('announcement-spacer')).toHaveCount(0);
+  }
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await mockEcladoApis(page,{siteAnnouncement:{content:'運送公告',enabled:true}});
+  await page.goto('/shop');
+  const banner=page.getByRole('region',{name:'全站公告',exact:true});
+  await expect(banner).toBeVisible();
+  await expect(banner.locator('.announcement-marquee__track')).toBeHidden();
+  await expect(banner.locator('.announcement-marquee__accessible')).toBeVisible();
+});

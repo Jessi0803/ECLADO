@@ -9,10 +9,12 @@ import {
 import { getProfessionalShoppingNotice } from '../../domain/memberShopping.js';
 import { openAdmin } from '../../services/membership.js';
 import DesktopNavItem from './DesktopNavItem.jsx';
+import AnnouncementMarquee from './AnnouncementMarquee.jsx';
+import { isAnnouncementVisible } from '../../services/siteAnnouncement.js';
 import MobileNavSection from './MobileNavSection.jsx';
 
 // ─── NAV ─────────────────────────────────────────────────────────────────────
-export default function Nav({ setPage, onOpenCart, cartCount, user, setUser, page }) {
+export default function Nav({ setPage, onOpenCart, cartCount, user, setUser, page, announcement }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [productDetailOpen, setProductDetailOpen] = useState(false);
@@ -116,11 +118,12 @@ export default function Nav({ setPage, onOpenCart, cartCount, user, setUser, pag
             </button>
           </div>
         </div>
+        <AnnouncementMarquee announcement={announcement} light={!darkMode && !drawerOpen} />
       </nav>
 
       {/* Mobile drawer */}
       {drawerOpen && (
-        <div className="mobile-drawer">
+        <div className="mobile-drawer" style={{ top:isAnnouncementVisible(announcement) ? 104 : 68 }}>
           {navItems.map(item => (
             <MobileNavSection key={item.label} item={item} setPage={setPage} user={user} close={() => setDrawerOpen(false)} />
           ))}

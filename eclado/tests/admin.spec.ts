@@ -3435,3 +3435,40 @@ test('活動標籤可選色並即時預覽及儲存', async ({ page }, testInfo)
   await expect.poll(() => saves.length).toBe(1);
   expect(saves[0]).toMatchObject({name:'春季活動',label_text:'限時 9 折',label_color:'#267a50',description:'完整活動說明\n保留換行'});
 });
+
+test('全站公告沿用活動管理樣式，可預覽、儲存並重新載入', async ({ page }, testInfo) => {
+  const saves: Record<string,unknown>[]=[];
+  await mockAdminApis(page,{siteAnnouncement:{content:'',enabled:false},onSiteAnnouncementSave:payload=>saves.push(payload)});
+  await page.goto('/admin'); await openAdminSection(page,/活動管理/);
+  await page.getByRole('button',{name:'全站公告',exact:true}).click();
+  const toggle=page.getByRole('switch',{name:'顯示跑馬燈'});
+  await expect(toggle).not.toBeChecked();
+  await page.getByRole('button',{name:'儲存設定'}).click();
+  await expect.poll(()=>saves.length).toBe(1);
+  await toggle.click();
+  await page.getByRole('button',{name:'儲存設定'}).click();
+  await expect(page.getByRole('alert')).toContainText('請輸入公告文字');
+  expect(saves).toHaveLength(1);
+  await page.getByLabel('公告文字',{exact:true}).fill('任選2件即免運');
+  await expect(page.getByText('7/200',{exact:true})).toBeVisible();
+  await expect(page.getByRole('region',{name:'公告跑馬燈預覽'})).toBeVisible();
+  await page.screenshot({path:testInfo.outputPath('announcement-settings.png'),fullPage:true});
+  await page.getByRole('button',{name:'儲存設定'}).click();
+  await expect(page.getByRole('status')).toHaveText('公告設定已儲存');
+  expect(saves[1]).toEqual({p_content:'任選2件即免運',p_enabled:true});
+  await page.getByRole('button',{name:'優惠活動',exact:true}).click();
+  await page.getByRole('button',{name:'全站公告',exact:true}).click();
+  await expect(page.getByLabel('公告文字',{exact:true})).toHaveValue('任選2件即免運');
+  await expect(toggle).toBeChecked();
+});
+
+test('全站公告儲存失敗保留編輯內容', async ({page})=>{
+  await mockAdminApis(page,{siteAnnouncement:{content:'原公告',enabled:true},siteAnnouncementSaveError:true});
+  await page.goto('/admin');await openAdminSection(page,/活動管理/);
+  await page.getByRole('button',{name:'全站公告',exact:true}).click();
+  await page.getByLabel('公告文字',{exact:true}).fill('修改的公告');
+  await page.getByRole('button',{name:'儲存設定'}).click();
+  await expect(page.getByRole('alert')).toContainText('儲存失敗');
+  await expect(page.getByLabel('公告文字',{exact:true})).toHaveValue('修改的公告');
+  await expect(page.getByText('公告設定已儲存',{exact:true})).toHaveCount(0);
+});
