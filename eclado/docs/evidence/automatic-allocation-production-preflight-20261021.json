@@ -1,0 +1,63 @@
+{
+  "captured_at": "2026-10-21T06:13:01.011841+00:00",
+  "phase": "production-read-only-preflight-and-backup",
+  "candidate_commit": "878f364",
+  "project_ref": "ilvdvlkdpntwmaijncaz",
+  "database_backup_sha256": "c1f46f068ea79923eebead337886f83b9da3c442b7d4dc604006b3c3a0f808dc",
+  "migration_sha256": "2f6be67e97f1b43d542753d237bf9c0589827487c830974133b5954568255f3b",
+  "allocation_table_installed": false,
+  "function_count": 271,
+  "target_definitions_owner_acl_match_test_baseline": {
+    "assisted_discount_quote(jsonb,text,text,text,uuid,boolean)": true,
+    "create_assisted_order(uuid,jsonb)": true,
+    "create_order_with_pricing_discount_v2(jsonb,text,text,text,text,text,text,text,text)": true,
+    "create_order_with_pricing(jsonb,text,text,text,text,text,text,text,text,text,text,text,bigint,jsonb)": true,
+    "create_order_with_pricing(jsonb,text,text,text,text,text,text,text,text,text,text,text,bigint)": true,
+    "create_order_with_pricing(jsonb,text,text,text,text,text,text,text,text,text,text,text)": true,
+    "create_order_with_pricing(jsonb,text,text,text,text,text,text,text,text)": true,
+    "create_order_with_pricing(jsonb,text,text,text,text,text,text,text)": true,
+    "persist_assisted_benefits(text,jsonb,uuid,text)": true,
+    "quote_assisted_order(jsonb)": true,
+    "quote_order_pricing_discount_v2(jsonb,text,text,text)": true,
+    "student_price_confirmation(jsonb)": true,
+    "quote_order_pricing_internal_20260916(jsonb,text)": true
+  },
+  "other_function_differences": [
+    "reward_withdrawal_schedule(timestamp with time zone)"
+  ],
+  "active_automatic_price_activity_count": 1,
+  "automatic_price_activity_overlap": false,
+  "coupon_policy_counts": {
+    "allow_auto_gifts": 4,
+    "coupon_only": 2,
+    "allow_all": 1
+  },
+  "database_writes": false,
+  "payment": {
+    "backup_dir": "/opt/eclado-payment-api/backups/automatic-allocation-20261021-mofYG5",
+    "files_verified": [
+      "server.js",
+      "assisted-orders.js",
+      "package.json",
+      "package-lock.json"
+    ],
+    "before_after_pid": 1983124,
+    "health_ok": true,
+    "health_time": "2026-10-21T06:13:17.521Z",
+    "server_sha256": "485150d4e6bd6a99f4a1514ce71448587f4723a763efdc8e3c3810fa6ea963b3",
+    "assisted_sha256": "efac286574fc00d7ca13ed272049cbcb511388309596ed38104de2899f2f198b",
+    "matches_candidate_parent": true,
+    "restarted": false
+  },
+  "push_performed": false,
+  "migration_executed": false,
+  "engine_enabled": false,
+  "frontend": {
+    "revision": "1ba8ae7c596b2a7c6b2cccb31e55ad7cb16fd862",
+    "environment": "Production",
+    "status": "Ready",
+    "domain": "ecladotaiwan.com",
+    "deployment_id": "88FsgZss7Cazx4md9jSbLs16pTVX",
+    "url": "https://vercel.com/eclado-s-projects/eclado/88FsgZss7Cazx4md9jSbLs16pTVX"
+  }
+}

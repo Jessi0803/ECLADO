@@ -1,0 +1,88 @@
+{
+  "phase": "production-database-installed-OFF",
+  "candidate_commit": "878f364",
+  "project_ref": "ilvdvlkdpntwmaijncaz",
+  "audit_at": "2026-10-21T06:57:37.268614+00:00",
+  "migration_sha256": "2f6be67e97f1b43d542753d237bf9c0589827487c830974133b5954568255f3b",
+  "guarded_install_sha256": "a78402140c773a67bfa9bd1fec0cfdde1a7ffb7cb76fae3a6475b34dcfe74be8",
+  "guarded_install_requires_baseline_match": true,
+  "checks": {
+    "settings_rls": true,
+    "settings_exist": true,
+    "no_client_switch": true,
+    "private_creators": true,
+    "authority_matches": true,
+    "private_allocator": true,
+    "private_authority": true,
+    "assisted_connected": true,
+    "storefront_connected": true,
+    "confirmation_versioned": true
+  },
+  "function_count_before": 271,
+  "function_count_after": 281,
+  "changed_existing_functions": [
+    "assisted_discount_quote(jsonb,text,text,text,uuid,boolean)",
+    "create_assisted_order(uuid,jsonb)",
+    "create_order_with_pricing_discount_v2(jsonb,text,text,text,text,text,text,text,text)",
+    "create_order_with_pricing(jsonb,text,text,text,text,text,text,text,text,text,text,text,bigint,jsonb)",
+    "create_order_with_pricing(jsonb,text,text,text,text,text,text,text,text,text,text,text,bigint)",
+    "create_order_with_pricing(jsonb,text,text,text,text,text,text,text,text,text,text,text)",
+    "create_order_with_pricing(jsonb,text,text,text,text,text,text,text,text)",
+    "create_order_with_pricing(jsonb,text,text,text,text,text,text,text)",
+    "persist_assisted_benefits(text,jsonb,uuid,text)",
+    "quote_assisted_order(jsonb)",
+    "quote_order_pricing_discount_v2(jsonb,text,text,text)",
+    "student_price_confirmation(jsonb)"
+  ],
+  "new_functions": [
+    "allocate_automatic_prices(jsonb,text,uuid)",
+    "automatic_price_allocation_enabled()",
+    "bound_automatic_price_allocation(jsonb,jsonb,integer[],integer[],integer)",
+    "create_order_with_allocation_confirmation_base(jsonb,text,text,text,text,text,text,text)",
+    "create_order_with_allocation_confirmation_base(jsonb,text,text,text,text,text,text,text,text)",
+    "create_order_with_allocation_confirmation_base(jsonb,text,text,text,text,text,text,text,text,text,text,text)",
+    "create_order_with_allocation_confirmation_base(jsonb,text,text,text,text,text,text,text,text,text,text,text,bigint)",
+    "evaluate_automatic_price_allocation(jsonb,jsonb,integer[])",
+    "quote_order_pricing_allocation_base(jsonb,text)",
+    "solve_automatic_price_component(jsonb,jsonb,integer)"
+  ],
+  "all_new_functions_private_to_clients": true,
+  "existing_acl_owner_changes": [],
+  "rollback_acceptance": {
+    "cases": [
+      "disjoint_products_sum_300",
+      "same_units_percentage_best",
+      "bogo_8_second_cheapest_repeat",
+      "bogo_8_second_cheapest_once",
+      "real_professional_quote_current_activity_matches_OFF",
+      "transactional_ON_authority_guard"
+    ],
+    "passed": true,
+    "bank_calls": 0,
+    "case_count": 6,
+    "enabled_after": false,
+    "created_orders": 0,
+    "modified_profiles": 0,
+    "sequence_advanced": false,
+    "modified_activities": 0
+  },
+  "final_state": {
+    "counts": {
+      "orders": 97,
+      "promotions": 12,
+      "adjustments": 17
+    },
+    "enabled": false,
+    "promotions_unchanged": true,
+    "immutable_trigger_enabled": true,
+    "promotion_scopes_unchanged": true
+  },
+  "payment_health": {
+    "ok": true,
+    "time": "2026-10-21T07:00:58.203Z"
+  },
+  "frontend_pushed": false,
+  "payment_restarted": false,
+  "enabled_for_live_traffic": false,
+  "test_fixture_scripts_executed_on_production": false
+}
