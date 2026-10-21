@@ -359,7 +359,7 @@ async function getSupabaseOrderPaymentState(orderNo) {
   }
   const params = new URLSearchParams({
     id: `eq.${orderNo}`,
-    select: 'id,user_id,member,email,phone,address,invoice_type,invoice_company_name,invoice_tax_id,order_source,public_lookup_code,status,fulfillment_method,total,shopping_credit_amount,reward_credit_amount,payment_amount,subtotal,discount,promotion_name,coupon_name,coupon_code_mask,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
+    select: 'id,user_id,member,email,phone,address,invoice_type,invoice_company_name,invoice_tax_id,order_source,public_lookup_code,status,fulfillment_method,total,shopping_credit_amount,reward_credit_amount,payment_amount,subtotal,discount,promotion_name,coupon_name,coupon_code_mask,pricing_snapshot,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
     limit: '1',
   });
   const rows = await fetchOrderRowsWithRewardCompatibility(params, 'Supabase order lookup failed');
@@ -439,7 +439,7 @@ function verifyGuestAccessToken(token, orderNo) {
 async function getSupabaseGuestOrderByLookup(lookupCode) {
   const params = new URLSearchParams({
     public_lookup_code: `eq.${lookupCode}`,
-    select: 'id,user_id,member,email,phone,public_lookup_code,status,fulfillment_method,total,shopping_credit_amount,reward_credit_amount,payment_amount,subtotal,discount,promotion_name,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
+    select: 'id,user_id,member,email,phone,public_lookup_code,status,fulfillment_method,total,shopping_credit_amount,reward_credit_amount,payment_amount,subtotal,discount,promotion_name,pricing_snapshot,items,payment_due_at,date,created_at,updated_at,tracking,shipping_carrier,shipped_at',
     limit: '1',
   });
   const rows = await fetchOrderRowsWithRewardCompatibility(params, 'Guest order lookup failed');
@@ -462,6 +462,9 @@ function toPublicOrderPaymentState(order) {
     discount,
     shipping: Math.max(0, total - subtotal + discount),
     promotion_name: order.promotion_name || null,
+    adjustments: Array.isArray(order.pricing_snapshot?.adjustments) ? order.pricing_snapshot.adjustments
+      .filter(row => row && ['legacy_discount', 'percentage_discount', 'fixed_discount', 'buy_x_get_y'].includes(row.adjustment_type))
+      .map(row => ({ name: row.name, amount: row.amount, adjustment_type: row.adjustment_type })) : [],
     items: Array.isArray(order.items) ? order.items : [],
     payment_due_at: order.payment_due_at,
     date: order.date || null,

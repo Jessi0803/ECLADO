@@ -73,6 +73,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   const [appliedCouponCode, setAppliedCouponCode] = useState('');
   const [couponQuote, setCouponQuote] = useState(null);
   const [couponState, setCouponState] = useState({ loading: false, error: '' });
+  const [automaticQuote, setAutomaticQuote] = useState({ key: '', summary: null, error: '' });
   const [shoppingCredit, setShoppingCredit] = useState({ available: 0, loading: false, error: '' });
   const [useShoppingCredit, setUseShoppingCredit] = useState(false);
   const [shoppingCreditAmount, setShoppingCreditAmount] = useState(0);
@@ -87,12 +88,18 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   const [copiedAtmNo, setCopiedAtmNo] = useState(false);
   const isMobile = useIsMobile();
 
-  // Browser values are a preview. The order RPC recalculates member prices and
-  // chooses the single best live promotion before any payment request is made.
+  const automaticQuoteKey = JSON.stringify([user?.uid, user?.role, fulfillmentMethod, walletRevision,
+    cart.map(item => [item.id, item.variantId || item.variant_id || item.variantSize, item.qty, getMemberPrice(item, user)])]);
+  const automaticSummary = automaticQuote.key === automaticQuoteKey ? automaticQuote.summary : null;
+  const automaticNotice = automaticQuote.key !== automaticQuoteKey ? '正在確認活動優惠…'
+    : automaticQuote.error ? `以下為估算金額；${automaticQuote.error}。付款前會重新確認。` : '';
+  // Browser arithmetic is only a temporary fallback while the server resolves
+  // authoritative member prices and the complete automatic allocation.
   const { subtotal, discount, finalSubtotal, promotion } =
     calculateDiscount(cart, promotions, user);
   const canPickup = areAllCustomOrderItems(cart);
-  const deliveryShipping = calculateShipping(cart, user, finalSubtotal, FULFILLMENT_DELIVERY, shippingGroup);
+  const deliveryShipping = fulfillmentMethod === FULFILLMENT_DELIVERY && automaticSummary
+    ? automaticSummary.shipping : calculateShipping(cart, user, finalSubtotal, FULFILLMENT_DELIVERY, shippingGroup);
   const shipping = calculateShipping(
     cart,
     user,
@@ -101,7 +108,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     fulfillmentMethod === FULFILLMENT_DELIVERY ? shippingGroup : null,
   );
   const total = finalSubtotal + shipping;
-  const baseCheckoutSummary = couponQuote || {
+  const baseCheckoutSummary = couponQuote || automaticSummary || {
     subtotal, discount, finalSubtotal, promotion, coupon: null, shipping, total,
     shippingGroup: fulfillmentMethod === FULFILLMENT_DELIVERY ? shippingGroup : null,
     isAdditionalOrder: fulfillmentMethod === FULFILLMENT_DELIVERY && Boolean(shippingGroup?.id),
@@ -224,6 +231,19 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   }, []);
 
   useEffect(() => {
+    let active = true;
+    if (!cart.length) return () => { active = false; };
+    const timer = setTimeout(() => {
+      quoteAuthoritativeOrder({ items: cart, fulfillmentMethod }).then(quote => {
+        if (active) setAutomaticQuote({ key: automaticQuoteKey, summary: toPaymentSummary(quote), error: '' });
+      }).catch(error => {
+        if (active) setAutomaticQuote({ key: automaticQuoteKey, summary: null, error: error?.message || '暫時無法確認活動優惠' });
+      });
+    }, 250);
+    return () => { active = false; clearTimeout(timer); };
+  }, [automaticQuoteKey]);
+
+  useEffect(() => {
     if (!user?.uid || invoiceDefaultsLoadedRef.current) return;
     const canUseInvoiceDefaults = isProfessionalMember(user);
     setInvoiceCompanyName(canUseInvoiceDefaults ? (user.defaultInvoiceCompanyName || '') : '');
@@ -321,6 +341,8 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       promotion: authoritativeOrder.promotion,
       coupon: authoritativeOrder.coupon,
       adjustments: authoritativeOrder.adjustments,
+      automaticAllocationVersion: authoritativeOrder.automatic_allocation_version ?? authoritativeOrder.pricing_snapshot?.automatic_allocation_version,
+      automaticAllocations: authoritativeOrder.pricing_snapshot?.automatic_allocations ?? null,
       shipping: authoritativeOrder.shipping,
       total: authoritativeOrder.total,
       items,
@@ -408,12 +430,15 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       const visible = baseCheckoutSummary;
       const walletChanged=rewardCredit.ready && Number(latestQuote.payment_amount)!==Number(checkoutSummary.paymentTotal);
       const amountChanged = ['subtotal','discount','shipping','total'].some(key => Number(latestSummary[key]) !== Number(visible[key]));
+      const allocationChanged = (latestSummary.automaticAllocationVersion === 1 || visible.automaticAllocationVersion === 1)
+        && (latestSummary.automaticAllocationVersion !== visible.automaticAllocationVersion
+          || JSON.stringify(latestSummary.automaticAllocations) !== JSON.stringify(visible.automaticAllocations));
       const itemChanged = cart.some(item => {
         const line = latestQuote.items.find(line => Number(line.product_id || line.id) === Number(item.id)
           && (!item.variantId || String(line.variant_id) === String(item.variantId)) && line.line_type !== 'gift');
         return !line || Number(line.unit_price) !== getMemberPrice(item,user);
       });
-      if (amountChanged || itemChanged || walletChanged || (useRewardCredit&&Number(rewardCreditAmount)!==appliedRewardCredit)) {
+      if (amountChanged || allocationChanged || itemChanged || walletChanged || (useRewardCredit&&Number(rewardCreditAmount)!==appliedRewardCredit)) {
         setCouponQuote(latestSummary);
         if (!window.confirm(`商品或優惠金額已更新，最新銀行應付 NT$${Number(latestQuote.payment_amount??(latestQuote.total-appliedShoppingCredit)).toLocaleString()}，購物金 NT$${Number(latestQuote.shopping_credit_amount??appliedShoppingCredit).toLocaleString()}、返饋金 NT$${Number(latestQuote.reward_credit_amount||0).toLocaleString()}。請確認是否使用最新報價建立訂單。`)) return;
       }
@@ -614,7 +639,8 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
           </div>
 
           <CheckoutOrderSummary
-            items={paymentSnapshot || couponQuote?.items || cart}
+            items={paymentSnapshot || couponQuote?.items || automaticSummary?.items || cart}
+            pricingNotice={paymentSummary || couponQuote ? '' : automaticNotice}
             products={products}
             summary={paymentSummary || checkoutSummary}
             user={user}
@@ -921,7 +947,8 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
             </div>
 
             <CheckoutOrderSummary
-              items={paymentSnapshot || couponQuote?.items || cart}
+              items={paymentSnapshot || couponQuote?.items || automaticSummary?.items || cart}
+              pricingNotice={paymentSummary || couponQuote ? '' : automaticNotice}
               products={products}
               summary={paymentSummary || checkoutSummary}
               user={user}

@@ -1,0 +1,198 @@
+{
+  "date": "2026-10-21",
+  "environment": "test",
+  "project_ref": "qqlgqasbmbicnmvnlqbr",
+  "production_modified": false,
+  "bank_calls": 0,
+  "backup_sha256": "9008f10ccf07859fa6e33803d0432560c4643328651bba193f66812d2cc86f98",
+  "old_engine": {
+    "acceptance": {
+      "cases": [
+        {
+          "case": "mixed_8_second_cheapest",
+          "passed": true,
+          "discount": 3000
+        },
+        {
+          "case": "repeat_boundaries_3_4_7_8_12_96",
+          "passed": true
+        },
+        {
+          "case": "once_8_only_1_free",
+          "passed": true
+        },
+        {
+          "case": "buy_2_get_2_repeat",
+          "passed": true
+        },
+        {
+          "case": "product_scope",
+          "passed": true
+        },
+        {
+          "case": "member_roles_guest_and_guest_only",
+          "passed": true
+        },
+        {
+          "case": "activity_period",
+          "passed": true
+        },
+        {
+          "case": "best_automatic_discount",
+          "passed": true
+        },
+        {
+          "case": "storefront_creation_snapshot_and_wallet_wrapper",
+          "passed": true
+        },
+        {
+          "case": "assisted_creation_inventory_and_snapshot",
+          "passed": true
+        },
+        {
+          "case": "coupon_only_gift_and_all_stacking",
+          "passed": true
+        },
+        {
+          "case": "coupon_order_rounding_and_redemption",
+          "passed": true
+        },
+        {
+          "case": "original_four_benefits_regression",
+          "passed": true
+        },
+        {
+          "case": "invalid_counts_and_authorisation",
+          "passed": true
+        }
+      ],
+      "passed": true,
+      "bank_calls": 0,
+      "case_count": 14,
+      "original_order_count": 1,
+      "retained_test_orders": 0,
+      "all_public_table_rows_unchanged": true
+    },
+    "verification": {
+      "assisted_engine": true,
+      "storefront_engine": true,
+      "calculator_private": true,
+      "buy_quantity_installed": true,
+      "configuration_constraint": true,
+      "snapshots_accept_benefit": true,
+      "audience_editor_preserved": true,
+      "assisted_product_id_bounds": true,
+      "storefront_audience_preserved": true,
+      "storefront_persists_adjustment": true,
+      "assisted_customer_audience_preserved": true
+    }
+  },
+  "new_engine": {
+    "cases": [
+      "disjoint_300_real_wallet_order_snapshots",
+      "stale_same_amount_and_legacy_client_rejected",
+      "shopping_credit_reservation_and_net_bank_amount",
+      "coupon_three_stacking_modes",
+      "global_best_and_allocated_threshold",
+      "same_unit_best_percentage",
+      "same_variant_split_and_whole_group_occupancy",
+      "repeat_second_cheapest_once_and_cheap_remainder",
+      "assisted_real_order_and_customer_guest_identity",
+      "designated_gift_keeps_original_eligibility",
+      "legacy_combines_and_persists",
+      "switch_keeps_historical_snapshots",
+      {
+        "case": "overlap_20_variants",
+        "elapsed_ms": 22.88,
+        "search_nodes": 117
+      }
+    ],
+    "passed": true,
+    "bank_calls": 0,
+    "case_count": 13,
+    "original_order_count": 1,
+    "retained_test_orders": 0,
+    "all_public_table_rows_unchanged": true
+  },
+  "final": {
+    "checks": {
+      "settings_rls": true,
+      "settings_exist": true,
+      "no_client_switch": true,
+      "private_creators": true,
+      "authority_matches": true,
+      "private_allocator": true,
+      "private_authority": true,
+      "assisted_connected": true,
+      "storefront_connected": true,
+      "confirmation_versioned": true
+    },
+    "counts": {
+      "orders": 1,
+      "promotions": 0,
+      "adjustments": 0
+    },
+    "enabled": false,
+    "immutable_trigger_enabled": true
+  },
+  "function_audit": {
+    "before": 263,
+    "after": 278,
+    "removed": [],
+    "existing_owner_acl_changes": [],
+    "changed_definitions": [
+      "assisted_discount_quote(jsonb,text,text,text,uuid,boolean)",
+      "create_assisted_order(uuid,jsonb)",
+      "create_order_with_pricing_discount_v2(jsonb,text,text,text,text,text,text,text,text)",
+      "create_order_with_pricing(jsonb,text,text,text,text,text,text,text,text,text,text,text,bigint,jsonb)",
+      "create_order_with_pricing(jsonb,text,text,text,text,text,text,text,text,text,text,text,bigint)",
+      "create_order_with_pricing(jsonb,text,text,text,text,text,text,text,text,text,text,text)",
+      "create_order_with_pricing(jsonb,text,text,text,text,text,text,text,text)",
+      "create_order_with_pricing(jsonb,text,text,text,text,text,text,text)",
+      "persist_assisted_benefits(text,jsonb,uuid,text)",
+      "quote_assisted_order(jsonb)",
+      "quote_order_pricing_discount_v2(jsonb,text,text,text)",
+      "student_price_confirmation(jsonb)"
+    ],
+    "added": [
+      "_admin_order_inventory_state(text,text,text,jsonb)",
+      "_admin_order_list_rows(text)",
+      "_admin_order_quantity(jsonb)",
+      "allocate_automatic_prices(jsonb,text,uuid)",
+      "automatic_price_allocation_enabled()",
+      "bound_automatic_price_allocation(jsonb,jsonb,integer[],integer[],integer)",
+      "create_order_with_allocation_confirmation_base(jsonb,text,text,text,text,text,text,text)",
+      "create_order_with_allocation_confirmation_base(jsonb,text,text,text,text,text,text,text,text)",
+      "create_order_with_allocation_confirmation_base(jsonb,text,text,text,text,text,text,text,text,text,text,text)",
+      "create_order_with_allocation_confirmation_base(jsonb,text,text,text,text,text,text,text,text,text,text,text,bigint)",
+      "evaluate_automatic_price_allocation(jsonb,jsonb,integer[])",
+      "get_admin_order_detail(text)",
+      "get_admin_orders_page(integer,integer,text,text,text)",
+      "quote_order_pricing_allocation_base(jsonb,text)",
+      "solve_automatic_price_component(jsonb,jsonb,integer)"
+    ]
+  },
+  "ui": {
+    "source": "native Chrome, authenticated test admin, real test Supabase RPC",
+    "desktop": [
+      "cart",
+      "checkout",
+      "account order",
+      "admin order detail",
+      "print preview"
+    ],
+    "mobile_viewport": "390x844",
+    "mobile": [
+      "cart",
+      "checkout",
+      "account order"
+    ],
+    "original_cart_restored_empty": true,
+    "payment_created_via_browser": false
+  },
+  "limitations": [
+    "No real bank/payment-host end-to-end call",
+    "Synthetic performance case; exhaustive solver retains 20000-node and 128-cell refusal limits",
+    "No production installation, deployment, commit or push"
+  ]
+}

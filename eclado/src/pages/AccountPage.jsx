@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import OrderPriceAdjustments from '../components/OrderPriceAdjustments.jsx';
 import {
   getMemberRole,
   getMemberTier,
@@ -627,7 +628,7 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
                             {item.price != null && <span>NT$ {Number(item.price).toLocaleString()}</span>}
                           </div>
                         ))}
-                        {order.promotion_name && <div style={{ fontSize:12, color:'var(--accent)' }}>活動：{order.promotion_name}</div>}
+                        <OrderPriceAdjustments order={order} />
                         {order.fulfillment_method === 'onsite_pickup' && (
                           <div style={{ marginTop:4, padding:'12px 14px', background:'var(--accent-tint)', border:'1px solid var(--accent)', fontSize:12, color:'var(--dark)' }}>
                             客訂商品現場自取{order.status === 'ready_for_pickup' ? '，商品已可取貨' : order.status === 'picked_up' ? '，已完成取貨' : '，目前正在處理中'}。

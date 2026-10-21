@@ -25,12 +25,13 @@ function OrderProductImage({ source, fallback, name }) {
     : <span aria-label={`${name}：暫無圖片`} style={{ display:'flex',alignItems:'center',justifyContent:'center',height:'100%',fontSize:10,color:'var(--mid)' }}>暫無圖片</span>;
 }
 
-export default function CheckoutOrderSummary({ items, summary, user, fulfillmentMethod = 'delivery', products = [] }) {
+export default function CheckoutOrderSummary({ items, summary, user, fulfillmentMethod = 'delivery', products = [], pricingNotice = '' }) {
   const hasPreorderItem = items.some(item => !item.is_gift && item.line_type !== 'gift' && getSummaryFulfillment(item).type === 'preorder');
 
   return (
     <div style={{ background:'var(--off-white)', padding:'28px 24px', height:'fit-content' }}>
       <h3 style={{ fontFamily:'var(--font-display)', fontSize:16, fontWeight:400, marginBottom:20, letterSpacing:'0.04em' }}>訂單明細</h3>
+      {pricingNotice && <p role="status" style={{ fontSize:12, marginBottom:12, lineHeight:1.6 }}>{pricingNotice}</p>}
       {hasPreorderItem && (
         <div style={{ background:'var(--accent-tint)', border:'1px solid var(--accent)', padding:'12px 14px', marginBottom:16, fontSize:12, color:'var(--dark)', lineHeight:1.7 }}>
           訂單含預購商品，預購品項出貨時間為 7-14 個工作天。

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import OrderPriceAdjustments from '../../components/OrderPriceAdjustments.jsx';
 import { getPaymentStateLabel, PAYMENT_METHODS } from '../../domain/payments.js';
 import { SF_EXPRESS_TRACKING_URL } from '../../domain/shipping.js';
 import { supabase } from '../../services/supabase.js';
@@ -1050,15 +1051,7 @@ export default function Orders({ refreshVersion = 0, persistOrderPatch: persistO
                 <span>商品小計</span><span>NT$ {Number(selected.subtotal).toLocaleString()}</span>
               </div>
             )}
-            {selected.discount > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 6, color: 'var(--red)' }}>
-                <span>
-                  {selected.couponName ? '優惠券折抵' : '活動折抵'}
-                  {(selected.couponName || selected.promotionName) ? `（${selected.couponName || selected.promotionName}${selected.couponCodeMask ? ` · ${selected.couponCodeMask}` : ''}）` : ''}
-                </span>
-                <span style={{ fontWeight: 500 }}>−NT$ {Number(selected.discount).toLocaleString()}</span>
-              </div>
-            )}
+            <OrderPriceAdjustments order={selected} style={{ color: 'var(--red)' }} />
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 6, color: 'var(--mid)' }}>
               <span>運費</span>
               <span>{selected.shipping === 0 ? '免運' : `NT$ ${Number(selected.shipping).toLocaleString()}`}</span>

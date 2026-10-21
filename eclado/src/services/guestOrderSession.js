@@ -10,6 +10,9 @@ function sanitizeResult(result = {}) {
     discount: sourceOrder.discount,
     shipping: sourceOrder.shipping,
     promotion_name: sourceOrder.promotion_name,
+    adjustments: Array.isArray(sourceOrder.adjustments) ? sourceOrder.adjustments.map(row => ({
+      name: row.name, amount: row.amount, adjustment_type: row.adjustment_type,
+    })) : [],
     items: Array.isArray(sourceOrder.items) ? sourceOrder.items : [],
     payment_due_at: sourceOrder.payment_due_at,
     date: sourceOrder.date,

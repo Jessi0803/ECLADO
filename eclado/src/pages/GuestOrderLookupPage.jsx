@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import OrderPriceAdjustments from '../components/OrderPriceAdjustments.jsx';
 import { getProductImagePublicUrl } from '../services/catalogData.js';
 import { getOrderStatusLabel, getPaymentStateColor, getPaymentStateLabel, PAYMENT_METHODS } from '../domain/payments.js';
 import { SF_EXPRESS_TRACKING_URL } from '../domain/shipping.js';
@@ -309,7 +310,7 @@ export default function GuestOrderLookupPage({ setPage }) {
                 </div>
                 <div style={{ borderTop:'1px solid var(--light)', marginTop:20, paddingTop:16, display:'grid', gap:9, fontSize:13 }}>
                   <div style={{ display:'flex', justifyContent:'space-between' }}><span>小計</span><span>NT$ {Number(order.subtotal || 0).toLocaleString()}</span></div>
-                  {Number(order.discount) > 0 && <div style={{ display:'flex', justifyContent:'space-between', color:'var(--accent)' }}><span>活動折扣{order.promotion_name ? ` · ${order.promotion_name}` : ''}</span><span>−NT$ {Number(order.discount).toLocaleString()}</span></div>}
+                  <OrderPriceAdjustments order={order} />
                   <div style={{ display:'flex', justifyContent:'space-between' }}><span>運費</span><span>{Number(order.shipping) === 0 ? '免運' : `NT$ ${Number(order.shipping).toLocaleString()}`}</span></div>
                   <div style={{ display:'flex', justifyContent:'space-between', borderTop:'1px solid var(--light)', paddingTop:12, fontWeight:600 }}><span>合計</span><span style={{ fontFamily:'var(--font-display)', fontSize:18 }}>NT$ {Number(order.total || 0).toLocaleString()}</span></div>
                 </div>

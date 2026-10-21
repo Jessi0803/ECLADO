@@ -1617,7 +1617,7 @@ test('結帳可試算一組優惠碼並以同一代碼建立權威訂單', async
   const quoteRequests: Record<string, unknown>[] = [];
   const orderRequests: Record<string, unknown>[] = [];
   await mockEcladoApis(page, {
-    onCouponQuote: request => quoteRequests.push(request),
+    onCouponQuote: request => { if (request.p_coupon_code) quoteRequests.push(request); },
     onOrderPricingRequest: request => orderRequests.push(request),
   });
 

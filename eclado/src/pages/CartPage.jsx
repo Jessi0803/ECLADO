@@ -14,6 +14,8 @@ import {
 import { getProfessionalOrderProgress, hasProfessionalOrderRules } from '../domain/memberShopping.js';
 import { calculateShipping } from '../domain/shipping.js';
 import { getMyAppendableShippingGroup } from '../services/shippingGroups.js';
+import { quoteAuthoritativeOrder } from '../services/orders.js';
+import OrderPriceAdjustments from '../components/OrderPriceAdjustments.jsx';
 
 // ─── CART PAGE ────────────────────────────────────────────────────────────────
 export default function CartPage({ cart, setCart, setPage, user, promotions = [], drawer = false, onClose }) {
@@ -22,6 +24,7 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
   const [itemsScrolling, setItemsScrolling] = useState(false);
   const [shippingGroup, setShippingGroup] = useState(null);
   const [shippingGroupError, setShippingGroupError] = useState('');
+  const [quoteState, setQuoteState] = useState({ key: '', quote: null, error: '' });
   const scrollStopTimer = useRef(null);
 
   useEffect(() => () => clearTimeout(scrollStopTimer.current), []);
@@ -68,9 +71,29 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
     setShowCheckoutChoice(false);
     setPage('checkout');
   }
-  const { subtotal, discount, finalSubtotal, promotion } = calculateDiscount(pricedCart, promotions, user);
+  const quoteKey = JSON.stringify([user?.uid, user?.role, pricedCart.map(item => [item.id, item.variantId || item.variant_id || item.variantSize, item.qty, getMemberPrice(item, user)])]);
+  useEffect(() => {
+    let active = true;
+    if (!pricedCart.length) return () => { active = false; };
+    const timer = setTimeout(() => {
+      quoteAuthoritativeOrder({ items: pricedCart }).then(quote => {
+        if (active) setQuoteState({ key: quoteKey, quote, error: '' });
+      }).catch(error => {
+        if (active) setQuoteState({ key: quoteKey, quote: null, error: error?.message || '暫時無法取得活動試算' });
+      });
+    }, 250);
+    return () => { active = false; clearTimeout(timer); };
+  }, [quoteKey]);
+  const currentQuote = quoteState.key === quoteKey ? quoteState.quote : null;
+  const quoteError = quoteState.key === quoteKey ? quoteState.error : '';
+  const quoteLoading = pricedCart.length > 0 && quoteState.key !== quoteKey;
+  const estimate = calculateDiscount(pricedCart, promotions, user);
+  const subtotal = currentQuote?.subtotal ?? estimate.subtotal;
+  const discount = currentQuote?.discount ?? estimate.discount;
+  const finalSubtotal = subtotal - discount;
+  const promotion = currentQuote?.promotion ?? estimate.promotion;
   const professionalProgress = getProfessionalOrderProgress(finalSubtotal, user, shippingGroup);
-  const shipping = calculateShipping(pricedCart, user, finalSubtotal, undefined, shippingGroup);
+  const shipping = currentQuote?.shipping ?? calculateShipping(pricedCart, user, finalSubtotal, undefined, shippingGroup);
   const grandTotal = finalSubtotal + shipping;
   const professionalProgressNotice = professionalProgress ? (
     <div
@@ -111,7 +134,7 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
           {drawer && <button type="button" onClick={onClose} aria-label="關閉購物車" style={{ position:'absolute', top:16, right: isMobile ? 0 : -13, width:36, height:36, border:'1px solid var(--light)', background:'none', color:'var(--dark)', fontSize:24, lineHeight:1, cursor:'pointer' }}>×</button>}
         </div>
 
-        {cart.length > 0 && promotions.some(p => isPromotionLive(p, user)) && discount === 0 && (
+        {!currentQuote && !quoteLoading && !quoteError && cart.length > 0 && promotions.some(p => isPromotionLive(p, user)) && discount === 0 && (
           <div style={{ background:'var(--accent-tint)', border:'1px solid var(--accent)', padding:'14px 18px', marginBottom:24, fontSize:13, color:'var(--dark)', lineHeight:1.65 }}>
             目前有<strong>限時優惠</strong>，但購物車內還沒有「活動指定商品」，所以尚無折抵。
           </div>
@@ -158,13 +181,15 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
                 {drawer && professionalProgressNotice}
               </div>
               {!drawer && professionalProgressNotice}
+              {quoteLoading && <p role="status" style={{ fontSize:12, marginBottom:10 }}>正在確認活動優惠…</p>}
+              {quoteError && <p role="status" style={{ fontSize:12, marginBottom:10 }}>以下為估算金額；{quoteError}。結帳時會重新確認。</p>}
               {shippingGroupError && (
                 <div role="alert" style={{ border:'1px solid #b87855', color:'#8a4c2d', padding:drawer ? '7px 9px' : '10px 12px', marginBottom:drawer ? 10 : 18, fontSize:drawer ? 10 : 12, lineHeight:1.6 }}>
                   無法確認追加訂單資格：{shippingGroupError}
                 </div>
               )}
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13 }}><span>小計</span><span style={{ fontFamily:'var(--font-display)' }}>NT$ {subtotal.toLocaleString()}</span></div>
-              {discount > 0 && promotion && (
+              {currentQuote ? <OrderPriceAdjustments order={currentQuote} style={{ marginBottom: drawer ? 5 : 10, fontSize:13 }} /> : discount > 0 && promotion && (
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13, color:'var(--accent)' }}>
                   <span>{promotion.name}</span>
                   <span style={{ fontFamily:'var(--font-display)' }}>−NT$ {discount.toLocaleString()}</span>

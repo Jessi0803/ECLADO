@@ -1,4 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
+import OrderPriceAdjustments from '../components/OrderPriceAdjustments.jsx';
 import { assistedApi } from '../services/assistedOrders.js';
 import { retrySinopacPayment } from '../services/paymentApi.js';
 import { PAYMENT_METHODS } from '../domain/payments.js';
@@ -57,7 +58,7 @@ export default function AssistedPaymentPage(){
       <h2>商品與金額</h2>
       <div className="assisted-payment-table-scroll"><table><thead><tr>{['商品／規格','數量','單價','小計'].map(label=><th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{order.items.map((item,index)=><tr key={index}><td>{item.is_gift&&'【贈品】'}{item.name} {item.size}{item.fulfillment_type==='preorder'&&'（含預購）'}</td><td>{item.qty}</td><td>{money(item.unit_price)}</td><td>{money(item.line_total)}</td></tr>)}</tbody></table></div>
       <div className="assisted-payment-totals"><p><span>商品小計</span><span>{money(order.subtotal)}</span></p>
-        {Number(order.discount)>0&&<p><span>促銷／優惠券折抵{order.promotion_name?`（${order.promotion_name}）`:''}</span><span>−{money(order.discount)}</span></p>}
+        <OrderPriceAdjustments order={order} />
         {order.coupon_name&&<p><span>優惠券</span><span>{order.coupon_name} {order.coupon_code_mask}</span></p>}
         <p><span>運費</span><span>{money(order.shipping)}</span></p>
         {Number(order.shopping_credit_amount)>0&&<p><span>購物金支付</span><span>−{money(order.shopping_credit_amount)}</span></p>}

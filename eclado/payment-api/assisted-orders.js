@@ -12,6 +12,9 @@ function publicAssistedOrder(order) {
     total:Number(order.total), shopping_credit_amount:Number(order.shopping_credit_amount||0),
     payment_amount:Number(order.payment_amount??order.total),
     promotion_name:order.promotion_name||null,coupon_name:order.coupon_name||null,coupon_code_mask:order.coupon_code_mask||null,
+    adjustments:(Array.isArray(order.pricing_snapshot?.adjustments)?order.pricing_snapshot.adjustments:[])
+      .filter(row=>row&&['legacy_discount','percentage_discount','fixed_discount','buy_x_get_y'].includes(row.adjustment_type))
+      .map(row=>({name:row.name,amount:row.amount,adjustment_type:row.adjustment_type})),
     payment_due_at:order.payment_due_at,
     fulfillment_method:order.fulfillment_method, invoice_type:order.invoice_type,
     invoice_company_name:order.invoice_type==='company' ? order.invoice_company_name : null,

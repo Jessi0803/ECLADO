@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { getOrderPriceAdjustments } from '../../domain/orderDiscounts.js';
 import { createPortal } from 'react-dom';
 import { STATUS_MAP } from './StatusIndicators.jsx';
 
@@ -84,7 +85,6 @@ export default function OrderPrintPreview({ order, onClose }) {
   const subtotal = Number.isFinite(savedSubtotal)
     ? savedSubtotal
     : items.reduce((sum, item) => sum + itemLineTotal(item), 0);
-  const discount = Math.max(0, numberValue(order.discount));
   const shoppingCreditDiscount = Math.max(0, numberValue(order.shoppingCreditDiscount));
   const shipping = Math.max(0, numberValue(order.shipping));
   const isCompanyInvoice = order.invoiceType === 'company';
@@ -160,7 +160,7 @@ export default function OrderPrintPreview({ order, onClose }) {
         <section className="order-print-summary" aria-label="訂單金額">
           <div><span>小計</span><strong>{money(subtotal)}</strong></div>
           <div><span>運費</span><strong>{shipping === 0 ? '—' : money(shipping)}</strong></div>
-          {discount > 0 && <div><span>{order.couponName ? '優惠券折抵' : '優惠折抵'}</span><strong>{negativeMoney(discount)}</strong></div>}
+          {getOrderPriceAdjustments(order).map((row, index) => <div key={index}><span>{row.name}</span><strong>{negativeMoney(row.amount)}</strong></div>)}
           {shoppingCreditDiscount > 0 && <div><span>購物金支付</span><strong>{negativeMoney(shoppingCreditDiscount)}</strong></div>}
           <div className="order-print-total"><span>應付總計</span><strong>{money(order.paymentAmount ?? order.total)}</strong></div>
         </section>

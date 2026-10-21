@@ -31,9 +31,13 @@ function fixture({bankFailure=false,rejected=false,duplicate=false,malformed=fal
   return {request,calls,order};
 }
 test('customer projection explicitly excludes staff notes, costs, stock and payment credentials',()=>{
-  const {order}=fixture();const data=publicAssistedOrder(order);
+  const {order}=fixture();
+  order.pricing_snapshot={private:'SECRET',adjustments:[{name:'活動A',amount:100,adjustment_type:'fixed_discount',qualification:{private:'SECRET'}},
+    {name:'活動B',amount:200,adjustment_type:'buy_x_get_y',private:'SECRET'}]};
+  const data=publicAssistedOrder(order);
   assert.equal(JSON.stringify(data).includes('SECRET'),false);assert.equal(data.invoice_company_name,null);
   assert.equal('stock_at_order' in data.items[0],false);assert.equal('cost' in data.items[0],false);
+  assert.deepEqual(data.adjustments,[{name:'活動A',amount:100,adjustment_type:'fixed_discount'},{name:'活動B',amount:200,adjustment_type:'buy_x_get_y'}]);
 });
 test('shopping credit requires explicit matching consent before any bank request; recorded consent recovers safely',async()=>{
   const f=fixture({credit:300});

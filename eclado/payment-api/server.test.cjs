@@ -697,6 +697,10 @@ test('訪客以短查詢碼與手機取得付款資訊，且回應不洩漏個�
         id: 'ECL-GUEST-001', user_id: null, member: '訪客', email: 'guest@example.com',
         phone: '0912-345-678', public_lookup_code: 'ABCDE-12345', status: 'unpaid',
         total: 4100, subtotal: 3980, discount: 0, items: [], payment_due_at: '2099-01-01T00:00:00.000Z',
+        pricing_snapshot: { private: 'PRIVATE-SNAPSHOT', adjustments: [
+          { name: '活動 A', amount: 100, adjustment_type: 'fixed_discount', qualification: { secret: 'PRIVATE-SNAPSHOT' } },
+          { name: '活動 B', amount: 200, adjustment_type: 'buy_x_get_y' },
+        ] },
         created_at: '2026-08-17T01:00:00.000Z', tracking: null, shipping_carrier: null, shipped_at: null,
       }]), { status: 200 });
     }
@@ -719,6 +723,8 @@ test('訪客以短查詢碼與手機取得付款資訊，且回應不洩漏個�
     assert.equal(body.order.email, undefined);
     assert.equal(body.order.phone, undefined);
     assert.equal(body.order.address, undefined);
+    assert.deepEqual(body.order.adjustments, [{ name: '活動 A', amount: 100, adjustment_type: 'fixed_discount' }, { name: '活動 B', amount: 200, adjustment_type: 'buy_x_get_y' }]);
+    assert.equal(JSON.stringify(body).includes('PRIVATE-SNAPSHOT'), false);
     assert.equal(body.order.created_at, '2026-08-17T01:00:00.000Z');
     assert.equal(server.verifyGuestAccessToken(body.guestAccessToken, 'ECL-GUEST-001'), true);
   } finally {
