@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import useIsMobile from '../../hooks/useIsMobile.js';
+import ProductImage from './ProductImage.jsx';
 import {
   applyVariantToProduct,
   getCartKey,
@@ -82,7 +83,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
           {/* 左：圖片 */}
           <div style={{ position: isMobile ? 'static' : 'sticky', top:90 }}>
             <div style={{ position:'relative', overflow:'hidden' }}>
-              <img src={images[activeImage] || getProductImage(product, 900)} alt={product.nameZh} style={{ width:'100%', aspectRatio:'1', objectFit:'contain', background:'var(--off-white)', display:'block' }} />
+              <ProductImage src={images[activeImage] || getProductImage(product, 900)} alt={product.nameZh} style={{ width:'100%', aspectRatio:'1', objectFit:'contain', background:'var(--off-white)', display:'block' }} />
             </div>
             {images.length > 1 && (
               <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8, marginTop:10 }}>

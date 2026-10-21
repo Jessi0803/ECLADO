@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import ProductImage from './ProductImage.jsx';
 import {
   PRODUCT_AUTO_IMAGE_TARGETS,
   analyzeTransparentImageBounds,
@@ -56,7 +57,7 @@ export default function ProductAutoImage({ src, alt, product, mode, style }) {
   }, [src, mode, manualScale, fallbackScale, shouldAnalyze]);
 
   return (
-    <img
+    <ProductImage
       ref={imgRef}
       src={src}
       alt={alt}
