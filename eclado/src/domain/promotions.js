@@ -119,3 +119,34 @@ export function getPromoDisplayPrice(product, user, promotions) {
   if (amount > 0) parts.push(`−NT$ ${amount.toLocaleString()}`);
   return { price: discounted, label: parts.join(' + '), promo: p };
 }
+
+// Storefront copy is independent of pricing: gift/threshold promotions also apply.
+export const DEFAULT_PROMOTION_LABEL_COLOR = '#C94A3F';
+
+export function getPromotionLabelColor(color) {
+  return /^#[0-9a-f]{6}$/i.test(color || '') ? color : DEFAULT_PROMOTION_LABEL_COLOR;
+}
+
+export function getPromotionLabelTextColor(color) {
+  const hex = getPromotionLabelColor(color).slice(1);
+  const channels = [0, 2, 4].map(offset => {
+    const value = parseInt(hex.slice(offset, offset + 2), 16) / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+  return luminance > 0.179 ? '#111111' : '#FFFFFF';
+}
+
+export function getProductDisplayPromotions(product, user, promotions = []) {
+  const now = Date.now();
+  return promotions.filter(p => {
+    const specifiedProducts = p.storefront_scope_type === 'products'
+      || (p.storefront_scope_type == null && (!p.benefit_type || p.benefit_type === 'legacy_discount'));
+    if (!specifiedProducts || !normProductIds(p).includes(Number(product.id))) return false;
+    if (p.active === false || p.archived_at || !promotionAllowsUser(p, user)) return false;
+    if ((p.activation_type || 'automatic') !== 'automatic') return false;
+    if (p.start_at && !(new Date(p.start_at).getTime() <= now)) return false;
+    if (p.end_at && !(new Date(p.end_at).getTime() > now)) return false;
+    return true;
+  });
+}

@@ -2673,3 +2673,32 @@ test('活動資格依目前身分判斷，訪客開關與會員身分各自獨�
   });
   expect(results).toEqual({eligibility:[false,true,true,false,false,false],guest:false,guestOnly:[true,false],legacy:[true,true,true,true,true,true],rejected:0,accepted:100,display:null});
 });
+
+test('指定商品活動標籤與完整說明依範圍及狀態顯示', async ({ page }, testInfo) => {
+  const promotion = { ...activePromotion, storefront_scope_type:'products', label_text:'限時 9 折', label_color:'#267A50', description:'指定商品享優惠\n結帳時自動套用，詳見活動條件。' };
+  await mockEcladoApis(page, { promotions:[
+    promotion,
+    {...promotion,id:'gift',benefit_type:'quantity_gift',discount_rate:1,discount_amount:0,label_text:'滿件贈',name:'滿件好禮'},
+    {...promotion,id:'store',storefront_scope_type:'all_regular',label_text:'全館不顯示'},
+    {...promotion,id:'sellable',storefront_scope_type:'all_sellable',label_text:'全商品不顯示'},
+    {...promotion,id:'inactive',active:false,label_text:'停用不顯示'},
+    {...promotion,id:'expired',end_at:'2020-01-01',label_text:'過期不顯示'},
+    {...promotion,id:'future',start_at:'2099-01-01',label_text:'未來不顯示'},
+    {...promotion,id:'member',allow_guest:false,label_text:'會員不顯示'},
+    {...promotion,id:'coupon',activation_type:'coupon_only',label_text:'券不顯示'},
+    {...promotion,id:'other',product_ids:[99999],label_text:'他品不顯示'},
+  ] });
+  await page.goto('/shop');
+  const card = page.locator('article').filter({ has:page.getByText('胜肽修護精華液 · 30ml', {exact:true}) });
+  await expect(card.getByTestId('promotion-label')).toHaveText(['限時 9 折','滿件贈']);
+  await expect(card.getByText('限時 9 折')).toHaveCSS('background-color','rgb(38, 122, 80)');
+  await expect(page.getByText(/不顯示/)).toHaveCount(0);
+  await expect(page.getByText('結帳時自動套用，詳見活動條件。', {exact:false})).toHaveCount(0);
+  await page.screenshot({path:testInfo.outputPath('promotion-list.png'),fullPage:true});
+  await card.getByRole('link').last().click();
+  const details = page.getByRole('region', {name:'活動說明'});
+  await expect(details).toContainText(promotion.description);
+  await expect(details).toContainText('滿件好禮');
+  await page.screenshot({path:testInfo.outputPath('promotion-detail.png'),fullPage:true});
+  await expect(page.getByText(/不顯示/)).toHaveCount(0);
+});

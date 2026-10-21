@@ -7,9 +7,9 @@ import {
 } from '../../domain/catalog.jsx';
 import {
   getPromoDisplayPrice,
-  isPromotionLive,
-  normProductIds,
+  getProductDisplayPromotions,
 } from '../../domain/promotions.js';
+import PromotionLabel from './PromotionLabel.jsx';
 import ProductAutoImage from './ProductAutoImage.jsx';
 import { getProductSlug } from '../../app/routes.js';
 
@@ -19,15 +19,15 @@ export default function ProductCard({ product, user, onAdd, onSelect, promotions
   const showPrice = getMemberPrice(product, user);
   const hasTierPrice = canAccessProfessionalCatalog(user) && showPrice !== product.price;
   const priceLabel = getProductPriceLabel(product, user);
-  const onPromo = promotions.some(p => isPromotionLive(p, user) && normProductIds(p).includes(Number(product.id)));
+  const displayPromotions = getProductDisplayPromotions(product, user, promotions);
   const promoDisplay = getPromoDisplayPrice(product, user, promotions);
   const productHref = `${routeBase}/${getProductSlug(product)}`;
   return (
     <article onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ position:'relative' }}>
-      {onPromo && (
-        <div style={{ position:'absolute', top:10, right:10, zIndex:3, background:'var(--accent)', color:'var(--white)', fontSize:10, padding:'3px 9px', letterSpacing:'0.1em', fontWeight:500 }}>活動中</div>
-      )}
       <div style={{ position:'relative', overflow:'hidden', width:'min(100%, 540px)', aspectRatio:'1', margin:'0 auto 14px', background:'var(--off-white)' }}>
+        <div aria-label="商品活動標籤" style={{ position:'absolute', top:10, left:10, right:10, zIndex:3, display:'flex', flexWrap:'wrap', alignItems:'start', gap:6, pointerEvents:'none' }}>
+          {displayPromotions.filter(p => p.label_text?.trim()).map(p => <PromotionLabel key={p.id} text={p.label_text} color={p.label_color} />)}
+        </div>
         <a href={productHref} onClick={event => { event.preventDefault(); onSelect(); }} aria-label={`查看${product.nameZh}`} style={{ position:'absolute', inset:0, display:'block', color:'inherit', textDecoration:'none' }}>
           <ProductAutoImage src={getProductImage(product)} alt={product.nameZh} product={product} mode="list" style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
         </a>

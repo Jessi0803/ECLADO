@@ -1,0 +1,39 @@
+{
+  "project_ref": "ilvdvlkdpntwmaijncaz",
+  "environment": "production",
+  "applied_at": "2026-10-21T08:41:13.673519Z",
+  "sql_file": "supabase-promotion-storefront-display.sql",
+  "sql_sha256": "4eba59287c3d731e8492d5c476a45dc95d18cce850e57b0e1196d077a7dcdae4",
+  "method": "Authenticated Supabase SQL Editor UI",
+  "query_id": "d58490cd-82b1-45bd-9aff-5fa7a4ca29af",
+  "preflight": {
+    "promotions": 12,
+    "orders": 97,
+    "promotion_hash": "b1dd68556860299b784159d9af1bf307",
+    "scope_hash": "e6839319e76ce294d8fbd73967d3a1c9",
+    "audience_wrapper": true,
+    "storefront_already_installed": false
+  },
+  "verification": {
+    "columns_ready": true,
+    "scopes_unchanged": true,
+    "wrapper_installed": true,
+    "anon_editor_denied": true,
+    "audience_preserved": true,
+    "private_scope_denied": true,
+    "private_editor_denied": true,
+    "labels_initially_blank": true,
+    "scope_backfill_correct": true,
+    "authenticated_editor_access": true,
+    "promotions": 12,
+    "orders": 97,
+    "raw_promotion_hash_unchanged": false,
+    "promotion_content_unchanged_after_restoring_original_updated_at_in_read_only_projection": true,
+    "distinct_backfill_updated_at_values": 1
+  },
+  "notes": [
+    "Existing updated_at trigger refreshed all activity timestamps during scope backfill. No timestamps were restored in the database.",
+    "Original activity content verified by recomputing the preflight hash with prior backed-up timestamps in a read-only projection.",
+    "No frontend deployment and no real activity label edits or successful save roundtrip performed."
+  ]
+}

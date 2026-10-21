@@ -3416,3 +3416,22 @@ test('買 X 送 Y 編輯會還原件數與單次贈送，並可連結優惠券',
   await page.getByRole('button', {name:'+ 新增優惠券'}).click();
   await expect(page.getByText(/買二送二 · 買 2 送 2/)).toBeVisible();
 });
+
+test('活動標籤可選色並即時預覽及儲存', async ({ page }, testInfo) => {
+  const saves: Record<string, unknown>[] = [];
+  await mockAdminApis(page, { onDiscountPromotionSave:payload => saves.push(payload) });
+  await page.goto('/admin');
+  await openAdminSection(page, /活動管理/);
+  await page.getByRole('button', {name:'+ 新增優惠活動'}).click();
+  await page.getByPlaceholder('例：秋季保養 9 折').fill('春季活動');
+  await page.getByLabel('活動標籤', {exact:true}).fill('限時 9 折');
+  await page.getByLabel('活動標籤顏色', {exact:true}).fill('#267a50');
+  const preview = page.getByLabel('活動標籤預覽').getByTestId('promotion-label');
+  await expect(preview).toHaveText('限時 9 折');
+  await expect(preview).toHaveCSS('background-color','rgb(38, 122, 80)');
+  await page.getByLabel('顧客說明', {exact:true}).fill('完整活動說明\n保留換行');
+  await page.screenshot({path:testInfo.outputPath('promotion-editor.png'),fullPage:true});
+  await page.getByRole('button', {name:'建立活動'}).click();
+  await expect.poll(() => saves.length).toBe(1);
+  expect(saves[0]).toMatchObject({name:'春季活動',label_text:'限時 9 折',label_color:'#267a50',description:'完整活動說明\n保留換行'});
+});

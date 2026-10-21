@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import useIsMobile from '../../hooks/useIsMobile.js';
+import PromotionLabel from './PromotionLabel.jsx';
 import ProductImage from './ProductImage.jsx';
 import {
   applyVariantToProduct,
@@ -14,8 +15,7 @@ import {
 } from '../../domain/catalog.jsx';
 import {
   getPromoDisplayPrice,
-  isPromotionLive,
-  normProductIds,
+  getProductDisplayPromotions,
 } from '../../domain/promotions.js';
 
 export default function ProductDetail({ product, user, onAdd, onBack, promotions = [] }) {
@@ -33,8 +33,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
   const priceLabel = getProductPriceLabel(displayProduct, user);
   const fulfillment = getFulfillmentInfo(displayProduct);
 
-  const livePromosForProduct = (promotions || []).filter(p => isPromotionLive(p, user) && normProductIds(p).includes(Number(product.id)));
-  const primaryPromo = livePromosForProduct[0];
+  const displayPromotions = getProductDisplayPromotions(product, user, promotions);
   const promoDisplay = getPromoDisplayPrice(displayProduct, user, promotions);
 
   function handleAdd() {
@@ -108,11 +107,20 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
               {fulfillment.shipping && <span style={{ fontSize:13, color:'var(--dark)', lineHeight:1.6 }}>{fulfillment.shipping}</span>}
             </div>
 
-            {primaryPromo && (
-              <div style={{ background:'var(--accent-tint)', border:'1px solid var(--accent)', padding:'14px 18px', marginBottom:20 }}>
-                <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--accent)', textTransform:'uppercase', marginBottom:6 }}>限時優惠</p>
-                <p style={{ fontSize:14, color:'var(--black)', fontWeight:500, marginBottom:0 }}>{primaryPromo.name}</p>
-              </div>
+            {displayPromotions.length > 0 && (
+              <section aria-label="活動說明" style={{ background:'var(--accent-tint)', border:'1px solid var(--light)', padding:'16px 18px', marginBottom:20 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, marginBottom:12 }}>
+                  <h2 style={{ fontSize:12, color:'var(--accent)', fontWeight:500, margin:0, flexShrink:0 }}>活動說明</h2>
+                  <div style={{ display:'flex', justifyContent:'flex-end', flexWrap:'wrap', gap:6, minWidth:0 }}>
+                    {displayPromotions.filter(promo => promo.label_text?.trim()).map(promo => <PromotionLabel key={promo.id} text={promo.label_text} color={promo.label_color} />)}
+                  </div>
+                </div>
+                {displayPromotions.map((promo, index) => <div key={promo.id} style={{ marginTop:index ? 16 : 0, paddingTop:index ? 16 : 0, borderTop:index ? '1px solid var(--light)' : undefined }}>
+                  <p style={{ fontSize:10, color:'var(--accent)', marginBottom:6 }}>限時優惠</p>
+                  <h3 style={{ fontSize:14, color:'var(--black)', fontWeight:500, marginBottom:promo.description ? 8 : 0, overflowWrap:'anywhere' }}>{promo.name}</h3>
+                  {promo.description && <p style={{ fontSize:13, color:'var(--dark)', lineHeight:1.85, whiteSpace:'pre-wrap', overflowWrap:'anywhere' }}>{promo.description}</p>}
+                </div>)}
+              </section>
             )}
 
             {variants.length > 1 && (
