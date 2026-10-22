@@ -34,9 +34,17 @@
   }
 
   /* 固定採用行動瀏覽器工具列展開時的安全高度，避免捲動時工具列收合造成 Hero 拉伸抖動。 */
-  .home-hero { height: 100vh; }
+  .home-hero {
+    height: 100vh;
+    min-height:calc(var(--hero-header-height, 68px) + 380px);
+    --hero-title-height-limit:clamp(34px, calc((100vh - var(--hero-header-height, 68px) - 320px) / 3), 112px);
+  }
+  .home-hero-copy > * { flex-shrink:0; }
   @supports (height: 100svh) {
-    .home-hero { height: 100svh; }
+    .home-hero {
+      height:100svh;
+      --hero-title-height-limit:clamp(34px, calc((100svh - var(--hero-header-height, 68px) - 320px) / 3), 112px);
+    }
   }
   .is-line-browser .home-hero { height:var(--line-home-hero-height, 100svh); }
 

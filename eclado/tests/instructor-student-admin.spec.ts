@@ -59,6 +59,11 @@ test('會員詳情可設定老師類型並確認清空，保留學生', async ({
   await page.goto('/admin'); await open(page,'會員管理');
   await page.locator('tr').filter({ hasText:'老師A' }).click();
   const panel=page.getByRole('dialog',{ name:'會員詳情' });
+  await expect(panel.getByLabel('老師學生價格類型').locator('option[value="student_1"]')).toHaveText('學生1・9折');
+  await expect(panel.getByLabel('老師學生價格類型').locator('option[value="student_2"]')).toHaveText('學生2・9.5折');
+  await page.route('**/rest/v1/rpc/get_admin_student_pricing_settings', route=>route.fulfill({json:{multipliers:{student_1:0.88,student_2:0.95},version:1}}));
+  await panel.getByRole('button',{name:'重新載入師生設定'}).click();
+  await expect(panel.getByLabel('老師學生價格類型').locator('option[value="student_1"]')).toHaveText('學生1・8.8折');
   const typeBox=await panel.getByLabel('老師學生價格類型').boundingBox();
   const saveBox=await panel.getByRole('button',{name:'儲存老師類型'}).boundingBox();
   expect(typeBox).not.toBeNull();expect(saveBox).not.toBeNull();expect(saveBox!.height).toBeCloseTo(typeBox!.height,0);

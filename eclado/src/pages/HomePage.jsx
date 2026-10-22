@@ -18,7 +18,7 @@ import { goProfessionalApply } from '../services/membership.js';
 import useDocumentMeta from '../hooks/useDocumentMeta.js';
 import { shopPath } from '../app/shopNavigation.js';
 
-export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user, cart, setCart, promotions = [], products = [], salesStats = emptySalesStats() }) {
+export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user, cart, setCart, promotions = [], products = [], salesStats = emptySalesStats(), announcementVisible = false }) {
   useDocumentMeta({
     title: 'ECLADO Taiwan｜韓國專業院線保養',
     description: 'ECLADO 源自韓國專業皮膚管理領域，提供院線與居家保養產品、專業美容知識及完整肌膚照護選擇。',
@@ -58,7 +58,7 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
   return (
     <div>
       {/* HERO */}
-      <section className="home-hero" style={{ position:'relative', overflow:'hidden', background:'#1a1a18' }}>
+      <section className="home-hero" style={{ position:'relative', overflow:'hidden', background:'#1a1a18', '--hero-header-height':announcementVisible ? '104px' : '68px' }}>
         {HERO_SLIDES.map((s,i) => (
           <img key={i} src={s.img} alt="" style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', objectFit:'cover', objectPosition: isMobile ? (s.mobilePosition || 'center') : (s.position || 'center'), opacity: i===slide ? 1 : 0, transition:'opacity 0.9s ease', pointerEvents:'none' }} />
         ))}
@@ -67,12 +67,12 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
         {HERO_SLIDES[slide].layout === 'left' && (
           <>
             <div style={{ position:'absolute', inset:0, background:'linear-gradient(to right, rgba(14,14,12,0.88) 45%, rgba(14,14,12,0.15))' }} />
-            <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', justifyContent:'center', padding:heroPad, maxWidth: isMobile ? '92vw' : 780, opacity: animating?0:1, transition:'opacity 0.45s' }}>
+            <div className="home-hero-copy" style={{ position:'absolute', top:'calc(var(--hero-header-height) + 24px)', bottom:72, left:0, right:0, display:'flex', flexDirection:'column', justifyContent:'safe center', padding:heroPad, maxWidth: isMobile ? '92vw' : 780, opacity: animating?0:1, transition:'opacity 0.45s' }}>
               <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
                 <div style={{ width:28, height:3, background:'var(--accent-on-dark)' }} />
                 <span style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--accent-on-dark-text)', textTransform:'uppercase', fontFamily:'var(--font-body)' }}>{HERO_SLIDES[slide].accent}</span>
               </div>
-              <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,44px)' : 'clamp(40px,7.5vw,104px)', fontWeight:300, color:'#fff', textShadow:'0 2px 16px rgba(0,0,0,0.22)', lineHeight:1.0, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
+              <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,44px)' : 'min(clamp(40px,7.5vw,104px), var(--hero-title-height-limit))', fontWeight:300, color:'#fff', textShadow:'0 2px 16px rgba(0,0,0,0.22)', lineHeight:1.0, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
               <p style={{ fontSize:15, color:'rgba(255,255,255,0.65)', letterSpacing:'0.06em', marginBottom:36, fontWeight:300, lineHeight:1.8, maxWidth:560 }}>{HERO_SLIDES[slide].sub}</p>
               <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
                 <button onClick={() => setPage('shop')} style={{ background:'var(--white)', color:'var(--accent)', border:'none', padding:'13px 28px', fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}
@@ -88,13 +88,13 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
         {HERO_SLIDES[slide].layout === 'center' && (
           <>
             <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse at center, rgba(14,14,12,0.5) 0%, rgba(14,14,12,0.82) 100%)' }} />
-            <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center', textAlign:'center', padding: isMobile ? '0 6vw' : '0 8vw', opacity: animating?0:1, transition:'opacity 0.45s' }}>
+            <div className="home-hero-copy" style={{ position:'absolute', top:'calc(var(--hero-header-height) + 24px)', bottom:72, left:0, right:0, display:'flex', flexDirection:'column', justifyContent:'safe center', alignItems:'center', textAlign:'center', padding: isMobile ? '0 6vw' : '0 8vw', opacity: animating?0:1, transition:'opacity 0.45s' }}>
               <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20 }}>
                 <div style={{ width:20, height:3, background:'var(--accent-on-dark)' }} />
                 <span style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--accent-on-dark-text)', textTransform:'uppercase' }}>{HERO_SLIDES[slide].accent}</span>
                 <div style={{ width:20, height:3, background:'var(--accent-on-dark)' }} />
               </div>
-              <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,46px)' : 'clamp(38px,8vw,112px)', fontWeight:300, color:'#fff', textShadow:'0 2px 16px rgba(0,0,0,0.22)', lineHeight:1.0, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
+              <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,46px)' : 'min(clamp(38px,8vw,112px), var(--hero-title-height-limit))', fontWeight:300, color:'#fff', textShadow:'0 2px 16px rgba(0,0,0,0.22)', lineHeight:1.0, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
               <p style={{ fontSize:15, color:'rgba(255,255,255,0.6)', letterSpacing:'0.06em', marginBottom:40, fontWeight:300, maxWidth:520, lineHeight:1.8 }}>{HERO_SLIDES[slide].sub}</p>
               <button onClick={() => onOpenArticle(getJournalArticle('azulene-ampoule-clinical-data'))} style={{ background:'transparent', color:'var(--white)', border:'1px solid rgba(255,255,255,0.6)', padding:'14px 40px', fontSize:11, letterSpacing:'0.14em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', whiteSpace:'nowrap' }}
                 onMouseEnter={e=>{e.target.style.background='var(--white)';e.target.style.color='var(--black)';}}
@@ -114,13 +114,13 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
                 ? 'linear-gradient(to right, rgba(14,14,12,0.88) 45%, rgba(14,14,12,0.15))'
                 : 'linear-gradient(to left, rgba(14,14,12,0.88) 45%, rgba(14,14,12,0.15))',
             }} />
-            <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', justifyContent:'center', alignItems: isMobile ? 'flex-start' : 'flex-end', padding:heroPad, opacity: animating?0:1, transition:'opacity 0.45s' }}>
+            <div className="home-hero-copy" style={{ position:'absolute', top:'calc(var(--hero-header-height) + 24px)', bottom:72, left:0, right:0, display:'flex', flexDirection:'column', justifyContent:'safe center', alignItems: isMobile ? 'flex-start' : 'flex-end', padding:heroPad, opacity: animating?0:1, transition:'opacity 0.45s' }}>
               <div style={{ maxWidth:520, textAlign: isMobile ? 'left' : 'right' }}>
                 <div style={{ display:'flex', alignItems:'center', justifyContent: isMobile ? 'flex-start' : 'flex-end', gap:12, marginBottom:16 }}>
                   <span style={{ fontSize:10, letterSpacing:'0.3em', color:'var(--accent-on-dark-text)', textTransform:'uppercase' }}>{HERO_SLIDES[slide].accent}</span>
                   <div style={{ width:28, height:3, background:'var(--accent-on-dark)' }} />
                 </div>
-                <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,44px)' : 'clamp(36px,6.5vw,92px)', fontWeight:300, color:'#fff', textShadow:'0 2px 16px rgba(0,0,0,0.22)', lineHeight:1.05, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
+                <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,44px)' : 'min(clamp(36px,6.5vw,92px), var(--hero-title-height-limit))', fontWeight:300, color:'#fff', textShadow:'0 2px 16px rgba(0,0,0,0.22)', lineHeight:1.05, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
                 <p style={{ fontSize:15, color:'rgba(255,255,255,0.6)', letterSpacing:'0.06em', marginBottom:36, fontWeight:300, lineHeight:1.8 }}>{HERO_SLIDES[slide].sub}</p>
                 <button onClick={() => setPage('login')} style={{ background:'var(--accent)', color:'var(--white)', border:'none', padding:'13px 28px', fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}
                   onMouseEnter={e=>e.target.style.opacity='0.85'}
@@ -135,7 +135,7 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
         <div style={{ position:'absolute', bottom:32, left: isMobile ? '6vw' : '10vw', display:'flex', alignItems:'center', gap:16 }}>
           <div style={{ display:'flex', gap:8 }}>
             {HERO_SLIDES.map((_,i) => (
-              <div key={i} onClick={() => { setAnimating(true); setTimeout(()=>{setSlide(i);setAnimating(false);},300); }} style={{ width: i===slide?24:8, height:2, background: i===slide?'var(--white)':'rgba(255,255,255,0.3)', cursor:'pointer', transition:'all 0.35s' }} />
+              <button type="button" aria-label={`查看首頁輪播第 ${i + 1} 張`} key={i} onClick={() => { setAnimating(true); setTimeout(()=>{setSlide(i);setAnimating(false);},300); }} style={{ border:0, padding:0, width: i===slide?24:8, height:2, background: i===slide?'var(--white)':'rgba(255,255,255,0.3)', cursor:'pointer', transition:'all 0.35s' }} />
             ))}
           </div>
           <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)', letterSpacing:'0.1em' }}>

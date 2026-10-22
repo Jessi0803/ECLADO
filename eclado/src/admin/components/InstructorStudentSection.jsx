@@ -1,11 +1,14 @@
 import '../../components/account/InstructorRewards.css';
 import React, { useEffect, useState } from 'react';
-import { fetchInstructorStudentMember, saveInstructorStudentType, saveInstructorStudentBinding } from '../../services/instructorStudents.js';
+import { fetchInstructorStudentMember, fetchStudentPricingSettings, saveInstructorStudentType, saveInstructorStudentBinding } from '../../services/instructorStudents.js';
+
+import { formatFold } from '../../domain/memberPricing.js';
 
 const labels = { bind:'建立綁定', unbind:'解除綁定', rebind:'更換老師', instructor_type:'老師類型變更', member_deleted:'會員刪除結束綁定' };
 
 export default function InstructorStudentSection({ member, members, canManage }) {
   const [data, setData] = useState(null);
+  const [multipliers, setMultipliers] = useState({});
   const [type, setType] = useState('');
   const [teacherId, setTeacherId] = useState('');
   const [search, setSearch] = useState('');
@@ -14,10 +17,11 @@ export default function InstructorStudentSection({ member, members, canManage })
   const [message, setMessage] = useState('');
   useEffect(() => {
     let active = true;
-    setData(null); setError(''); setMessage(''); setSearch(''); setTeacherId(''); setBusy(true);
-    fetchInstructorStudentMember(member.id).then(result => {
+    setData(null); setMultipliers({}); setError(''); setMessage(''); setSearch(''); setTeacherId(''); setBusy(true);
+    Promise.all([fetchInstructorStudentMember(member.id), Promise.resolve(fetchStudentPricingSettings()).catch(() => ({ error:true }))]).then(([result, pricing]) => {
       if (!active) return;
       if (result.error) { setError(`無法載入師生設定：${result.error.message}`); return; }
+      setMultipliers(pricing.error ? {} : pricing.data?.multipliers || {});
       setData(result.data); setType(result.data?.instructor_settings?.student_price_type || '');
     }).catch(err => { if (active) setError(err.message); }).finally(() => { if (active) setBusy(false); });
     return () => { active = false; };
@@ -25,7 +29,8 @@ export default function InstructorStudentSection({ member, members, canManage })
   async function reload() {
     setBusy(true); setError(''); setMessage('');
     try {
-      const result = await fetchInstructorStudentMember(member.id);
+      const [result, pricing] = await Promise.all([fetchInstructorStudentMember(member.id), Promise.resolve(fetchStudentPricingSettings()).catch(() => ({ error:true }))]);
+      setMultipliers(pricing.error ? {} : pricing.data?.multipliers || {});
       if (result.error) throw result.error;
       setData(result.data); setType(result.data?.instructor_settings?.student_price_type || '');
     } catch (err) { setError(err.message); }
@@ -56,6 +61,13 @@ export default function InstructorStudentSection({ member, members, canManage })
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }
+  function studentTypeLabel(value) {
+    const name = { student_1:'學生1', student_2:'學生2' }[value];
+    if (!name) return value || '未設定';
+    const multiplier = Number(multipliers[value]);
+    return Number.isFinite(multiplier) && multiplier > 0 && multiplier <= 1
+      ? `${name}・${formatFold(multiplier)}折` : name;
+  }
   const context = data?.context;
   const teachers = members.filter(row => row.type === 'instructor' && row.id !== member.id
     && `${row.name} ${row.id}`.toLowerCase().includes(search.toLowerCase()));
@@ -70,7 +82,7 @@ export default function InstructorStudentSection({ member, members, canManage })
         <form onSubmit={saveType} className="reward-type-form">
           <label className="reward-field">老師學生價格類型<select aria-label="老師學生價格類型" value={type}
             disabled={!canManage || busy || member.type !== 'instructor'} onChange={e => setType(e.target.value)}>
-            <option value="">未設定</option><option value="student_1">學生1</option><option value="student_2">學生2</option>
+            <option value="">未設定</option><option value="student_1">{studentTypeLabel('student_1')}</option><option value="student_2">{studentTypeLabel('student_2')}</option>
           </select></label>
           {canManage && member.type === 'instructor' && <button type="submit" disabled={busy} className="reward-button reward-button--primary">儲存老師類型</button>}
         </form>
@@ -81,7 +93,7 @@ export default function InstructorStudentSection({ member, members, canManage })
       </div>}
       {(member.type === 'pro' || context?.has_binding) && <div className="reward-details">
         <p>目前老師：{context?.has_binding ? context.instructor_name || context.instructor_id : '未綁定'}</p>
-        {context?.has_binding && <p>類型：{context.student_price_type || '未設定'} · {context.student_pricing_eligible ? '資格符合' : '資格暫停'}
+        {context?.has_binding && <p>類型：{studentTypeLabel(context.student_price_type)} · {context.student_pricing_eligible ? '資格符合' : '資格暫停'}
           {!context.student_role_eligible && '；學生目前不是 pro'}{!context.instructor_role_eligible && '；老師目前不是 instructor'}{!context.instructor_type_set && '；老師尚未設定類型'}
         </p>}
         {canManage && <>

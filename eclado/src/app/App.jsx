@@ -201,7 +201,7 @@ export default function App() {
 
   function renderPage() {
     switch (page) {
-      case 'home':     return <HomePage setPage={setPage} onSelectProduct={product => openProduct(product, 'home')} onOpenArticle={article => openJournalArticle(article, 'home')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
+      case 'home':     return <HomePage announcementVisible={isAnnouncementVisible(announcement)} setPage={setPage} onSelectProduct={product => openProduct(product, 'home')} onOpenArticle={article => openJournalArticle(article, 'home')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
       case 'shop':     return <ShopPage onSelectProduct={product => openProduct(product, 'shop')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} productsStatus={productsStatus} productsError={productsError} salesStats={salesStats} />;
       case 'product':  return <ProductPage productSlug={productSlugFromPath(window.location.pathname)} products={products} productsStatus={productsStatus} productsError={productsError} user={user} setCart={setCart} promotions={promotions} onBack={closeProduct} onShop={() => setPage('shop')} />;
       case 'event-products': return <EventProductsPage user={user} setCart={setCart} onSelectProduct={openEventProduct} products={eventProducts} productsStatus={eventStatus} productsError={eventErrorText} promotions={promotions} />;
@@ -223,7 +223,7 @@ export default function App() {
       case 'order-payment': return <AssistedPaymentPage />;
       case 'privacy':  return <PrivacyPage />;
       case 'contact':  return <ContactPage />;
-      default:         return <HomePage setPage={setPage} onSelectProduct={product => openProduct(product, 'home')} onOpenArticle={article => openJournalArticle(article, 'home')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
+      default:         return <HomePage announcementVisible={isAnnouncementVisible(announcement)} setPage={setPage} onSelectProduct={product => openProduct(product, 'home')} onOpenArticle={article => openJournalArticle(article, 'home')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
     }
   }
 

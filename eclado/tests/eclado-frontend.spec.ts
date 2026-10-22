@@ -2744,3 +2744,32 @@ test('全站公告停用、空白或讀取失敗時不留空列，減少動態�
   await expect(banner.locator('.announcement-marquee__track')).toBeHidden();
   await expect(banner.locator('.announcement-marquee__accessible')).toBeVisible();
 });
+
+test('首頁輪播預留導覽與公告高度，三張內容不覆蓋公告或輪播指示', async ({page},testInfo)=>{
+  const sizes=testInfo.project.name==='mobile-chrome'
+    ? [{width:390,height:667},{width:844,height:390}]
+    : [{width:1280,height:600},{width:1440,height:900}];
+  for(const enabled of [true,false]){
+    await mockEcladoApis(page,{siteAnnouncement:{content:'雙11活動即將開始 詳細留意品牌訊息',enabled}});
+    for(const size of sizes){
+      await page.setViewportSize(size);
+      await page.goto('/');
+      await page.evaluate(()=>document.fonts.ready);
+      const hero=page.locator('.home-hero');
+      for(let index=0;index<3;index++){
+        await page.getByRole('button',{name:`查看首頁輪播第 ${index+1} 張`,exact:true}).click();
+        const copy=hero.locator('.home-hero-copy');
+        await expect(copy.getByRole('heading',{level:1})).toContainText(["Korea's",'Care For','Glow'][index]);
+        await expect(copy).toHaveCSS('opacity','1');
+        await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
+        const header=await page.locator('nav.site-nav').boundingBox();
+        const eyebrow=await copy.locator('span').first().boundingBox();
+        const cta=await copy.getByRole('button').boundingBox();
+        const dots=await page.getByRole('button',{name:'查看首頁輪播第 1 張',exact:true}).boundingBox();
+        expect(eyebrow!.y).toBeGreaterThanOrEqual(header!.y+header!.height+20);
+        expect(cta!.y+cta!.height).toBeLessThan(dots!.y-8);
+        if(enabled && size.width===1280) await page.screenshot({path:testInfo.outputPath(`hero-safe-${index+1}.png`)});
+      }
+    }
+  }
+});
