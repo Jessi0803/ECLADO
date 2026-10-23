@@ -1,0 +1,31 @@
+{
+  "project_ref": "ilvdvlkdpntwmaijncaz",
+  "environment": "production",
+  "verified_at": "2026-10-22T03:31:28.932822Z",
+  "query_id": "b853d24a-5ef0-4cab-8378-ca6aed464f2e",
+  "method": "Authenticated Supabase SQL Editor UI",
+  "sql_file": "supabase-site-announcement-schedule.sql",
+  "sql_sha256": "b6e48201354340c280c37864f037e98364b7d7d2a52f84f29989c46a8c3b13dc",
+  "preflight": {
+    "schedule_installed": false,
+    "announcement_hash": "3dba72a7333ae7ef0d9baeebb02adcea",
+    "promotion_hash": "77288ae706b45e62308e501994f7b72c"
+  },
+  "verification": {
+    "rls_enabled": true,
+    "columns_ready": true,
+    "schedule_constraint": true,
+    "anon_schedule_denied": true,
+    "direct_writes_denied": true,
+    "promotions_unchanged": true,
+    "announcement_unchanged": true,
+    "legacy_preserves_schedule": true,
+    "authenticated_schedule_access": true,
+    "schedule_initially_unrestricted": true
+  },
+  "limits": [
+    "No schedule values or announcement copy/switch were modified.",
+    "No real authenticated save roundtrip performed.",
+    "Schedule frontend remains local and uncommitted."
+  ]
+}

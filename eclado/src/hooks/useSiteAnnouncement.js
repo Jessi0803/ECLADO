@@ -1,3 +1,4 @@
+import useAnnouncementClock from './useAnnouncementClock.js';
 import { useEffect, useState } from 'react';
 import { EMPTY_ANNOUNCEMENT, fetchSiteAnnouncement } from '../services/siteAnnouncement.js';
 import { subscribeToTables, removeRealtimeChannel } from '../services/realtime.js';
@@ -25,5 +26,6 @@ export default function useSiteAnnouncement() {
       document.removeEventListener('visibilitychange', refreshVisible);
     };
   }, []);
+  useAnnouncementClock(announcement);
   return announcement;
 }

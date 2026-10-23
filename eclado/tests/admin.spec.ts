@@ -3455,7 +3455,7 @@ test('全站公告沿用活動管理樣式，可預覽、儲存並重新載入',
   await page.screenshot({path:testInfo.outputPath('announcement-settings.png'),fullPage:true});
   await page.getByRole('button',{name:'儲存設定'}).click();
   await expect(page.getByRole('status')).toHaveText('公告設定已儲存');
-  expect(saves[1]).toEqual({p_content:'任選2件即免運',p_enabled:true});
+  expect(saves[1]).toEqual({p_content:'任選2件即免運',p_enabled:true,p_start_at:null,p_end_at:null});
   await page.getByRole('button',{name:'優惠活動',exact:true}).click();
   await page.getByRole('button',{name:'全站公告',exact:true}).click();
   await expect(page.getByLabel('公告文字',{exact:true})).toHaveValue('任選2件即免運');
@@ -3471,4 +3471,27 @@ test('全站公告儲存失敗保留編輯內容', async ({page})=>{
   await expect(page.getByRole('alert')).toContainText('儲存失敗');
   await expect(page.getByLabel('公告文字',{exact:true})).toHaveValue('修改的公告');
   await expect(page.getByText('公告設定已儲存',{exact:true})).toHaveCount(0);
+});
+
+test('公告排程使用台北凌晨時間，拒絕倒置區間並保留重新載入的排程',async({page},testInfo)=>{
+  const saves:Record<string,unknown>[]=[];
+  await mockAdminApis(page,{siteAnnouncement:{content:'雙11預告',enabled:true},onSiteAnnouncementSave:p=>saves.push(p)});
+  await page.goto('/admin');await openAdminSection(page,/活動管理/);
+  await page.getByRole('button',{name:'全站公告',exact:true}).click();
+  await page.getByLabel('公告開始時間',{exact:true}).fill('2026-11-11T00:00');
+  await page.getByLabel('公告結束時間',{exact:true}).fill('2026-11-10T23:59');
+  await page.getByRole('button',{name:'儲存設定'}).click();
+  await expect(page.getByRole('alert')).toContainText('結束時間必須晚於開始時間');
+  expect(saves).toHaveLength(0);
+  await page.getByLabel('公告結束時間',{exact:true}).fill('2026-11-12T00:00');
+  await expect(page.getByTestId('announcement-schedule-summary')).toContainText('開始：2026-11-11 00:00');
+  await expect(page.getByRole('region',{name:'公告跑馬燈預覽'})).toBeVisible();
+  await page.getByRole('button',{name:'儲存設定'}).click();
+  await expect(page.getByRole('status')).toHaveText('公告設定已儲存');
+  expect(saves[0]).toEqual({p_content:'雙11預告',p_enabled:true,p_start_at:'2026-11-10T16:00:00.000Z',p_end_at:'2026-11-11T16:00:00.000Z'});
+  await page.getByRole('button',{name:'優惠活動',exact:true}).click();
+  await page.getByRole('button',{name:'全站公告',exact:true}).click();
+  await expect(page.getByLabel('公告開始時間',{exact:true})).toHaveValue('2026-11-11T00:00');
+  await expect(page.getByLabel('公告結束時間',{exact:true})).toHaveValue('2026-11-12T00:00');
+  await page.screenshot({path:testInfo.outputPath('announcement-schedule.png'),fullPage:true});
 });

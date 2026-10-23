@@ -2773,3 +2773,19 @@ test('首頁輪播預留導覽與公告高度，三張內容不覆蓋公告或�
     }
   }
 });
+
+test('公告排程在已開啟的頁面到時顯示與隱藏，同步收回主視覺留白',async({page})=>{
+  const now=new Date('2026-11-10T15:59:57Z');
+  await page.clock.install({time:now});
+  await page.clock.pauseAt(now);
+  await mockEcladoApis(page,{siteAnnouncement:{content:'雙11排程公告',enabled:true,start_at:'2026-11-10T16:00:00Z',end_at:'2026-11-10T16:00:03Z'}});
+  await page.goto('/');
+  const banner=page.getByRole('region',{name:'全站公告',exact:true});
+  await expect(banner).toHaveCount(0);
+  await page.clock.fastForward(3000);
+  await expect(banner).toBeVisible();
+  await expect(page.locator('.home-hero')).toHaveCSS('--hero-header-height','104px');
+  await page.clock.fastForward(3000);
+  await expect(banner).toHaveCount(0);
+  await expect(page.locator('.home-hero')).toHaveCSS('--hero-header-height','68px');
+});
