@@ -756,6 +756,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       })),
     });
   });
+  await page.route('**/rest/v1/rpc/get_admin_order_payment_diagnostics', route => json(route, []));
   await page.route('**/rest/v1/rpc/get_admin_order_detail', async route => {
     const id = route.request().postDataJSON()?.p_order_id;
     const row = orders.find(row => row.id === id);

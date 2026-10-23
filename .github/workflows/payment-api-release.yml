@@ -56,7 +56,7 @@ jobs:
       - name: Package runtime only
         if: github.event_name == 'workflow_dispatch'
         run: |
-          tar -czf payment-api.tgz -C eclado/payment-api server.js assisted-orders.js reward-payment-evidence.cjs checkout-events.cjs package.json package-lock.json
+          tar -czf payment-api.tgz -C eclado/payment-api server.js assisted-orders.js reward-payment-evidence.cjs checkout-events.cjs sinopac-diagnostics.cjs sinopac-status-codes.json package.json package-lock.json
           sha256sum payment-api.tgz > payment-api.tgz.sha256
           cp eclado/payment-api/deploy-release.sh deploy-release.sh
       - uses: actions/upload-artifact@v4

@@ -7,12 +7,14 @@ const crypto = require('crypto');
 const { mountAssistedRoutes, isAmbiguousGatewayFailure } = require('./assisted-orders');
 const { verifiedRewardPaymentEvidence, verifiedRewardPaymentFailure, rewardBankAmount } = require('./reward-payment-evidence.cjs');
 const { createPaymentTrace } = require('./checkout-events.cjs');
+const { createDiagnosticWriter } = require('./sinopac-diagnostics.cjs');
 
 const app = express();
 const port = process.env.PORT || 3000;
 const baseUrl = process.env.SINOPAC_API_BASE_URL || 'https://apisbx.sinopac.com/funBIZ-Sbx/QPay.WebAPI/api';
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || '';
+const recordBankDiagnostic = createDiagnosticWriter({ url: supabaseUrl, key: supabaseServiceKey });
 
 function must(value, name) {
   if (!value) throw new Error(`Missing env: ${name}`);
@@ -134,52 +136,94 @@ function getSinopacPaymentError(response) {
 
 async function sinopacPost(path, body) {
   const xKey = must(process.env.SINOPAC_X_KEY, 'SINOPAC_X_KEY');
-  const response = await fetch(`${baseUrl}/${path}`, {
+  let response;
+  try { response = await fetch(`${baseUrl}/${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-KeyID': xKey,
     },
     body: JSON.stringify(body),
-  });
-
-  const text = await response.text();
-  if (!response.ok) {
-    throw new Error(`Sinopac ${path} failed: ${response.status} ${text}`);
+  }); } catch (error) {
+    error.sinopacDiagnostic = { kind: ['AbortError','TimeoutError'].includes(error.name) ? 'timeout' : 'network' };
+    throw error;
   }
-  return JSON.parse(text);
+
+  let text;
+  try { text = await response.text(); }
+  catch (error) {
+    error.sinopacDiagnostic = { kind: ['AbortError','TimeoutError'].includes(error.name) ? 'timeout' : 'network' };
+    throw error;
+  }
+  if (!response.ok) {
+    // Keep upstream bodies private: they may echo request parameters or secrets.
+    const error = new Error(`Sinopac ${path} failed: ${response.status}`);
+    error.sinopacDiagnostic = { kind: 'bank_http', httpStatus: response.status };
+    throw error;
+  }
+  try { return JSON.parse(text); }
+  catch {
+    const error = new Error('Sinopac response JSON is invalid');
+    error.sinopacDiagnostic = { kind:'response_integrity' };
+    throw error;
+  }
 }
 
 async function getNonce() {
   const shopNo = must(process.env.SINOPAC_SHOP_NO, 'SINOPAC_SHOP_NO');
   const res = await sinopacPost('Nonce', { ShopNo: shopNo });
-  if (!res.Nonce) throw new Error('Nonce not returned from Sinopac');
+  if (!res.Nonce) {
+    const error = new Error('Nonce not returned from Sinopac');
+    error.sinopacDiagnostic = { kind: 'response_integrity' };
+    throw error;
+  }
   return res.Nonce;
 }
 
-async function callOrderApi(apiService, inner) {
-  const shopNo = must(process.env.SINOPAC_SHOP_NO, 'SINOPAC_SHOP_NO');
-  const aesKey = getAesKey();
-  const nonce = await getNonce();
+async function callOrderApi(apiService, inner, diagnosticContext = null) {
+  let bankResponseReceived = false;
+  try {
+    const shopNo = must(process.env.SINOPAC_SHOP_NO, 'SINOPAC_SHOP_NO');
+    const aesKey = getAesKey();
+    const nonce = await getNonce();
 
-  const outerReq = {
-    Version: '1.0.0',
-    ShopNo: shopNo,
-    APIService: apiService,
-    Nonce: nonce,
-    Message: encryptMessage(aesKey, JSON.stringify(inner), nonce),
-    Sign: generateSign(inner, aesKey, nonce),
-  };
+    const outerReq = {
+      Version: '1.0.0',
+      ShopNo: shopNo,
+      APIService: apiService,
+      Nonce: nonce,
+      Message: encryptMessage(aesKey, JSON.stringify(inner), nonce),
+      Sign: generateSign(inner, aesKey, nonce),
+    };
 
-  const outerRes = await sinopacPost('Order', outerReq);
-  const decoded = JSON.parse(decryptMessage(aesKey, outerRes.Message, outerRes.Nonce));
-  const verify = generateSign(decoded, aesKey, outerRes.Nonce);
+    const outerRes = await sinopacPost('Order', outerReq);
+    bankResponseReceived = true;
+    let decoded;
+    try { decoded = JSON.parse(decryptMessage(aesKey, outerRes.Message, outerRes.Nonce)); }
+    catch {
+      const error = new Error('Sinopac response decode failed');
+      error.sinopacDiagnostic = { kind:'response_integrity' };
+      throw error;
+    }
+    const verify = generateSign(decoded, aesKey, outerRes.Nonce);
 
-  if (verify !== String(outerRes.Sign || '').toUpperCase()) {
-    throw new Error('Sinopac response sign mismatch');
+    if (verify !== String(outerRes.Sign || '').toUpperCase()) {
+      throw new Error('Sinopac response sign mismatch');
+    }
+
+    void recordBankDiagnostic(diagnosticContext && { ...diagnosticContext, apiService }, decoded);
+    return { request: outerReq, response: outerRes, data: decoded };
+  } catch (error) {
+    if (!error.sinopacDiagnostic && bankResponseReceived) error.sinopacDiagnostic = { kind: 'response_integrity' };
+    if (!error.sinopacDiagnostic && /^Missing env: SINOPAC_/.test(error.message)) error.sinopacDiagnostic = { kind: 'configuration' };
+    void recordBankDiagnostic(diagnosticContext && { ...diagnosticContext, apiService }, null, error);
+    throw error;
   }
+}
 
-  return { request: outerReq, response: outerRes, data: decoded };
+function recordResolvedPaymentDiagnostics(payment, orderId, providerOrderNo, source) {
+  if (payment?.raw?.payQuery) void recordBankDiagnostic({ orderId, providerOrderNo, source, apiService:'OrderPayQuery' }, payment.raw.payQuery);
+  if (payment?.raw?.orderQuery) void recordBankDiagnostic({ orderId, providerOrderNo, source, apiService:'OrderQuery' }, payment.raw.orderQuery);
 }
 
 function buildCreateBody(input) {
@@ -1232,6 +1276,7 @@ async function redirectPaymentReturn(req, res) {
       const providerOrderNo = payment.orderNo;
       resolvedOrderNo = await resolveSiteOrderNo(providerOrderNo, resolvedOrderNo);
       resultAccessToken = resolvedOrderNo ? createPaymentResultAccessToken(resolvedOrderNo) : '';
+      if (resolvedOrderNo) recordResolvedPaymentDiagnostics(payment, resolvedOrderNo, providerOrderNo, 'return');
       if(resolvedOrderNo)await persistVerifiedRewardPayment(resolvedOrderNo,providerOrderNo,payment);
       if (resolvedOrderNo && payment.paid) {
         // 先轉發給 Vercel（此時訂單尚未標記 paid）→ Vercel 標記已付款並寄 LINE／Email，
@@ -1283,7 +1328,7 @@ app.post('/api/sinopac/create-payment', async (req, res) => {
     checkoutTrace.record('payment_claimed');
     checkoutTrace.record('gateway_requested');
     void checkoutTrace.flush();
-    const result = await callOrderApi('OrderCreate', inner);
+    const result = await callOrderApi('OrderCreate', inner, { orderId:orderNo, providerOrderNo:inner.OrderNo, source:'create' });
     const sinopacError = getSinopacPaymentError(result.data);
     if (sinopacError) {
       checkoutTrace.record('gateway_rejected', { code: /^E\d{4}/.exec(String(result.data?.Description || ''))?.[0] });
@@ -1388,7 +1433,7 @@ app.post('/api/sinopac/retry-payment', async (req, res) => {
     };
     const inner = await buildAuthoritativeCreateBody(retryInput);
     claimed = true;
-    const result = await callOrderApi('OrderCreate', inner);
+    const result = await callOrderApi('OrderCreate', inner, { orderId:orderNo, providerOrderNo:inner.OrderNo, source:'retry' });
     if (assisted && (!result.data || !String(result.data.Status || '').trim() || isAmbiguousGatewayFailure(result.data))) {
       throw new Error('銀行付款結果待確認；原訂單保留，請勿取消重建或重複開單。');
     }
@@ -1459,7 +1504,7 @@ app.post('/api/sinopac/query-payment', async (req, res) => {
     const instruction = await getOptionalOrderPaymentInstruction(orderNo);
     const providerOrderNo = instruction?.provider_order_no || orderNo;
     const inner = buildQueryBody({ ...(req.body || {}), orderNo: providerOrderNo });
-    const result = await callOrderApi('OrderQuery', inner);
+    const result = await callOrderApi('OrderQuery', inner, { orderId:orderNo, providerOrderNo, source:'query' });
     const paymentState = resolvePaymentQueryState(order, result.data);
     await persistVerifiedRewardPayment(orderNo,providerOrderNo,{raw:{orderQuery:result.data}});
     try {
@@ -1615,6 +1660,8 @@ app.post('/api/sinopac/notify', async (req, res) => {
       return res.status(400).json({ Status: 'F', message: 'order unresolved' });
     }
 
+    recordResolvedPaymentDiagnostics(payment, orderNo, providerOrderNo, 'notify');
+
     const instruction = await getOptionalOrderPaymentInstruction(orderNo);
     const isCurrentAttempt = !instruction?.provider_order_no || instruction.provider_order_no === providerOrderNo;
     const nextStatus = payment.paid ? 'paid' : getPendingOrderStatus(payment.payType);
@@ -1691,6 +1738,7 @@ module.exports = {
   persistVerifiedRewardPayment,
   isPendingLike,
   getSinopacPaymentError,
+  callOrderApi,
   buildCreateBody,
   buildAuthoritativeCreateBody,
   formatSinopacDeadline,

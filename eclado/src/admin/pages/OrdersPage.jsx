@@ -6,6 +6,7 @@ import { supabase } from '../../services/supabase.js';
 import { PaymentStateBadge, STATUS_MAP, StatusSelect, TypeBadge } from '../components/StatusIndicators.jsx';
 import OrderMemberAssignmentDialog from '../components/OrderMemberAssignmentDialog.jsx';
 import OrderPrintPreview from '../components/OrderPrintPreview.jsx';
+import PaymentDiagnostics from '../components/PaymentDiagnostics.jsx';
 import usePanelHistory from '../hooks/usePanelHistory.js';
 import { shipShippingGroup } from '../../services/shippingGroups.js';
 import { getAssistedLink,assistedLink } from '../../services/assistedOrders.js';
@@ -808,6 +809,7 @@ export default function Orders({ refreshVersion = 0, persistOrderPatch: persistO
               {selected.providerStatus && <div style={{ gridColumn:'1 / -1' }}>金流狀態：{selected.providerStatus}</div>}
               {selected.providerDescription && <div style={{ gridColumn:'1 / -1', lineHeight:1.6, overflowWrap:'anywhere' }}>金流說明：{selected.providerDescription}</div>}
             </div>
+            <PaymentDiagnostics order={selected} />
             {selected.paymentAttempts.length > 0 && (
               <details style={{ marginTop:12 }}>
                 <summary style={{ fontSize:11, color:'var(--dark)', cursor:'pointer' }}>查看付款嘗試紀錄</summary>

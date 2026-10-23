@@ -861,6 +861,59 @@ test('訂單管理可查看明細並更新狀態', async ({ page }) => {
   await expect(page.getByText('已付款').first()).toBeVisible();
 });
 
+test('訂單付款區分 API 成功與信用卡內層 3D 失敗，顯示銀行碼與查核建議', async ({ page }) => {
+  await mockAdminApis(page);
+  await page.route('**/rest/v1/rpc/get_admin_order_payment_diagnostics', route => route.fulfill({ json: [
+    { id:'query-1',attempt_no:2,source:'query',api_service:'OrderQuery',api_status:'S',api_message_code:'S0000',pay_status:'1C200',recorded_at:'2026-10-23T02:10:00Z' },
+    { id:'failure-1',attempt_no:2,source:'notify',api_service:'OrderPayQuery',api_status:'S',api_message_code:'S0000',transaction_status:'F',transaction_type:'PayOut',transaction_message_code:'E2720',auth_response_code:'N7',recorded_at:'2026-10-23T02:00:00Z' },
+  ] }));
+  await page.goto('/admin'); await openAdminSection(page,/訂單管理/);
+  await page.getByText('E2E-ORDER-001',{exact:true}).click();
+  const panel=page.getByRole('dialog',{name:'訂單詳情'});
+  const diagnostics=panel.getByRole('region',{name:'永豐付款診斷'});
+  await expect(diagnostics.getByText('最近明確資訊：信用卡 3D 驗證失敗')).toBeVisible();
+  await expect(diagnostics.getByText('API 執行：成功（S） · S0000 處理成功',{exact:true}).first()).toBeVisible();
+  await expect(diagnostics.getByText('內層交易結果：失敗（F） · E2720 3D 驗證失敗',{exact:true}).first()).toBeVisible();
+  await expect(diagnostics.getByText('信用卡回應碼：N7（規格未列出對照，需向永豐確認）').first()).toBeVisible();
+  await expect(diagnostics.getByText(/無法僅憑此碼判定簡訊或密碼輸入有誤/).first()).toBeVisible();
+  await diagnostics.getByText('查看銀行診斷紀錄（最近 2 筆）',{exact:true}).click();
+  await expect(diagnostics.getByText('銀行交易狀態：1C200 · 待付款')).toBeVisible();
+  await diagnostics.scrollIntoViewIfNeeded();
+  await page.screenshot({path:`docs/evidence/sinopac-diagnostics-${test.info().project.name}.png`});
+});
+
+test('付款診斷顯示 API 認證失敗，並保留訂單已付款的事實', async ({ page }) => {
+  await mockAdminApis(page,{orders:adminOrderRows.map(row=>row.id==='E2E-ORDER-001'?{...row,status:'paid'}:row)});
+  await page.route('**/rest/v1/rpc/get_admin_order_payment_diagnostics',route=>route.fulfill({json:[
+    {id:'auth-1',attempt_no:2,source:'query',api_service:'OrderQuery',failure_kind:'bank_http',http_status:401,recorded_at:'2026-10-23T02:00:00Z'},
+  ]}));
+  await page.goto('/admin'); await openAdminSection(page,/訂單管理/);
+  await page.getByText('E2E-ORDER-001',{exact:true}).click();
+  const diagnostics=page.getByRole('region',{name:'永豐付款診斷'});
+  await expect(diagnostics.getByText('最近明確資訊：永豐 API 認證未通過')).toBeVisible();
+  await expect(diagnostics.getByText('永豐 HTTP 狀態：401')).toBeVisible();
+  await expect(diagnostics.getByText(/訂單目前已有付款紀錄/)).toBeVisible();
+  await expect(diagnostics.getByText(/不能據此判定刷卡失敗/).first()).toBeVisible();
+});
+
+test('診斷服務未部署時仍能查看原訂單，舊紀錄不捏造失敗原因', async ({ page }) => {
+  await mockAdminApis(page);
+  let fail=true;
+  await page.route('**/rest/v1/rpc/get_admin_order_payment_diagnostics',route=>fail
+    ? route.fulfill({status:404,json:{code:'PGRST202',message:'not installed'}})
+    : route.fulfill({json:[]}));
+  await page.goto('/admin'); await openAdminSection(page,/訂單管理/);
+  await page.getByText('E2E-ORDER-001',{exact:true}).click();
+  const panel=page.getByRole('dialog',{name:'訂單詳情'});
+  await expect(panel.getByText('商品明細',{exact:true})).toBeVisible();
+  await expect(panel.getByRole('region',{name:'永豐付款診斷'})).toContainText('詳細銀行診斷暫時無法載入');
+  if ((page.viewportSize()?.width || 0) > 900) await panel.getByRole('button',{name:'關閉訂單詳情',exact:true}).click();
+  else await panel.getByRole('button',{name:'← 返回',exact:true}).click();
+  fail=false;
+  await page.getByText('E2E-ORDER-001',{exact:true}).click();
+  await expect(page.getByRole('region',{name:'永豐付款診斷'})).toContainText('無法回溯未保存的失敗原因');
+});
+
 test('訂單詳情顯示合併出貨批次、未付款提醒與人工處理警示', async ({ page }) => {
   const groupId = '11111111-2222-4333-8444-555555555555';
   await mockAdminApis(page, {

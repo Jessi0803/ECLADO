@@ -32,7 +32,8 @@ function fixture(t, failure = '') {
   write('sleep', 'exit 0');
   write('curl', `active=$(/usr/bin/readlink -f "$PAYMENT_RELEASE_ROOT/current")\nif [[ "$TEST_FAILURE" = health && "$active" = *"/${next}" ]]; then exit 22; fi\nprintf '%s' '{"ok":true,"service":"eclado-payment-api"}'`);
   const source = `${dir}/source`; fs.mkdirSync(source);
-  for (const file of ['server.js', 'assisted-orders.js', 'reward-payment-evidence.cjs', 'checkout-events.cjs']) fs.writeFileSync(`${source}/${file}`, '// fixture\n');
+  for (const file of ['server.js', 'assisted-orders.js', 'reward-payment-evidence.cjs', 'checkout-events.cjs', 'sinopac-diagnostics.cjs']) fs.writeFileSync(`${source}/${file}`, '// fixture\n');
+  fs.writeFileSync(`${source}/sinopac-status-codes.json`, '{}');
   fs.writeFileSync(`${source}/package.json`, '{}'); fs.writeFileSync(`${source}/package-lock.json`, '{}');
   assert.equal(spawnSync('tar', ['-czf', `${upload}/payment-api.tgz`, '-C', source, ...fs.readdirSync(source)]).status, 0);
   const hash = require('node:crypto').createHash('sha256').update(fs.readFileSync(`${upload}/payment-api.tgz`)).digest('hex');

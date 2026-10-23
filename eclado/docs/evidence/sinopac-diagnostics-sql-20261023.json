@@ -1,0 +1,17 @@
+{
+  "project_ref": "ilvdvlkdpntwmaijncaz",
+  "verified_at": "2026-10-23T01:49:34.281872+00:00",
+  "rls_enabled": true,
+  "column_count": 17,
+  "orders_count_before": 104,
+  "orders_count_after": 104,
+  "record_count": 0,
+  "service_insert": true,
+  "anon_rpc_denied": true,
+  "authenticated_rpc": true,
+  "anon_direct_denied": true,
+  "member_direct_denied": true,
+  "service_update_denied": true,
+  "orders_permission_guard": true,
+  "bank_transactions_created": false
+}

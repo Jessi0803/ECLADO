@@ -24,13 +24,19 @@ export async function fetchAdminOrdersPage({ page, status, inventory, search }, 
 
 export async function fetchAdminOrderDetail(orderId, signal) {
   let request = supabase.rpc('get_admin_order_detail', { p_order_id: orderId });
+  let diagnostics = supabase.rpc('get_admin_order_payment_diagnostics', { p_order_id: orderId });
   if (signal) request = request.abortSignal(signal);
-  const { data, error } = await request;
+  if (signal) diagnostics = diagnostics.abortSignal(signal);
+  const [{ data, error }, diagnosticResult] = await Promise.all([
+    request, Promise.resolve(diagnostics).catch(() => ({ data:null, error:true })),
+  ]);
   if (error) throw error;
   if (!data?.order || data.order.id !== orderId || !Array.isArray(data.order.items)
     || !Array.isArray(data.order.payment_attempts)) throw new Error('Invalid order detail response');
   return {
     ...normalizeOrder(data.order), memberNote: data.memberNote || '', linkedMemberExists: data.linkedMemberExists === true,
+    paymentDiagnostics: !diagnosticResult.error && Array.isArray(diagnosticResult.data) ? diagnosticResult.data.slice(0,30) : [],
+    paymentDiagnosticsStatus: !diagnosticResult.error && Array.isArray(diagnosticResult.data) ? 'ready' : 'unavailable',
   };
 }
 

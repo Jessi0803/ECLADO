@@ -87,7 +87,7 @@ function mountAssistedRoutes(app, dependencies) {
       // Database row lock admits only one claimant, including separate browsers.
       const inner=await buildCreate(input);
       gatewayStarted=true;
-      const result=await callBank('OrderCreate',inner);
+      const result=await callBank('OrderCreate',inner,{orderId:orderNo,providerOrderNo:inner.OrderNo,source:'assisted_create'});
       if (!result.data || !String(result.data.Status || '').trim()) throw new Error('Incomplete bank response');
       const error=gatewayError(result.data);
       if (error) {
