@@ -1,0 +1,39 @@
+{
+  "project_ref": "ilvdvlkdpntwmaijncaz",
+  "environment": "production",
+  "applied_via": "Supabase SQL Editor",
+  "migration": "supabase-checkout-events.sql",
+  "migration_sha256": "686056f26353243fecb1be6b726f1178454552ef6980ead94ef20aefb29fe871",
+  "preflight": {
+    "orders_count": 104,
+    "events_absent": true,
+    "orders_ready": true,
+    "payment_auth_ready": true,
+    "rate_limit_ready": true,
+    "admin_check_ready": true,
+    "existing_checkout_triggers": 0
+  },
+  "verification": {
+    "verified_at": "2026-10-23T00:58:04.223743+00:00",
+    "rls_enabled": true,
+    "column_count": 16,
+    "index_count": 4,
+    "anon_denied": true,
+    "member_writes_denied": true,
+    "admin_read_policy": true,
+    "rpc_service_only": true,
+    "capture_not_public": true,
+    "enabled_triggers": 2,
+    "event_count": 0,
+    "orders_count": 104
+  },
+  "rest_readonly_checks": {
+    "service_role_limit_zero_http_status": 200,
+    "anonymous_limit_zero_http_status": 401,
+    "anonymous_error_code": "42501"
+  },
+  "historical_events_backfilled": false,
+  "production_orders_or_bank_transactions_created": false,
+  "website_and_payment_service_deployed": false,
+  "commit_or_push_performed": false
+}

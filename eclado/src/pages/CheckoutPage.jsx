@@ -25,6 +25,7 @@ import {
 } from '../domain/payments.js';
 import { createAuthoritativeOrder, quoteAuthoritativeOrder } from '../services/orders.js';
 import { createSinopacPayment, querySinopacPayment } from '../services/paymentApi.js';
+import { beginCheckoutAttempt, checkoutErrorDetails } from '../services/checkoutEvents.js';
 import '../components/account/InstructorRewards.css';
 import {getMyRewardCredit} from '../services/instructorRewards.js';
 import { PAYMENT_ENABLED } from '../config/runtime.js';
@@ -84,9 +85,17 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   const [shippingGroup, setShippingGroup] = useState(null);
   const [shippingGroupError, setShippingGroupError] = useState('');
   const submittingRef = useRef(false);
+  const errorAttemptRef = useRef(null);
   const invoiceDefaultsLoadedRef = useRef(false);
   const [copiedAtmNo, setCopiedAtmNo] = useState(false);
   const isMobile = useIsMobile();
+  useEffect(() => {
+    if (paymentError && errorAttemptRef.current) {
+      const { attempt, details } = errorAttemptRef.current;
+      attempt.record('error_shown', details);
+      errorAttemptRef.current = null;
+    }
+  }, [paymentError]);
 
   const automaticQuoteKey = JSON.stringify([user?.uid, user?.role, fulfillmentMethod, walletRevision,
     cart.map(item => [item.id, item.variantId || item.variant_id || item.variantSize, item.qty, getMemberPrice(item, user)])]);
@@ -421,11 +430,14 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     const method = PAYMENT_METHODS[paymentMethod] || PAYMENT_METHODS.atm;
     setPaymentError('');
     setSubmitting(true);
+    const checkoutAttempt = beginCheckoutAttempt();
     try {
+      checkoutAttempt.record('quote_requested');
       const latestQuote = await quoteAuthoritativeOrder({
         items:cart, fulfillmentMethod, couponCode:appliedCouponCode, email:form.email,
         walletPricing:rewardCredit.ready,shoppingCreditAmount:appliedShoppingCredit,rewardCreditAmount:appliedRewardCredit,
       });
+      checkoutAttempt.record('quote_received');
       const latestSummary = toPaymentSummary(latestQuote);
       const visible = baseCheckoutSummary;
       const walletChanged=rewardCredit.ready && Number(latestQuote.payment_amount)!==Number(checkoutSummary.paymentTotal);
@@ -442,6 +454,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
         setCouponQuote(latestSummary);
         if (!window.confirm(`商品或優惠金額已更新，最新銀行應付 NT$${Number(latestQuote.payment_amount??(latestQuote.total-appliedShoppingCredit)).toLocaleString()}，購物金 NT$${Number(latestQuote.shopping_credit_amount??appliedShoppingCredit).toLocaleString()}、返饋金 NT$${Number(latestQuote.reward_credit_amount||0).toLocaleString()}。請確認是否使用最新報價建立訂單。`)) return;
       }
+      checkoutAttempt.record('order_requested');
       const authoritativeOrder = await createAuthoritativeOrder({
           items: cart.map(item => {
             const line = latestQuote.items.find(line => Number(line.product_id || line.id) === Number(item.id)
@@ -465,8 +478,11 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
           shoppingCreditAmount: appliedShoppingCredit,
           rewardCreditAmount:appliedRewardCredit,walletPricing:rewardCredit.ready,
           expectedQuote:latestQuote,
+          checkoutTrace: checkoutAttempt.trace,
         });
       const authoritativeOrderNo = authoritativeOrder.order_id;
+      checkoutAttempt.setOrder(authoritativeOrderNo);
+      checkoutAttempt.record('order_received');
       setOrderNo(authoritativeOrderNo);
       const authoritativeSummary = toPaymentSummary(authoritativeOrder);
       setPaymentSnapshot(authoritativeSummary.items);
@@ -483,10 +499,13 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
         qrCodeStatus: 'Y',
         memo: safeTrim(form.note),
         Param1: authoritativeOrderNo,
+        checkoutTrace: checkoutAttempt.trace,
       };
       if (method.choosePay) payload.choosePay = method.choosePay;
 
+      checkoutAttempt.record('payment_requested');
       const paymentApiResult = await createSinopacPayment(payload);
+      checkoutAttempt.record('payment_received');
       const apiResponse = paymentApiResult.response;
       const sinopacError = getSinopacPaymentError(apiResponse);
       if (sinopacError) throw new Error(sinopacError);
@@ -517,6 +536,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
         response: apiResponse,
         summary: authoritativeSummary,
       });
+      if (saved) checkoutAttempt.record('recovery_saved');
       setPaymentResult({
         ...nextPaymentResult,
         recoveryWarning: saved ? '' : '瀏覽器未能保存付款資訊，請勿重新整理或重複建立付款單，並請先記下訂單編號。',
@@ -525,14 +545,18 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       if (saved) setCart([]);
       window.scrollTo(0, 0);
       setStep(3);
+      checkoutAttempt.record('checkout_ready');
     } catch (err) {
+      checkoutAttempt.record('checkout_error', checkoutErrorDetails(err));
       console.error(err);
       const message = err?.name === 'AbortError'
         ? '付款服務連線逾時，請稍後再試或聯繫客服。'
         : '付款單建立失敗，請稍後再試或聯繫客服。' + (err?.message ? `（${err.message}）` : '');
       setWalletRevision(r=>r+1);
+      errorAttemptRef.current = { attempt: checkoutAttempt, details: checkoutErrorDetails(err) };
       setPaymentError(message);
     } finally {
+      checkoutAttempt.finish();
       submittingRef.current = false;
       setSubmitting(false);
     }

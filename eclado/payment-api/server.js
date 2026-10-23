@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const crypto = require('crypto');
 const { mountAssistedRoutes, isAmbiguousGatewayFailure } = require('./assisted-orders');
 const { verifiedRewardPaymentEvidence, verifiedRewardPaymentFailure, rewardBankAmount } = require('./reward-payment-evidence.cjs');
+const { createPaymentTrace } = require('./checkout-events.cjs');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -1270,15 +1271,22 @@ app.post('/return', redirectPaymentReturn);
 app.post('/api/sinopac/create-payment', async (req, res) => {
   const orderNo = String(req.body?.orderNo || '').trim();
   const paymentToken = String(req.body?.paymentToken || '').trim();
+  const checkoutTrace = createPaymentTrace(req.body?.checkoutTrace, orderNo, { url: supabaseUrl, key: supabaseServiceKey });
   let claimed = false;
   let gatewaySucceeded = false;
   try {
     if (!await enforceSharedRateLimit(req, res, 'payment:create', 20)) return;
+    checkoutTrace.record('payment_api_received');
+    void checkoutTrace.flush();
     const inner = await buildAuthoritativeCreateBody(req.body || {});
     claimed = true;
+    checkoutTrace.record('payment_claimed');
+    checkoutTrace.record('gateway_requested');
+    void checkoutTrace.flush();
     const result = await callOrderApi('OrderCreate', inner);
     const sinopacError = getSinopacPaymentError(result.data);
     if (sinopacError) {
+      checkoutTrace.record('gateway_rejected', { code: /^E\d{4}/.exec(String(result.data?.Description || ''))?.[0] });
       await callSupabaseRpc('complete_order_payment_claim', {
         p_order_id: orderNo,
         p_payment_token: paymentToken,
@@ -1295,6 +1303,7 @@ app.post('/api/sinopac/create-payment', async (req, res) => {
       return res.status(400).json({ ok: false, error: sinopacError, request: inner, response: result.data });
     }
     gatewaySucceeded = true;
+    checkoutTrace.record('gateway_succeeded');
     await callSupabaseRpc('complete_order_payment_claim', {
       p_order_id: orderNo,
       p_payment_token: paymentToken,
@@ -1313,12 +1322,15 @@ app.post('/api/sinopac/create-payment', async (req, res) => {
       };
       await saveOrderPaymentInstruction(order, paymentInput, result.data);
       await saveOrderPaymentAttempt(order, paymentInput, result.data);
+      checkoutTrace.record('payment_saved');
       recoveryStored = true;
       const emailResult = await sendGuestOrderCreatedEmail(order);
       orderEmailSent = emailResult.sent === true;
     } catch (lookupError) {
+      checkoutTrace.record('payment_api_error', lookupError);
       console.error('[create-payment] payment recovery save failed', lookupError.message);
     }
+    checkoutTrace.record('payment_response_ready');
     res.json({
       ok: true,
       request: inner,
@@ -1329,6 +1341,7 @@ app.post('/api/sinopac/create-payment', async (req, res) => {
       orderEmailSent,
     });
   } catch (error) {
+    checkoutTrace.record('payment_api_error', error);
     if (claimed && !gatewaySucceeded) {
       try {
         await callSupabaseRpc('complete_order_payment_claim', {
@@ -1341,6 +1354,8 @@ app.post('/api/sinopac/create-payment', async (req, res) => {
       }
     }
     res.status(400).json({ ok: false, error: error.message });
+  } finally {
+    void checkoutTrace.flush();
   }
 });
 

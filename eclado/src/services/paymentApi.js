@@ -25,7 +25,10 @@ export async function createSinopacPayment(payload) {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || data.ok === false) {
-      throw new Error(data.error || `金流建立失敗（HTTP ${response.status}）`);
+      const error = new Error(data.error || `金流建立失敗（HTTP ${response.status}）`);
+      error.status = response.status;
+      error.code = data.code || '';
+      throw error;
     }
     const deadline = data.request?.ATMParam
       ? {

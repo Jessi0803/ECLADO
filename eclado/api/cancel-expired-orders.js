@@ -62,6 +62,15 @@ module.exports = async function handler(req, res) {
 
   if (!requireCronAuth(req, res)) return;
 
+  // Independent, bounded-time diagnostic retention; failure cannot prevent
+  // expiration processing, including while the migration is not yet installed.
+  try {
+    const before = new Date(Date.now() - 30 * 86400000).toISOString();
+    await supabaseRequest(`checkout_events?received_at=lt.${encodeURIComponent(before)}`, {
+      method: 'DELETE', signal: AbortSignal.timeout(2000),
+    });
+  } catch { console.warn('[checkout-events] retention unavailable'); }
+
   const cutoff = new Date(Date.now()).toISOString();
   const statuses = ['awaiting_confirm', 'unpaid'];
 

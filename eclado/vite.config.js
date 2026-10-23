@@ -23,6 +23,9 @@ export default defineConfig(({ mode }) => {
   }
 
   return ({
+  define: {
+    'import.meta.env.VITE_BUILD_ID': JSON.stringify(env.VITE_BUILD_ID || env.VERCEL_GIT_COMMIT_SHA || 'local'),
+  },
   plugins: [
     {
       name: 'eclado-local-routes',

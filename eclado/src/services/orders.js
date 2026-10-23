@@ -79,6 +79,7 @@ export async function createAuthoritativeOrder({
   rewardCreditAmount = 0,
   walletPricing = false,
   expectedQuote = null,
+  checkoutTrace = null,
 }) {
   const args = {
     p_items: toPricingItems(items),
@@ -97,13 +98,21 @@ export async function createAuthoritativeOrder({
     ...(walletPricing ? {p_reward_credit_amount:rewardCreditAmount} : {}),
     ...(expectedQuote ? {p_expected_quote:expectedQuote} : {}),
   };
-  let { data, error } = await supabase.rpc(walletPricing ? 'create_order_with_wallets' : 'create_order_with_pricing', args);
+  function createOrderRpc(rpcArgs) {
+    const request = supabase.rpc(walletPricing ? 'create_order_with_wallets' : 'create_order_with_pricing', rpcArgs);
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuid.test(checkoutTrace?.flowId) && uuid.test(checkoutTrace?.attemptId)) {
+      request.setHeader('x-client-info', `eclado-checkout/v1;flow=${checkoutTrace.flowId.toLowerCase()};attempt=${checkoutTrace.attemptId.toLowerCase()}`);
+    }
+    return request;
+  }
+  let { data, error } = await createOrderRpc(args);
   // Pre-1C DB has no matching overload and no student-price activation.
   if (!walletPricing && expectedQuote && ['PGRST202','42883'].includes(error?.code)) {
     const readiness = await supabase.rpc('get_my_student_product_prices');
     if (!['PGRST202','42883'].includes(readiness.error?.code)) throw error;
     const { p_expected_quote, ...legacyArgs } = args;
-    ({ data, error } = await supabase.rpc('create_order_with_pricing', legacyArgs));
+    ({ data, error } = await createOrderRpc(legacyArgs));
   }
   if (error) throw error;
   if (!data?.order_id) {

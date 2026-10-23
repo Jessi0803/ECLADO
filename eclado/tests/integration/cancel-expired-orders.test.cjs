@@ -42,6 +42,12 @@ test('cancel expired orders - cancels awaiting_confirm and unpaid orders past pa
   global.fetch = async (url, options = {}) => {
     calls.push({ url: String(url), options });
 
+    if (options.method === 'DELETE') {
+      assert.match(String(url), /checkout_events\?received_at=lt\./);
+      assert.match(String(url), /2026-04-21T12%3A00%3A00\.000Z/);
+      return new Response(null, { status: 204 });
+    }
+
     if (options.method === 'GET') {
       assert.match(String(url), /status=in\.\(awaiting_confirm,unpaid\)/);
       assert.match(String(url), /payment_due_at=lte\.2026-05-21T12%3A00%3A00\.000Z/);
@@ -84,7 +90,7 @@ test('cancel expired orders - cancels awaiting_confirm and unpaid orders past pa
   assert.equal(res.jsonBody.ok, true);
   assert.equal(res.jsonBody.cancelled, 2);
   assert.deepEqual(res.jsonBody.orderIds, ['OLD-001', 'OLD-002']);
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 3);
 });
 
 test('cancel expired orders - rejects unsupported methods', async () => {
@@ -113,6 +119,7 @@ test('cancel expired orders - returns zero when no expired orders exist', async 
 
   global.fetch = async (url, options = {}) => {
     calls.push({ url: String(url), options });
+    if (options.method === 'DELETE') return new Response(null, { status: 204 });
     assert.equal(options.method, 'GET');
     return jsonResponse(200, []);
   };
@@ -135,7 +142,7 @@ test('cancel expired orders - returns zero when no expired orders exist', async 
   assert.equal(res.jsonBody.ok, true);
   assert.equal(res.jsonBody.cancelled, 0);
   assert.equal(res.jsonBody.message, 'No expired unpaid orders');
-  assert.equal(calls.length, 1);
+  assert.equal(calls.length, 2);
 });
 
 test('cancel expired orders - returns 500 when service key is missing', async () => {

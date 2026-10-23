@@ -23,7 +23,7 @@ test ! -e "$release" || { echo 'Release already exists; use a new commit or the 
 cd "$upload"
 sha256sum -c payment-api.tgz.sha256
 contents=$(tar -tzf payment-api.tgz | LC_ALL=C sort)
-allowed=$(printf '%s\n' assisted-orders.js package-lock.json package.json reward-payment-evidence.cjs server.js | LC_ALL=C sort)
+allowed=$(printf '%s\n' assisted-orders.js checkout-events.cjs package-lock.json package.json reward-payment-evidence.cjs server.js | LC_ALL=C sort)
 test "$contents" = "$allowed" || { echo 'Unexpected runtime archive contents.' >&2; exit 7; }
 test -z "$(tar -tvzf payment-api.tgz | cut -c1 | tr -d '\n-')" || { echo 'Archive must contain regular files only.' >&2; exit 7; }
 mkdir "$release"
@@ -33,6 +33,7 @@ npm ci --omit=dev --ignore-scripts
 node --check server.js
 node --check assisted-orders.js
 node --check reward-payment-evidence.cjs
+node --check checkout-events.cjs
 ln -s "$root/shared/.env" "$release/.env"
 health() {
   curl --fail --silent --max-time 3 http://127.0.0.1:3000/health |
