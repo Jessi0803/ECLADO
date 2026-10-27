@@ -300,7 +300,11 @@ async function updateSupabaseOrder(orderNo, patch, auditSource = 'payment-api') 
   if (!supabaseUrl || !supabaseServiceKey) {
     throw new Error('Missing env: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
   }
-  const response = await fetch(`${supabaseUrl}/rest/v1/orders?id=eq.${encodeURIComponent(orderNo)}`, {
+  // A delayed pending callback must not undo an administrator's receipt
+  // confirmation, including when confirmation races with the callback.
+  const pendingOnly = ['awaiting_confirm', 'unpaid'].includes(patch.status);
+  const statusFilter = pendingOnly ? '&status=in.(awaiting_confirm,unpaid)' : '';
+  const response = await fetch(`${supabaseUrl}/rest/v1/orders?id=eq.${encodeURIComponent(orderNo)}${statusFilter}`, {
     method: 'PATCH',
     headers: {
       apikey: supabaseServiceKey,
@@ -316,7 +320,7 @@ async function updateSupabaseOrder(orderNo, patch, auditSource = 'payment-api') 
     throw new Error(`Supabase update failed: ${response.status} ${text}`);
   }
   const data = text ? JSON.parse(text) : [];
-  if (!Array.isArray(data) || data.length === 0) {
+  if (!Array.isArray(data) || (data.length === 0 && !pendingOnly)) {
     throw new Error(`Order not found: ${orderNo}`);
   }
   return data;
@@ -1171,37 +1175,92 @@ async function queryPayByToken(payToken) {
   return result.data;
 }
 
-async function resolvePaymentStateFromWebhook(body) {
+function requireBankQuerySuccess(response) {
+  if (response?.Status !== 'S') throw new Error('Bank payment query was not successful');
+  const shopNo = must(process.env.SINOPAC_SHOP_NO, 'SINOPAC_SHOP_NO');
+  // Some query records omit ShopNo; the request and verified bank signature
+  // already bind the configured merchant. Reject any conflicting returned ID.
+  if (response.ShopNo != null && response.ShopNo !== shopNo) throw new Error('Bank payment merchant mismatch');
+}
+
+function requireBankOrder(response, providerOrderNo) {
+  requireBankQuerySuccess(response);
+  const rows = response.OrderList;
+  if (!Array.isArray(rows) || rows.length !== 1 || rows[0]?.OrderNo !== providerOrderNo) {
+    throw new Error('Bank payment order mismatch');
+  }
+  const order = rows[0];
+  if (order.ShopNo != null && order.ShopNo !== process.env.SINOPAC_SHOP_NO) {
+    throw new Error('Bank payment merchant mismatch');
+  }
+  if (order.CurrencyID != null && order.CurrencyID !== 'TWD') throw new Error('Bank payment currency mismatch');
+  return order;
+}
+
+function requireBankPaymentAmount(payment, order) {
+  if (!payment.paid) return;
+  const bankOrder = requireBankOrder(payment.raw.orderQuery, payment.orderNo);
+  // QPay OrderQuery Amount is integer hundredths (180 TWD -> 18000), matching
+  // OrderCreate. Compare with the immutable net bank tender, not gross total.
+  const expected = Math.round(Number(order.payment_amount ?? order.total) * 100);
+  const amount = bankOrder.Amount;
+  if (!['number', 'string'].includes(typeof amount) || !/^\d+$/.test(String(amount))
+      || !Number.isSafeInteger(expected) || expected < 1 || Number(amount) !== expected) {
+    throw new Error('Bank payment amount mismatch');
+  }
+}
+
+function requirePaymentOrderHints(sources, providerOrderNo, siteOrderNo) {
+  for (const source of sources) {
+    for (const key of ['OrderNo', 'orderNo']) {
+      const hint = source?.[key];
+      if (hint == null || hint === '') continue;
+      if (typeof hint !== 'string' || ![providerOrderNo, siteOrderNo].includes(hint.trim())) {
+        throw new Error('Payment return order mismatch');
+      }
+    }
+  }
+}
+
+async function resolvePaymentStateFromWebhook(body, { requirePayTokenOrder = false } = {}) {
   const payToken = pickFirst(body, ['PayToken', 'payToken', 'TOKEN']);
   const orderNoFromBody = pickFirst(body, ['OrderNo', 'orderNo']);
-  const payStatusFromBody = pickFirst(body, ['PayStatus', 'payStatus']);
-  const payFlagFromBody = pickFirst(body, ['PayFlag', 'payFlag']);
-  const tsNoFromBody = pickFirst(body, ['TSNo', 'tsNo']);
-  const payTypeFromBody = pickFirst(body, ['PayType', 'payType']);
-  const descriptionFromBody = pickFirst(body, ['Description', 'description']);
 
-  let queryOrderNo = String(orderNoFromBody || '').trim();
+  let queryOrderNo = typeof orderNoFromBody === 'string' ? orderNoFromBody.trim() : '';
   let orderQuery = null;
   let payQuery = null;
 
   if (payToken) {
+    if (typeof payToken !== 'string') {
+      throw new Error('Invalid payment return token');
+    }
     payQuery = await queryPayByToken(String(payToken).trim());
-    queryOrderNo = queryOrderNo || String(payQuery?.TSResultContent?.OrderNo || '').trim();
+    requireBankQuerySuccess(payQuery);
+    const tokenOrderNo = payQuery?.TSResultContent?.OrderNo;
+    // API success can describe a declined transaction: retain its verified
+    // identity for result access, but never substitute a caller-selected order.
+    if (typeof tokenOrderNo !== 'string' || !tokenOrderNo.trim()) {
+      throw new Error('Payment return order identity is unavailable');
+    }
+    const tokenShop = payQuery.TSResultContent.ShopNo;
+    if (tokenShop != null && tokenShop !== process.env.SINOPAC_SHOP_NO) throw new Error('Bank payment merchant mismatch');
+    queryOrderNo = tokenOrderNo.trim();
+  } else if (requirePayTokenOrder) {
+    throw new Error('Payment return token is required');
   }
 
-  if (queryOrderNo) {
-    orderQuery = await queryOrderByOrderNo(queryOrderNo);
-  }
+  if (!queryOrderNo) throw new Error('Bank payment order identity is unavailable');
+  orderQuery = await queryOrderByOrderNo(queryOrderNo);
 
-  const orderInfo = Array.isArray(orderQuery?.OrderList) ? orderQuery.OrderList[0] : null;
+  const orderInfo = requireBankOrder(orderQuery, queryOrderNo);
   const payResult = payQuery?.TSResultContent || {};
   const payResultStatus = String(payResult.Status || '').trim().toUpperCase();
   const apType = String(payResult.APType || '').trim();
-  const payStatus = String(orderInfo?.PayStatus || payStatusFromBody || '').trim().toUpperCase();
-  const payFlag = String(orderInfo?.PayFlag || payFlagFromBody || '').trim().toUpperCase();
-  const payType = String(orderInfo?.PayType || payResult.PayType || payTypeFromBody || '').trim().toUpperCase();
-  const tsNo = String(orderInfo?.TSNo || payResult.TSNo || tsNoFromBody || '').trim();
-  const description = String(orderInfo?.Description || payQuery?.Description || descriptionFromBody || '').trim();
+  const payStatus = String(orderInfo.PayStatus || '').trim().toUpperCase();
+  const payFlag = String(orderInfo.PayFlag || '').trim().toUpperCase();
+  const payType = String(orderInfo.PayType || payResult.PayType || '').trim().toUpperCase();
+  const tsNo = String(orderInfo.TSNo || payResult.TSNo || '').trim();
+  const description = String(orderInfo.Description || payQuery?.Description || '').trim();
 
   // 信用卡/行動支付走 OrderPayQuery：APType=PayOut(付款成功)/CaptureOut(已請款) 且交易 Status=S 即視為已付款
   const paidByPayResult = payResultStatus === 'S' && ['PayOut', 'CaptureOut'].includes(apType);
@@ -1263,7 +1322,8 @@ function buildPaymentResultUrl(orderNo, result = 'pending', resultAccessToken = 
 
 async function redirectPaymentReturn(req, res) {
   const orderNo = req.query.orderNo || req.body?.OrderNo || req.body?.orderNo;
-  const payToken = req.body?.PayToken || req.body?.payToken || req.query.payToken;
+  const input = { ...req.query, ...req.body };
+  const payToken = pickFirst(input, ['PayToken', 'payToken', 'TOKEN']);
   let resolvedOrderNo = String(orderNo || '').trim();
   let result = 'pending';
   let resultAccessToken = '';
@@ -1272,9 +1332,15 @@ async function redirectPaymentReturn(req, res) {
   // 這裡用 PayToken 向豐收款確認付款結果後更新訂單，再導回前台。
   if (payToken) {
     try {
-      const payment = await resolvePaymentStateFromWebhook({ ...req.query, ...req.body });
+      const payment = await resolvePaymentStateFromWebhook(input, { requirePayTokenOrder: true });
       const providerOrderNo = payment.orderNo;
-      resolvedOrderNo = await resolveSiteOrderNo(providerOrderNo, resolvedOrderNo);
+      // Resolve only the bank-derived provider identity. Caller hints must never
+      // supply the fallback identity or skip the trusted retry-attempt mapping.
+      const siteOrderNo = await resolveSiteOrderNo(providerOrderNo);
+      if (!siteOrderNo) throw new Error('Payment return order mapping is unavailable');
+      requirePaymentOrderHints([req.query, req.body], providerOrderNo, siteOrderNo);
+      resolvedOrderNo = siteOrderNo;
+      if (payment.paid) requireBankPaymentAmount(payment, await getSupabaseOrderPaymentState(resolvedOrderNo));
       resultAccessToken = resolvedOrderNo ? createPaymentResultAccessToken(resolvedOrderNo) : '';
       if (resolvedOrderNo) recordResolvedPaymentDiagnostics(payment, resolvedOrderNo, providerOrderNo, 'return');
       if(resolvedOrderNo)await persistVerifiedRewardPayment(resolvedOrderNo,providerOrderNo,payment);
@@ -1505,7 +1571,9 @@ app.post('/api/sinopac/query-payment', async (req, res) => {
     const providerOrderNo = instruction?.provider_order_no || orderNo;
     const inner = buildQueryBody({ ...(req.body || {}), orderNo: providerOrderNo });
     const result = await callOrderApi('OrderQuery', inner, { orderId:orderNo, providerOrderNo, source:'query' });
+    requireBankOrder(result.data, providerOrderNo);
     const paymentState = resolvePaymentQueryState(order, result.data);
+    requireBankPaymentAmount({ paid: paymentState === 'paid', orderNo: providerOrderNo, raw: { orderQuery: result.data } }, order);
     await persistVerifiedRewardPayment(orderNo,providerOrderNo,{raw:{orderQuery:result.data}});
     try {
       const paymentDetails = {
@@ -1660,6 +1728,12 @@ app.post('/api/sinopac/notify', async (req, res) => {
       return res.status(400).json({ Status: 'F', message: 'order unresolved' });
     }
 
+    requirePaymentOrderHints([body], providerOrderNo, orderNo);
+    const order = await getSupabaseOrderPaymentState(orderNo);
+    requireBankPaymentAmount(payment, order);
+    if (!payment.paid && resolveStoredTerminalPaymentState(order)) {
+      return res.json({ Status: 'S', OrderNo: orderNo, ignored: true, message: 'order is terminal' });
+    }
     recordResolvedPaymentDiagnostics(payment, orderNo, providerOrderNo, 'notify');
 
     const instruction = await getOptionalOrderPaymentInstruction(orderNo);

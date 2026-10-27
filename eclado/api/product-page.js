@@ -5,6 +5,7 @@ const {
   productSeo,
   renderProductBody,
 } = require('./_seo.js');
+const { resolveSiteUrl } = require('./_supabase-env.js');
 
 function decodeSlug(value) {
   try { return decodeURIComponent(String(value || '')).toLowerCase(); } catch { return ''; }
@@ -14,12 +15,15 @@ function fallbackTemplate() {
   return '<!doctype html><html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ECLADO Taiwan</title></head><body><div id="root"></div></body></html>';
 }
 
-async function loadSiteTemplate(req) {
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  if (!host) return fallbackTemplate();
-  const protocol = req.headers['x-forwarded-proto'] || (String(host).includes('localhost') ? 'http' : 'https');
+async function loadSiteTemplate() {
   try {
-    const response = await fetch(`${protocol}://${host}/`);
+    // Only deployment configuration selects the origin. Request proxy headers
+    // cannot select a template or redirect this fetch to another destination.
+    const origin = new URL(resolveSiteUrl());
+    if (origin.protocol !== 'https:' || origin.username || origin.password) return fallbackTemplate();
+    const response = await fetch(new URL('/', origin).href, {
+      redirect: 'error', signal: AbortSignal.timeout(5000),
+    });
     return response.ok ? await response.text() : fallbackTemplate();
   } catch {
     return fallbackTemplate();
@@ -49,7 +53,7 @@ module.exports = async function handler(req, res) {
     return res.status(503).send('商品資料暫時無法載入');
   }
   const product = products.find(item => decodeSlug(item.slug) === requestedSlug);
-  const template = await loadSiteTemplate(req);
+  const template = await loadSiteTemplate();
   if (!product) {
     const html = injectSeoDocument(template, {
       title: '找不到商品｜ECLADO Taiwan', description: '您開啟的商品不存在或已下架。',

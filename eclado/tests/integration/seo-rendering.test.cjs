@@ -75,3 +75,83 @@ test('product fallback returns HTTP 404 and noindex for unknown products', async
     global.fetch = originalFetch;
   }
 });
+
+test('product template ignores request hosts and uses trusted origin without redirects', async () => {
+  const originalFetch = global.fetch;
+  const originalSite = process.env.PUBLIC_SITE_URL;
+  process.env.PUBLIC_SITE_URL = 'https://trusted.example.test';
+  const calls = [];
+  global.fetch = async (url, options = {}) => {
+    if (String(url).includes('/rest/v1/rpc/get_storefront_catalog')) return {
+      ok: true, json: async () => ({ products: [{ id: 1, slug: 'test-toner', name_zh: '測試化妝水' }] }),
+    };
+    calls.push(String(url));
+    assert.equal(String(url), 'https://trusted.example.test/');
+    assert.equal(options.redirect, 'error');
+    assert.ok(options.signal);
+    return { ok: true, text: async () => template };
+  };
+  try {
+    for (const method of ['GET', 'HEAD']) {
+      const res = responseRecorder();
+      await productPageHandler({ method, query: { slug: 'test-toner' }, headers: {
+        host: 'attacker.example', 'x-forwarded-host': '127.0.0.1:1234', 'x-forwarded-proto': 'http',
+      } }, res);
+      assert.equal(res.statusCode, 200);
+      if (method === 'GET') assert.match(res.body, /<script src="\/assets\/main\.js"><\/script>/);
+      else assert.equal(res.body, '');
+    }
+    assert.equal(calls.length, 2);
+  } finally {
+    global.fetch = originalFetch;
+    if (originalSite === undefined) delete process.env.PUBLIC_SITE_URL; else process.env.PUBLIC_SITE_URL = originalSite;
+  }
+});
+
+test('template fetch failures retain safe product HTML instead of following an external redirect', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url, options = {}) => {
+    if (String(url).includes('/rest/v1/rpc/get_storefront_catalog')) return {
+      ok: true, json: async () => ({ products: [{ id: 1, slug: 'test-toner', name_zh: '測試化妝水' }] }),
+    };
+    assert.equal(options.redirect, 'error');
+    throw new TypeError('redirect blocked');
+  };
+  try {
+    const res = responseRecorder();
+    await productPageHandler({ method: 'GET', query: { slug: 'test-toner' }, headers: {} }, res);
+    assert.equal(res.statusCode, 200);
+    assert.match(res.body, /<h1>測試化妝水<\/h1>/);
+    assert.doesNotMatch(res.body, /attacker/);
+  } finally { global.fetch = originalFetch; }
+});
+
+test('preview templates use isolated deployment configuration rather than request headers', async () => {
+  const originalFetch = global.fetch;
+  const keys = ['VERCEL_ENV', 'VERCEL_BRANCH_URL', 'PUBLIC_SITE_URL', 'SUPABASE_URL', 'SUPABASE_ANON_KEY'];
+  const saved = Object.fromEntries(keys.map(key => [key, process.env[key]]));
+  Object.assign(process.env, { VERCEL_ENV: 'preview', VERCEL_BRANCH_URL: 'preview.example.test',
+    SUPABASE_URL: 'https://isolated.example.test', SUPABASE_ANON_KEY: 'test-anon' });
+  delete process.env.PUBLIC_SITE_URL;
+  let templateReads = 0;
+  global.fetch = async (url, options = {}) => {
+    if (String(url).includes('/rest/v1/rpc/get_storefront_catalog')) {
+      assert.equal(new URL(String(url)).host, 'isolated.example.test');
+      return { ok: true, json: async () => ({ products: [] }) };
+    }
+    templateReads++;
+    assert.equal(String(url), 'https://preview.example.test/');
+    assert.equal(options.redirect, 'error');
+    return { ok: true, text: async () => template };
+  };
+  try {
+    const res = responseRecorder();
+    await productPageHandler({ method: 'GET', query: { slug: 'missing' }, headers: { host: 'attacker.test' } }, res);
+    assert.equal(res.statusCode, 404);
+    assert.equal(templateReads, 1);
+    assert.match(res.body, /<script src="\/assets\/main\.js"><\/script>/);
+  } finally {
+    global.fetch = originalFetch;
+    for (const key of keys) if (saved[key] === undefined) delete process.env[key]; else process.env[key] = saved[key];
+  }
+});
