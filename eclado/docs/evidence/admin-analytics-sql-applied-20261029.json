@@ -1,0 +1,49 @@
+{
+  "dateTaipei": "2026-10-29",
+  "projectRef": "ilvdvlkdpntwmaijncaz",
+  "databaseVersion": "17.6",
+  "migration": "supabase-admin-analytics.sql",
+  "installationMethod": "Authenticated Supabase SQL Editor; transaction",
+  "previousFunctionExisted": false,
+  "functionBodyMD5": "853a33e2b5966288e2376d32cd617d98",
+  "matchesLocalSQLBody": true,
+  "securityDefiner": true,
+  "stableRead": true,
+  "anonExecute": false,
+  "authenticatedExecute": true,
+  "businessRowsWritten": 0,
+  "localAuthenticatedReportLoaded": true,
+  "frontendProductionDeployed": false,
+  "maximumRange": "one calendar year inclusive (end before next anniversary)",
+  "defaultPeriod": "current month through today",
+  "dateLimitDesktopMobileTests": 12,
+  "dateLimitDatabaseTest": "passed",
+  "memberRevenueDistribution": {
+    "grouping": "order type snapshot; consumer distinguished by linked user_id",
+    "categories": [
+      "guest",
+      "consumer",
+      "pro",
+      "instructor",
+      "distributor",
+      "staff",
+      "other"
+    ],
+    "sumMatchesPeriodRevenueTest": true,
+    "desktopMobileTests": 6,
+    "localAuthenticatedChartLoaded": true
+  },
+  "stackedRevenueTrend": {
+    "dailyByRole": true,
+    "monthlyAggregationTest": "passed",
+    "desktopMobileTests": 8,
+    "localAuthenticatedChartLoaded": true
+  },
+  "preFrontendDeploymentValidation": {
+    "desktopMobileRegressionTests": 36,
+    "dashboardNavigationTests": 2,
+    "databaseTests": 2,
+    "build": "passed",
+    "pieBarToggleDesktopMobile": "passed"
+  }
+}

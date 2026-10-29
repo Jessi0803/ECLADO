@@ -341,8 +341,10 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
   }
 
   const isDashboard = page === 'dashboard';
-  const dataMode = isDashboard ? 'dashboard' : page === 'orders' ? 'orders' : 'full';
+  const dataMode = isDashboard ? 'dashboard' : page === 'analytics' ? 'analytics' : page === 'orders' ? 'orders' : 'full';
   useEffect(() => {
+    // Analytics owns its aggregate query; do not load raw orders or member data.
+    if (dataMode === 'analytics') return;
     // Keep full order/member/catalog payloads off the dashboard startup path.
     const refresh = isDashboard ? fetchDashboard : dataMode === 'orders'
       ? () => setOrderRefreshVersion(version => version + 1) : fetchAll;
@@ -716,7 +718,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
         : null;
     }
     switch (page) {
-      case 'dashboard': return <Dashboard summary={dashboard} loading={dashboardLoading} error={dashboardError} onRetry={fetchDashboard} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} />;
+      case 'dashboard': return <Dashboard summary={dashboard} loading={dashboardLoading} error={dashboardError} onRetry={fetchDashboard} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} onGoToAnalytics={canAccessBackofficePage(backofficeAccess, 'analytics') ? () => setPage('analytics') : undefined} />;
       case 'orders': return <Orders refreshVersion={orderRefreshVersion} persistOrderPatch={persistOrderPatch} onSaveInvoiceNumber={saveOrderInvoiceNumber} onDeleteCancelledOrder={deleteCancelledOrder} onCancelHistoricalOrder={cancelHistoricalOrder} onAssignGuestOrder={canWriteOrders && canWriteMembers && canReadMembers ? assignGuestOrderToMember : null} defaultFilter={ordersDefaultFilter} focusOrderId={crossLink?.orderId || ''} backToMember={crossLink?.backMemberId ? { id: crossLink.backMemberId, name: crossLink.backMemberName } : null} onOpenMember={canReadMembers ? openMemberFromOrder : null} onClearCrossLink={() => setCrossLink(null)} onCreateAssistedOrder={canCreateAssistedOrder ? ()=>openAssistedOrder() : null} canConfirmPayments={canWriteOrders && ['admin','super_admin'].includes(backofficeAccess?.role)} />;
       case 'reward_management':
       case 'withdrawals':
@@ -736,7 +738,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
       case 'members': return <Members members={members} orders={orders} products={products} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} onCreateHistoricalOrder={canWriteOrders ? createMemberHistoricalOrder : null} onCreateAssistedOrder={canCreateAssistedOrder ? openAssistedOrder : null} defaultFilter={membersDefaultFilter} memberNotes={memberNotes} onSaveMemberNote={canWriteMembers ? saveMemberNote : null} focusMemberId={crossLink?.memberId || ''} backToOrderId={crossLink?.backOrderId || ''} onOpenOrder={canReadOrders ? openOrderFromMember : null} onClearCrossLink={() => setCrossLink(null)} canManageShoppingCredit={canManageShoppingCredit} canManageInstructorStudents={canManageInstructorStudents} />;
       case 'renewals': return <ProfessionalRenewalsPage canWrite={canWriteMembers} />;
       case 'applications': return <Members members={members} orders={orders} products={products} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} onCreateHistoricalOrder={canWriteOrders ? createMemberHistoricalOrder : null} defaultFilter="app_pending" canManageShoppingCredit={canManageShoppingCredit} canManageInstructorStudents={canManageInstructorStudents} />;
-      case 'analytics': return <Analytics orders={orders} />;
+      case 'analytics': return <Analytics />;
       case 'ai': return <AIReorder products={activeProducts} orders={orders} />;
       default: return null;
     }

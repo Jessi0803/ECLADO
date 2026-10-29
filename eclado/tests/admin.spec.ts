@@ -3296,7 +3296,7 @@ test('營業分析與 AI 補貨只使用真實訂單統計，不套用預設銷�
   await page.goto('/admin');
   await openAdminSection(page, /營業分析/);
   await expect(page.getByRole('heading', { name: '營業分析' })).toBeVisible();
-  await expect(page.getByText('月營業額趨勢')).toBeVisible();
+  await expect(page.getByText('營業額趨勢', { exact: true })).toBeVisible();
   await expect(page.getByText('NT$ 46,200').first()).toBeVisible();
 
   await openAdminSection(page, /AI 補貨建議/);
@@ -3547,4 +3547,98 @@ test('公告排程使用台北凌晨時間，拒絕倒置區間並保留重新�
   await expect(page.getByLabel('公告開始時間',{exact:true})).toHaveValue('2026-11-11T00:00');
   await expect(page.getByLabel('公告結束時間',{exact:true})).toHaveValue('2026-11-12T00:00');
   await page.screenshot({path:testInfo.outputPath('announcement-schedule.png'),fullPage:true});
+});
+
+test('營業分析自訂日期、跨月趨勢及商品規格排行共用期間且不載入原始訂單', async ({ page }, testInfo) => {
+  await page.clock.install({ time:new Date('2026-10-29T12:00:00+08:00') });
+  await mockAdminApis(page);
+  const queries: any[] = [];
+  await page.route('**/rest/v1/rpc/get_admin_analytics', route => {
+    const query = route.request().postDataJSON(); queries.push(query);
+    return route.fulfill({ json:{ startDate:query.p_start_date,endDate:query.p_end_date,
+      memberRevenue: query.p_end_date === '2026-11-02' ? [{role:'pro',revenue:4000,orders:1},{role:'staff',revenue:2000,orders:1},{role:'consumer',revenue:3000,orders:1},{role:'guest',revenue:0,orders:1}] : [],
+      daily:[{ date:'2026-10-30',revenue:0,orders:1,proRevenue:0,byRole:{guest:0} },{ date:'2026-10-31',revenue:6000,orders:2,proRevenue:4000,byRole:{pro:4000,staff:2000} },{ date:'2026-11-01',revenue:3000,orders:1,proRevenue:0,byRole:{consumer:3000} }].filter(row=>row.date>=query.p_start_date&&row.date<=query.p_end_date),
+      productSales:[
+        { date:'2026-10-31',productKey:'1',variantKey:'11',name:'已下架安瓶',size:'30ml',quantity:2,gifts:0 },
+        { date:'2026-11-01',productKey:'1',variantKey:'12',name:'已下架安瓶',size:'100ml',quantity:3,gifts:0 },
+        { date:'2026-11-01',productKey:'2',variantKey:'21',name:'活動贈品',size:'10ml',quantity:0,gifts:8 },
+      ].filter(row=>row.date>=query.p_start_date&&row.date<=query.p_end_date),
+    } });
+  });
+  await page.goto('/admin');
+  const fullReads: string[] = [];
+  page.on('request',r=> { if (/\/rest\/v1\/(orders|profiles)$/.test(new URL(r.url()).pathname)) fullReads.push(r.url()); });
+  await page.getByText('本月營業額',{exact:true}).click();
+  await expect(page.getByLabel('開始日期')).toHaveValue('2026-10-01');
+  await expect(page.getByText('此期間沒有符合條件的銷售訂單。')).toBeVisible();
+  expect(queries[0]).toEqual({ p_start_date:'2026-10-01',p_end_date:'2026-10-29' });
+  await page.getByLabel('開始日期').fill('2026-10-30');
+  await page.getByLabel('結束日期').fill('2026-11-02');
+  await page.getByRole('button',{ name:'查詢',exact:true }).click();
+  await expect(page.getByText('NT$ 9,000',{ exact:true })).toBeVisible();
+  await expect(page.getByText('另贈送 8 件，不計入銷售排行')).toBeVisible();
+  const memberChart = page.getByRole('region',{ name:'會員身分營收分布',exact:true });
+  const mobileChart = (page.viewportSize()?.width || 0) <= 900;
+  await expect(memberChart.getByRole('button',{name:mobileChart ? '圓餅圖' : '柱狀圖',exact:true})).toHaveAttribute('aria-pressed','true');
+  await memberChart.getByRole('button',{name:'圓餅圖',exact:true}).click();
+  await expect(memberChart.getByRole('img',{name:'會員身分營收圓餅圖，總營業額 NT$ 9,000',exact:true})).toBeVisible();
+  expect(await memberChart.evaluate(element=>element.scrollWidth<=element.clientWidth)).toBe(true);
+  await memberChart.getByRole('button',{name:'柱狀圖',exact:true}).click();
+  await expect(memberChart.getByRole('button',{name:'柱狀圖',exact:true})).toHaveAttribute('aria-pressed','true');
+  await memberChart.getByRole('button',{name:mobileChart ? '圓餅圖' : '柱狀圖',exact:true}).click();
+
+  await expect(memberChart.getByLabel('美容師：NT$ 4,000，1 筆訂單',{exact:true})).toBeVisible();
+  await expect(memberChart.getByLabel('一般會員：NT$ 3,000，1 筆訂單',{exact:true})).toBeVisible();
+  const details = page.getByRole('table',{ name:'營業額明細' });
+  await expect(details.getByRole('cell',{ name:'2026-10-30',exact:true })).toBeVisible();
+  await expect(details.getByRole('cell',{ name:'2026-11-02',exact:true })).toHaveCount(0);
+  await expect(page.getByText('已隱藏 1 個無訂單日期')).toBeVisible();
+  await expect(page.locator('.analytics-bar-column')).toHaveCount(4);
+  await expect(page.locator('.analytics-stacked-bar [data-member-role=pro]')).toHaveAttribute('title','美容師：NT$ 4,000');
+  await expect(page.locator('.analytics-stacked-bar [data-member-role=staff]')).toHaveAttribute('title','內部人員：NT$ 2,000');
+  await page.getByLabel('顯示無訂單日期',{ exact:true }).check();
+  await expect(details.getByRole('cell',{ name:'2026-11-02',exact:true })).toBeVisible();
+  await page.getByLabel('顯示無訂單日期',{ exact:true }).uncheck();
+  await expect(details.getByRole('cell',{ name:'2026-11-02',exact:true })).toHaveCount(0);
+
+  const ranking = page.locator('section').filter({ has:page.getByRole('heading',{ name:'商品銷售排行' }) });
+  await expect(ranking.getByRole('row').nth(1)).toContainText('已下架安瓶');
+  await expect(ranking.getByRole('row').nth(1)).toContainText('100.0%');
+  await page.getByLabel('商品統計方式').selectOption('variant');
+  await expect(ranking.getByRole('row').nth(1)).toContainText('100ml');
+  await page.getByLabel('檢視方式').selectOption('month');
+  await expect(page.getByRole('cell',{ name:'2026-10-30 ～ 2026-10-31',exact:true })).toBeVisible();
+  await page.getByLabel('排行範圍').selectOption('2026-10');
+  await expect(ranking.getByRole('row').nth(1)).toContainText('30ml');
+  await expect(ranking.getByRole('row')).toHaveCount(2);
+  await expect(page.getByText('NT$ 9,000',{ exact:true })).toBeVisible();
+  expect(queries.at(-1)).toEqual({ p_start_date:'2026-10-30',p_end_date:'2026-11-02' });
+  expect(fullReads).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path:testInfo.outputPath('analytics-period.png'),fullPage:true });
+  await page.getByLabel('開始日期').fill('2026-12-01');
+  const count = queries.length;
+  await page.getByRole('button',{ name:'查詢',exact:true }).click();
+  await expect(page.getByRole('alert')).toContainText('開始日期不可晚於結束日期');
+  expect(queries).toHaveLength(count);
+  await expect(page.getByText('NT$ 9,000',{ exact:true })).toBeVisible();
+  await page.getByLabel('開始日期').fill('2025-11-02');
+  await page.getByRole('button',{ name:'查詢',exact:true }).click();
+  await expect(page.getByRole('alert')).toContainText('查詢期間最多一年');
+  expect(queries).toHaveLength(count);
+});
+
+test('營業分析查詢失敗可重試，不將錯誤顯示為零元', async ({ page }) => {
+  await mockAdminApis(page);
+  let fail = true;
+  await page.route('**/rest/v1/rpc/get_admin_analytics',route=> {
+    if (fail) return route.fulfill({ status:500,json:{ message:'分析服務暫時無法使用' } });
+    return route.fallback();
+  });
+  await page.goto('/admin'); await openAdminSection(page,/營業分析/);
+  await expect(page.getByRole('alert')).toContainText('分析服務暫時無法使用');
+  await expect(page.getByText('期間營業額',{ exact:true })).toHaveCount(0);
+  fail = false;
+  await page.getByRole('button',{ name:'重新載入',exact:true }).click();
+  await expect(page.getByText('期間營業額',{ exact:true })).toBeVisible();
 });

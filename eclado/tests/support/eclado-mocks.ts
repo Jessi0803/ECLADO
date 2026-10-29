@@ -499,6 +499,35 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     });
   });
 
+  await page.route('**/rest/v1/rpc/get_admin_analytics', async route => {
+    const { p_start_date: startDate, p_end_date: endDate } = route.request().postDataJSON();
+    const daily = new Map<string, any>();
+    const productSales: any[] = [];
+    const memberRevenue = new Map<string, any>();
+    for (const order of orders) {
+      if (!['paid','preparing','ready_for_pickup','picked_up','shipped','delivered'].includes(String(order.status)) || order.order_source === 'historical_manual') continue;
+      const rawDate = order.date || order.created_at;
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : new Date(new Date(rawDate).getTime()+8*3600000).toISOString().slice(0,10);
+      if (date < startDate || date > endDate) continue;
+      const day = daily.get(date) || { date, revenue: 0, orders: 0, proRevenue: 0 };
+      day.revenue += Number(order.total); day.orders++;
+      if (['pro','instructor','distributor'].includes(order.type)) day.proRevenue += Number(order.total);
+      daily.set(date,day);
+      const role = ['pro','instructor','distributor','staff'].includes(order.type) ? order.type
+        : order.type === 'consumer' && order.user_id ? 'consumer'
+        : ['consumer','guest'].includes(order.type) && !order.user_id ? 'guest' : 'other';
+      day.byRole ||= {}; day.byRole[role] = (day.byRole[role] || 0) + Number(order.total);
+      const group = memberRevenue.get(role) || { role,revenue:0,orders:0 };
+      group.revenue += Number(order.total); group.orders++; memberRevenue.set(role,group);
+
+      for (const item of order.items || []) {
+        const gift = item.line_type === 'gift' || item.is_gift === true;
+        productSales.push({ date, productKey: String(item.product_id ?? item.id ?? item.name), variantKey: String(item.variant_id ?? item.size ?? 'unknown'), name: item.nameZh || item.name, size: item.size || '未記錄規格', quantity: gift ? 0 : Number(item.qty), gifts: gift ? Number(item.qty) : 0 });
+      }
+    }
+    return json(route, { startDate,endDate,daily:[...daily.values()],productSales,memberRevenue:[...memberRevenue.values()] });
+  });
+
   await page.route('**/rest/v1/rpc/get_admin_dashboard', async route => {
     const permissions = options.backofficeAccess?.permissions;
     const normalizedOrders = orders.map(order => normalizeOrder({

@@ -4,7 +4,7 @@ import { MiniBarChart, StatCard } from '../components/DashboardWidgets.jsx';
 import { revenueGrowth } from '../domain/analytics.js';
 import { isHistoricalOrder } from '../../domain/sales.js';
 
-export default function Dashboard({ summary, loading, error, onRetry, adminEmail, onGoToPendingMembers, onGoToOrders }) {
+export default function Dashboard({ summary, loading, error, onRetry, adminEmail, onGoToPendingMembers, onGoToOrders, onGoToAnalytics }) {
   if (!summary) return (
     <div>
       <h1 style={{ fontSize: 28, fontWeight: 400, marginBottom: 24 }}>儀表板</h1>
@@ -34,7 +34,7 @@ export default function Dashboard({ summary, loading, error, onRetry, adminEmail
 
       {/* Stats grid */}
       <div className="stat-grid-4" style={{ marginBottom: 32 }}>
-        <StatCard label="本月營業額" value={`NT$ ${thisMonth.revenue.toLocaleString()}`} sub={growthLabel} accent="var(--dark)" icon="◐" />
+        <StatCard label="本月營業額" value={`NT$ ${thisMonth.revenue.toLocaleString()}`} sub={onGoToAnalytics ? `${growthLabel} · 點擊查看營業分析` : growthLabel} accent="var(--dark)" icon="◐" onClick={onGoToAnalytics} />
         <StatCard label="已付款訂單" value={paidOrderCount} sub={paidOrderCount > 0 ? '可安排後續出貨' : '目前無已付款訂單'} accent={paidOrderCount > 0 ? 'var(--blue)' : 'var(--green)'} icon="◫" />
         <StatCard label="待審核申請" value={pendingApplicationCount} sub={pendingApplicationCount > 0 ? '點擊前往會員管理審核' : '目前無待審核'} accent={pendingApplicationCount > 0 ? 'var(--gold)' : 'var(--green)'} icon="◉" onClick={pendingApplicationCount > 0 ? onGoToPendingMembers : undefined} />
         <StatCard label="庫存警示" value={lowStock.length} sub="件商品庫存不足" accent={lowStock.length > 0 ? 'var(--red)' : 'var(--green)'} icon="◉" />
