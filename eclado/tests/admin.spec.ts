@@ -2185,7 +2185,7 @@ test('活動可套用全館商品並包含活動限定商品', async ({ page }) 
   expect(saves[0]).toMatchObject({ scope_type:'all_sellable', product_ids:[] });
 });
 
-test('活動管理不顯示已停用活動', async ({ page }) => {
+test('活動管理預設不顯示已封存活動', async ({ page }) => {
   await mockAdminApis(page, {
     promotions: [
       activePromotion,
@@ -3642,3 +3642,122 @@ test('營業分析查詢失敗可重試，不將錯誤顯示為零元', async ({
   await page.getByRole('button',{ name:'重新載入',exact:true }).click();
   await expect(page.getByText('期間營業額',{ exact:true })).toBeVisible();
 });
+
+for (const kind of ['promotions', 'coupon_campaigns'] as const) {
+  test(`${kind} 停用保留列表、封存與手動還原分離`, async ({ page }) => {
+    const updates: Record<string, unknown>[] = [];
+    const rows = [
+      { ...activePromotion, id:'current', name:'目前方案', benefit_type:'fixed_discount', activation_type:'automatic', discount_amount:100, archived_at:null, code:'CURRENT' },
+      { ...activePromotion, id:'old-archived', name:'原先已封存', active:false, archived_at:'2026-09-11T15:26:36.807Z', code:'OLD' },
+    ];
+    await mockAdminApis(page);
+    await page.route(`**/rest/v1/${kind}**`, async route => {
+      if (route.request().method() === 'PATCH') {
+        const patch = route.request().postDataJSON();
+        const id = new URL(route.request().url()).searchParams.get('id')?.replace('eq.','');
+        const row = rows.find(row => row.id === id)!;
+        Object.assign(row, patch); updates.push({ id, ...patch });
+        return route.fulfill({json:[{ id }]});
+      }
+      return route.fulfill({json:rows});
+    });
+    page.on('dialog', dialog => dialog.accept());
+    await page.goto('/admin'); await openAdminSection(page, /活動管理/);
+    if (kind === 'coupon_campaigns') await page.getByRole('button', {name:'優惠券方案',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'目前方案'})).toBeVisible();
+    await expect(page.getByRole('heading',{name:'原先已封存'})).toHaveCount(0);
+    expect(updates).toHaveLength(0);
+    await page.getByRole('button',{name:'停用',exact:true}).click();
+    await expect(page.getByRole('button',{name:'啟用',exact:true})).toBeVisible();
+    await expect(page.getByRole('heading',{name:'目前方案'})).toBeVisible();
+    expect(updates[0]).toEqual({ id:'current', active:false });
+    await page.getByRole('button',{name:'啟用',exact:true}).click();
+    await expect(page.getByRole('button',{name:'停用',exact:true})).toBeVisible();
+    await page.getByRole('button',{name:'封存',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'目前方案'})).toHaveCount(0);
+    await page.getByRole('button',{name:'已封存',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'原先已封存'})).toBeVisible();
+    const currentCard = page.getByRole('heading',{name:'目前方案'}).locator('xpath=../../..');
+    await currentCard.getByRole('button',{name:'還原',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'目前方案'})).toHaveCount(0);
+    await expect(page.getByRole('heading',{name:'原先已封存'})).toBeVisible();
+    expect(rows[1].archived_at).toBe('2026-09-11T15:26:36.807Z');
+    expect(updates.at(-1)).toEqual({ id:'current', active:false, archived_at:null });
+    await page.getByRole('button',{name:'未封存',exact:true}).click();
+    await expect(page.getByRole('button',{name:'啟用',exact:true})).toBeVisible();
+  });
+}
+
+test('活動狀態更新失敗或已被其他人變更時保留原畫面並提示', async ({ page }) => {
+  await mockAdminApis(page,{promotions:[{...activePromotion,benefit_type:'fixed_discount',discount_amount:100}]});
+  let stale = false;
+  await page.route('**/rest/v1/promotions**', route => {
+    if(route.request().method() !== 'PATCH') return route.fallback();
+    return stale ? route.fulfill({json:[]}) : route.fulfill({status:403,json:{message:'Permission denied'}});
+  });
+  page.on('dialog', dialog => dialog.accept());
+  await page.goto('/admin'); await openAdminSection(page,/活動管理/);
+  await page.getByRole('button',{name:'停用',exact:true}).click();
+  await expect(page.getByRole('alert')).toContainText('Permission denied');
+  await expect(page.getByRole('button',{name:'停用',exact:true})).toBeEnabled();
+  stale=true;
+  await page.getByRole('button',{name:'停用',exact:true}).click();
+  await expect(page.getByRole('alert')).toContainText('狀態已變更或沒有操作權限');
+});
+
+test('複製買贈活動帶入商品與設定，取消不寫入、儲存使用新 ID 且預設停用', async ({ page }) => {
+  const saves: Record<string,unknown>[]=[];
+  const source={...activePromotion,id:'copy-source',name:'美容師買三送一',benefit_type:'buy_x_get_y',activation_type:'automatic',
+    buy_quantity:3,gift_quantity:1,repeat_mode:'repeat',threshold_type:'quantity',threshold_value:4,
+    audience_roles:['pro'],allow_guest:false,label_text:'限時買贈',label_color:'#123456',start_at:'2030-11-01T00:00:00Z',end_at:'2030-11-12T00:00:00Z'};
+  const scopes=['qualification','benefit'].map(scope_role=>({promotion_id:source.id,scope_role,mode:'include',target_type:'product',product_id:2}));
+  await mockAdminApis(page,{promotions:[source],promotionScopes:scopes,onDiscountPromotionSave:p=>saves.push(p)});
+  await page.goto('/admin'); await openAdminSection(page,/活動管理/);
+  await page.getByRole('button',{name:'複製',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'複製優惠活動'})).toBeVisible();
+  await expect(page.getByPlaceholder('例：秋季保養 9 折')).toHaveValue('美容師買三送一（副本）');
+  await expect(page.getByLabel('啟用活動',{exact:true})).not.toBeChecked();
+  await expect(page.getByLabel('買入件數 X')).toHaveValue('3');
+  await expect(page.getByLabel('達標方式')).toHaveValue('repeat');
+  await expect(page.getByLabel('美容師',{exact:true})).toBeChecked();
+  await expect(page.getByLabel('允許訪客',{exact:true})).not.toBeChecked();
+  await page.getByRole('button',{name:'返回活動列表'}).click();
+  expect(saves).toHaveLength(0);
+  await page.getByRole('button',{name:'複製',exact:true}).click();
+  await page.getByRole('button',{name:'建立活動',exact:true}).click();
+  await expect.poll(()=>saves.length).toBe(1);
+  expect(saves[0]).toMatchObject({id:null,name:'美容師買三送一（副本）',active:false,product_ids:[2],audience_roles:['pro'],allow_guest:false,
+    buy_quantity:3,gift_quantity:1,repeat_mode:'repeat',label_text:'限時買贈',label_color:'#123456',start_at:'2030-11-01T00:00:00.000Z',end_at:'2030-11-12T00:00:00.000Z'});
+  expect(source.active).toBe(true);
+});
+
+test('複製活動遇到無法表示的排除範圍時阻擋，不默默擴大範圍', async ({ page }) => {
+  const source={...activePromotion,benefit_type:'fixed_discount',discount_amount:100};
+  await mockAdminApis(page,{promotions:[source],promotionScopes:[{promotion_id:source.id,scope_role:'benefit',mode:'exclude',target_type:'product',product_id:2}]});
+  const dialogs:string[]=[];page.on('dialog',async d=>{dialogs.push(d.message());await d.accept();});
+  await page.goto('/admin'); await openAdminSection(page,/活動管理/);
+  await page.getByRole('button',{name:'複製',exact:true}).click();
+  await expect.poll(()=>dialogs.length).toBe(1);
+  expect(dialogs[0]).toContain('無法直接複製');
+  await expect(page.getByRole('button',{name:'複製',exact:true})).toBeVisible();
+});
+
+for (const benefit of ['percentage_discount','fixed_discount','amount_gift','quantity_gift']) {
+  test(`複製 ${benefit} 保留優惠與範圍設定並建立停用副本`, async ({ page }) => {
+    const saves:Record<string,unknown>[]=[];
+    const source={...activePromotion,id:'copy-other',name:'可重用活動',benefit_type:benefit,activation_type:'automatic',
+      discount_rate:0.875,discount_amount:250,threshold_type:benefit==='quantity_gift'?'quantity':'amount',threshold_value:benefit==='quantity_gift'?3:1000,
+      threshold_basis:'after_bundle_discount',gift_variant_id:101,gift_quantity:2,repeat_mode:'repeat',priority:7};
+    await mockAdminApis(page,{promotions:[source],promotionScopes:['qualification','benefit'].map(scope_role=>({promotion_id:source.id,scope_role,mode:'include',target_type:'all_sellable'})),
+      productVariants:adminProductVariants.map(v=>({...v,gift_enabled:true,gift_stock:10})),onDiscountPromotionSave:p=>saves.push(p)});
+    await page.goto('/admin'); await openAdminSection(page,/活動管理/);
+    await page.getByRole('button',{name:'複製',exact:true}).click();
+    if(benefit==='percentage_discount') await expect(page.getByLabel('折扣百分比（% OFF）')).toHaveValue('12.5');
+    await page.getByRole('button',{name:'建立活動',exact:true}).click();
+    await expect.poll(()=>saves.length).toBe(1);
+    expect(saves[0]).toMatchObject({id:null,active:false,priority:7,benefit_type:benefit,scope_type:'all_sellable',product_ids:[],threshold_value:source.threshold_value});
+    if(benefit==='percentage_discount') expect(saves[0].discount_rate).toBe(0.875);
+    if(benefit==='fixed_discount') expect(saves[0].discount_amount).toBe(250);
+    if(benefit.endsWith('_gift')) expect(saves[0]).toMatchObject({gift_variant_id:101,gift_quantity:2,repeat_mode:'repeat'});
+  });
+}

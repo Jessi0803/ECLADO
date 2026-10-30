@@ -17,6 +17,7 @@ const secondaryButton = { flex:1, padding:'8px', background:'var(--off)', color:
 
 export default function Promotions({ products }) {
   const [tab, setTab] = useState('promotions');
+  const [showArchived, setShowArchived] = useState(false);
   const [promotions, setPromotions] = useState([]);
   const [scopes, setScopes] = useState([]);
   const [coupons, setCoupons] = useState([]);
@@ -30,9 +31,9 @@ export default function Promotions({ products }) {
   async function load() {
     setLoading(true); setLoadError('');
     const [promotionResult, scopeResult, couponResult, linkResult, memberLinkResult] = await Promise.all([
-      supabase.from('promotions').select('*').is('archived_at', null).order('created_at', { ascending:false }),
+      supabase.from('promotions').select('*').order('created_at', { ascending:false }),
       supabase.from('promotion_scopes').select('*'),
-      supabase.from('coupon_campaigns').select('*').is('archived_at', null).order('created_at', { ascending:false }),
+      supabase.from('coupon_campaigns').select('*').order('created_at', { ascending:false }),
       supabase.from('coupon_promotions').select('*').order('sort_order'),
       supabase.from('coupon_campaign_members').select('coupon_campaign_id,user_id'),
     ]);
@@ -41,6 +42,21 @@ export default function Promotions({ products }) {
     setPromotions(promotionResult.data || []); setScopes(scopeResult.data || []);
     setCoupons(couponResult.data || []); setLinks(linkResult.data || []);
     setCouponMembers(memberLinkResult.data || []); setLoading(false);
+  }
+
+  function copyPromotion(promo) {
+    const sourceScopes = scopes.filter(scope => scope.promotion_id === promo.id);
+    const benefitScopes = sourceScopes.filter(scope => scope.scope_role === 'benefit');
+    const representable = benefitScopes.every(scope => scope.target_type === 'product') || benefitScopes.length === 1;
+    const supported = representable && sourceScopes.every(scope => scope.mode === 'include'
+      && ['product','all_regular','all_sellable'].includes(scope.target_type) && !scope.product_variant_id);
+    const scopeKeys = role => sourceScopes.filter(scope => scope.scope_role === role)
+      .map(scope => `${scope.target_type}:${scope.product_id ?? ''}`).sort().join('|');
+    if (!supported || !scopeKeys('benefit') || scopeKeys('benefit') !== scopeKeys('qualification')) {
+      alert('此活動含目前表單不支援的商品範圍，無法直接複製。請新增活動並重新設定範圍。');
+      return;
+    }
+    setEditingPromotion({ ...promo, copySourceId:promo.id, id:null, name:`${promo.name}（副本）`, active:false, archived_at:null });
   }
 
   useEffect(() => { load(); }, []);
@@ -56,17 +72,47 @@ export default function Promotions({ products }) {
     <div style={{ display:'flex', gap:4, borderBottom:'1px solid var(--border)', marginBottom:24 }}>
       {[['promotions','優惠活動'],['coupons','優惠券方案'],['announcement','全站公告']].map(([value,label]) => <button key={value} onClick={() => setTab(value)} style={{ padding:'11px 20px', border:'none', borderBottom:tab === value ? '2px solid var(--dark)' : '2px solid transparent', background:'none', color:tab === value ? 'var(--dark)' : 'var(--mid)', cursor:'pointer', fontSize:13 }}>{label}</button>)}
     </div>
+    {tab !== 'announcement' && <div aria-label="封存篩選" style={{ display:'flex', gap:8, marginBottom:18 }}>{[[false,'未封存'],[true,'已封存']].map(([value,label]) => <button key={label} type="button" aria-pressed={showArchived === value} onClick={() => setShowArchived(value)} style={{ ...secondaryButton, flex:'none', borderColor:showArchived === value ? 'var(--dark)' : 'var(--border)' }}>{label}</button>)}</div>}
     {tab !== 'announcement' && loadError && <div role="alert" style={{ marginBottom:16, color:'var(--red)', fontSize:13 }}>{loadError}</div>}
-    {tab === 'announcement' ? <SiteAnnouncementSettings /> : loading ? <Empty text="載入中…" /> : tab === 'promotions' ? <PromotionList list={promotions} scopes={scopes} products={products} onEdit={setEditingPromotion} onReload={load} /> : <CouponList list={coupons} links={links} memberLinks={couponMembers} promotions={promotions} onEdit={setEditingCoupon} onReload={load} />}
+    {tab === 'announcement' ? <SiteAnnouncementSettings /> : loading ? <Empty text="載入中…" /> : tab === 'promotions' ? <PromotionList list={promotions.filter(p => Boolean(p.archived_at) === showArchived)} scopes={scopes} products={products} onEdit={setEditingPromotion} onCopy={copyPromotion} onReload={load} /> : <CouponList list={coupons.filter(c => Boolean(c.archived_at) === showArchived)} links={links} memberLinks={couponMembers} promotions={promotions} onEdit={setEditingCoupon} onReload={load} />}
   </div>;
 }
 
-function PromotionList({ list, scopes, products, onEdit, onReload }) {
-  async function archive(promo) {
-    if (!confirm(`確定停用活動「${promo.name}」？既有訂單快照不受影響。`)) return;
-    const { error } = await supabase.from('promotions').update({ active:false, archived_at:new Date().toISOString() }).eq('id', promo.id);
-    if (error) alert(`停用失敗：${error.message}`); else onReload();
+function LifecycleActions({ item, table, noun, onReload }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  async function change(action) {
+    const messages = {
+      toggle: item.active ? `確定停用${noun}「${item.name}」？仍可編輯並重新啟用。` : `確定啟用${noun}「${item.name}」？符合活動時間與資格後即可使用。`,
+      archive: `確定封存${noun}「${item.name}」？將停止使用並移至已封存列表，既有訂單與紀錄保留。`,
+      restore: `確定還原${noun}「${item.name}」？還原後保持停用，確認設定後再啟用。`,
+    };
+    if (busy || !confirm(messages[action])) return;
+    setBusy(true); setError('');
+    try {
+      const patch = action === 'toggle' ? { active:!item.active }
+        : { active:false, archived_at:action === 'archive' ? new Date().toISOString() : null };
+      let query = supabase.from(table).update(patch).eq('id', item.id).eq('active', item.active);
+      query = item.archived_at ? query.eq('archived_at', item.archived_at) : query.is('archived_at', null);
+      const { data, error:writeError } = await query.select('id');
+      if (writeError) throw writeError;
+      if (!data?.length) throw new Error('狀態已變更或沒有操作權限，請重新整理後再試。');
+      await onReload();
+    } catch (failure) { setError(`操作失敗：${failure.message}`); }
+    finally { setBusy(false); }
   }
+  return <div style={{ marginTop:8 }}>
+    <div style={{ display:'flex', gap:8 }}>
+      {item.archived_at ? <button disabled={busy} onClick={() => change('restore')} style={secondaryButton}>還原</button> : <>
+        <button disabled={busy} onClick={() => change('toggle')} style={secondaryButton}>{item.active ? '停用' : '啟用'}</button>
+        <button disabled={busy} onClick={() => change('archive')} style={{ ...secondaryButton, color:'var(--red)' }}>封存</button>
+      </>}
+    </div>
+    {error && <p role="alert" style={{ fontSize:12, color:'var(--red)' }}>{error}</p>}
+  </div>;
+}
+
+function PromotionList({ list, scopes, products, onEdit, onCopy, onReload }) {
   if (!list.length) return <Empty text="目前還沒有優惠活動" />;
   return <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(320px, 1fr))', gap:16 }}>
     {list.map(promo => {
@@ -76,36 +122,34 @@ function PromotionList({ list, scopes, products, onEdit, onReload }) {
       const names = promoScopes.filter(scope => scope.target_type === 'product').map(scope => products.find(product => product.id === scope.product_id)?.nameZh).filter(Boolean);
       const legacy = !promo.benefit_type || promo.benefit_type === 'legacy_discount';
       return <Card key={promo.id}>
-        <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}><div><h3 style={{ fontSize:15, fontWeight:500, marginBottom:6 }}>{promo.name}</h3><PromoBadge phase={getPromotionPhase(promo)} /></div><span style={{ fontSize:10, color:'var(--mid)' }}>{promo.activation_type === 'coupon_only' ? '優惠券專用' : '自動活動'}</span></div>
+        <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}><div><h3 style={{ fontSize:15, fontWeight:500, marginBottom:6 }}>{promo.name}</h3>{promo.archived_at ? <span style={{ fontSize:11, color:'var(--mid)' }}>已封存</span> : !promo.active ? <span style={{ fontSize:11, color:'var(--mid)' }}>已停用</span> : <PromoBadge phase={getPromotionPhase(promo)} />}</div><span style={{ fontSize:10, color:'var(--mid)' }}>{promo.activation_type === 'coupon_only' ? '優惠券專用' : '自動活動'}</span></div>
         <div style={{ background:'var(--off)', padding:'11px 12px', borderLeft:'2px solid var(--gold)', fontSize:12 }}>{getBenefitLabel(promo, products)}</div>
         <div style={{ fontSize:11, color:'var(--mid)', lineHeight:1.7 }}>適用：{legacy ? `${(promo.product_ids || []).length} 件既有指定商品` : allSellable ? '全館商品（含活動限定）' : allRegular ? '全館一般商品' : names.length ? names.join('、') : '尚未設定範圍'}{promo.threshold_value && <div>門檻：{promo.benefit_type === 'quantity_gift' || promo.threshold_type === 'quantity' ? `滿 ${Number(promo.threshold_value)} 件` : `滿 NT$ ${Number(promo.threshold_value).toLocaleString()}`}</div>}</div>
         {promo.activation_type !== 'coupon_only' && <div style={{ fontSize:11, color:'var(--mid)', lineHeight:1.7 }}>適用對象：{[...ROLES.filter(([role]) => (promo.audience_roles ?? ROLES.map(([key]) => key)).includes(role)).map(([,label]) => label), ...((promo.allow_guest ?? true) ? ['訪客'] : [])].join('、') || '無'}</div>}
-        <div style={{ display:'flex', gap:8, marginTop:'auto' }}><button onClick={() => legacy ? alert('舊版複合活動維持唯讀；請建立新的單一優惠活動取代。') : onEdit(promo)} style={secondaryButton}>編輯</button><button onClick={() => archive(promo)} disabled={!!promo.archived_at} style={{ ...secondaryButton, flex:'none', color:'var(--red)', opacity:promo.archived_at ? 0.45 : 1 }}>停用</button></div>
+        <div style={{ marginTop:'auto' }}>
+          {!promo.archived_at && <div style={{ display:'flex', gap:8 }}><button onClick={() => legacy ? alert('舊版複合活動維持唯讀；請建立新的單一優惠活動取代。') : onEdit(promo)} style={secondaryButton}>編輯</button>{!legacy && <button onClick={() => onCopy(promo)} style={secondaryButton}>複製</button>}</div>}
+          <LifecycleActions item={promo} table="promotions" noun="活動" onReload={onReload} />
+        </div>
       </Card>;
     })}
   </div>;
 }
 
 function CouponList({ list, links, memberLinks, promotions, onEdit, onReload }) {
-  async function archive(coupon) {
-    if (!confirm(`確定停用優惠券「${coupon.name}」？既有訂單與核銷紀錄會保留。`)) return;
-    const { error } = await supabase.from('coupon_campaigns').update({ active:false, archived_at:new Date().toISOString() }).eq('id', coupon.id);
-    if (error) alert(`停用失敗：${error.message}`); else onReload();
-  }
   if (!list.length) return <Empty text="目前還沒有優惠券方案" />;
   return <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(320px, 1fr))', gap:16 }}>{list.map(coupon => {
     const benefitNames = links.filter(link => link.coupon_campaign_id === coupon.id).map(link => promotions.find(p => p.id === link.promotion_id)?.name).filter(Boolean);
     const targetMemberCount = memberLinks.filter(link => link.coupon_campaign_id === coupon.id).length;
     const audienceLabel = coupon.audience_mode === 'members' ? `指定會員 ${targetMemberCount} 位` : `依會員身分${coupon.allow_guest ? '（含訪客）' : ''}`;
-    return <Card key={coupon.id}><div style={{ display:'flex', justifyContent:'space-between', gap:12 }}><div><h3 style={{ fontSize:15, marginBottom:5 }}>{coupon.name}</h3><code style={{ color:'var(--gold)', letterSpacing:'0.12em' }}>{coupon.code}</code></div><span style={{ fontSize:11, color:coupon.active ? '#287a50' : 'var(--mid)' }}>{coupon.active ? '啟用' : '停用'}</span></div><div style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7 }}>{benefitNames.join(' ＋ ') || '尚未連結折扣活動'}</div><div style={{ fontSize:11, color:'var(--mid)', lineHeight:1.7 }}>適用：{audienceLabel}<br />每人上限：{coupon.per_member_limit || '不限'} 次 · 總上限：{coupon.total_usage_limit || '不限'} 次<br />疊加：{stackingLabel(coupon.stacking_policy)}</div><div style={{ display:'flex', gap:8, marginTop:'auto' }}><button onClick={() => onEdit(coupon)} style={secondaryButton}>編輯</button><button onClick={() => archive(coupon)} style={{ ...secondaryButton, flex:'none', color:'var(--red)' }}>停用</button></div></Card>;
+    return <Card key={coupon.id}><div style={{ display:'flex', justifyContent:'space-between', gap:12 }}><div><h3 style={{ fontSize:15, marginBottom:5 }}>{coupon.name}</h3><code style={{ color:'var(--gold)', letterSpacing:'0.12em' }}>{coupon.code}</code></div><span style={{ fontSize:11, color:coupon.active ? '#287a50' : 'var(--mid)' }}>{coupon.archived_at ? '已封存' : coupon.active ? '啟用' : '停用'}</span></div><div style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7 }}>{benefitNames.join(' ＋ ') || '尚未連結折扣活動'}</div><div style={{ fontSize:11, color:'var(--mid)', lineHeight:1.7 }}>適用：{audienceLabel}<br />每人上限：{coupon.per_member_limit || '不限'} 次 · 總上限：{coupon.total_usage_limit || '不限'} 次<br />疊加：{stackingLabel(coupon.stacking_policy)}</div><div style={{ marginTop:'auto' }}>{!coupon.archived_at && <button onClick={() => onEdit(coupon)} style={secondaryButton}>編輯</button>}<LifecycleActions item={coupon} table="coupon_campaigns" noun="優惠券" onReload={onReload} /></div></Card>;
   })}</div>;
 }
 
 function DiscountPromotionForm({ promo, products, scopes, onClose }) {
-  const benefitScopes = scopes.filter(scope => scope.promotion_id === promo?.id && scope.scope_role === 'benefit' && scope.mode === 'include');
+  const benefitScopes = scopes.filter(scope => scope.promotion_id === (promo?.copySourceId || promo?.id) && scope.scope_role === 'benefit' && scope.mode === 'include');
   const initialAllRegular = benefitScopes.some(scope => scope.target_type === 'all_regular') || !promo;
   const initialAllSellable = benefitScopes.some(scope => scope.target_type === 'all_sellable');
-  const [form, setForm] = useState({ name:promo?.name || '', label_text:promo?.label_text || '', label_color:getPromotionLabelColor(promo?.label_color), description:promo?.description || '', benefit_type:promo?.benefit_type || 'percentage_discount', activation_type:promo?.activation_type || 'automatic', percent:promo ? Math.round((1 - Number(promo.discount_rate)) * 100) : 10, amount:promo?.discount_amount || 100, threshold_value:promo?.threshold_value || '', threshold_type:promo?.threshold_type || (promo?.benefit_type === 'quantity_gift' ? 'quantity' : 'amount'), threshold_basis:promo?.threshold_basis || 'before_bundle_discount', gift_variant_id:promo?.gift_variant_id || '', gift_quantity:promo?.gift_quantity || 1, buy_quantity:promo?.buy_quantity || 3, repeat_mode:promo?.repeat_mode || 'once', scope_type:initialAllSellable ? 'all_sellable' : initialAllRegular ? 'all_regular' : 'products', product_ids:new Set(benefitScopes.filter(scope => scope.target_type === 'product').map(scope => scope.product_id)), start_at:toLocalInput(promo?.start_at), end_at:toLocalInput(promo?.end_at), active:promo?.active ?? true, audience_roles:new Set(promo?.audience_roles ?? ROLES.map(([role]) => role)), allow_guest:promo?.allow_guest ?? true });
+  const [form, setForm] = useState({ name:promo?.name || '', label_text:promo?.label_text || '', label_color:getPromotionLabelColor(promo?.label_color), description:promo?.description || '', benefit_type:promo?.benefit_type || 'percentage_discount', activation_type:promo?.activation_type || 'automatic', percent:promo ? Number(((1 - Number(promo.discount_rate)) * 100).toFixed(10)) : 10, amount:promo?.discount_amount || 100, threshold_value:promo?.threshold_value || '', threshold_type:promo?.threshold_type || (promo?.benefit_type === 'quantity_gift' ? 'quantity' : 'amount'), threshold_basis:promo?.threshold_basis || 'before_bundle_discount', gift_variant_id:promo?.gift_variant_id || '', gift_quantity:promo?.gift_quantity || 1, buy_quantity:promo?.buy_quantity || 3, repeat_mode:promo?.repeat_mode || 'once', scope_type:initialAllSellable ? 'all_sellable' : initialAllRegular ? 'all_regular' : 'products', product_ids:new Set(benefitScopes.filter(scope => scope.target_type === 'product').map(scope => scope.product_id)), start_at:toLocalInput(promo?.start_at), end_at:toLocalInput(promo?.end_at), active:promo?.active ?? true, audience_roles:new Set(promo?.audience_roles ?? ROLES.map(([role]) => role)), allow_guest:promo?.allow_guest ?? true });
   const [saving,setSaving] = useState(false); const [error,setError] = useState('');
   const selectableProducts = useMemo(() => products.filter(product => product.publicationStatus !== 'archived' && product.publicationStatus !== 'gift_only'), [products]);
   const giftVariants = useMemo(() => products
@@ -131,12 +175,14 @@ function DiscountPromotionForm({ promo, products, scopes, onClose }) {
     if (form.start_at && form.end_at && new Date(form.start_at) >= new Date(form.end_at)) return setError('結束時間必須晚於開始時間');
     setSaving(true);
     const thresholdType = (form.benefit_type === 'quantity_gift' || isBuyXGetY) ? 'quantity' : form.benefit_type === 'amount_gift' ? 'amount' : form.threshold_type;
-    const payload = { id:promo?.id || null, name:form.name.trim(), label_text:form.label_text.trim(), label_color:form.label_color, description:form.description.trim(), benefit_type:form.benefit_type, activation_type:form.activation_type, discount_rate:form.benefit_type === 'percentage_discount' ? 1 - Number(form.percent) / 100 : 1, discount_amount:form.benefit_type === 'fixed_discount' ? Number(form.amount) : 0, threshold_value:isBuyXGetY ? Number(form.buy_quantity) + Number(form.gift_quantity) : form.threshold_value === '' ? null : Number(form.threshold_value), threshold_type:thresholdType, threshold_basis:!isGift && !isBuyXGetY && thresholdType === 'amount' && form.threshold_value !== '' ? form.threshold_basis : null, gift_variant_id:isGift ? Number(form.gift_variant_id) : null, gift_quantity:(isGift || isBuyXGetY) ? Number(form.gift_quantity) : null, buy_quantity:isBuyXGetY ? Number(form.buy_quantity) : null, repeat_mode:(isGift || isBuyXGetY) ? form.repeat_mode : 'once', scope_type:form.scope_type, product_ids:[...form.product_ids], start_at:form.start_at ? new Date(form.start_at).toISOString() : null, end_at:form.end_at ? new Date(form.end_at).toISOString() : null, active:form.active };
+    const payload = { id:promo?.id || null, priority:promo?.priority ?? 100, name:form.name.trim(), label_text:form.label_text.trim(), label_color:form.label_color, description:form.description.trim(), benefit_type:form.benefit_type, activation_type:form.activation_type, discount_rate:form.benefit_type === 'percentage_discount' ? 1 - Number(form.percent) / 100 : 1, discount_amount:form.benefit_type === 'fixed_discount' ? Number(form.amount) : 0, threshold_value:isBuyXGetY ? Number(form.buy_quantity) + Number(form.gift_quantity) : form.threshold_value === '' ? null : Number(form.threshold_value), threshold_type:thresholdType, threshold_basis:!isGift && !isBuyXGetY && thresholdType === 'amount' && form.threshold_value !== '' ? form.threshold_basis : null, gift_variant_id:isGift ? Number(form.gift_variant_id) : null, gift_quantity:(isGift || isBuyXGetY) ? Number(form.gift_quantity) : null, buy_quantity:isBuyXGetY ? Number(form.buy_quantity) : null, repeat_mode:(isGift || isBuyXGetY) ? form.repeat_mode : 'once', scope_type:form.scope_type, product_ids:[...form.product_ids], start_at:form.start_at ? new Date(form.start_at).toISOString() : null, end_at:form.end_at ? new Date(form.end_at).toISOString() : null, active:form.active };
     if (form.activation_type === 'automatic') { payload.audience_roles = [...form.audience_roles]; payload.allow_guest = form.allow_guest; }
     const { error:saveError } = await supabase.rpc('save_discount_promotion', { p_payload:payload }); setSaving(false);
     if (saveError) setError(`儲存失敗：${saveError.message}`); else onClose();
   }
-  return <Editor title={promo ? '編輯優惠活動' : '新增優惠活動'} back="返回活動列表" onClose={onClose} error={error}><form onSubmit={save} style={{ ...panelStyle, display:'flex', flexDirection:'column', gap:22 }}>
+  return <Editor title={promo?.copySourceId ? '複製優惠活動' : promo?.id ? '編輯優惠活動' : '新增優惠活動'} back="返回活動列表" onClose={onClose} error={error}><form onSubmit={save} style={{ ...panelStyle, display:'flex', flexDirection:'column', gap:22 }}>
+    {promo?.copySourceId && <p role="status" style={{ fontSize:12, color:'var(--mid)' }}>已帶入原活動設定，儲存後建立獨立且預設停用的活動；請確認名稱、適用對象與活動時間。</p>}
+    <Field label="活動狀態"><label style={{ fontSize:13 }}><input type="checkbox" checked={form.active} onChange={e => set('active',e.target.checked)} /> 啟用活動</label></Field>
     <Field label="活動名稱 *"><input style={inputStyle} value={form.name} onChange={e => set('name',e.target.value)} placeholder="例：秋季保養 9 折" /></Field>
     <Field label="活動標籤（選填）">
       <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
@@ -147,7 +193,7 @@ function DiscountPromotionForm({ promo, products, scopes, onClose }) {
       <p style={{ fontSize:11, color:'var(--mid)', marginTop:7 }}>最多 20 字；生效的指定商品自動活動會顯示在商品小卡左上角，留空則不顯示標籤。全館活動暫不顯示。</p>
     </Field>
     <Field label="顧客說明（選填）"><textarea aria-label="顧客說明" placeholder="顯示於指定商品詳情的完整活動說明" style={{ ...inputStyle, border:'1px solid var(--border)', padding:10 }} rows={2} value={form.description} onChange={e => set('description',e.target.value)} /></Field>
-    <div style={gridStyle}><Field label="啟用方式"><select aria-label="啟用方式" style={inputStyle} value={form.activation_type} onChange={e => set('activation_type',e.target.value)}><option value="automatic">自動活動</option><option value="coupon_only">優惠券專用</option></select></Field><Field label="優惠類型"><select aria-label="優惠類型" style={inputStyle} value={form.benefit_type} onChange={e => set('benefit_type',e.target.value)}><option value="percentage_discount">百分比折扣</option><option value="fixed_discount">固定金額折抵</option><option value="amount_gift">滿額贈</option><option value="quantity_gift">滿件贈</option><option value="buy_x_get_y">買 X 送 Y（最低價免費）</option></select></Field>{form.benefit_type === 'percentage_discount' ? <Field label="折扣百分比（% OFF）"><input aria-label="折扣百分比（% OFF）" type="number" min="1" max="100" style={inputStyle} value={form.percent} onChange={e => set('percent',e.target.value)} /></Field> : form.benefit_type === 'fixed_discount' ? <Field label="折抵金額（NT$）"><input aria-label="折抵金額（NT$）" type="number" min="1" style={inputStyle} value={form.amount} onChange={e => set('amount',e.target.value)} /></Field> : null}</div>
+    <div style={gridStyle}><Field label="啟用方式"><select aria-label="啟用方式" style={inputStyle} value={form.activation_type} onChange={e => set('activation_type',e.target.value)}><option value="automatic">自動活動</option><option value="coupon_only">優惠券專用</option></select></Field><Field label="優惠類型"><select aria-label="優惠類型" style={inputStyle} value={form.benefit_type} onChange={e => set('benefit_type',e.target.value)}><option value="percentage_discount">百分比折扣</option><option value="fixed_discount">固定金額折抵</option><option value="amount_gift">滿額贈</option><option value="quantity_gift">滿件贈</option><option value="buy_x_get_y">買 X 送 Y（最低價免費）</option></select></Field>{form.benefit_type === 'percentage_discount' ? <Field label="折扣百分比（% OFF）"><input aria-label="折扣百分比（% OFF）" type="number" step="any" min="1" max="100" style={inputStyle} value={form.percent} onChange={e => set('percent',e.target.value)} /></Field> : form.benefit_type === 'fixed_discount' ? <Field label="折抵金額（NT$）"><input aria-label="折抵金額（NT$）" type="number" min="1" style={inputStyle} value={form.amount} onChange={e => set('amount',e.target.value)} /></Field> : null}</div>
     <div style={gridStyle}>{!isGift && !isBuyXGetY && <Field label="門檻類型"><select aria-label="門檻類型" style={inputStyle} value={form.threshold_type} onChange={e => set('threshold_type',e.target.value)}><option value="amount">滿額</option><option value="quantity">滿件</option></select></Field>}{!isBuyXGetY && <Field label={form.benefit_type === 'quantity_gift' ? '滿幾件贈送 *' : isGift ? '滿額門檻（NT$）*' : form.threshold_type === 'quantity' ? '最低適用件數（選填）' : '最低適用金額（選填）'}><input type="number" min="1" step={form.threshold_type === 'quantity' ? '1' : undefined} style={inputStyle} value={form.threshold_value} onChange={e => set('threshold_value',e.target.value)} /></Field>}{isBuyXGetY && <><Field label="買入件數 X *"><input aria-label="買入件數 X" type="number" min="1" step="1" required style={inputStyle} value={form.buy_quantity} onChange={e => set('buy_quantity',e.target.value)} /></Field><Field label="免費件數 Y *"><input aria-label="免費件數 Y" type="number" min="1" step="1" required style={inputStyle} value={form.gift_quantity} onChange={e => set('gift_quantity',e.target.value)} /></Field></>}{isGift && <><Field label="贈品庫存 *"><select aria-label="贈品庫存" style={inputStyle} value={form.gift_variant_id} onChange={e => set('gift_variant_id',e.target.value)}><option value="">請選擇贈品</option>{giftVariants.map(variant => <option key={variant.id} value={variant.id}>[{variant.sourceLabel}] {variant.productName} · {variant.size} · {variant.sku}（庫存 {variant.giftStock}）</option>)}</select></Field><Field label="每次贈送數量 *"><input type="number" min="1" style={inputStyle} value={form.gift_quantity} onChange={e => set('gift_quantity',e.target.value)} /></Field></>}{(isGift || isBuyXGetY) && <Field label="達標方式"><select aria-label="達標方式" style={inputStyle} value={form.repeat_mode} onChange={e => set('repeat_mode',e.target.value)}><option value="once">每筆訂單只贈一次</option><option value="repeat">每達門檻重複贈送</option></select></Field>}<Field label="開始時間（選填）"><input type="datetime-local" style={inputStyle} value={form.start_at} onChange={e => set('start_at',e.target.value)} /></Field><Field label="結束時間（選填）"><input type="datetime-local" style={inputStyle} value={form.end_at} onChange={e => set('end_at',e.target.value)} /></Field></div>
     {isBuyXGetY && <p data-testid="buy-x-get-y-explanation" style={{ fontSize:12, color:'var(--mid)', lineHeight:1.7 }}>顧客需選滿 {Number(form.buy_quantity) + Number(form.gift_quantity) || 0} 件活動商品，其中最低價的 {Number(form.gift_quantity) || 0} 件免費。{form.repeat_mode === 'repeat' ? '每滿一組可再次贈送，不另設每筆上限。' : '每筆訂單只贈送一組。'}使用一般販售庫存；自動活動與其他自動折扣擇優套用。</p>}
     {form.activation_type === 'automatic' && <Field label="適用對象"><div data-testid="promotion-audience" style={{ display:'flex', flexWrap:'wrap', gap:16 }}>{ROLES.map(([role,label]) => <label key={role} style={{ fontSize:13 }}><input type="checkbox" checked={form.audience_roles.has(role)} onChange={() => { const next = new Set(form.audience_roles); next.has(role) ? next.delete(role) : next.add(role); set('audience_roles',next); }} /> {label}</label>)}<label style={{ fontSize:13 }}><input type="checkbox" checked={form.allow_guest} onChange={e => set('allow_guest',e.target.checked)} /> 允許訪客</label></div><p style={{ fontSize:11, color:'var(--mid)', marginTop:7 }}>只對勾選的會員身分或訪客自動套用；優惠券專用活動由優惠券方案設定適用對象。</p></Field>}
@@ -160,7 +206,7 @@ function DiscountPromotionForm({ promo, products, scopes, onClose }) {
       onSelectAll={() => set('product_ids', new Set(selectableProducts.map(product => product.id)))}
       onClear={() => set('product_ids', new Set())}
     />}
-    <SaveButtons saving={saving} onClose={onClose} label={promo ? '儲存變更' : '建立活動'} />
+    <SaveButtons saving={saving} onClose={onClose} label={promo?.id ? '儲存變更' : '建立活動'} />
   </form></Editor>;
 }
 
