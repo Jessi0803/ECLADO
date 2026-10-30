@@ -114,6 +114,7 @@ test('admin purchase sales batch summary and yearly detail keep offline totals s
  expect(calls).toEqual([{p_instructor_ids:['one','two'],p_year:year}]);
  await card.click();const panel=page.getByRole('region',{name:'師資本人叫貨額'});
  await expect(panel.getByRole('cell',{name:'NT$ 5,000',exact:true})).toBeVisible();
+ expect(await panel.locator('.table-scroll').evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
  await expect(panel.getByText('統計師資本人已付款的商品叫貨額，不含運費、取消／退貨及學生訂單。',{exact:true})).toBeVisible();
  await panel.locator('summary').click();await expect(panel.locator('.reward-purchase-months')).toContainText('NT$ 18,000');
  await panel.getByLabel('叫貨統計年度').selectOption(String(year-1));

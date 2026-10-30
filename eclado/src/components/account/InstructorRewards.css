@@ -177,8 +177,9 @@
 .reward-purchase-intro .reward-note { margin:8px 0 0 !important; }
 .reward-purchase-sales .reward-heading > label { flex-shrink:0; display:flex; align-items:center; gap:8px; }
 .reward-purchase-sales select { padding:8px 12px; border:1px solid var(--border); background:#fff; font:inherit; }
-.reward-purchase-table { border-collapse:collapse; width:100%; font-size:13px; margin:12px 0 0; }
-.reward-purchase-table th,.reward-purchase-table td { text-align:right; padding:12px 10px; border-bottom:1px solid var(--border); white-space:nowrap; }
+.reward-purchase-sales .reward-purchase-table { border-collapse:collapse; width:100%; min-width:0; table-layout:fixed; font-size:13px; margin:12px 0 0; }
+.reward-purchase-table th,.reward-purchase-table td { text-align:right; padding:12px 10px; border-bottom:1px solid var(--border); white-space:normal; overflow-wrap:anywhere; }
+.reward-purchase-table th:first-child { width:22%; }
 .reward-purchase-table th:first-child { text-align:left; }
 .reward-purchase-sales > .reward-details { margin-top:8px; }
 .reward-purchase-months { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:16px; padding-top:18px; }
