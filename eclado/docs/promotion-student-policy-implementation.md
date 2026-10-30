@@ -105,3 +105,11 @@
 ## 獨立發布候選（2026-10-30）
 
 已自正式基準隔離本功能；精確候選的5項資料庫整合、14項桌面／手機、82項付款API及完整建置均通過，含正式優惠券 allow_auto_gifts 回歸。正式安裝檔已準備但尚未執行。詳見 `promotion-student-policy-release-candidate.md`。
+
+## 正式發布完成（2026-10-30）
+
+已發布16bf435前端與配套API，安裝正式增量政策並啟用version2，九筆美容師雙十一活動為false／false。日期與其他活動保留。詳見 `promotion-student-policy-production-release-20261030.md`。
+
+## 後續政策修訂（2026-10-30 23:35）
+
+依使用者最新要求，九筆美容師雙十一活動的返饋開關已於正式資料庫改為true，學生價疊加仍為false。未回算歷史帳務，其他設定保留。最新狀態以 `promotion-student-policy-reward-change-20261030.md` 及其變更收據為準；先前false／false紀錄保留作為發布當時快照。

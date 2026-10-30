@@ -1,0 +1,234 @@
+{
+  "completed_at": "2026-10-30T15:16:12.548149+00:00",
+  "release_commit": "16bf4355f69b358543c80f4c1d0ab880f631b390",
+  "production_project": "ilvdvlkdpntwmaijncaz",
+  "database_install": {
+    "verify_passed": 9,
+    "original_functions": 290,
+    "post_install_functions": 298,
+    "changed_original_functions": 8,
+    "original_owner_acl_preserved": true,
+    "original_promotions_preserved_before_activation": true,
+    "other_promotions_preserved_after_activation": true,
+    "private_backup_csv_sha256": "47c8d98b1e5b1936ca3cb5d29f14b33c4bdaafa03ddbfad6ce33ce678024efc0"
+  },
+  "frontend": {
+    "deployment_id": "dpl_8Mi8pfvJQWhPWZsGSn2syqBQQAAA",
+    "host": "eclado-czjvkznce-eclado-s-projects.vercel.app",
+    "production_domain": "ecladotaiwan.com",
+    "status": "Ready",
+    "git_sha": "16bf4355f69b358543c80f4c1d0ab880f631b390",
+    "deployed_frontend_mocked_api_tests_passed": 14
+  },
+  "payment_api": {
+    "node": "v20.20.2",
+    "host_isolated_tests_passed": 82,
+    "stage": "/opt/eclado-payment-api-staging/student-policy-16bf435-20261030",
+    "backup": "/opt/eclado-payment-api/backups/student-policy-16bf435-yEocxR",
+    "pid_before": 2327559,
+    "pid_after": 2489208,
+    "health_internal_ok": true,
+    "health_external_ok": true,
+    "brief_restart_connection_refusal": true,
+    "deployed_sha256": {
+      "server.js": "ad542d0ffe07bde22a4df2521816714d255d123b2be5ce6ce0a7f6450b473f04",
+      "assisted-orders.js": "b55b587e24f70f39a49be4c86a636f14997c73b2fda4829c01a72a464cde136d"
+    }
+  },
+  "production_read_only_arithmetic_checks": [
+    {
+      "case": "bogo_mixed_remainder",
+      "discount": 600,
+      "excluded": 4,
+      "other_excluded": 0
+    },
+    {
+      "case": "student_cheaper",
+      "discount": 0,
+      "adjustment_count": 0
+    },
+    {
+      "case": "equal_price_activity",
+      "discount": 0,
+      "excluded": 1
+    },
+    {
+      "case": "stacking_allowed",
+      "discount": 100,
+      "adjustment_count": 1
+    }
+  ],
+  "arithmetic_check_limits": "Synthetic prices, direct pure helpers; not authenticated production student checkout.",
+  "activation": {
+    "new_policy": {
+      "enabled": true,
+      "version": 2,
+      "singleton": true
+    },
+    "double_eleven": [
+      {
+        "id": "06906fd2-a796-4db2-9bd8-8397e9360f2e",
+        "name": "11.11 限定｜TOP熱銷商品-買3送1",
+        "roles": [
+          "pro"
+        ],
+        "end_at": "2026-11-11T15:59:00+00:00",
+        "start_at": "2026-10-31T16:00:00+00:00",
+        "instructor_reward_eligible": false,
+        "allow_student_price_stacking": false
+      },
+      {
+        "id": "130e6ba0-4111-4e17-9564-f2ac14d24d8a",
+        "name": "11.11 限定｜TOP熱銷商品-買3送1",
+        "roles": [
+          "pro"
+        ],
+        "end_at": "2026-11-11T15:59:00+00:00",
+        "start_at": "2026-10-31T16:01:00+00:00",
+        "instructor_reward_eligible": false,
+        "allow_student_price_stacking": false
+      },
+      {
+        "id": "1876ed80-ca9c-44ee-bb05-4c47ddae6799",
+        "name": "11.11 限定｜TOP熱銷商品-買3送1",
+        "roles": [
+          "pro"
+        ],
+        "end_at": "2026-11-11T15:59:00+00:00",
+        "start_at": "2026-10-31T16:01:00+00:00",
+        "instructor_reward_eligible": false,
+        "allow_student_price_stacking": false
+      },
+      {
+        "id": "2a559e1a-ccbe-4c8b-a86e-b9808549369c",
+        "name": "11.11 限定｜TOP熱銷商品-任選6件送1件",
+        "roles": [
+          "distributor",
+          "instructor"
+        ],
+        "end_at": "2026-11-11T15:59:00+00:00",
+        "start_at": "2026-11-10T16:00:00+00:00",
+        "instructor_reward_eligible": true,
+        "allow_student_price_stacking": true
+      },
+      {
+        "id": "49572111-a383-4cd4-a116-ad9ff30d3f47",
+        "name": "11.11 限定｜TOP熱銷商品-買3送1",
+        "roles": [
+          "pro"
+        ],
+        "end_at": "2026-11-11T15:59:00+00:00",
+        "start_at": "2026-10-31T16:01:00+00:00",
+        "instructor_reward_eligible": false,
+        "allow_student_price_stacking": false
+      },
+      {
+        "id": "9be5e4f9-f0d4-460e-a054-7a1aba1ca4ca",
+        "name": "11.11 限定｜棉花水光管理4+1 （每盒加贈品牌矽膠刷）",
+        "roles": [
+          "pro"
+        ],
+        "end_at": "2026-11-11T15:59:00+00:00",
+        "start_at": "2026-10-31T16:00:00+00:00",
+        "instructor_reward_eligible": false,
+        "allow_student_price_stacking": false
+      },
+      {
+        "id": "bc5aea6c-088b-46ab-addb-fb4071412f90",
+        "name": "11.11 限定｜VONO 喚膚調理組4+1 （每盒加贈品牌矽膠刷）",
+        "roles": [
+          "pro"
+        ],
+        "end_at": "2026-11-11T15:59:00+00:00",
+        "start_at": "2026-10-31T16:00:00+00:00",
+        "instructor_reward_eligible": false,
+        "allow_student_price_stacking": false
+      },
+      {
+        "id": "ced451c6-c8e7-4bdd-8835-35398e5e04a1",
+        "name": "11.11 限定｜呼吸系列 任5件贈送1件 （每瓶呼吸爽膚水加贈拉伸化妝棉*1）",
+        "roles": [
+          "pro"
+        ],
+        "end_at": "2026-11-11T15:59:00+00:00",
+        "start_at": "2026-10-31T16:00:00+00:00",
+        "instructor_reward_eligible": false,
+        "allow_student_price_stacking": false
+      },
+      {
+        "id": "daf857ba-df5f-48ee-9875-ade66941edda",
+        "name": "11.11 限定｜TOP熱銷商品-買3送1",
+        "roles": [
+          "pro"
+        ],
+        "end_at": "2026-11-11T15:59:00+00:00",
+        "start_at": "2026-10-31T16:01:00+00:00",
+        "instructor_reward_eligible": false,
+        "allow_student_price_stacking": false
+      },
+      {
+        "id": "e1ac15b9-8050-47ce-9046-5f0b83e7e38a",
+        "name": "11.11 限定｜TOP熱銷商品-買3送1",
+        "roles": [
+          "pro"
+        ],
+        "end_at": "2026-11-11T15:59:00+00:00",
+        "start_at": "2026-10-31T16:01:00+00:00",
+        "instructor_reward_eligible": false,
+        "allow_student_price_stacking": false
+      }
+    ],
+    "allocation_enabled": true,
+    "restricted_activity_count": 9
+  },
+  "http_checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "bytes": 9562
+    },
+    {
+      "path": "/shop",
+      "status": 200,
+      "bytes": 33416
+    },
+    {
+      "path": "/cart",
+      "status": 200,
+      "bytes": 3726
+    },
+    {
+      "path": "/checkout",
+      "status": 200,
+      "bytes": 3734
+    },
+    {
+      "path": "/payment-result",
+      "status": 200,
+      "bytes": 3746
+    },
+    {
+      "path": "/admin",
+      "status": 200,
+      "bytes": 959
+    }
+  ],
+  "bank_calls": 0,
+  "production_test_orders_created": 0,
+  "customer_order_inventory_reward_data_modified_by_release": false,
+  "final_status_checks_passed": 5,
+  "rollback": "Disable only new policy; preserve allocation ON, order snapshots and schema.",
+  "evidence_sha256": {
+    "production-activated.json": "ee7056e14b59e95cf1204a54fb9dad762d34d4c798c4e592a7ce98f1a921b184",
+    "production-preflight-20261030.json": "a07510f99dd440e1b6a0dc94b06ee9efa8a78094f50cde0fc29125c5e415fc68",
+    "production-http-smoke.json": "6270405eb6ce0a24d34c7ce0d445478fd7a448bc0f5bf7a2160f1ae9c4926164",
+    "production-vercel-ready.jpg": "6241e020f2fae3138346f01f90a967ee0c5a78d75919ca70f1b1cddc191a3f6c",
+    "production-installed-off.jpg": "41b65187fde506fdde543df2e722b5c02075fc3b3f39213adc16c2392a31541c",
+    "production-policy-active.jpg": "045915a779f78df44bdc5f0886c9b6436d56276b08dc1b29b0abd22ad77f2804"
+  },
+  "sql_sha256": {
+    "promotion-student-policy-production-install.sql": "e98abaef65365cf45776055eae3d4a5cdc4ffed05ec158187afffda6afcdc8a6",
+    "promotion-student-policy-production-activate.sql": "4bc3509a11d45f203a6e41bdcf782bf885f2e186cfbb88f05cce8f80f16dd86c",
+    "promotion-student-policy-production-disable.sql": "37f0bb3bd51f13fe1a01c50b56f8b8bd22d789bd986994df59e3afb433a86efd"
+  }
+}

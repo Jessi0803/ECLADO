@@ -1,0 +1,32 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "bytes": 9562
+  },
+  {
+    "path": "/shop",
+    "status": 200,
+    "bytes": 33416
+  },
+  {
+    "path": "/cart",
+    "status": 200,
+    "bytes": 3726
+  },
+  {
+    "path": "/checkout",
+    "status": 200,
+    "bytes": 3734
+  },
+  {
+    "path": "/payment-result",
+    "status": 200,
+    "bytes": 3746
+  },
+  {
+    "path": "/admin",
+    "status": 200,
+    "bytes": 959
+  }
+]

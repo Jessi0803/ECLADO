@@ -1,0 +1,122 @@
+{
+  "new_policy": {
+    "enabled": true,
+    "version": 2,
+    "singleton": true
+  },
+  "double_eleven": [
+    {
+      "id": "06906fd2-a796-4db2-9bd8-8397e9360f2e",
+      "name": "11.11 限定｜TOP熱銷商品-買3送1",
+      "roles": [
+        "pro"
+      ],
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "start_at": "2026-10-31T16:00:00+00:00",
+      "instructor_reward_eligible": false,
+      "allow_student_price_stacking": false
+    },
+    {
+      "id": "130e6ba0-4111-4e17-9564-f2ac14d24d8a",
+      "name": "11.11 限定｜TOP熱銷商品-買3送1",
+      "roles": [
+        "pro"
+      ],
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "start_at": "2026-10-31T16:01:00+00:00",
+      "instructor_reward_eligible": false,
+      "allow_student_price_stacking": false
+    },
+    {
+      "id": "1876ed80-ca9c-44ee-bb05-4c47ddae6799",
+      "name": "11.11 限定｜TOP熱銷商品-買3送1",
+      "roles": [
+        "pro"
+      ],
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "start_at": "2026-10-31T16:01:00+00:00",
+      "instructor_reward_eligible": false,
+      "allow_student_price_stacking": false
+    },
+    {
+      "id": "2a559e1a-ccbe-4c8b-a86e-b9808549369c",
+      "name": "11.11 限定｜TOP熱銷商品-任選6件送1件",
+      "roles": [
+        "distributor",
+        "instructor"
+      ],
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "start_at": "2026-11-10T16:00:00+00:00",
+      "instructor_reward_eligible": true,
+      "allow_student_price_stacking": true
+    },
+    {
+      "id": "49572111-a383-4cd4-a116-ad9ff30d3f47",
+      "name": "11.11 限定｜TOP熱銷商品-買3送1",
+      "roles": [
+        "pro"
+      ],
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "start_at": "2026-10-31T16:01:00+00:00",
+      "instructor_reward_eligible": false,
+      "allow_student_price_stacking": false
+    },
+    {
+      "id": "9be5e4f9-f0d4-460e-a054-7a1aba1ca4ca",
+      "name": "11.11 限定｜棉花水光管理4+1 （每盒加贈品牌矽膠刷）",
+      "roles": [
+        "pro"
+      ],
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "start_at": "2026-10-31T16:00:00+00:00",
+      "instructor_reward_eligible": false,
+      "allow_student_price_stacking": false
+    },
+    {
+      "id": "bc5aea6c-088b-46ab-addb-fb4071412f90",
+      "name": "11.11 限定｜VONO 喚膚調理組4+1 （每盒加贈品牌矽膠刷）",
+      "roles": [
+        "pro"
+      ],
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "start_at": "2026-10-31T16:00:00+00:00",
+      "instructor_reward_eligible": false,
+      "allow_student_price_stacking": false
+    },
+    {
+      "id": "ced451c6-c8e7-4bdd-8835-35398e5e04a1",
+      "name": "11.11 限定｜呼吸系列 任5件贈送1件 （每瓶呼吸爽膚水加贈拉伸化妝棉*1）",
+      "roles": [
+        "pro"
+      ],
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "start_at": "2026-10-31T16:00:00+00:00",
+      "instructor_reward_eligible": false,
+      "allow_student_price_stacking": false
+    },
+    {
+      "id": "daf857ba-df5f-48ee-9875-ade66941edda",
+      "name": "11.11 限定｜TOP熱銷商品-買3送1",
+      "roles": [
+        "pro"
+      ],
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "start_at": "2026-10-31T16:01:00+00:00",
+      "instructor_reward_eligible": false,
+      "allow_student_price_stacking": false
+    },
+    {
+      "id": "e1ac15b9-8050-47ce-9046-5f0b83e7e38a",
+      "name": "11.11 限定｜TOP熱銷商品-買3送1",
+      "roles": [
+        "pro"
+      ],
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "start_at": "2026-10-31T16:01:00+00:00",
+      "instructor_reward_eligible": false,
+      "allow_student_price_stacking": false
+    }
+  ],
+  "allocation_enabled": true,
+  "restricted_activity_count": 9
+}

@@ -1,0 +1,19 @@
+{
+  "scope": "local preview only, no deployment",
+  "preview_url": "http://127.0.0.1:5173/admin",
+  "database_project": "ilvdvlkdpntwmaijncaz",
+  "payment_mode": "disabled",
+  "separate_policy_page_removed": true,
+  "ordinary_editor_saves_policy_with_activity": true,
+  "legacy_editor_preserves_readonly_conditions_and_concurrency_guard": true,
+  "desktop_mobile_tests_passed": 12,
+  "final_save_button_regression_tests_passed": 4,
+  "real_admin_login": "performed by user",
+  "real_activity_loaded": "Double Eleven TOP buy3get1, product 124",
+  "real_policy_checkbox_values": [
+    false,
+    false
+  ],
+  "production_activity_writes_during_preview": 0,
+  "ui_deployed": false
+}

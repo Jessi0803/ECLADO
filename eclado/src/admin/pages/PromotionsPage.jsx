@@ -26,7 +26,6 @@ export default function Promotions({ products }) {
   const [loading, setLoading] = useState(true);
   const [editingPromotion, setEditingPromotion] = useState(null);
   const [editingCoupon, setEditingCoupon] = useState(null);
-  const [editingPolicy, setEditingPolicy] = useState(null);
   const [loadError, setLoadError] = useState('');
   const [policyInstalled, setPolicyInstalled] = useState(false);
 
@@ -65,7 +64,6 @@ export default function Promotions({ products }) {
 
   useEffect(() => { load(); }, []);
 
-  if (editingPolicy) return <StudentPolicyEditor promo={editingPolicy} onClose={() => { setEditingPolicy(null); load(); }} />;
   if (editingPromotion) return <DiscountPromotionForm policyInstalled={policyInstalled} promo={editingPromotion === 'new' ? null : editingPromotion} products={products} scopes={scopes} onClose={() => { setEditingPromotion(null); load(); }} />;
   if (editingCoupon) return <CouponForm coupon={editingCoupon === 'new' ? null : editingCoupon} promotions={promotions.filter(p => p.activation_type === 'coupon_only' && !p.archived_at && ['percentage_discount', 'fixed_discount', 'amount_gift', 'quantity_gift', 'buy_x_get_y'].includes(p.benefit_type))} linkedIds={editingCoupon === 'new' ? [] : links.filter(link => link.coupon_campaign_id === editingCoupon.id).map(link => link.promotion_id)} linkedMemberIds={editingCoupon === 'new' ? [] : couponMembers.filter(link => link.coupon_campaign_id === editingCoupon.id).map(link => link.user_id)} onClose={() => { setEditingCoupon(null); load(); }} />;
 
@@ -79,7 +77,7 @@ export default function Promotions({ products }) {
     </div>
     {tab !== 'announcement' && <div aria-label="封存篩選" style={{ display:'flex', gap:8, marginBottom:18 }}>{[[false,tab === 'promotions' ? '活動列表' : '優惠券列表'],[true,tab === 'promotions' ? '封存活動' : '封存優惠券']].map(([value,label]) => <button key={label} type="button" aria-pressed={showArchived === value} onClick={() => setShowArchived(value)} style={{ ...secondaryButton, flex:'none', borderColor:showArchived === value ? 'var(--dark)' : 'var(--border)' }}>{label}</button>)}</div>}
     {tab !== 'announcement' && loadError && <div role="alert" style={{ marginBottom:16, color:'var(--red)', fontSize:13 }}>{loadError}</div>}
-    {tab === 'announcement' ? <SiteAnnouncementSettings /> : loading ? <Empty text="載入中…" /> : tab === 'promotions' ? <PromotionList list={promotions.filter(p => Boolean(p.archived_at) === showArchived)} scopes={scopes} products={products} onEdit={setEditingPromotion} onCopy={copyPromotion} onEditPolicy={setEditingPolicy} onReload={load} /> : <CouponList list={coupons.filter(c => Boolean(c.archived_at) === showArchived)} links={links} memberLinks={couponMembers} promotions={promotions} onEdit={setEditingCoupon} onReload={load} />}
+    {tab === 'announcement' ? <SiteAnnouncementSettings /> : loading ? <Empty text="載入中…" /> : tab === 'promotions' ? <PromotionList list={promotions.filter(p => Boolean(p.archived_at) === showArchived)} scopes={scopes} products={products} onEdit={setEditingPromotion} onCopy={copyPromotion} onReload={load} /> : <CouponList list={coupons.filter(c => Boolean(c.archived_at) === showArchived)} links={links} memberLinks={couponMembers} promotions={promotions} onEdit={setEditingCoupon} onReload={load} />}
   </div>;
 }
 
@@ -138,7 +136,7 @@ function LifecycleActions({ item, table, noun, onReload, children, actions }) {
 
 }
 
-function PromotionList({ list, scopes, products, onEdit, onCopy, onEditPolicy, onReload }) {
+function PromotionList({ list, scopes, products, onEdit, onCopy, onReload }) {
   if (!list.length) return <Empty text="目前還沒有優惠活動" />;
   return <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(320px, 1fr))', gap:16 }}>
     {list.map(promo => {
@@ -150,8 +148,7 @@ function PromotionList({ list, scopes, products, onEdit, onCopy, onEditPolicy, o
       return <Card key={promo.id}>
         <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}><div><h3 style={{ fontSize:15, fontWeight:500, marginBottom:6 }}>{promo.name}</h3></div><span style={{ fontSize:10, color:'var(--mid)' }}>{promo.activation_type === 'coupon_only' ? '優惠券專用' : '自動活動'}</span></div>
         <LifecycleActions item={promo} table="promotions" noun="活動" onReload={onReload} actions={<>
-          <button onClick={() => legacy ? alert('舊版複合活動維持唯讀；請建立新的單一優惠活動取代。') : onEdit(promo)} style={{ ...secondaryButton, background:'var(--dark)', color:'#fff' }}>編輯活動</button>
-          {supportsStudentPolicy(promo) && <button onClick={() => onEditPolicy(promo)} disabled={!Object.hasOwn(promo, 'allow_student_price_stacking')} style={secondaryButton}>學生價與返饋設定</button>}
+          <button onClick={() => onEdit(promo)} style={{ ...secondaryButton, background:'var(--dark)', color:'#fff' }}>編輯活動</button>
           {!legacy && <button onClick={() => onCopy(promo)} style={secondaryButton}>複製</button>}
         </>}>
         {supportsStudentPolicy(promo) && <p style={{ fontSize:11, color:'var(--mid)' }}>學生價：{promo.allow_student_price_stacking === false ? '不疊加，與學生價擇優' : '可疊加'} · 活動參與件：{promo.instructor_reward_eligible === false ? '不計師資返饋' : '正常計師資返饋'}</p>}
@@ -175,6 +172,7 @@ function CouponList({ list, links, memberLinks, promotions, onEdit, onReload }) 
 }
 
 function DiscountPromotionForm({ promo, products, scopes, onClose, policyInstalled = false }) {
+  const legacy = Boolean(promo?.id && (!promo.benefit_type || promo.benefit_type === 'legacy_discount'));
   const benefitScopes = scopes.filter(scope => scope.promotion_id === (promo?.copySourceId || promo?.id) && scope.scope_role === 'benefit' && scope.mode === 'include');
   const initialAllRegular = benefitScopes.some(scope => scope.target_type === 'all_regular') || !promo;
   const initialAllSellable = benefitScopes.some(scope => scope.target_type === 'all_sellable');
@@ -196,6 +194,17 @@ function DiscountPromotionForm({ promo, products, scopes, onClose, policyInstall
   function toggle(id) { const next = new Set(form.product_ids); next.has(id) ? next.delete(id) : next.add(id); set('product_ids', next); }
   async function save(event) {
     event.preventDefault(); setError('');
+    if (legacy) {
+      if (!policyInstalled || !supportsStudentPolicy(promo)) return;
+      setSaving(true);
+      const { error:saveError } = await supabase.rpc('save_promotion_student_policy', {
+        p_id:promo.id, p_allow_stacking:form.allow_student_price_stacking,
+        p_reward_eligible:form.instructor_reward_eligible, p_expected_updated_at:promo.updated_at,
+      });
+      setSaving(false);
+      if (saveError) setError(`儲存失敗：${saveError.message}`); else onClose();
+      return;
+    }
     if (!form.name.trim()) return setError('請輸入活動名稱');
     if (form.activation_type === 'automatic' && !form.audience_roles.size && !form.allow_guest) return setError('請至少選擇一種會員身分或允許訪客');
     if (form.scope_type === 'products' && !form.product_ids.size) return setError('請至少選擇一件商品');
@@ -215,8 +224,12 @@ function DiscountPromotionForm({ promo, products, scopes, onClose, policyInstall
   }
   return <Editor title={promo?.copySourceId ? '複製優惠活動' : promo?.id ? '編輯優惠活動' : '新增優惠活動'} back="返回活動列表" onClose={onClose} error={error}><form onSubmit={save} style={{ ...panelStyle, display:'flex', flexDirection:'column', gap:22 }}>
     {promo?.copySourceId && <p role="status" style={{ fontSize:12, color:'var(--mid)' }}>已帶入原活動設定，儲存後建立獨立且預設停用的活動；請確認名稱、適用對象與活動時間。</p>}
+    {legacy ? <>
+      <Field label="活動名稱"><input aria-label="活動名稱" style={inputStyle} value={promo.name} disabled /></Field>
+      <Field label="優惠內容"><p style={{ fontSize:13, lineHeight:1.7 }}>{getBenefitLabel(promo, products)}</p></Field>
+      <p style={{ fontSize:12, color:'var(--mid)', lineHeight:1.7 }}>此為舊版複合活動，原優惠條件與商品範圍維持唯讀；可在此調整學生價與師資返饋設定。</p>
+    </> : <>
     <Field label="活動狀態"><label style={{ fontSize:13 }}><input type="checkbox" checked={form.active} onChange={e => set('active',e.target.checked)} /> 啟用活動</label></Field>
-    <StudentPolicyFields form={form} set={set} installed={policyInstalled} />
     <Field label="活動名稱 *"><input style={inputStyle} value={form.name} onChange={e => set('name',e.target.value)} placeholder="例：秋季保養 9 折" /></Field>
     <Field label="活動標籤（選填）">
       <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
@@ -240,7 +253,9 @@ function DiscountPromotionForm({ promo, products, scopes, onClose, policyInstall
       onSelectAll={() => set('product_ids', new Set(selectableProducts.map(product => product.id)))}
       onClear={() => set('product_ids', new Set())}
     />}
-    <SaveButtons saving={saving} onClose={onClose} label={promo?.id ? '儲存變更' : '建立活動'} />
+    </>}
+    <StudentPolicyFields form={legacy ? { ...form, benefit_type:promo.benefit_type || 'legacy_discount' } : form} set={set} installed={policyInstalled} />
+    <SaveButtons saving={saving} disabled={legacy && (!policyInstalled || !supportsStudentPolicy(promo))} onClose={onClose} label={promo?.id ? '儲存變更' : '建立活動'} />
   </form></Editor>;
 }
 
@@ -407,7 +422,7 @@ function Editor({ title, back, onClose, error, children }) { return <div><button
 function Field({ label, children }) { return <div><label style={labelStyle}>{label}</label>{children}</div>; }
 function Card({ children }) { return <div style={{ background:'var(--white)', border:'1px solid var(--border)', padding:'20px 22px', display:'flex', flexDirection:'column', gap:13, minHeight:190 }}>{children}</div>; }
 function Empty({ text }) { return <div style={{ padding:48, textAlign:'center', color:'var(--mid)', border:'1px solid var(--border)', background:'var(--white)', fontSize:13 }}>{text}</div>; }
-function SaveButtons({ saving, onClose, label }) { return <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}><button type="button" onClick={onClose} style={{ ...secondaryButton, flex:'none', padding:'11px 22px' }}>取消</button><button disabled={saving} style={{ padding:'11px 26px', border:'none', background:saving ? 'var(--mid)' : 'var(--dark)', color:'#fff', cursor:saving ? 'wait' : 'pointer', fontSize:12 }}>{saving ? '儲存中…' : label}</button></div>; }
+function SaveButtons({ saving, disabled = false, onClose, label }) { return <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}><button type="button" onClick={onClose} style={{ ...secondaryButton, flex:'none', padding:'11px 22px' }}>取消</button><button disabled={saving || disabled} style={{ padding:'11px 26px', border:'none', background:saving ? 'var(--mid)' : 'var(--dark)', color:'#fff', cursor:saving ? 'wait' : 'pointer', fontSize:12 }}>{saving ? '儲存中…' : label}</button></div>; }
 function toLocalInput(value) { if (!value) return ''; const date = new Date(value); const offset = date.getTimezoneOffset() * 60000; return new Date(date.getTime() - offset).toISOString().slice(0,16); }
 function stackingLabel(value) { return value === 'allow_all' ? '含自動折扣' : value === 'allow_auto_gifts' ? '僅自動贈品' : '只用優惠券'; }
 
@@ -420,31 +435,14 @@ function supportsStudentPolicy(promo) {
 function StudentPolicyFields({ form, set, installed = true }) {
   if (!supportsStudentPolicy(form)) return <p style={{ fontSize:12, color:'var(--mid)' }}>學生價與返饋排除設定僅適用自動價格活動；滿額贈、滿件贈及優惠券專用活動維持原規則。</p>;
   return <Field label="學生價與師資返饋">
-    <label style={{ display:'block', fontSize:13, marginBottom:12 }}><input type="checkbox" disabled={!installed} checked={form.allow_student_price_stacking} onChange={e => set('allow_student_price_stacking', e.target.checked)} /> 可與學生價疊加</label>
-    <label style={{ display:'block', fontSize:13 }}><input type="checkbox" disabled={!installed} checked={form.instructor_reward_eligible} onChange={e => set('instructor_reward_eligible', e.target.checked)} /> 活動參與件計入師資返饋</label>
-    <p style={{ fontSize:12, color:'var(--mid)', lineHeight:1.7, marginTop:10 }}>{installed ? '設定須新版計價功能啟用後生效。不疊加時與學生價比較商品應付，同額優先活動；買贈整組皆受設定約束，未參與及剩餘件數維持學生價與返饋。' : '學生價與返饋設定尚未安裝，目前維持原規則。'}</p>
-    {form.instructor_reward_eligible && <p style={{ fontSize:12, color:'var(--mid)', lineHeight:1.7 }}>返饋沿用活動前價格差額，活動折抵不會減少返饋金額。</p>}
+    <div style={{ marginBottom:18 }}>
+      <label style={{ display:'block', fontSize:13 }}><input type="checkbox" disabled={!installed} checked={form.allow_student_price_stacking} onChange={e => set('allow_student_price_stacking', e.target.checked)} /> 活動優惠可再享學生價</label>
+      <p style={{ fontSize:12, color:'var(--mid)', lineHeight:1.7, marginTop:8 }}>勾選：學生價可再套用活動優惠。<br />未勾選：活動優惠與學生價擇一，系統自動選較便宜的方案；同額時選活動優惠。</p>
+    </div>
+    <div>
+      <label style={{ display:'block', fontSize:13 }}><input type="checkbox" disabled={!installed} checked={form.instructor_reward_eligible} onChange={e => set('instructor_reward_eligible', e.target.checked)} /> 活動商品照常計算師資返饋</label>
+      <p style={{ fontSize:12, color:'var(--mid)', lineHeight:1.7, marginTop:8 }}>勾選：套用活動優惠的商品仍計算師資返饋，返饋金額不因活動折抵而減少。<br />未勾選：套用活動優惠的商品不計師資返饋。</p>
+    </div>
+    <p style={{ fontSize:12, color:'var(--mid)', lineHeight:1.7, marginTop:14 }}>{installed ? '買贈活動以整組商品（含贈送件）套用上述設定。未套用活動的商品與剩餘件數，仍依原規則享學生價及師資返饋。' : '學生價與返饋設定尚未安裝，目前維持原規則。'}</p>
   </Field>;
-}
-
-function StudentPolicyEditor({ promo, onClose }) {
-  const [form, setForm] = useState({ ...promo, allow_student_price_stacking:promo.allow_student_price_stacking ?? true, instructor_reward_eligible:promo.instructor_reward_eligible ?? true });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  async function save(event) {
-    event.preventDefault(); setSaving(true); setError('');
-    const { error: failure } = await supabase.rpc('save_promotion_student_policy', {
-      p_id:promo.id, p_allow_stacking:form.allow_student_price_stacking,
-      p_reward_eligible:form.instructor_reward_eligible, p_expected_updated_at:promo.updated_at,
-    });
-    setSaving(false);
-    if (failure) setError(`儲存失敗：${failure.message}`); else onClose();
-  }
-  return <Editor title="學生價與師資返饋設定" back="返回活動列表" onClose={onClose} error={error}>
-    <form onSubmit={save} style={{ ...panelStyle, display:'flex', flexDirection:'column', gap:22 }}>
-      <p>{promo.name}</p>
-      <StudentPolicyFields form={form} set={(key, value) => setForm(current => ({ ...current, [key]:value }))} />
-      <button type="submit" disabled={saving} style={secondaryButton}>{saving ? '儲存中…' : '儲存學生價與返饋設定'}</button>
-    </form>
-  </Editor>;
 }

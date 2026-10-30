@@ -27,12 +27,12 @@ test('空活動列表仍可設定學生政策，缺少欄位時保留舊相容�
   });
   await open(page);
   await page.getByRole('button',{name:'+ 新增優惠活動'}).click();
-  await expect(page.getByLabel('可與學生價疊加')).toBeEnabled();
-  await page.getByLabel('可與學生價疊加').uncheck();
+  await expect(page.getByLabel('活動優惠可再享學生價')).toBeEnabled();
+  await page.getByLabel('活動優惠可再享學生價').uncheck();
   installed = false;
   await page.getByRole('button',{name:'取消',exact:true}).click();
   await page.getByRole('button',{name:'+ 新增優惠活動'}).click();
-  await expect(page.getByLabel('可與學生價疊加')).toBeDisabled();
+  await expect(page.getByLabel('活動優惠可再享學生價')).toBeDisabled();
 });
 
 test('學生互斥活動複製保留兩個政策，優惠券專用恢復原規則', async ({ page }) => {
@@ -40,8 +40,8 @@ test('學生互斥活動複製保留兩個政策，優惠券專用恢復原規�
   await mockEcladoApis(page, { ...options,onDiscountPromotionSave:p => saves.push(p) });
   await open(page);
   await page.getByRole('button',{name:'複製',exact:true}).click();
-  await expect(page.getByLabel('可與學生價疊加')).not.toBeChecked();
-  await expect(page.getByLabel('活動參與件計入師資返饋')).not.toBeChecked();
+  await expect(page.getByLabel('活動優惠可再享學生價')).not.toBeChecked();
+  await expect(page.getByLabel('活動商品照常計算師資返饋')).not.toBeChecked();
   await page.getByRole('button',{name:/建立|儲存/}).last().click();
   await expect.poll(() => saves.length).toBe(1);
   expect(saves[0].allow_student_price_stacking).toBe(false);
@@ -55,7 +55,7 @@ test('學生互斥活動複製保留兩個政策，優惠券專用恢復原規�
   expect(saves[1].instructor_reward_eligible).toBe(true);
 });
 
-test('既有複合活動可獨立設定學生價與返饋並處理過期設定', async ({ page }) => {
+test('既有複合活動在活動編輯調整政策，保留唯讀條件與過期防護', async ({ page }) => {
   await mockEcladoApis(page, { ...options,promotions:[{ ...activity,benefit_type:'legacy_discount' }] });
   let request: any;
   await page.route('**/rest/v1/rpc/save_promotion_student_policy', route => {
@@ -63,11 +63,31 @@ test('既有複合活動可獨立設定學生價與返饋並處理過期設定',
     return route.fulfill({status:409,json:{code:'40001',message:'活動已變更，請重新載入'}});
   });
   await open(page);
-  await page.getByRole('button',{name:'學生價與返饋設定',exact:true}).click();
-  await page.getByLabel('可與學生價疊加').check();
-  await page.getByRole('button',{name:'儲存學生價與返饋設定'}).click();
+  await expect(page.getByRole('button',{name:'學生價與返饋設定',exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'編輯活動',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'編輯優惠活動',exact:true})).toBeVisible();
+  await expect(page.getByLabel('活動名稱',{exact:true})).toBeDisabled();
+  await page.getByLabel('活動優惠可再享學生價').check();
+  await page.getByRole('button',{name:'儲存變更',exact:true}).click();
   await expect(page.getByText('儲存失敗：活動已變更，請重新載入')).toBeVisible();
   expect(request).toEqual({p_id:activity.id,p_allow_stacking:true,p_reward_eligible:false,p_expected_updated_at:activity.updated_at});
+});
+
+
+test('一般活動由同一編輯表單儲存學生價與返饋設定', async ({ page }) => {
+  let payload: any;
+  await mockEcladoApis(page, { ...options,onDiscountPromotionSave:value => { payload = value; } });
+  await open(page);
+  await expect(page.getByRole('button',{name:'學生價與返饋設定',exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'編輯活動',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'編輯優惠活動',exact:true})).toBeVisible();
+  await expect(page.getByLabel('活動優惠可再享學生價')).not.toBeChecked();
+  await page.getByLabel('活動商品照常計算師資返饋').check();
+  await page.getByRole('button',{name:'儲存變更',exact:true}).click();
+  await expect.poll(() => payload?.id).toBe(activity.id);
+  expect(payload.allow_student_price_stacking).toBe(false);
+  expect(payload.instructor_reward_eligible).toBe(true);
+  expect(payload.benefit_type).toBe(activity.benefit_type);
 });
 
 test('學生價不疊活動的估價等待後端，價格調整可核對同額方案', () => {
