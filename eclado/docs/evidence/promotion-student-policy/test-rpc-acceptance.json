@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-30",
+  "project_ref": "qqlgqasbmbicnmvnlqbr",
+  "method": "SQL Editor real public RPCs with TEST JWT identity claims; rollback subtransactions; not browser PostgREST or bank E2E",
+  "cases": [
+    "real_wallet_order_nonstacking_restoration_zero_reward",
+    "stale_policy_rejected_student_cheaper_and_activity_tie",
+    "mixed_bogo_remainder_unrelated_duplicate_report_immutable_snapshot_and_acl",
+    "real_assisted_auto_manual_orders",
+    "real_coupon_only_allow_all_orders_and_rewards",
+    "cancel_once_and_both_flags_off_regression"
+  ],
+  "passed": true,
+  "bank_calls": 0,
+  "case_count": 6,
+  "original_order_count": 1,
+  "retained_test_orders": 0,
+  "all_public_table_rows_unchanged": true
+}

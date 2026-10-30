@@ -1,0 +1,540 @@
+{
+  "captured_at": "2026-10-30T14:15:24.416195+00:00",
+  "time_zone": "Asia/Taipei",
+  "mode": "read_only_preflight_no_release",
+  "project_ref": "ilvdvlkdpntwmaijncaz",
+  "production_server_version": "17.6",
+  "production_new_policy_installed": false,
+  "production_new_policy_columns": [],
+  "current_allocation_settings": {
+    "enabled": true,
+    "version": 1,
+    "singleton": true,
+    "base_source_hash": "0fc1ef1d1b3c98dfdc6580a2d93a4363"
+  },
+  "current_student_feature_settings": {
+    "enabled": true,
+    "version": 1,
+    "singleton": true,
+    "updated_at": "2026-10-19T13:57:29.753838+00:00"
+  },
+  "current_student_pricing": {
+    "version": 0,
+    "singleton": true,
+    "student_1": 0.9,
+    "student_2": 0.95,
+    "updated_at": "2026-10-12T03:02:05.405366+00:00"
+  },
+  "function_source_checks": [
+    {
+      "signature": "allocate_automatic_prices(jsonb,text,uuid)",
+      "production_md5": "5a79b606b5aa9bc8684b087410fb6d72",
+      "matches_test_source": true,
+      "owner": "postgres",
+      "acl_matches_test_source": true
+    },
+    {
+      "signature": "assisted_discount_quote(jsonb,text,text,text,uuid,boolean)",
+      "production_md5": "c44d173aac6d50afae52eb3fc591fa17",
+      "matches_test_source": true,
+      "owner": "postgres",
+      "acl_matches_test_source": true
+    },
+    {
+      "signature": "create_order_with_pricing_discount_v2(jsonb,text,text,text,text,text,text,text,text)",
+      "production_md5": "188403d77c2c5e63e608130d622fdb05",
+      "matches_test_source": true,
+      "owner": "postgres",
+      "acl_matches_test_source": true
+    },
+    {
+      "signature": "instructor_reward_report_internal(uuid,integer,integer,integer)",
+      "production_md5": "ddda524cdf68da621c2760c7a49ba7da",
+      "matches_test_source": true,
+      "owner": "postgres",
+      "acl_matches_test_source": true
+    },
+    {
+      "signature": "persist_student_reward_snapshot(text,jsonb)",
+      "production_md5": "162a02312a75f3d41b368dfff7be338f",
+      "matches_test_source": true,
+      "owner": "postgres",
+      "acl_matches_test_source": true
+    },
+    {
+      "signature": "quote_assisted_order(jsonb)",
+      "production_md5": "3b8ef6207fb29a6e31f9d4ded31b8efb",
+      "matches_test_source": true,
+      "owner": "postgres",
+      "acl_matches_test_source": true
+    },
+    {
+      "signature": "quote_order_pricing_discount_v2(jsonb,text,text,text)",
+      "production_md5": "d1b3fa40a662e2c24fe91e9e328182f0",
+      "matches_test_source": true,
+      "owner": "postgres",
+      "acl_matches_test_source": true
+    },
+    {
+      "signature": "solve_automatic_price_component(jsonb,jsonb,integer)",
+      "production_md5": "4f053df263fa6ec5d818492c9f5a7db7",
+      "matches_test_source": true,
+      "owner": "postgres",
+      "acl_matches_test_source": true
+    },
+    {
+      "signature": "save_discount_promotion(jsonb)",
+      "production_md5": "e6a7723a713dbfa6823554dde3681e12",
+      "matches_test_source": true,
+      "owner": "postgres",
+      "acl_matches_test_source": true
+    }
+  ],
+  "remote_main": "c471584e4dddf318221291947ce9203bbc48f8c9",
+  "remote_develop": "888dd5b90db2572027fb0da52be5fd9d3292db13",
+  "production_frontend": {
+    "deployment_id": "dpl_4EDNjBX5B2Ym56o28Aquv1tPM43h",
+    "status": "Ready",
+    "domain": "ecladotaiwan.com",
+    "deployment_host": "eclado-e4qnhb7p6-eclado-s-projects.vercel.app",
+    "git_sha": "c471584e4dddf318221291947ce9203bbc48f8c9"
+  },
+  "production_payment_api": {
+    "health_ok": true,
+    "internal_health_ok": true,
+    "health_time": "2026-10-30T14:13:39.557Z",
+    "pid": 2327559,
+    "server_sha256": "2dac30608084d848ab641b6c60b5285777080f032a25ea754881e1289aa526b6",
+    "assisted_orders_sha256": "2b13157c0c78a05e942feff44ca53cabe59ba37cb3fff7dc6505768ebbbf7210",
+    "both_scoped_runtime_files_match_local_HEAD": true
+  },
+  "proposed_targets": [
+    {
+      "id": "06906fd2-a796-4db2-9bd8-8397e9360f2e",
+      "name": "11.11 限定｜TOP熱銷商品-買3送1",
+      "updated_at": "2026-10-29T17:26:49.750294+00:00",
+      "active": true,
+      "benefit_type": "buy_x_get_y",
+      "buy_quantity": 3,
+      "gift_quantity": 1,
+      "repeat_mode": "repeat",
+      "audience_roles": [
+        "pro"
+      ],
+      "start_at": "2026-10-31T16:00:00+00:00",
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "scope_digest": "1c064d55b49bca32f8eac3886a0cc7ae",
+      "products": [
+        {
+          "id": 132,
+          "name": "C.P 50 安瓶組"
+        }
+      ],
+      "coupon_link_count": 0,
+      "proposed_policy": {
+        "allow_student_price_stacking": false,
+        "instructor_reward_eligible": false
+      }
+    },
+    {
+      "id": "130e6ba0-4111-4e17-9564-f2ac14d24d8a",
+      "name": "11.11 限定｜TOP熱銷商品-買3送1",
+      "updated_at": "2026-10-29T17:27:07.001816+00:00",
+      "active": true,
+      "benefit_type": "buy_x_get_y",
+      "buy_quantity": 3,
+      "gift_quantity": 1,
+      "repeat_mode": "repeat",
+      "audience_roles": [
+        "pro"
+      ],
+      "start_at": "2026-10-31T16:01:00+00:00",
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "scope_digest": "7253271a999f0bed74081390c5f7690c",
+      "products": [
+        {
+          "id": 106,
+          "name": "保濕補水霜"
+        }
+      ],
+      "coupon_link_count": 0,
+      "proposed_policy": {
+        "allow_student_price_stacking": false,
+        "instructor_reward_eligible": false
+      }
+    },
+    {
+      "id": "1876ed80-ca9c-44ee-bb05-4c47ddae6799",
+      "name": "11.11 限定｜TOP熱銷商品-買3送1",
+      "updated_at": "2026-10-29T17:26:55.689732+00:00",
+      "active": true,
+      "benefit_type": "buy_x_get_y",
+      "buy_quantity": 3,
+      "gift_quantity": 1,
+      "repeat_mode": "repeat",
+      "audience_roles": [
+        "pro"
+      ],
+      "start_at": "2026-10-31T16:01:00+00:00",
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "scope_digest": "2878a1603d45927393a7cf35f49498d5",
+      "products": [
+        {
+          "id": 102,
+          "name": "乳酸菌益膚面膜"
+        }
+      ],
+      "coupon_link_count": 0,
+      "proposed_policy": {
+        "allow_student_price_stacking": false,
+        "instructor_reward_eligible": false
+      }
+    },
+    {
+      "id": "49572111-a383-4cd4-a116-ad9ff30d3f47",
+      "name": "11.11 限定｜TOP熱銷商品-買3送1",
+      "updated_at": "2026-10-30T02:53:10.341452+00:00",
+      "active": true,
+      "benefit_type": "buy_x_get_y",
+      "buy_quantity": 3,
+      "gift_quantity": 1,
+      "repeat_mode": "repeat",
+      "audience_roles": [
+        "pro"
+      ],
+      "start_at": "2026-10-31T16:01:00+00:00",
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "scope_digest": "bb5b2a1a407d6b88ac3fea640b72b8b0",
+      "products": [
+        {
+          "id": 124,
+          "name": "溫和增效潔面乳"
+        }
+      ],
+      "coupon_link_count": 0,
+      "proposed_policy": {
+        "allow_student_price_stacking": false,
+        "instructor_reward_eligible": false
+      }
+    },
+    {
+      "id": "daf857ba-df5f-48ee-9875-ade66941edda",
+      "name": "11.11 限定｜TOP熱銷商品-買3送1",
+      "updated_at": "2026-10-29T17:27:00.90316+00:00",
+      "active": true,
+      "benefit_type": "buy_x_get_y",
+      "buy_quantity": 3,
+      "gift_quantity": 1,
+      "repeat_mode": "repeat",
+      "audience_roles": [
+        "pro"
+      ],
+      "start_at": "2026-10-31T16:01:00+00:00",
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "scope_digest": "19cd5161b3abf4c04c6abb8f8c5e624c",
+      "products": [
+        {
+          "id": 116,
+          "name": "記憶修護霜"
+        }
+      ],
+      "coupon_link_count": 0,
+      "proposed_policy": {
+        "allow_student_price_stacking": false,
+        "instructor_reward_eligible": false
+      }
+    },
+    {
+      "id": "e1ac15b9-8050-47ce-9046-5f0b83e7e38a",
+      "name": "11.11 限定｜TOP熱銷商品-買3送1",
+      "updated_at": "2026-10-29T17:26:36.353346+00:00",
+      "active": true,
+      "benefit_type": "buy_x_get_y",
+      "buy_quantity": 3,
+      "gift_quantity": 1,
+      "repeat_mode": "repeat",
+      "audience_roles": [
+        "pro"
+      ],
+      "start_at": "2026-10-31T16:01:00+00:00",
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "scope_digest": "c97b0f34f1ede77bb13d64d5efbd2115",
+      "products": [
+        {
+          "id": 123,
+          "name": "極致珍珠緞面膜"
+        }
+      ],
+      "coupon_link_count": 0,
+      "proposed_policy": {
+        "allow_student_price_stacking": false,
+        "instructor_reward_eligible": false
+      }
+    },
+    {
+      "id": "bc5aea6c-088b-46ab-addb-fb4071412f90",
+      "name": "11.11 限定｜VONO 喚膚調理組4+1 （每盒加贈品牌矽膠刷）",
+      "updated_at": "2026-10-29T17:14:40.892766+00:00",
+      "active": true,
+      "benefit_type": "buy_x_get_y",
+      "buy_quantity": 4,
+      "gift_quantity": 1,
+      "repeat_mode": "repeat",
+      "audience_roles": [
+        "pro"
+      ],
+      "start_at": "2026-10-31T16:00:00+00:00",
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "scope_digest": "131a549398dc57ec8983d6b16fd3786b",
+      "products": [
+        {
+          "id": 136,
+          "name": "VONO 喚膚調理組"
+        }
+      ],
+      "coupon_link_count": 0,
+      "proposed_policy": {
+        "allow_student_price_stacking": false,
+        "instructor_reward_eligible": false
+      }
+    },
+    {
+      "id": "ced451c6-c8e7-4bdd-8835-35398e5e04a1",
+      "name": "11.11 限定｜呼吸系列 任5件贈送1件 （每瓶呼吸爽膚水加贈拉伸化妝棉*1）",
+      "updated_at": "2026-10-29T16:56:35.721045+00:00",
+      "active": true,
+      "benefit_type": "buy_x_get_y",
+      "buy_quantity": 5,
+      "gift_quantity": 1,
+      "repeat_mode": "repeat",
+      "audience_roles": [
+        "pro"
+      ],
+      "start_at": "2026-10-31T16:00:00+00:00",
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "scope_digest": "a1a04dfcc0aefc7175d852618bea7361",
+      "products": [
+        {
+          "id": 140,
+          "name": "呼吸雪霜"
+        },
+        {
+          "id": 139,
+          "name": "呼吸爽膚水"
+        },
+        {
+          "id": 138,
+          "name": "呼吸安瓶"
+        },
+        {
+          "id": 141,
+          "name": "呼吸精華液"
+        }
+      ],
+      "coupon_link_count": 0,
+      "proposed_policy": {
+        "allow_student_price_stacking": false,
+        "instructor_reward_eligible": false
+      }
+    },
+    {
+      "id": "9be5e4f9-f0d4-460e-a054-7a1aba1ca4ca",
+      "name": "11.11 限定｜棉花水光管理4+1 （每盒加贈品牌矽膠刷）",
+      "updated_at": "2026-10-29T16:51:25.862812+00:00",
+      "active": true,
+      "benefit_type": "buy_x_get_y",
+      "buy_quantity": 4,
+      "gift_quantity": 1,
+      "repeat_mode": "repeat",
+      "audience_roles": [
+        "pro"
+      ],
+      "start_at": "2026-10-31T16:00:00+00:00",
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "scope_digest": "6830813e8e0cfb6784fc07b3384f5830",
+      "products": [
+        {
+          "id": 120,
+          "name": "棉花水光管理"
+        }
+      ],
+      "coupon_link_count": 0,
+      "proposed_policy": {
+        "allow_student_price_stacking": false,
+        "instructor_reward_eligible": false
+      }
+    }
+  ],
+  "preserve_promotions": [
+    {
+      "id": "2a559e1a-ccbe-4c8b-a86e-b9808549369c",
+      "name": "11.11 限定｜TOP熱銷商品-任選6件送1件",
+      "updated_at": "2026-10-22T03:23:06.356769+00:00",
+      "active": true,
+      "benefit_type": "buy_x_get_y",
+      "buy_quantity": 6,
+      "gift_quantity": 1,
+      "repeat_mode": "repeat",
+      "audience_roles": [
+        "distributor",
+        "instructor"
+      ],
+      "start_at": "2026-11-10T16:00:00+00:00",
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "scope_digest": "1c243c934f0e6e89b98e921e1b706371",
+      "products": [
+        {
+          "id": 102,
+          "name": "乳酸菌益膚面膜"
+        },
+        {
+          "id": 106,
+          "name": "保濕補水霜"
+        },
+        {
+          "id": 116,
+          "name": "記憶修護霜"
+        },
+        {
+          "id": 123,
+          "name": "極致珍珠緞面膜"
+        },
+        {
+          "id": 132,
+          "name": "C.P 50 安瓶組"
+        },
+        {
+          "id": 124,
+          "name": "溫和增效潔面乳"
+        }
+      ],
+      "coupon_link_count": 0,
+      "action": "preserve"
+    }
+  ],
+  "other_active_promotions": [
+    {
+      "id": "b1af9d8f-35da-4404-946f-0a44eb771262",
+      "name": "叫貨9折優惠",
+      "benefit_type": "percentage_discount",
+      "activation_type": "coupon_only"
+    },
+    {
+      "id": "7edc749f-8da8-468f-93f4-1e005fe0e2ff",
+      "name": "急救安瓶三盒折300元",
+      "benefit_type": "fixed_discount",
+      "activation_type": "automatic"
+    }
+  ],
+  "business_counts_at_read": {
+    "ledger": 7,
+    "orders": 111,
+    "snapshots": 1,
+    "adjustments": 18
+  },
+  "candidate_runtime_and_test_file_manifest": [
+    {
+      "path": "eclado/src/admin/pages/PromotionsPage.jsx",
+      "sha256": "097806ce8c6d724a46b0626aad44e36cc78d1649885feacfcc10b2500007ea90"
+    },
+    {
+      "path": "eclado/src/domain/promotions.js",
+      "sha256": "b979b6da6725be93527202b1b5a868ee880cd0bc24ecdf0421aaae1bcc825dc9"
+    },
+    {
+      "path": "eclado/src/domain/orderDiscounts.js",
+      "sha256": "e0b873d1e9ba62681030d7fa6e05f2cd7dd3626f11387ee19a981e1473f411fe"
+    },
+    {
+      "path": "eclado/src/components/OrderPriceAdjustments.jsx",
+      "sha256": "c7d7999211ac8a04d86e8b7bd64b77f01e1a5d2fc46382518e24b23567742212"
+    },
+    {
+      "path": "eclado/src/admin/components/OrderPrintPreview.jsx",
+      "sha256": "d2b592914aff7ec1f63da3c404d33c841bcec731602834339aa015ce39c4fb3f"
+    },
+    {
+      "path": "eclado/src/components/checkout/CheckoutOrderSummary.jsx",
+      "sha256": "0e252a6664f8afb59d3e04aba6fbd9462928641cf28da8fef41fd139a001edad"
+    },
+    {
+      "path": "eclado/src/admin/components/AssistedOrderDialog.jsx",
+      "sha256": "df75c7ee5c0621a59b4b7368f16c0d188b5112b478e0429d717b7be31e92297a"
+    },
+    {
+      "path": "eclado/src/components/account/InstructorRewardsPanel.jsx",
+      "sha256": "71985957a95a3fabdf00e3f42f490a3867d4bee6105d66cc8d94cd9523d12b1e"
+    },
+    {
+      "path": "eclado/payment-api/server.js",
+      "sha256": "ad542d0ffe07bde22a4df2521816714d255d123b2be5ce6ce0a7f6450b473f04"
+    },
+    {
+      "path": "eclado/payment-api/assisted-orders.js",
+      "sha256": "b55b587e24f70f39a49be4c86a636f14997c73b2fda4829c01a72a464cde136d"
+    },
+    {
+      "path": "eclado/payment-api/server.test.cjs",
+      "sha256": "31dc57a2c9618e0a48efe295d824050856bcee46ffbe0e288935c2663379c4f9"
+    },
+    {
+      "path": "eclado/payment-api/assisted-orders.test.cjs",
+      "sha256": "625e7e29222bd33c1171b9c23d4ce878b87d51bfd388095018a1b7ee5bd41476"
+    },
+    {
+      "path": "eclado/supabase-promotion-student-policy.sql",
+      "sha256": "1dda08f4cd6ef57cba41fa5c40c30d27adc54cc1bff397732372a8ef694a55a5"
+    },
+    {
+      "path": "eclado/supabase-promotion-student-policy-verify.sql",
+      "sha256": "14f9914c0f438c75c4fa340d9d5306cbc370cb1a5fb93e26815bbbd4ae9f5eca"
+    },
+    {
+      "path": "eclado/tests/helpers/student-policy-oracle.cjs",
+      "sha256": "1e96419168d183d06512df26aa366f611154c95779faf21c44bc178733abe779"
+    },
+    {
+      "path": "eclado/tests/integration/promotion-student-policy-db.test.cjs",
+      "sha256": "7d745e61b9ee9aecb20aa2c5efb69676bc1815ef67ccbd2222ab24c248f1c010"
+    },
+    {
+      "path": "eclado/tests/promotion-student-policy.spec.ts",
+      "sha256": "eceee3f0050c4f8d60fd448985da9452fe692dfd5cd65bfe437cef744753834a"
+    }
+  ],
+  "candidate_commit_created": false,
+  "production_writes": false,
+  "bank_calls": 0,
+  "raw_snapshot_sha256": "310487fd28639dc82d564a3da106c7e862de1e0944cd7f08c24947b0a66fa2d2",
+  "release_conditions": [
+    "Recheck function hashes and target updated_at/scope digests immediately before mutation",
+    "Do not pin production order counts: legitimate customer orders can continue",
+    "Preserve existing allocation switch true; new policy initializes false",
+    "Production already has storefront display prerequisite; do not replay test prerequisite setup",
+    "Create isolated feature commit and verify exact candidate before deployment",
+    "Do not include unrelated working tree edits or environment files",
+    "No real bank transaction included in this preflight"
+  ],
+  "companion_scope_check": {
+    "automatic_fixed_discount": {
+      "id": "7edc749f-8da8-468f-93f4-1e005fe0e2ff",
+      "scope_count": 8,
+      "product_ids": [
+        107,
+        108,
+        109,
+        110
+      ],
+      "qualification_and_benefit": true,
+      "only_product_include_scopes": true,
+      "overlaps_proposed_target_products": false
+    },
+    "coupon": {
+      "active": true,
+      "stacking_policy": "allow_auto_gifts",
+      "linked_promotion_id": "b1af9d8f-35da-4404-946f-0a44eb771262",
+      "promotion_scope": "all_sellable",
+      "action": "preserve"
+    }
+  }
+}

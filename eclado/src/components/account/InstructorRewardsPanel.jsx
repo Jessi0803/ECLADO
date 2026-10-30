@@ -53,7 +53,7 @@ export default function InstructorRewardsPanel({userId,instructorId,admin=false,
         <div className="reward-entry-title"><strong>{order.order_id}</strong> · {order.student_name|| (order.student_deleted?'已刪除會員':'未提供姓名')}</div>
         <div className="reward-meta">{time(order.created_at)} · {order.order_source==='admin_assisted'?'代客訂單':'一般訂單'} · {labels[order.reward_status]||'待查核'} · 返饋 {money(order.total_reward)}</div>
         {order.order_missing&&<p>原訂單已刪除，返饋歷史仍保留。</p>}
-        <ul className="reward-items">{order.items.map((item,index)=><li key={index}>{item.name||`商品 #${item.product_id}`} {item.size||''} × {item.qty} · 商品單價 {money(item.unit_price)} · 返饋 {money(item.reward)}</li>)}</ul>
+        <ul className="reward-items">{order.items.map((item,index)=><li key={index}>{item.name||`商品 #${item.product_id}`} {item.size||''} × {item.qty} · 商品單價 {money(item.unit_price)} · 返饋 {money(item.reward)}{Number(item.reward_excluded_quantity)>0&&<span className="reward-meta"> · 活動參與 {item.reward_excluded_quantity} 件不計返饋，計入返饋 {item.reward_eligible_quantity} 件</span>}</li>)}</ul>
       </article>)}
       {pager(offset,setOffset,report.order_count,'訂單')}
       </RewardHistorySection>

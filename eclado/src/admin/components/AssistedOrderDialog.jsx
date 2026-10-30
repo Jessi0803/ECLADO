@@ -208,7 +208,7 @@ export default function AssistedOrderDialog({members=[],products=[],initialMembe
           <button type="button" style={secondaryButton} disabled={busy} onClick={preview}>重新計算優惠與金額</button>
           {currentQuote?<div style={{fontSize:12,lineHeight:1.8,marginTop:12}}>
             <p>商品小計 NT$ {Number(currentQuote.subtotal).toLocaleString()}</p>
-            {currentQuote.adjustments?.map((adjustment,index)=><p key={index}>{adjustment.name}：{Number(adjustment.amount)>0?`−NT$ ${Number(adjustment.amount).toLocaleString()}`:`贈品 ${adjustment.gift_quantity||0} 件`}</p>)}
+            {currentQuote.adjustments?.map((adjustment,index)=><p key={index}>{adjustment.name}：{Number(adjustment.amount)>0?`${adjustment.adjustment_type==='student_price_restoration'?'+':'−'}NT$ ${Number(adjustment.amount).toLocaleString()}`:`贈品 ${adjustment.gift_quantity||0} 件`}</p>)}
             <p>運費 NT$ {Number(currentQuote.shipping).toLocaleString()} · 購物金 −NT$ {Number(currentQuote.shopping_credit_amount).toLocaleString()}</p>
             {currentQuote.items?.filter(item=>item.line_type==='gift').map((item,index)=><p key={index}>贈品：{item.name||item.nameZh} {item.size} × {item.qty}</p>)}
             <strong style={{fontSize:15}}>銀行付款 NT$ {Number(currentQuote.payment_amount).toLocaleString()}</strong>

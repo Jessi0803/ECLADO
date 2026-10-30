@@ -1,0 +1,42 @@
+{
+  "stage": "isolated_release_candidate",
+  "production_mutated": false,
+  "base_commit": "c471584e4dddf318221291947ce9203bbc48f8c9",
+  "branch": "codex/student-promotion-policy",
+  "candidate_directory": "/private/tmp/eclado-student-policy-release-20261030-rdjtq9qk",
+  "checks": {
+    "pglite_database_integration": {
+      "passed": 5,
+      "skipped": 0
+    },
+    "playwright_desktop_mobile": {
+      "passed": 14
+    },
+    "payment_api": {
+      "passed": 82
+    },
+    "vite_and_seo_build": {
+      "passed": true,
+      "products": 62,
+      "articles": 8,
+      "note": "Existing large-chunk warning remains."
+    }
+  },
+  "additional_regression": "allow_auto_gifts coupon removes automatic price activity, restores student price and instructor reward; real order RPC exercised in isolated database.",
+  "production_installer": {
+    "executed": false,
+    "new_policy_enabled": false,
+    "existing_allocation_enabled": true,
+    "guards": [
+      "9 relevant function MD5, owner and ACL",
+      "9 target promotion configurations and scope digests",
+      "no target coupon links",
+      "unchanged existing promotion data after installation",
+      "9 installation checks"
+    ]
+  },
+  "runtime_hashes": {
+    "payment-api/server.js": "ad542d0ffe07bde22a4df2521816714d255d123b2be5ce6ce0a7f6450b473f04",
+    "payment-api/assisted-orders.js": "b55b587e24f70f39a49be4c86a636f14997c73b2fda4829c01a72a464cde136d"
+  }
+}

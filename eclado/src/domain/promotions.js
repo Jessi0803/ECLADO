@@ -62,6 +62,10 @@ export function calculateDiscount(cart, promotions, user) {
     .map(p => {
       const ids = new Set(normProductIds(p));
       const promoItems = cart.filter(i => ids.has(Number(i.id)));
+      // Mutual exclusion needs the server's quantity allocation and thresholds.
+      // Keep the student baseline until the authoritative quote arrives.
+      if (p.allow_student_price_stacking === false && promoItems.some(item => getMemberRole(user) === 'pro'
+        && user?.uid && item.studentPriceUserId === user.uid)) return null;
       const promoSubtotal = promoItems.reduce((s, i) => s + unit(i) * i.qty, 0);
       const rate = Number(p.discount_rate);
       const amount = Number(p.discount_amount);
@@ -100,6 +104,8 @@ export function getPromoDisplayPrice(product, user, promotions) {
   const basePrice = getMemberPrice(product, user);
   const candidates = (promotions || [])
     .filter(p => isPromotionLive(p, user) && normProductIds(p).includes(Number(product.id)))
+    .filter(p => !(p.allow_student_price_stacking === false && getMemberRole(user) === 'pro'
+      && user?.uid && product.studentPriceUserId === user.uid))
     .map(p => {
       const rate = Number(p.discount_rate);
       const amount = Number(p.discount_amount);

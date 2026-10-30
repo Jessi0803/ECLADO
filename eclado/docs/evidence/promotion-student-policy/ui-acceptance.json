@@ -1,0 +1,126 @@
+{
+  "date": "2026-10-30",
+  "project_ref": "qqlgqasbmbicnmvnlqbr",
+  "status": "passed",
+  "fixture": {
+    "promotion_id": "71e53224-472c-4989-822b-5876f3dcff4b",
+    "name": "TEST｜學生互斥買3送1｜20261030",
+    "product_id": 1239098752,
+    "activity_variant": 1,
+    "other_variant": 2,
+    "automatic_expiry_hours": 2,
+    "cleanup": "Archive reusable fixture, restore both pricing switches false, retain audit history"
+  },
+  "expected_mixed_cart": {
+    "activity_quantity": 5,
+    "other_quantity": 3,
+    "subtotal": 8820,
+    "promotion_discount": 1000,
+    "student_price_restoration": 400,
+    "net_discount": 600,
+    "merchandise_payable": 8220,
+    "shipping": 120,
+    "total": 8340
+  },
+  "sql_fixture_quote": {
+    "subtotal": 8820,
+    "discount": 600,
+    "shipping": 120,
+    "total": 8340
+  },
+  "browser_acceptance": [
+    {
+      "case": "student_catalog_prices",
+      "100ml": 900,
+      "200ml": 1440
+    },
+    {
+      "case": "below_bogo_threshold",
+      "activity_qty": 3,
+      "other_qty": 3,
+      "subtotal": 7020,
+      "discount": 0,
+      "shipping": 120,
+      "total": 7140
+    },
+    {
+      "case": "whole_bogo_group",
+      "activity_qty": 4,
+      "other_qty": 3,
+      "subtotal": 7920,
+      "discount": 600,
+      "shipping": 120,
+      "total": 7440
+    },
+    {
+      "case": "bogo_group_plus_student_remainder",
+      "activity_qty": 5,
+      "other_qty": 3,
+      "subtotal": 8820,
+      "activity_adjustment": 1000,
+      "student_price_restoration": 400,
+      "discount": 600,
+      "shipping": 120,
+      "total": 8340
+    },
+    {
+      "case": "checkout_recipient_and_payment_confirmation",
+      "total": 8340,
+      "submitted": false
+    },
+    {
+      "case": "mobile_checkout_and_cart",
+      "observed_viewport_widths": [
+        416,
+        433
+      ],
+      "horizontal_overflow": false,
+      "total": 8340
+    }
+  ],
+  "payment_mode": "disabled",
+  "new_orders_expected": 0,
+  "cloud_helper_performance": [
+    {
+      "case": "six_variants_sixty_units_buy6get1",
+      "discount": 2400,
+      "elapsed_ms": 21.935,
+      "search_nodes": 1
+    },
+    {
+      "case": "one_variant_9999_units_buy3get1",
+      "discount": 1499400,
+      "elapsed_ms": 1.267,
+      "search_nodes": 1
+    }
+  ],
+  "performance_limit": "Single BOGO helper measurements on TEST, not a latency guarantee for full quote RPCs or arbitrary overlapping promotions",
+  "payment_verification": "Reached payment confirmation only; payment disabled, no browser order submission or bank transaction",
+  "exact_fixture_reward_rollback": {
+    "passed": true,
+    "subtotal": 8820,
+    "discount": 600,
+    "shipping": 120,
+    "total": 8340,
+    "reward": 1160,
+    "excluded_quantities": [
+      4,
+      0
+    ],
+    "cancel_event_count": 1,
+    "bank_calls": 0,
+    "inventory_unchanged": true,
+    "retained_test_orders": 0
+  },
+  "final_state": {
+    "student_policy_enabled": false,
+    "allocation_enabled": false,
+    "orders": 1,
+    "snapshots": 1,
+    "ledger": 12,
+    "adjustments": 0,
+    "active_promotions": 0,
+    "archived_test_fixtures": 1,
+    "browser_cart_empty": true
+  }
+}

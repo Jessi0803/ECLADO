@@ -77,7 +77,7 @@ export default function CheckoutOrderSummary({ items, summary, user, fulfillment
             </span>
             <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{adjustment.name}</span>
           </span>
-          <span style={{ fontFamily:'var(--font-display)', flexShrink:0 }}>{['amount_gift','quantity_gift'].includes(adjustment.adjustment_type) ? `贈品 × ${adjustment.gift_quantity || 1}` : `−NT$ ${Number(adjustment.amount || 0).toLocaleString()}`}</span>
+          <span style={{ fontFamily:'var(--font-display)', flexShrink:0 }}>{['amount_gift','quantity_gift'].includes(adjustment.adjustment_type) ? `贈品 × ${adjustment.gift_quantity || 1}` : `${adjustment.adjustment_type === 'student_price_restoration' ? '+' : '−'}NT$ ${Number(adjustment.amount || 0).toLocaleString()}`}</span>
         </div>
       )) : summary.discount > 0 && (summary.coupon || summary.promotion) && (
         <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--accent)', marginBottom:8 }}>

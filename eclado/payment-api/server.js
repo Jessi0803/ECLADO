@@ -512,7 +512,7 @@ function toPublicOrderPaymentState(order) {
     shipping: Math.max(0, total - subtotal + discount),
     promotion_name: order.promotion_name || null,
     adjustments: Array.isArray(order.pricing_snapshot?.adjustments) ? order.pricing_snapshot.adjustments
-      .filter(row => row && ['legacy_discount', 'percentage_discount', 'fixed_discount', 'buy_x_get_y'].includes(row.adjustment_type))
+      .filter(row => row && ['legacy_discount', 'percentage_discount', 'fixed_discount', 'buy_x_get_y', 'student_price_restoration'].includes(row.adjustment_type))
       .map(row => ({ name: row.name, amount: row.amount, adjustment_type: row.adjustment_type })) : [],
     items: Array.isArray(order.items) ? order.items : [],
     payment_due_at: order.payment_due_at,

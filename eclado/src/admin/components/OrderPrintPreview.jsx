@@ -160,7 +160,7 @@ export default function OrderPrintPreview({ order, onClose }) {
         <section className="order-print-summary" aria-label="訂單金額">
           <div><span>小計</span><strong>{money(subtotal)}</strong></div>
           <div><span>運費</span><strong>{shipping === 0 ? '—' : money(shipping)}</strong></div>
-          {getOrderPriceAdjustments(order).map((row, index) => <div key={index}><span>{row.name}</span><strong>{negativeMoney(row.amount)}</strong></div>)}
+          {getOrderPriceAdjustments(order).map((row, index) => <div key={index}><span>{row.name}</span><strong>{row.amount < 0 ? `+${money(-row.amount)}` : negativeMoney(row.amount)}</strong></div>)}
           {shoppingCreditDiscount > 0 && <div><span>購物金支付</span><strong>{negativeMoney(shoppingCreditDiscount)}</strong></div>}
           <div className="order-print-total"><span>應付總計</span><strong>{money(order.paymentAmount ?? order.total)}</strong></div>
         </section>

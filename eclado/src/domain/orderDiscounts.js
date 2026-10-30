@@ -4,8 +4,8 @@ export function getOrderPriceAdjustments(order = {}) {
   const source = order.adjustments || snapshot?.adjustments;
   const discount = Number(order.discount) || 0;
   if (Array.isArray(source)) {
-    const rows = source.filter(row => row && ['legacy_discount', 'percentage_discount', 'fixed_discount', 'buy_x_get_y'].includes(row.adjustment_type)
-      && Number.isFinite(Number(row.amount)) && Number(row.amount) > 0).map(row => ({ name: row.name || row.name_snapshot || '活動優惠', amount: Number(row.amount) }));
+    const rows = source.filter(row => row && ['legacy_discount', 'percentage_discount', 'fixed_discount', 'buy_x_get_y', 'student_price_restoration'].includes(row.adjustment_type)
+      && Number.isFinite(Number(row.amount)) && Number(row.amount) > 0).map(row => ({ name: row.name || row.name_snapshot || '活動優惠', amount: (row.adjustment_type === 'student_price_restoration' ? -1 : 1) * Number(row.amount) }));
     if (rows.length && Math.abs(rows.reduce((total, row) => total + row.amount, 0) - discount) < 0.000001) return rows;
   }
   return discount > 0 ? [{ name: order.promotion_name || order.promotionName || '活動／優惠券折抵', amount: discount }] : [];
