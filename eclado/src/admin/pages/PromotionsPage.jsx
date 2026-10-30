@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../services/supabase.js';
-import { getPromotionPhase, PromoBadge } from '../components/StatusIndicators.jsx';
+import { getPromotionPhase } from '../components/StatusIndicators.jsx';
 
 import PromotionLabel from '../../components/product/PromotionLabel.jsx';
 import { DEFAULT_PROMOTION_LABEL_COLOR, getPromotionLabelColor } from '../../domain/promotions.js';
@@ -72,13 +72,13 @@ export default function Promotions({ products }) {
     <div style={{ display:'flex', gap:4, borderBottom:'1px solid var(--border)', marginBottom:24 }}>
       {[['promotions','優惠活動'],['coupons','優惠券方案'],['announcement','全站公告']].map(([value,label]) => <button key={value} onClick={() => setTab(value)} style={{ padding:'11px 20px', border:'none', borderBottom:tab === value ? '2px solid var(--dark)' : '2px solid transparent', background:'none', color:tab === value ? 'var(--dark)' : 'var(--mid)', cursor:'pointer', fontSize:13 }}>{label}</button>)}
     </div>
-    {tab !== 'announcement' && <div aria-label="封存篩選" style={{ display:'flex', gap:8, marginBottom:18 }}>{[[false,'未封存'],[true,'已封存']].map(([value,label]) => <button key={label} type="button" aria-pressed={showArchived === value} onClick={() => setShowArchived(value)} style={{ ...secondaryButton, flex:'none', borderColor:showArchived === value ? 'var(--dark)' : 'var(--border)' }}>{label}</button>)}</div>}
+    {tab !== 'announcement' && <div aria-label="封存篩選" style={{ display:'flex', gap:8, marginBottom:18 }}>{[[false,tab === 'promotions' ? '活動列表' : '優惠券列表'],[true,tab === 'promotions' ? '封存活動' : '封存優惠券']].map(([value,label]) => <button key={label} type="button" aria-pressed={showArchived === value} onClick={() => setShowArchived(value)} style={{ ...secondaryButton, flex:'none', borderColor:showArchived === value ? 'var(--dark)' : 'var(--border)' }}>{label}</button>)}</div>}
     {tab !== 'announcement' && loadError && <div role="alert" style={{ marginBottom:16, color:'var(--red)', fontSize:13 }}>{loadError}</div>}
     {tab === 'announcement' ? <SiteAnnouncementSettings /> : loading ? <Empty text="載入中…" /> : tab === 'promotions' ? <PromotionList list={promotions.filter(p => Boolean(p.archived_at) === showArchived)} scopes={scopes} products={products} onEdit={setEditingPromotion} onCopy={copyPromotion} onReload={load} /> : <CouponList list={coupons.filter(c => Boolean(c.archived_at) === showArchived)} links={links} memberLinks={couponMembers} promotions={promotions} onEdit={setEditingCoupon} onReload={load} />}
   </div>;
 }
 
-function LifecycleActions({ item, table, noun, onReload }) {
+function LifecycleActions({ item, table, noun, onReload, children, actions }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   async function change(action) {
@@ -101,15 +101,36 @@ function LifecycleActions({ item, table, noun, onReload }) {
     } catch (failure) { setError(`操作失敗：${failure.message}`); }
     finally { setBusy(false); }
   }
-  return <div style={{ marginTop:8 }}>
-    <div style={{ display:'flex', gap:8 }}>
-      {item.archived_at ? <button disabled={busy} onClick={() => change('restore')} style={secondaryButton}>還原</button> : <>
-        <button disabled={busy} onClick={() => change('toggle')} style={secondaryButton}>{item.active ? '停用' : '啟用'}</button>
-        <button disabled={busy} onClick={() => change('archive')} style={{ ...secondaryButton, color:'var(--red)' }}>封存</button>
-      </>}
+  const phase = getPromotionPhase(item);
+  const dateText = value => new Date(value).toLocaleString('zh-TW', { timeZone:'Asia/Taipei', month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
+  return <>
+    {item.archived_at ? <span style={{ fontSize:12, color:'var(--mid)' }}>已封存</span> : <div style={{ padding:'2px 0 12px', borderBottom:'1px solid var(--border)' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
+        <span style={{ padding:'4px 9px', borderRadius:3, fontSize:12, fontWeight:500, background:!item.active || phase === 'expired' ? '#f0f0ee' : phase === 'scheduled' ? '#f5f0e5' : '#edf6ef', color:!item.active || phase === 'expired' ? '#686864' : phase === 'scheduled' ? '#8a713b' : '#287a50' }}>{!item.active ? '已停用' : phase === 'scheduled' ? '排程中' : phase === 'live' ? '進行中' : '已結束'}</span>
+        <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+          <span style={{ fontSize:11, color:'var(--mid)' }}>{item.active ? '已啟用' : '已停用'}</span>
+          <button type="button" role="switch" aria-label={`${noun}啟用狀態`} aria-checked={!!item.active} disabled={busy} onClick={() => change('toggle')} style={{ position:'relative', width:36, height:22, border:0, borderRadius:20, background:item.active ? '#287a50' : '#aaa', cursor:busy ? 'wait' : 'pointer', opacity:busy ? 0.6 : 1, flexShrink:0 }}><span style={{ position:'absolute', top:3, left:item.active ? 17 : 3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .15s' }} /></button>
+        </div>
+      </div>
+      <div style={{ marginTop:8, fontSize:11, color:'var(--mid)', lineHeight:1.6 }}>
+        {phase === 'scheduled' && item.start_at && <span>{!item.active ? '原排程：' : ''}{dateText(item.start_at)} 開始（台灣時間）</span>}
+        {phase === 'live' && <span>{!item.active ? '活動期間內' : '活動期間'}{item.end_at ? ` · 至 ${dateText(item.end_at)}（台灣時間）` : ' · 未設定結束時間'}</span>}
+        {phase === 'expired' && item.end_at && <span>{dateText(item.end_at)} 已結束（台灣時間）</span>}
+      </div>
+      {!item.active && <p style={{ margin:'5px 0 0', fontSize:11, color:'var(--mid)' }}>{phase === 'scheduled' ? '到達開始時間仍不生效，需手動啟用。' : '目前不會套用，啟用後仍須符合活動期間與資格。'}</p>}
+    </div>}
+    {children}
+    <div style={{ marginTop:'auto' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        {item.archived_at ? <button disabled={busy} onClick={() => change('restore')} style={secondaryButton}>還原</button> : <>
+          {actions}
+          <button disabled={busy} onClick={() => change('archive')} style={{ padding:'8px 4px', marginLeft:'auto', border:0, background:'transparent', color:'var(--mid)', cursor:'pointer', fontSize:12 }}>封存</button>
+        </>}
+      </div>
+      {error && <p role="alert" style={{ fontSize:12, color:'var(--red)' }}>{error}</p>}
     </div>
-    {error && <p role="alert" style={{ fontSize:12, color:'var(--red)' }}>{error}</p>}
-  </div>;
+  </>;
+
 }
 
 function PromotionList({ list, scopes, products, onEdit, onCopy, onReload }) {
@@ -122,14 +143,15 @@ function PromotionList({ list, scopes, products, onEdit, onCopy, onReload }) {
       const names = promoScopes.filter(scope => scope.target_type === 'product').map(scope => products.find(product => product.id === scope.product_id)?.nameZh).filter(Boolean);
       const legacy = !promo.benefit_type || promo.benefit_type === 'legacy_discount';
       return <Card key={promo.id}>
-        <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}><div><h3 style={{ fontSize:15, fontWeight:500, marginBottom:6 }}>{promo.name}</h3>{promo.archived_at ? <span style={{ fontSize:11, color:'var(--mid)' }}>已封存</span> : !promo.active ? <span style={{ fontSize:11, color:'var(--mid)' }}>已停用</span> : <PromoBadge phase={getPromotionPhase(promo)} />}</div><span style={{ fontSize:10, color:'var(--mid)' }}>{promo.activation_type === 'coupon_only' ? '優惠券專用' : '自動活動'}</span></div>
+        <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}><div><h3 style={{ fontSize:15, fontWeight:500, marginBottom:6 }}>{promo.name}</h3></div><span style={{ fontSize:10, color:'var(--mid)' }}>{promo.activation_type === 'coupon_only' ? '優惠券專用' : '自動活動'}</span></div>
+        <LifecycleActions item={promo} table="promotions" noun="活動" onReload={onReload} actions={<>
+          <button onClick={() => legacy ? alert('舊版複合活動維持唯讀；請建立新的單一優惠活動取代。') : onEdit(promo)} style={{ ...secondaryButton, background:'var(--dark)', color:'#fff' }}>編輯活動</button>
+          {!legacy && <button onClick={() => onCopy(promo)} style={secondaryButton}>複製</button>}
+        </>}>
         <div style={{ background:'var(--off)', padding:'11px 12px', borderLeft:'2px solid var(--gold)', fontSize:12 }}>{getBenefitLabel(promo, products)}</div>
         <div style={{ fontSize:11, color:'var(--mid)', lineHeight:1.7 }}>適用：{legacy ? `${(promo.product_ids || []).length} 件既有指定商品` : allSellable ? '全館商品（含活動限定）' : allRegular ? '全館一般商品' : names.length ? names.join('、') : '尚未設定範圍'}{promo.threshold_value && <div>門檻：{promo.benefit_type === 'quantity_gift' || promo.threshold_type === 'quantity' ? `滿 ${Number(promo.threshold_value)} 件` : `滿 NT$ ${Number(promo.threshold_value).toLocaleString()}`}</div>}</div>
         {promo.activation_type !== 'coupon_only' && <div style={{ fontSize:11, color:'var(--mid)', lineHeight:1.7 }}>適用對象：{[...ROLES.filter(([role]) => (promo.audience_roles ?? ROLES.map(([key]) => key)).includes(role)).map(([,label]) => label), ...((promo.allow_guest ?? true) ? ['訪客'] : [])].join('、') || '無'}</div>}
-        <div style={{ marginTop:'auto' }}>
-          {!promo.archived_at && <div style={{ display:'flex', gap:8 }}><button onClick={() => legacy ? alert('舊版複合活動維持唯讀；請建立新的單一優惠活動取代。') : onEdit(promo)} style={secondaryButton}>編輯</button>{!legacy && <button onClick={() => onCopy(promo)} style={secondaryButton}>複製</button>}</div>}
-          <LifecycleActions item={promo} table="promotions" noun="活動" onReload={onReload} />
-        </div>
+        </LifecycleActions>
       </Card>;
     })}
   </div>;
@@ -141,7 +163,7 @@ function CouponList({ list, links, memberLinks, promotions, onEdit, onReload }) 
     const benefitNames = links.filter(link => link.coupon_campaign_id === coupon.id).map(link => promotions.find(p => p.id === link.promotion_id)?.name).filter(Boolean);
     const targetMemberCount = memberLinks.filter(link => link.coupon_campaign_id === coupon.id).length;
     const audienceLabel = coupon.audience_mode === 'members' ? `指定會員 ${targetMemberCount} 位` : `依會員身分${coupon.allow_guest ? '（含訪客）' : ''}`;
-    return <Card key={coupon.id}><div style={{ display:'flex', justifyContent:'space-between', gap:12 }}><div><h3 style={{ fontSize:15, marginBottom:5 }}>{coupon.name}</h3><code style={{ color:'var(--gold)', letterSpacing:'0.12em' }}>{coupon.code}</code></div><span style={{ fontSize:11, color:coupon.active ? '#287a50' : 'var(--mid)' }}>{coupon.archived_at ? '已封存' : coupon.active ? '啟用' : '停用'}</span></div><div style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7 }}>{benefitNames.join(' ＋ ') || '尚未連結折扣活動'}</div><div style={{ fontSize:11, color:'var(--mid)', lineHeight:1.7 }}>適用：{audienceLabel}<br />每人上限：{coupon.per_member_limit || '不限'} 次 · 總上限：{coupon.total_usage_limit || '不限'} 次<br />疊加：{stackingLabel(coupon.stacking_policy)}</div><div style={{ marginTop:'auto' }}>{!coupon.archived_at && <button onClick={() => onEdit(coupon)} style={secondaryButton}>編輯</button>}<LifecycleActions item={coupon} table="coupon_campaigns" noun="優惠券" onReload={onReload} /></div></Card>;
+    return <Card key={coupon.id}><div style={{ display:'flex', justifyContent:'space-between', gap:12 }}><div><h3 style={{ fontSize:15, marginBottom:5 }}>{coupon.name}</h3><code style={{ color:'var(--gold)', letterSpacing:'0.12em' }}>{coupon.code}</code></div></div><LifecycleActions item={coupon} table="coupon_campaigns" noun="優惠券" onReload={onReload} actions={<button onClick={() => onEdit(coupon)} style={{ ...secondaryButton, background:'var(--dark)', color:'#fff' }}>編輯優惠券</button>}><div style={{ fontSize:12, color:'var(--dark)', lineHeight:1.7 }}>{benefitNames.join(' ＋ ') || '尚未連結折扣活動'}</div><div style={{ fontSize:11, color:'var(--mid)', lineHeight:1.7 }}>適用：{audienceLabel}<br />每人上限：{coupon.per_member_limit || '不限'} 次 · 總上限：{coupon.total_usage_limit || '不限'} 次<br />疊加：{stackingLabel(coupon.stacking_policy)}</div></LifecycleActions></Card>;
   })}</div>;
 }
 
@@ -339,16 +361,25 @@ function MemberPicker({ query, setQuery, loading, results, selected, selectedIds
 }
 
 function ProductPicker({ products, selected, onToggle, onSelectAll, onClear }) {
+  const [query, setQuery] = useState('');
+  const keyword = query.trim().toLocaleLowerCase();
+  const filteredProducts = products.filter(product => [product.nameZh, product.name].some(name => String(name || '').toLocaleLowerCase().includes(keyword)));
   const allSelected = products.length > 0 && products.every(product => selected.has(product.id));
   return <div>
     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:8, flexWrap:'wrap' }}>
       <span style={{ ...labelStyle, marginBottom:0 }}>指定商品（已選 {selected.size}）</span>
-      <div style={{ display:'flex', gap:6 }}>
+      <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap', flex:'1 1 300px' }}>
+        <div style={{ position:'relative', flex:'1 1 140px', minWidth:120 }}>
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'var(--mid)', pointerEvents:'none' }}><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
+          <input type="search" aria-label="搜尋指定商品" value={query} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') event.preventDefault(); }} style={{ ...inputStyle, width:'100%', minWidth:0, padding:'6px 10px 6px 32px' }} />
+        </div>
         <button type="button" onClick={onSelectAll} disabled={allSelected || !products.length} style={{ ...secondaryButton, flex:'none', padding:'6px 12px', opacity:allSelected || !products.length ? 0.45 : 1 }}>全選</button>
         <button type="button" onClick={onClear} disabled={!selected.size} style={{ ...secondaryButton, flex:'none', padding:'6px 12px', opacity:selected.size ? 1 : 0.45 }}>全取消</button>
       </div>
     </div>
-    <div style={{ maxHeight:360, overflow:'auto', display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(230px,1fr))', gap:7, border:'1px solid var(--border)', padding:10 }}>{products.map(product => <label key={product.id} style={{ padding:'8px 9px', fontSize:12, border:`1px solid ${selected.has(product.id) ? 'var(--gold)' : 'transparent'}`, background:selected.has(product.id) ? '#fff' : 'var(--off)' }}><input type="checkbox" checked={selected.has(product.id)} onChange={() => onToggle(product.id)} /> {product.nameZh}<small style={{ display:'block', color:'var(--mid)', marginLeft:18 }}>{product.publicationStatus === 'event_only' ? '活動限定' : '一般商品'}</small></label>)}</div>
+    {keyword && <p role="status" style={{ fontSize:11, color:'var(--mid)', margin:'0 0 8px' }}>找到 {filteredProducts.length} 件商品；搜尋不影響已選項目。全選／全取消仍適用全部商品。</p>}
+    <div style={{ maxHeight:360, overflow:'auto', display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(230px,1fr))', gap:7, border:'1px solid var(--border)', padding:10 }}>{filteredProducts.map(product => <label key={product.id} style={{ padding:'8px 9px', fontSize:12, border:`1px solid ${selected.has(product.id) ? 'var(--gold)' : 'transparent'}`, background:selected.has(product.id) ? '#fff' : 'var(--off)' }}><input type="checkbox" checked={selected.has(product.id)} onChange={() => onToggle(product.id)} /> {product.nameZh}<small style={{ display:'block', color:'var(--mid)', marginLeft:18 }}>{product.publicationStatus === 'event_only' ? '活動限定' : '一般商品'}</small></label>)}</div>
+    {!filteredProducts.length && <p style={{ fontSize:12, color:'var(--mid)', padding:12 }}>找不到符合的商品</p>}
   </div>;
 }
 function getBenefitLabel(promotion, products) {

@@ -2246,11 +2246,19 @@ test('活動指定商品可全選及全取消', async ({ page }) => {
 
   await page.getByRole('button', { name:'全選', exact:true }).click();
   await expect(page.getByText(`指定商品（已選 ${adminProductRows.length}）`)).toBeVisible();
-  await expect(page.locator('input[type="checkbox"]:checked')).toHaveCount(adminProductRows.length + 6);
+  await expect(page.locator('input[type="checkbox"]:checked')).toHaveCount(adminProductRows.length + 7);
+
+  await page.getByRole('searchbox', { name:'搜尋指定商品' }).fill('不存在的商品xyz');
+  await expect(page.getByText('找不到符合的商品')).toBeVisible();
+  await expect(page.getByText(`指定商品（已選 ${adminProductRows.length}）`)).toBeVisible();
+  await page.getByRole('searchbox', { name:'搜尋指定商品' }).fill(adminProductRows[0].name_zh);
+  await expect(page.getByText('找不到符合的商品')).toHaveCount(0);
+  await page.getByRole('searchbox', { name:'搜尋指定商品' }).fill('');
+  await expect(page.locator('input[type="checkbox"]:checked')).toHaveCount(adminProductRows.length + 7);
 
   await page.getByRole('button', { name:'全取消', exact:true }).click();
   await expect(page.getByText('指定商品（已選 0）')).toBeVisible();
-  await expect(page.locator('input[type="checkbox"]:checked')).toHaveCount(6);
+  await expect(page.locator('input[type="checkbox"]:checked')).toHaveCount(7);
 });
 
 test('優惠券方案可打包多個優惠券專用活動', async ({ page }) => {
@@ -2296,7 +2304,7 @@ test('編輯優惠券會依後端排序還原活動執行順序', async ({ page 
   });
   await page.goto('/admin'); await openAdminSection(page, /活動管理/);
   await page.getByRole('button', { name:'優惠券方案' }).click();
-  await page.getByRole('button', { name:'編輯' }).click();
+  await page.getByRole('button', { name:'編輯優惠券' }).click();
 
   const orderedActivities = page.getByLabel('已選優惠活動執行順序');
   await expect(orderedActivities.locator(':scope > div').nth(0)).toContainText('再折百元');
@@ -2365,7 +2373,7 @@ test('編輯指定會員優惠券會還原既有會員名單', async ({ page }) 
   await page.goto('/admin'); await openAdminSection(page, /活動管理/);
   await page.getByRole('button', { name:'優惠券方案' }).click();
   await expect(page.getByText('指定會員 1 位')).toBeVisible();
-  await page.getByRole('button', { name:'編輯' }).click();
+  await page.getByRole('button', { name:'編輯優惠券' }).click();
   const selected = page.getByLabel('已指定會員');
   await expect(selected.getByText('LINE 會員', { exact:true })).toBeVisible();
   await expect(selected.getByText(/美容師 · line-member@example.com/)).toBeVisible();
@@ -3457,7 +3465,7 @@ test('買 X 送 Y 編輯會還原件數與單次贈送，並可連結優惠券',
   await mockAdminApis(page, {promotions:[bogo],onDiscountPromotionSave:payload => saves.push(payload)});
   await page.goto('/admin'); await openAdminSection(page, /活動管理/);
   await expect(page.getByText('買 2 送 2 · 最低價免費 · 每筆只贈一次')).toBeVisible();
-  await page.getByRole('button', {name:'編輯',exact:true}).click();
+  await page.getByRole('button', {name:'編輯活動',exact:true}).click();
   await expect(page.getByLabel('買入件數 X')).toHaveValue('2');
   await expect(page.getByLabel('免費件數 Y')).toHaveValue('2');
   await expect(page.getByLabel('達標方式')).toHaveValue('once');
@@ -3647,7 +3655,7 @@ for (const kind of ['promotions', 'coupon_campaigns'] as const) {
   test(`${kind} 停用保留列表、封存與手動還原分離`, async ({ page }) => {
     const updates: Record<string, unknown>[] = [];
     const rows = [
-      { ...activePromotion, id:'current', name:'目前方案', benefit_type:'fixed_discount', activation_type:'automatic', discount_amount:100, archived_at:null, code:'CURRENT' },
+      { ...activePromotion, id:'current', name:'目前方案', start_at:'2099-11-11T00:00:00Z', benefit_type:'fixed_discount', activation_type:'automatic', discount_amount:100, archived_at:null, code:'CURRENT' },
       { ...activePromotion, id:'old-archived', name:'原先已封存', active:false, archived_at:'2026-09-11T15:26:36.807Z', code:'OLD' },
     ];
     await mockAdminApis(page);
@@ -3667,15 +3675,18 @@ for (const kind of ['promotions', 'coupon_campaigns'] as const) {
     await expect(page.getByRole('heading',{name:'目前方案'})).toBeVisible();
     await expect(page.getByRole('heading',{name:'原先已封存'})).toHaveCount(0);
     expect(updates).toHaveLength(0);
-    await page.getByRole('button',{name:'停用',exact:true}).click();
-    await expect(page.getByRole('button',{name:'啟用',exact:true})).toBeVisible();
+    await page.getByRole('switch',{checked:true}).click();
+    await expect(page.getByRole('switch',{checked:false})).toBeVisible();
     await expect(page.getByRole('heading',{name:'目前方案'})).toBeVisible();
     expect(updates[0]).toEqual({ id:'current', active:false });
-    await page.getByRole('button',{name:'啟用',exact:true}).click();
-    await expect(page.getByRole('button',{name:'停用',exact:true})).toBeVisible();
+    await expect(page.getByText('已停用',{exact:true}).first()).toBeVisible();
+    await expect(page.getByText(/原排程：.*開始（台灣時間）/)).toBeVisible();
+    await expect(page.getByText('到達開始時間仍不生效，需手動啟用。',{exact:true})).toBeVisible();
+    await page.getByRole('switch',{checked:false}).click();
+    await expect(page.getByRole('switch',{checked:true})).toBeVisible();
     await page.getByRole('button',{name:'封存',exact:true}).click();
     await expect(page.getByRole('heading',{name:'目前方案'})).toHaveCount(0);
-    await page.getByRole('button',{name:'已封存',exact:true}).click();
+    await page.getByRole('button',{name:kind === 'promotions' ? '封存活動' : '封存優惠券',exact:true}).click();
     await expect(page.getByRole('heading',{name:'原先已封存'})).toBeVisible();
     const currentCard = page.getByRole('heading',{name:'目前方案'}).locator('xpath=../../..');
     await currentCard.getByRole('button',{name:'還原',exact:true}).click();
@@ -3683,8 +3694,8 @@ for (const kind of ['promotions', 'coupon_campaigns'] as const) {
     await expect(page.getByRole('heading',{name:'原先已封存'})).toBeVisible();
     expect(rows[1].archived_at).toBe('2026-09-11T15:26:36.807Z');
     expect(updates.at(-1)).toEqual({ id:'current', active:false, archived_at:null });
-    await page.getByRole('button',{name:'未封存',exact:true}).click();
-    await expect(page.getByRole('button',{name:'啟用',exact:true})).toBeVisible();
+    await page.getByRole('button',{name:kind === 'promotions' ? '活動列表' : '優惠券列表',exact:true}).click();
+    await expect(page.getByRole('switch',{checked:false})).toBeVisible();
   });
 }
 
@@ -3697,11 +3708,11 @@ test('活動狀態更新失敗或已被其他人變更時保留原畫面並提�
   });
   page.on('dialog', dialog => dialog.accept());
   await page.goto('/admin'); await openAdminSection(page,/活動管理/);
-  await page.getByRole('button',{name:'停用',exact:true}).click();
+  await page.getByRole('switch',{checked:true}).click();
   await expect(page.getByRole('alert')).toContainText('Permission denied');
-  await expect(page.getByRole('button',{name:'停用',exact:true})).toBeEnabled();
+  await expect(page.getByRole('switch',{checked:true})).toBeEnabled();
   stale=true;
-  await page.getByRole('button',{name:'停用',exact:true}).click();
+  await page.getByRole('switch',{checked:true}).click();
   await expect(page.getByRole('alert')).toContainText('狀態已變更或沒有操作權限');
 });
 
