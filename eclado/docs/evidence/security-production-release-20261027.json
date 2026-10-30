@@ -1,0 +1,105 @@
+{
+  "revision": "74579966cbfd4e051b57d7432209a4819eb083ab",
+  "verified_at": "2026-10-27T02:34:54.507Z",
+  "website": {
+    "deployment_id": "dpl_GR6QLEt4GWnba2dE3DHKVkhbY3os",
+    "url": "eclado-6qx21988l-eclado-s-projects.vercel.app",
+    "state": "READY",
+    "production_domain": "ecladotaiwan.com",
+    "commit_matched": true,
+    "previous_deployment": "eclado-kjg20aqgu-eclado-s-projects.vercel.app"
+  },
+  "payment_host": {
+    "revision": "74579966cbfd4e051b57d7432209a4819eb083ab",
+    "backupPath": "/opt/eclado-payment-api/backups/security-7457996-vHLMRT",
+    "serverSha256": "2dac30608084d848ab641b6c60b5285777080f032a25ea754881e1289aa526b6",
+    "pid": 2327559,
+    "localHealth": true,
+    "publicHealth": true,
+    "dependenciesAndEnvUnchanged": true,
+    "rollbackUsed": false
+  },
+  "public_smoke": {
+    "checkedAt": "2026-10-27T02:34:54.507Z",
+    "results": [
+      {
+        "path": "/",
+        "status": 200
+      },
+      {
+        "path": "/shop",
+        "status": 200
+      },
+      {
+        "path": "/checkout",
+        "status": 200
+      },
+      {
+        "path": "/order-lookup",
+        "status": 200
+      },
+      {
+        "path": "/payment-result",
+        "status": 200
+      },
+      {
+        "path": "/admin",
+        "status": 200
+      },
+      {
+        "path": "/api/product-page",
+        "status": 200,
+        "hostileHeadersIgnored": true,
+        "bundleScriptsPreserved": true
+      },
+      {
+        "path": "payment-health",
+        "status": 200,
+        "ok": true
+      }
+    ]
+  },
+  "tests": {
+    "payment_api_on_production_node20": {
+      "passed": 82,
+      "failed": 0,
+      "real_bank_and_db": "mocked",
+      "environment": "isolated host stage; existing production node_modules; no production .env"
+    },
+    "seo_unit": {
+      "passed": 7
+    },
+    "deployed_admin_browser": {
+      "passed": 3,
+      "site": "https://ecladotaiwan.com",
+      "api": "intercepted fixtures; no real admin login or order changes"
+    }
+  },
+  "live_acceptance": {
+    "guest_lookup": true,
+    "guest_token_refresh": true,
+    "invalid_guest_token_denied": true,
+    "terminal_payment_query": true,
+    "bank_paid_and_pending_query_contracts": true,
+    "isolated_deployed_pending_handler_real_readonly_bank": true,
+    "blocked_persistence_requests": 2,
+    "business_orders_modified_by_probes": 0,
+    "bank_transactions_created": 0,
+    "security_rate_limit_records": "Live lookup/query invoked normal limiter; no business order writes"
+  },
+  "unchanged": [
+    "Database schema and migrations",
+    "Backoffice manual receipt authorization/UI",
+    "Production .env and dependencies"
+  ],
+  "limitations": [
+    "No real card charge, new payment transaction, or complete real bank callback cycle was performed.",
+    "Backoffice production assets were tested with intercepted APIs; no real production order was manually marked paid."
+  ],
+  "recovery": {
+    "payment_backup": "/opt/eclado-payment-api/backups/security-7457996-vHLMRT",
+    "website_previous_url": "https://eclado-kjg20aqgu-eclado-s-projects.vercel.app",
+    "rollback_used": false,
+    "restart": "PM2 fork restart briefly refused a local health connection, then recovered under retries."
+  }
+}

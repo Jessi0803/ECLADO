@@ -1,0 +1,57 @@
+{
+  "phase": "production-enabled",
+  "revision": "d0c27520577b0f9759b5fe427301e3e30631a5bf",
+  "project_ref": "ilvdvlkdpntwmaijncaz",
+  "activation": {
+    "enabled": true,
+    "version": 1,
+    "bank_calls": 0,
+    "activated_at": "2026-10-21T07:22:19.980675+00:00",
+    "created_orders": 0,
+    "promotions_unchanged": true,
+    "professional_discount": 300,
+    "guest_quote_matches_OFF": true,
+    "promotion_scopes_unchanged": true,
+    "function_baselines_verified": 23,
+    "professional_quote_matches_OFF": true
+  },
+  "guarded_activation_sql_sha256": "f8957eda2d12953ff2ace5ee3e87a002a6273c8bbed2d96169fd1062744bf9d5",
+  "post_commit_query": {
+    "enabled": true,
+    "promotions_unchanged": true,
+    "promotion_scopes_unchanged": true,
+    "immutable_trigger_enabled": true,
+    "counts": {
+      "orders": 97,
+      "promotions": 12,
+      "adjustments": 17
+    }
+  },
+  "payment": {
+    "server_sha256": "d7e2356954b71a3767b369906873d863d59dc76a7aba73b90cb6ab7350fb3dcb",
+    "assisted_sha256": "404bbf600c83868d95a3cab72486e9602c6f0ccd0006c0739571d9b9d9bc3714",
+    "pid": 2085522,
+    "health_ok": true,
+    "health_time": "2026-10-21T07:23:03.722Z",
+    "restarted_during_activation": false
+  },
+  "frontend": {
+    "deployment_id": "5WD9ypgVUJax6yxJpJvLRU2zvvAG",
+    "status": "Ready",
+    "domain": "ecladotaiwan.com"
+  },
+  "live_bank_transaction_tested": false,
+  "frontend_quote_acceptance": {
+    "identity": "existing authenticated instructor",
+    "product": "rebalancing-toner / 500ml",
+    "quantity": 10,
+    "subtotal": 7700,
+    "discount": 0,
+    "shipping": 120,
+    "total": 7820,
+    "cart_matches_checkout": true,
+    "pricing_error": false,
+    "created_order": false,
+    "original_empty_cart_restored": true
+  }
+}

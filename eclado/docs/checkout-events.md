@@ -79,4 +79,14 @@ order by e.occurred_at, e.received_at, e.event_id;
 
 [正式驗收證據](evidence/checkout-events-production-20261023.json)；重跑唯讀查核可使用 `supabase-checkout-events-verify.sql`。
 
-**此階段僅正式 DB 已完成，尚未 commit／push 或發布網站／付款服務。** 新版前端與同源收件 API 必須經網站部署才能開始完整追蹤。付款 API 沿用 [HOST-DEPLOYMENT.md](../payment-api/HOST-DEPLOYMENT.md) 記錄的 Vultr 直接管理方式，需另外部署 server.js 與 checkout-events.cjs；不能把網站 push 當作付款主機已更新。現有 GitHub payment-api-release workflow 只更新封裝相依檔案，這次沒有觸發或切換部署管道。只有表建好時，舊版前端沒有流程 header，不會回填或自動產生新追蹤。
+**截至本節 08:58 的驗收，僅正式 DB 已完成；網站與付款服務於同日 09:11 完成發布，見下一節。** 新版前端與同源收件 API 必須經網站部署才能開始完整追蹤。付款 API 沿用 [HOST-DEPLOYMENT.md](../payment-api/HOST-DEPLOYMENT.md) 記錄的 Vultr 直接管理方式，需另外部署 server.js 與 checkout-events.cjs；不能把網站 push 當作付款主機已更新。現有 GitHub payment-api-release workflow 只更新封裝相依檔案，這次沒有觸發或切換部署管道。只有表建好時，舊版前端沒有流程 header，不會回填或自動產生新追蹤。
+
+## 網站與付款服務發布完成（2026-10-23 09:11 台灣時間）
+
+後續依使用者要求提交並推送 `069aa8e3cfb5c8c94efef38a3632f69b53696e41`。Vercel 部署 `ARGcBnNZHY5XJqdF9dxbLzuUBhH9` 顯示 success；正式 `/api/checkout-events` GET 回傳預期的 405／Allow: POST／no-store。
+
+付款服務沿用既有主機管理方式：先驗證現行 server.js 等於前一提交，再建立並逐檔驗證 root 私有完整備份；候選由已提交的 Git bytes 封裝，於主機隔離目錄使用 Node 20.20.2、既有 node_modules、假環境設定及對外 fetch 防護執行 65 項測試，全部成功。更新前取得排他鎖，再核對所有現有檔案與備份，僅替換 server.js 及新增 checkout-events.cjs，重啟原 PM2 應用，PID 2085522 → 2171327。原有環境設定、依賴及其餘模組指紋／權限保持一致，沒有安裝套件或切換部署管道。
+
+主機內部、主機公開 HTTPS 與外部 HTTPS health 全部正常；唯讀 smoke 確認新模組可載入，正式事件表欄位 limit=0 查詢回傳 200，沒有讀取客戶資料列或呼叫銀行。此部署未再執行 SQL migration，沒有使用回復；沒有以真實客戶付款做端到端驗收。資料庫、網站及付款端的追蹤程式均已就位，但缺少個別事件仍須依前述觀測限制判讀。
+
+完整備份與部署證據位置見 [付款服務發布證據](evidence/checkout-events-payment-deployment-20261023.json)。本節及發布證據為部署後補登的歷史紀錄；程序 PID、版本與驗證結果均為當時狀態，文件歸檔不需重新發布付款服務。

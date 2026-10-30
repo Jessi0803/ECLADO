@@ -1,0 +1,58 @@
+{
+  "date": "2026-10-21",
+  "phase": "frontend-and-payment-published-engine-OFF",
+  "revision": "d0c27520577b0f9759b5fe427301e3e30631a5bf",
+  "feature_commit": "878f364",
+  "frontend": {
+    "deployment_id": "5WD9ypgVUJax6yxJpJvLRU2zvvAG",
+    "status": "Ready",
+    "environment": "Production",
+    "current_domain": "ecladotaiwan.com",
+    "ready_time_taipei": "2026-10-21 15:12:17",
+    "build_seconds": 19
+  },
+  "payment": {
+    "mode": "direct SSH; no GitHub deployment workflow",
+    "backup_dir": "/opt/eclado-payment-api/backups/automatic-allocation-20261021-mofYG5",
+    "runtime_tar_sha256": "b931896e6704dd09faf398f483059ae99ced4635bd92282ca3989724181303e1",
+    "server_sha256": "d7e2356954b71a3767b369906873d863d59dc76a7aba73b90cb6ab7350fb3dcb",
+    "assisted_sha256": "404bbf600c83868d95a3cab72486e9602c6f0ccd0006c0739571d9b9d9bc3714",
+    "pid_before": 1983124,
+    "pid_after": 2085522,
+    "restarted": true,
+    "health_ok": true,
+    "health_time": "2026-10-21T07:16:25.479Z",
+    "transient_502_during_restart": true,
+    "restore_required": false,
+    "environment_or_credentials_changed": false,
+    "package_dependencies_changed": false
+  },
+  "http_smoke": {
+    "/": 200,
+    "/shop": 200,
+    "/cart": 200,
+    "/checkout": 200,
+    "/account": 200,
+    "/order-lookup": 200
+  },
+  "guest_details_empty_request_status": 401,
+  "post_release_database": {
+    "enabled": false,
+    "promotions_unchanged": true,
+    "promotion_scopes_unchanged": true,
+    "immutable_trigger_enabled": true,
+    "counts": {
+      "orders": 97,
+      "promotions": 12,
+      "adjustments": 17
+    }
+  },
+  "created_orders": 0,
+  "bank_calls": 0,
+  "limits": [
+    "Authenticated real customer order/payment page not exercised in production",
+    "No live bank transaction",
+    "GitHub CI status not independently verified in this release step"
+  ],
+  "release_note": "Initial macOS archive included AppleDouble files; strict archive-list guard rejected it before modifying active runtime. Repacked without xattrs and retried successfully."
+}

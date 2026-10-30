@@ -1,0 +1,10 @@
+{
+  "simulation": true,
+  "realApiTraffic": false,
+  "orderIds": [
+    "ECL-E2E-1792715397918",
+    "ECL-E2E-1792715400266"
+  ],
+  "paymentRequests": 2,
+  "buttonEnabledAfterFailure": true
+}

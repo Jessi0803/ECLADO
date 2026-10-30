@@ -1,0 +1,32 @@
+{
+  "source_commit": "069aa8e3cfb5c8c94efef38a3632f69b53696e41",
+  "deployment_method": "existing Vultr PM2 host management",
+  "backup_path": "/opt/eclado-payment-api/backups/current-20261023-010729Z",
+  "backup_archive_sha256": "e3ce9af97e12e40eca4a670cbf6ad8707e9b7792827367994a6818c33ef52e00",
+  "stage_path": "/opt/eclado-payment-api-staging/checkout-events-069aa8e",
+  "old_pid": 2085522,
+  "new_pid": 2171327,
+  "server_sha256": "d0454244b54aca2c579eb997a729f669007f66d3610ae900cd94df4f8fa5085d",
+  "checkout_module_sha256": "293e7baac222827c09de384c2ff432a2394c12d0ac1650a41314d1fc096927be",
+  "existing_dependencies_and_env_unchanged": true,
+  "isolated_tests_passed": 65,
+  "isolated_node_version": "v20.20.2",
+  "isolated_external_fetch_blocked": true,
+  "local_health_ok": true,
+  "host_public_health_ok": true,
+  "external_public_health": {
+    "ok": true,
+    "service": "eclado-payment-api",
+    "time": "2026-10-23T01:11:06.968Z"
+  },
+  "readonly_smoke": {
+    "checkout_table_projection_http_status": 200,
+    "helper_loaded": true,
+    "customer_rows_read": 0,
+    "non_get_requests": 0
+  },
+  "sql_migrations_executed_during_payment_deployment": false,
+  "bank_test_transactions_created": false,
+  "rollback_used": false,
+  "live_customer_checkout_end_to_end_tested": false
+}
