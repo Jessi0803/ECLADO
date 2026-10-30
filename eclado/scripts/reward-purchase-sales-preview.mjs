@@ -1,0 +1,34 @@
+// Local-only disposable SQL demo. Never loads .env or forwards cloud requests.
+import {createServer} from 'vite';
+import {fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
+import {mockEcladoApis} from '../tests/support/eclado-mocks.ts';
+const require=createRequire(import.meta.url);
+const {purchaseFixture}=require('../tests/integration/reward-purchase-sales-db.test.cjs');
+const {db,teacher,admin,query,add}=await purchaseFixture();
+const year=Number(new Intl.DateTimeFormat('en',{year:'numeric',timeZone:'Asia/Taipei'}).format(new Date()));
+await db.query("insert into public.professional_memberships values('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',$1,'instructor',$2,null)",[teacher,`${year}-01-01`]);
+const month=Number(new Intl.DateTimeFormat('en',{month:'numeric',timeZone:'Asia/Taipei'}).format(new Date())),quarterMonth=1+3*Math.floor((month-1)/3);
+await add('LOCAL-PURCHASE-EXAMPLE',`${year}-${String(month).padStart(2,'0')}-02T02:00:00Z`,'paid',18000);
+await db.query("insert into public.professional_sales_adjustments values('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',$1,5000)",[`${year}-${String(quarterMonth).padStart(2,'0')}-01`]);
+const port=Number(process.env.PURCHASE_PREVIEW_PORT||5192),host=`http://127.0.0.1:${port}`;
+const routes=[],scripts=[];
+const matcher=p=>new RegExp('^'+p.split('**').map(x=>x.split('*').map(y=>y.replace(/[.+?^${}()|[\]\\]/g,'\\$&')).join('[^/]*')).join('.*')+'$');
+await mockEcladoApis({route:async(pattern,handler)=>routes.push({pattern:matcher(pattern),handler}),addInitScript:async(fn,arg)=>scripts.push(`(${fn.toString()})(${JSON.stringify(arg)})`)},{authUser:{id:admin,email:'admin@example.test',user_metadata:{name:'本機示範管理員'},app_metadata:{provider:'email'},aud:'authenticated',role:'authenticated',created_at:'2026-01-01T00:00:00Z'},adminAccess:true,backofficeAccess:{role:'admin',permissions:['orders.read','members.read','catalog.read','rewards.withdrawals.read']},profiles:[{id:teacher,role:'instructor',name:'示範師資'},{id:admin,role:'consumer',name:'本機示範管理員'}]});
+const json=(r,data)=>r.fulfill({body:JSON.stringify(data),contentType:'application/json'});
+routes.push({pattern:matcher('**/rest/v1/rpc/get_admin_instructor_reward_accounts'),handler:r=>json(r,{total:1,accounts:[{id:teacher,name:'示範師資',balance:0,pending_balance:0,student_count:1}]})});
+routes.push({pattern:matcher('**/rest/v1/rpc/get_admin_reward_purchase_sales'),handler:async r=>{const a=r.request().postDataJSON();return json(r,await query(a.p_instructor_ids,a.p_year));}});
+let queue=Promise.resolve();
+const bootstrap=`(()=>{const original=window.fetch.bind(window);window.fetch=(input,opts)=>{const url=typeof input==='string'?input:input.url;const u=new URL(url,location.href);if(u.origin===location.origin&&!u.pathname.startsWith('/api/'))return original(input,opts);const target='/__purchase/mock?url='+encodeURIComponent(u.href);return input instanceof Request?original(new Request(target,input),opts):original(target,opts);};${scripts.join(';')};document.addEventListener('DOMContentLoaded',()=>{const bar=document.createElement('div');bar.textContent='本機畫面驗收｜假管理員與示範資料，叫貨統計使用隔離 SQL；不連正式資料庫';bar.style.cssText='background:#fff4d6;color:#684100;padding:12px;font:13px sans-serif';document.body.prepend(bar);});})();`;
+const plugin={name:'purchase-isolated-preview',transformIndexHtml:()=>[{tag:'script',children:bootstrap,injectTo:'head-prepend'}],configureServer(server){server.middlewares.use((req,res,next)=>{
+ res.setHeader('Content-Security-Policy',"default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ws://127.0.0.1:*;");
+ const u=new URL(req.url,host);if(u.pathname==='/admin')req.url='/admin.html';
+ if(u.pathname!=='/__purchase/mock')return next();
+ const work=async()=>{let body='';for await(const chunk of req)body+=chunk;const original=u.searchParams.get('url')||'';
+ const route={request:()=>({url:()=>original,method:()=>req.method,headers:()=>req.headers,postDataJSON:()=>body?JSON.parse(body):{}}),fulfill:async({status=200,contentType='application/json',body='',json:payload})=>{res.writeHead(status,{'Content-Type':contentType});res.end(payload?JSON.stringify(payload):body);},abort:async()=>{res.writeHead(403);res.end();}};
+ try{const match=[...routes].reverse().find(r=>r.pattern.test(original));if(match)await match.handler(route);else await route.fulfill({status:404,json:{code:'PGRST202',message:'Local preview endpoint unavailable'}});}catch(e){if(!res.headersSent)res.writeHead(400,{'Content-Type':'application/json'});res.end(JSON.stringify({message:e.message}));}};
+ queue=queue.then(work,work);
+ });}};
+const server=await createServer({root:fileURLToPath(new URL('..',import.meta.url)),configFile:false,envFile:false,plugins:[plugin],server:{host:'127.0.0.1',port,strictPort:true}});
+await server.listen();console.log(`LOCAL PURCHASE SQL PREVIEW ${host}/admin`);
+for(const signal of ['SIGINT','SIGTERM'])process.on(signal,async()=>{await server.close();await db.close();process.exit(0);});

@@ -1,5 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {getAdminRewardAccounts} from '../../services/instructorRewards.js';
+import {getAdminRewardAccounts,getAdminRewardPurchaseSales} from '../../services/instructorRewards.js';
+import {PurchaseSalesSummary,purchaseSalesError,taipeiPurchasePeriod} from '../components/RewardPurchaseSales.jsx';
 import InstructorRewardsPanel from '../../components/account/InstructorRewardsPanel.jsx';
 import usePanelHistory from '../hooks/usePanelHistory.js';
 import RewardRedemptionExport from '../components/RewardRedemptionExport.jsx';
@@ -7,6 +8,7 @@ export default function InstructorRewardsPage({adminUserId,embedded=false,refres
   const Heading=embedded?'h2':'h1';
   const [data,setData]=useState(null),[error,setError]=useState(''),[offset,setOffset]=useState(0),[selected,setSelected]=useState(''),[revision,setRevision]=useState(0);
   const dialogRef=useRef(null),triggerRef=useRef(null);
+  const [purchases,setPurchases]=useState(null),[purchaseError,setPurchaseError]=useState('');
   const closeDetails=usePanelHistory(!!selected,()=>setSelected(''));
   useEffect(()=>{
     if(!selected)return;
@@ -27,8 +29,13 @@ export default function InstructorRewardsPage({adminUserId,embedded=false,refres
     return()=>{document.body.style.overflow=previousOverflow;document.removeEventListener('keydown',keydown);if(triggerRef.current?.isConnected)triggerRef.current.focus({preventScroll:true});};
   },[selected,closeDetails]);
   useEffect(()=>{
-    let alive=true;setData(null);setError('');setSelected('');
-    getAdminRewardAccounts(offset).then(value=>{if(alive)setData(value);}).catch(e=>{if(alive)setError(e.code==='PGRST202'?'返饋查詢尚未安裝。':e.message||'返饋帳戶暫時無法載入。');});
+    let alive=true;setData(null);setError('');setSelected('');setPurchases(null);setPurchaseError('');
+    getAdminRewardAccounts(offset).then(async value=>{
+      if(!alive)return;setData(value);
+      if(!value.accounts.length){setPurchases([]);return;}
+      try{const result=await getAdminRewardPurchaseSales(value.accounts.map(a=>a.id),taipeiPurchasePeriod().year);if(alive)setPurchases(result.accounts);}
+      catch(e){if(alive)setPurchaseError(purchaseSalesError(e));}
+    }).catch(e=>{if(alive)setError(e.code==='PGRST202'?'返饋查詢尚未安裝。':e.message||'返饋帳戶暫時無法載入。');});
     return()=>{alive=false;};
   },[adminUserId,offset,revision,refreshVersion]);
   useEffect(()=>{const focus=()=>setRevision(r=>r+1);window.addEventListener('focus',focus);return()=>window.removeEventListener('focus',focus);},[]);
@@ -42,6 +49,7 @@ export default function InstructorRewardsPage({adminUserId,embedded=false,refres
         <strong>{account.name||'已刪除會員'}</strong><div className="reward-meta">{account.id}</div>
         <div>餘額 NT$ {Number(account.balance).toLocaleString('zh-TW')} · 待入帳 NT$ {Number(account.pending_balance).toLocaleString('zh-TW')}</div>
         <div>有效綁定學生 {account.student_count} 位{account.account_status==='closed'?' · 帳戶已關閉':''}{account.inconsistent?' · 帳務需查核':''}{Number(account.exception_count)>0?` · 付款異常 ${account.exception_count} 筆`:''}</div>
+        <PurchaseSalesSummary data={purchases?.find(row=>row.id===account.id)} error={purchaseError||(purchases&&!purchases.some(row=>row.id===account.id)?'找不到師資叫貨統計。':'')}/>
       </button>)}</div>
       <div className="reward-pager"><button className="reward-button" type="button" disabled={offset===0} onClick={()=>setOffset(Math.max(0,offset-20))}>上一頁帳戶</button>
       <button className="reward-button" type="button" disabled={offset+20>=data.total} onClick={()=>setOffset(offset+20)}>下一頁帳戶</button></div>

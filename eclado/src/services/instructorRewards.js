@@ -11,6 +11,7 @@ export const getAdminInstructorRewards=(id,offset=0,ledgerOffset=0)=>query('get_
   p_instructor_id:id,p_offset:offset,p_limit:20,p_ledger_offset:ledgerOffset,
 });
 export const getAdminRewardAccounts=(offset=0)=>query('get_admin_instructor_reward_accounts',{p_offset:offset,p_limit:20});
+export const getAdminRewardPurchaseSales=(ids,year)=>query('get_admin_reward_purchase_sales',{p_instructor_ids:ids,p_year:year});
 
 export const getMyRewardCredit=()=>query('get_my_reward_credit',{});
 export const exportRewardRedemptions=filters=>query('export_admin_reward_redemptions',{

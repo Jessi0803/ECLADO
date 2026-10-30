@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-30",
+  "project_ref": "ilvdvlkdpntwmaijncaz",
+  "migration": "supabase-instructor-reward-purchase-sales.sql",
+  "source_sha256": "761be53b296c5fc8cc8a3b2ecf71b40a67026167e91b23d03670a51bc9bcb60f",
+  "preflight": {
+    "rpc_previously_absent": true,
+    "renewal_source_matches_local": true,
+    "amount_helper_matches_local": true,
+    "admin_guard_matches_local": true
+  },
+  "installation": "success",
+  "verification": {
+    "status": "PASS",
+    "read_only": true,
+    "source_match": true,
+    "acl": true,
+    "anonymous_denied": true,
+    "checked_instructors": 9,
+    "renewal_and_month_totals_match": true
+  },
+  "business_writes": false,
+  "limits": [
+    "SQL-editor admin-claims verification; not authenticated browser acceptance",
+    "No production write, order, payment, reward, renewal, or feature-flag changes"
+  ],
+  "screenshot": "reward-purchase-sales-production-20261030.png"
+}

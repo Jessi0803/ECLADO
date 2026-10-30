@@ -167,3 +167,19 @@
 .reward-batch-export { margin-top: 16px; }
 .reward-withdrawal-dialog .reward-field { margin: 16px 0; }
 @media (max-width: 700px) { .reward-withdrawal-filters { grid-template-columns: minmax(0,1fr); } }
+
+.reward-purchase-card-summary { margin-top:10px; font-size:13px; line-height:1.8; }
+.reward-purchase-card-summary > span { display:block; }
+.reward-purchase-sales { margin:24px 0; padding-bottom:24px; border-bottom:1px solid var(--reward-border); }
+.reward-purchase-sales .reward-heading { gap:16px; flex-wrap:wrap; align-items:flex-start; }
+.reward-purchase-intro { flex:1 1 280px; min-width:0; }
+.reward-purchase-intro h3 { margin:0; }
+.reward-purchase-intro .reward-note { margin:8px 0 0 !important; }
+.reward-purchase-sales .reward-heading > label { flex-shrink:0; display:flex; align-items:center; gap:8px; }
+.reward-purchase-sales select { padding:8px 12px; border:1px solid var(--border); background:#fff; font:inherit; }
+.reward-purchase-table { border-collapse:collapse; width:100%; font-size:13px; margin:12px 0 0; }
+.reward-purchase-table th,.reward-purchase-table td { text-align:right; padding:12px 10px; border-bottom:1px solid var(--border); white-space:nowrap; }
+.reward-purchase-table th:first-child { text-align:left; }
+.reward-purchase-sales > .reward-details { margin-top:8px; }
+.reward-purchase-months { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:16px; padding-top:18px; }
+.reward-purchase-months > div { display:grid; gap:6px; font-size:13px; }

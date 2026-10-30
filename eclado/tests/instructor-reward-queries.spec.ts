@@ -96,3 +96,38 @@ test('backoffice entrance requires both read permissions and admin role',async({
   expect(canAccessBackofficePage({role:'catalog_editor',permissions:['orders.read','members.read']},'rewards')).toBe(false);
   expect(canAccessBackofficePage({role:'admin',permissions:['orders.read','members.read']},'rewards')).toBe(true);
 });
+
+test('admin purchase sales batch summary and yearly detail keep offline totals separate',async({page})=>{
+ await admin(page,['orders.read','members.read','catalog.read']);
+ const date=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'numeric'}).formatToParts(new Date());
+ const year=Number(date.find(p=>p.type==='year')!.value),month=Number(date.find(p=>p.type==='month')!.value),quarter=Math.ceil(month/3);
+ const calls:any[]=[];
+ await page.route('**/rest/v1/rpc/get_admin_instructor_reward_accounts',r=>r.fulfill({json:{total:2,accounts:['one','two'].map(id=>({id,name:`採購老師-${id}`,balance:0,pending_balance:0,student_count:0}))}}));
+ await page.route('**/rest/v1/rpc/get_admin_reward_purchase_sales',r=>{
+  const a=r.request().postDataJSON();calls.push(a);
+  return r.fulfill({json:{year:a.p_year,accounts:a.p_instructor_ids.map((id:string)=>({id,months:[{month,amount:a.p_year===year?18000:12000,order_count:1}],quarters:[{quarter,online_amount:18000,offline_amount:5000,amount:23000}]}))}});
+ });
+ await page.route('**/rest/v1/rpc/get_admin_instructor_reward_report',r=>r.fulfill({json:{...report,orders:[],entries:[]}}));
+ await page.locator('.app-sidebar button:not(.sidebar-star)').filter({hasText:'師資返饋管理'}).click();
+ const card=page.getByRole('button',{name:/採購老師-one/});
+ await expect(card).toContainText('本月網站叫貨 NT$ 18,000 · 本季叫貨合計 NT$ 23,000');
+ expect(calls).toEqual([{p_instructor_ids:['one','two'],p_year:year}]);
+ await card.click();const panel=page.getByRole('region',{name:'師資本人叫貨額'});
+ await expect(panel.getByRole('cell',{name:'NT$ 5,000',exact:true})).toBeVisible();
+ await expect(panel.getByText('統計師資本人已付款的商品叫貨額，不含運費、取消／退貨及學生訂單。',{exact:true})).toBeVisible();
+ await panel.locator('summary').click();await expect(panel.locator('.reward-purchase-months')).toContainText('NT$ 18,000');
+ await panel.getByLabel('叫貨統計年度').selectOption(String(year-1));
+ await expect(panel.locator('.reward-purchase-months')).toContainText('NT$ 12,000');
+ expect(calls.at(-1)).toEqual({p_instructor_ids:['one'],p_year:year-1});
+});
+test('missing purchase migration does not show misleading zero or hide reward history',async({page})=>{
+ await admin(page,['orders.read','members.read','catalog.read']);
+ await page.route('**/rest/v1/rpc/get_admin_instructor_reward_accounts',r=>r.fulfill({json:{total:1,accounts:[{id:'teacher-history',name:'失敗查詢老師',balance:0,pending_balance:0,student_count:0}]}}));
+ await page.route('**/rest/v1/rpc/get_admin_reward_purchase_sales',r=>r.fulfill({status:404,json:{code:'PGRST202',message:'missing'}}));
+ await page.route('**/rest/v1/rpc/get_admin_instructor_reward_report',r=>r.fulfill({json:report}));
+ await page.locator('.app-sidebar button:not(.sidebar-star)').filter({hasText:'師資返饋管理'}).click();
+ const card=page.getByRole('button',{name:/失敗查詢老師/});await expect(card).toContainText('叫貨統計尚未安裝。');
+ await expect(card).not.toContainText('本月網站叫貨 NT$ 0');await card.click();
+ await expect(page.getByRole('region',{name:'師資本人叫貨額'}).getByRole('alert')).toHaveText('叫貨統計尚未安裝。');
+ await expect(page.getByText('HISTORICAL-OLD-TEACHER · 歷史學生',{exact:true})).toBeVisible();
+});

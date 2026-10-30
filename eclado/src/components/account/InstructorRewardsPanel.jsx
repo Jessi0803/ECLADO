@@ -1,6 +1,7 @@
 import './InstructorRewards.css';
 import RewardWithdrawalsPanel from './RewardWithdrawalsPanel.jsx';
 import React,{useEffect,useState} from 'react';
+import RewardPurchaseSales from '../../admin/components/RewardPurchaseSales.jsx';
 import {getMyInstructorRewards,getAdminInstructorRewards} from '../../services/instructorRewards.js';
 const money=value=>`NT$ ${Number(value||0).toLocaleString('zh-TW')}`;
 const labels={pending:'待入帳',credited:'已入帳',cancelled:'已作廢',reversed:'已扣回',credit:'正式入帳',cancel:'待入帳作廢',reverse:'扣回',spend_reserve:'購物付款處理中',spend_consume:'購物扣用',spend_release:'購物釋放',spend_refund:'購物返還',withdraw_reserve:'提領處理中',withdraw_complete:'提領完成',withdraw_release:'提領退回'};
@@ -45,6 +46,7 @@ export default function InstructorRewardsPanel({userId,instructorId,admin=false,
       </div>}
       {Number(report.summary.balance)<0&&<p>帳戶為負餘額，後續入帳將抵銷負餘額。</p>}
       {(report.payment_exceptions||[]).map(entry=><p role="alert" key={entry.order_id}>{entry.order_id}：已收款但返饋金帳務異常，請聯繫管理員處理。</p>)}
+      {admin&&<RewardPurchaseSales instructorId={instructorId} revision={revision}/>}
       <RewardHistorySection title="歷史學生訂單" admin={admin}>
       {!report.orders.length&&<p>目前沒有返饋訂單紀錄。</p>}
       {report.orders.map(order=><article key={order.order_id} className="reward-entry">
