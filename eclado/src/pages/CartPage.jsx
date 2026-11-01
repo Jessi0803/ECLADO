@@ -16,6 +16,7 @@ import { calculateShipping } from '../domain/shipping.js';
 import { getMyAppendableShippingGroup } from '../services/shippingGroups.js';
 import { quoteAuthoritativeOrder } from '../services/orders.js';
 import OrderPriceAdjustments from '../components/OrderPriceAdjustments.jsx';
+import { getOrderMinimumPreview, isOrderMinimumRejection } from '../domain/orderMinimumPreview.js';
 
 // ─── CART PAGE ────────────────────────────────────────────────────────────────
 export default function CartPage({ cart, setCart, setPage, user, promotions = [], drawer = false, onClose }) {
@@ -24,7 +25,7 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
   const [itemsScrolling, setItemsScrolling] = useState(false);
   const [shippingGroup, setShippingGroup] = useState(null);
   const [shippingGroupError, setShippingGroupError] = useState('');
-  const [quoteState, setQuoteState] = useState({ key: '', quote: null, error: '' });
+  const [quoteState, setQuoteState] = useState({ key: '', quote: null, minimumPreview: null, minimumRejected: false, error: '' });
   const scrollStopTimer = useRef(null);
 
   useEffect(() => () => clearTimeout(scrollStopTimer.current), []);
@@ -77,23 +78,30 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
     if (!pricedCart.length) return () => { active = false; };
     const timer = setTimeout(() => {
       quoteAuthoritativeOrder({ items: pricedCart }).then(quote => {
-        if (active) setQuoteState({ key: quoteKey, quote, error: '' });
+        if (active) setQuoteState({ key: quoteKey, quote, minimumPreview: null, minimumRejected: false, error: '' });
       }).catch(error => {
-        if (active) setQuoteState({ key: quoteKey, quote: null, error: error?.message || '暫時無法取得活動試算' });
+        const minimumPreview = getOrderMinimumPreview(error);
+        if (active) setQuoteState({ key: quoteKey, quote: null, minimumPreview, minimumRejected: Boolean(minimumPreview) || isOrderMinimumRejection(error), error: minimumPreview ? '' : error?.message || '暫時無法取得活動試算' });
       });
     }, 250);
     return () => { active = false; clearTimeout(timer); };
   }, [quoteKey]);
   const currentQuote = quoteState.key === quoteKey ? quoteState.quote : null;
+  const minimumPreview = quoteState.key === quoteKey ? quoteState.minimumPreview : null;
+  const minimumRejected = quoteState.key === quoteKey && quoteState.minimumRejected;
+  const displayQuote = currentQuote || minimumPreview;
   const quoteError = quoteState.key === quoteKey ? quoteState.error : '';
   const quoteLoading = pricedCart.length > 0 && quoteState.key !== quoteKey;
   const estimate = calculateDiscount(pricedCart, promotions, user);
-  const subtotal = currentQuote?.subtotal ?? estimate.subtotal;
-  const discount = currentQuote?.discount ?? estimate.discount;
+  const subtotal = displayQuote?.subtotal ?? estimate.subtotal;
+  const discount = displayQuote?.discount ?? estimate.discount;
   const finalSubtotal = subtotal - discount;
   const promotion = currentQuote?.promotion ?? estimate.promotion;
-  const professionalProgress = getProfessionalOrderProgress(finalSubtotal, user, shippingGroup);
-  const shipping = currentQuote?.shipping ?? calculateShipping(pricedCart, user, finalSubtotal, undefined, shippingGroup);
+  const professionalProgress = minimumRejected ? { eligible:false, freeShipping:false, remaining:minimumPreview?.remaining,
+    message:'優惠後尚未達最低訂購金額 NT$ 5,000；暫時無法取得完整優惠試算，請稍後重試。' }
+    : getProfessionalOrderProgress(finalSubtotal, user, shippingGroup);
+  const compactProgress = drawer && !minimumRejected;
+  const shipping = currentQuote?.shipping ?? calculateShipping(pricedCart, user, finalSubtotal, undefined, minimumRejected ? null : shippingGroup);
   const grandTotal = finalSubtotal + shipping;
   const professionalProgressNotice = professionalProgress ? (
     <div
@@ -106,19 +114,24 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
           ? '4px solid var(--accent)'
           : `1px solid ${professionalProgress.eligible ? 'var(--accent)' : '#b87855'}`,
         background: professionalProgress.eligible && !professionalProgress.freeShipping ? 'var(--accent-tint)' : 'var(--white)',
-        padding: drawer ? '6px 9px' : (professionalProgress.eligible && !professionalProgress.freeShipping ? '14px 16px' : '12px 14px'),
-        marginBottom: drawer ? 0 : 18,
-        fontSize: drawer ? 10 : (professionalProgress.eligible && !professionalProgress.freeShipping ? 14 : 12),
+        padding: compactProgress ? '6px 9px' : (professionalProgress.eligible && !professionalProgress.freeShipping ? '14px 16px' : '12px 14px'),
+        marginBottom: compactProgress ? 0 : 18,
+        fontSize: compactProgress ? 10 : (professionalProgress.eligible && !professionalProgress.freeShipping ? 14 : 12),
         fontWeight: professionalProgress.eligible && !professionalProgress.freeShipping ? 600 : 400,
-        lineHeight: drawer ? 1.35 : 1.65,
+        lineHeight: compactProgress ? 1.35 : 1.65,
         color: professionalProgress.eligible && !professionalProgress.freeShipping ? 'var(--accent)' : (professionalProgress.eligible ? 'var(--dark)' : '#8a4c2d'),
-        textAlign: drawer ? 'right' : 'left',
-        maxWidth: drawer ? '68%' : undefined,
+        textAlign: compactProgress ? 'right' : 'left',
+        maxWidth: compactProgress ? '68%' : undefined,
       }}
     >
-      {professionalProgress.message}
+      {minimumPreview ? <div data-testid="cart-minimum-preview">
+        {minimumPreview.hasActivity && <strong style={{ display:'block', marginBottom:6 }}>已達活動優惠條件</strong>}
+        <div>優惠後商品金額：NT$ {minimumPreview.merchandiseAmount.toLocaleString()}（不含運費）</div>
+        <div>最低訂購金額 NT$ {minimumPreview.minimum.toLocaleString()}，還差 <strong>NT$ {minimumPreview.remaining.toLocaleString()}</strong>。</div>
+        <div style={{ marginTop:6 }}>請再加入商品，折後滿 NT$ {minimumPreview.minimum.toLocaleString()} 即可結帳。</div>
+      </div> : professionalProgress.message}
       {professionalProgress.additionalOrder && (
-        <span style={{ display:'block', marginTop:4, fontSize:drawer ? 9 : 11, fontWeight:400 }}>
+        <span style={{ display:'block', marginTop:4, fontSize:compactProgress ? 9 : 11, fontWeight:400 }}>
           目前待出貨 NT${professionalProgress.currentAmount.toLocaleString()} · 本次 NT${professionalProgress.merchandiseAmount.toLocaleString()} · 追加後 NT${professionalProgress.projectedAmount.toLocaleString()}
         </span>
       )}
@@ -134,7 +147,7 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
           {drawer && <button type="button" onClick={onClose} aria-label="關閉購物車" style={{ position:'absolute', top:16, right: isMobile ? 0 : -13, width:36, height:36, border:'1px solid var(--light)', background:'none', color:'var(--dark)', fontSize:24, lineHeight:1, cursor:'pointer' }}>×</button>}
         </div>
 
-        {!currentQuote && !quoteLoading && !quoteError && cart.length > 0 && promotions.some(p => isPromotionLive(p, user)) && discount === 0 && (
+        {!displayQuote && !quoteLoading && !quoteError && cart.length > 0 && promotions.some(p => isPromotionLive(p, user)) && discount === 0 && (
           <div style={{ background:'var(--accent-tint)', border:'1px solid var(--accent)', padding:'14px 18px', marginBottom:24, fontSize:13, color:'var(--dark)', lineHeight:1.65 }}>
             目前有<strong>限時優惠</strong>，但購物車內還沒有「活動指定商品」，所以尚無折抵。
           </div>
@@ -178,9 +191,9 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
             <div className={drawer ? 'cart-drawer-summary' : ''} style={{ background:'var(--off-white)', padding: drawer ? '12px 22px 11px' : '28px', height:'fit-content', marginTop:0 }}>
               <div data-testid="cart-summary-header" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom: drawer ? 9 : 20 }}>
                 <h3 style={{ fontFamily:'var(--font-display)', fontSize:drawer ? 16 : 18, fontWeight:400, margin:0, flexShrink:0 }}>訂單摘要</h3>
-                {drawer && professionalProgressNotice}
+                {drawer && !minimumRejected && professionalProgressNotice}
               </div>
-              {!drawer && professionalProgressNotice}
+              {(!drawer || minimumRejected) && professionalProgressNotice}
               {quoteLoading && <p role="status" style={{ fontSize:12, marginBottom:10 }}>正在確認活動優惠…</p>}
               {quoteError && <p role="status" style={{ fontSize:12, marginBottom:10 }}>以下為估算金額；{quoteError}。結帳時會重新確認。</p>}
               {shippingGroupError && (
@@ -189,7 +202,7 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
                 </div>
               )}
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13 }}><span>小計</span><span style={{ fontFamily:'var(--font-display)' }}>NT$ {subtotal.toLocaleString()}</span></div>
-              {currentQuote ? <OrderPriceAdjustments order={currentQuote} style={{ marginBottom: drawer ? 5 : 10, fontSize:13 }} /> : discount > 0 && promotion && (
+              {displayQuote ? <OrderPriceAdjustments order={displayQuote} style={{ marginBottom: drawer ? 5 : 10, fontSize:13 }} /> : discount > 0 && promotion && (
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13, color:'var(--accent)' }}>
                   <span>{promotion.name}</span>
                   <span style={{ fontFamily:'var(--font-display)' }}>−NT$ {discount.toLocaleString()}</span>

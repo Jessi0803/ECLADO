@@ -1,0 +1,58 @@
+{
+  "scope": [
+    "cart minimum preview",
+    "checkout mobile width"
+  ],
+  "production_project": "ilvdvlkdpntwmaijncaz",
+  "database": {
+    "acl": [
+      "postgres=X/postgres",
+      "service_role=X/postgres"
+    ],
+    "md5": "f2028b1c110c4be4be51d48fdda5dc4b",
+    "owner": "postgres",
+    "report": [
+      {
+        "case": "six_ampoules_rejected_with_preview",
+        "code": "22023",
+        "discount": 930,
+        "subtotal": 5580,
+        "remaining": 350,
+        "adjustments": [
+          {
+            "name": "11.11 限定｜呼吸系列 任5件贈送1件 （加贈拉伸化妝棉）",
+            "amount": 930,
+            "adjustment_type": "buy_x_get_y"
+          }
+        ],
+        "merchandise_amount": 4650
+      },
+      {
+        "case": "seven_ampoules_accepted",
+        "merchandise_amount": 5580
+      },
+      {
+        "case": "six_serum_accepted",
+        "merchandise_amount": 6600
+      }
+    ],
+    "captured_at": "2026-11-01T05:00:59.787614+00:00"
+  },
+  "before_md5": "6ca161645e783a1ce8d913ef0bea7b4d",
+  "owner_acl_preserved": true,
+  "source_patch_only": true,
+  "installation_checks_passed": 4,
+  "isolated_database_tests_passed": 1,
+  "frontend_regression_cases_passed": 16,
+  "viewports": [
+    320,
+    390,
+    1280
+  ],
+  "narrow_address_inputs_fixed": true,
+  "bank_calls": 0,
+  "production_orders_created": 0,
+  "verification_mode": "BEGIN READ ONLY, public quote RPC, ROLLBACK; no customer identity persisted in this report.",
+  "notes": "Live controlled pro account used base member prices; the student 10%-off BOGO case is covered separately by isolated fixtures.",
+  "migration_sha256": "dcb6329f246fc5c51ec9198c179aafae816ea77f86792b25c6d3013c6d63b3d4"
+}

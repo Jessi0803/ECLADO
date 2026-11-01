@@ -29,7 +29,7 @@ export default function CheckoutOrderSummary({ items, summary, user, fulfillment
   const hasPreorderItem = items.some(item => !item.is_gift && item.line_type !== 'gift' && getSummaryFulfillment(item).type === 'preorder');
 
   return (
-    <div style={{ background:'var(--off-white)', padding:'28px 24px', height:'fit-content' }}>
+    <div data-testid="checkout-order-summary" style={{ background:'var(--off-white)', padding:'28px 24px', height:'fit-content', minWidth:0, maxWidth:'100%', boxSizing:'border-box', overflowWrap:'anywhere' }}>
       <h3 style={{ fontFamily:'var(--font-display)', fontSize:16, fontWeight:400, marginBottom:20, letterSpacing:'0.04em' }}>訂單明細</h3>
       {pricingNotice && <p role="status" style={{ fontSize:12, marginBottom:12, lineHeight:1.6 }}>{pricingNotice}</p>}
       {hasPreorderItem && (
@@ -70,22 +70,22 @@ export default function CheckoutOrderSummary({ items, summary, user, fulfillment
         <span>小計</span><span style={{ fontFamily:'var(--font-display)' }}>NT$ {summary.subtotal.toLocaleString()}</span>
       </div>
       {Array.isArray(summary.adjustments) && summary.adjustments.length > 0 ? summary.adjustments.map((adjustment, index) => (
-        <div key={`${adjustment.promotion_id || 'discount'}-${index}`} style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--accent)', marginBottom:8, gap:12 }}>
-          <span style={{ display:'flex', alignItems:'center', gap:6, minWidth:0 }}>
+        <div key={`${adjustment.promotion_id || 'discount'}-${index}`} style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) auto', minWidth:0, fontSize:13, color:'var(--accent)', marginBottom:8, gap:12 }}>
+          <span style={{ display:'flex', alignItems:'flex-start', gap:6, minWidth:0 }}>
             <span style={{ background:'var(--accent)', color:'var(--white)', fontSize:9, padding:'1px 5px', letterSpacing:'0.06em', flexShrink:0 }}>
               {adjustment.coupon_campaign_id ? '優惠券' : '活動'}
             </span>
-            <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{adjustment.name}</span>
+            <span style={{ minWidth:0, overflowWrap:'anywhere' }}>{adjustment.name}</span>
           </span>
-          <span style={{ fontFamily:'var(--font-display)', flexShrink:0 }}>{['amount_gift','quantity_gift'].includes(adjustment.adjustment_type) ? `贈品 × ${adjustment.gift_quantity || 1}` : `${adjustment.adjustment_type === 'student_price_restoration' ? '+' : '−'}NT$ ${Number(adjustment.amount || 0).toLocaleString()}`}</span>
+          <span style={{ fontFamily:'var(--font-display)', whiteSpace:'nowrap' }}>{['amount_gift','quantity_gift'].includes(adjustment.adjustment_type) ? `贈品 × ${adjustment.gift_quantity || 1}` : `${adjustment.adjustment_type === 'student_price_restoration' ? '+' : '−'}NT$ ${Number(adjustment.amount || 0).toLocaleString()}`}</span>
         </div>
       )) : summary.discount > 0 && (summary.coupon || summary.promotion) && (
-        <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--accent)', marginBottom:8 }}>
-          <span style={{ display:'flex', alignItems:'center', gap:6 }}>
-            <span style={{ background:'var(--accent)', color:'var(--white)', fontSize:9, padding:'1px 5px', letterSpacing:'0.06em' }}>{summary.coupon ? '優惠券' : '活動'}</span>
-            {(summary.coupon || summary.promotion).name}
+        <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) auto', gap:12, minWidth:0, fontSize:13, color:'var(--accent)', marginBottom:8 }}>
+          <span style={{ display:'flex', alignItems:'flex-start', gap:6, minWidth:0 }}>
+            <span style={{ background:'var(--accent)', color:'var(--white)', fontSize:9, padding:'1px 5px', letterSpacing:'0.06em', flexShrink:0 }}>{summary.coupon ? '優惠券' : '活動'}</span>
+            <span style={{ minWidth:0, overflowWrap:'anywhere' }}>{(summary.coupon || summary.promotion).name}</span>
           </span>
-          <span style={{ fontFamily:'var(--font-display)' }}>−NT$ {summary.discount.toLocaleString()}</span>
+          <span style={{ fontFamily:'var(--font-display)', whiteSpace:'nowrap' }}>−NT$ {summary.discount.toLocaleString()}</span>
         </div>
       )}
       <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--dark)', marginBottom:14, alignItems:'center' }}>

@@ -715,10 +715,10 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
 
                   {fulfillmentMethod === FULFILLMENT_DELIVERY && <div>
                     <label style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--dark)', textTransform:'uppercase', display:'block', marginBottom:7 }}>收件地址 <span style={{ color:'var(--accent)' }}>*</span></label>
-                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(2,minmax(0,1fr))', gap:12, marginBottom:12 }}>
                       {[['city','縣市'],['district','區域']].map(([k,ph]) => (
                         <input key={k} type="text" value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} required placeholder={ph}
-                          style={{ border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', fontVariantNumeric:'tabular-nums', outline:'none', background:'none', color:'var(--black)' }}
+                          style={{ minWidth:0, width:'100%', boxSizing:'border-box', border:'none', borderBottom:'1px solid var(--light)', padding:'10px 0', fontSize:14, fontFamily:'var(--font-body)', fontVariantNumeric:'tabular-nums', outline:'none', background:'none', color:'var(--black)' }}
                           onFocus={e => e.target.style.borderBottomColor='var(--black)'}
                           onBlur={e => e.target.style.borderBottomColor='var(--light)'}
                         />
