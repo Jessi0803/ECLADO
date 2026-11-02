@@ -207,13 +207,13 @@ test('首頁依指定順序呈現熱門商品、品牌理念、三大系列與�
   await expect(page).toHaveURL(/\/shop\/series\/cell$/);
 });
 
-test('首頁第一張與第三張輪播的瀏覽保養商品按鈕皆前往商城', async ({ page }) => {
+test('首頁第一張與第三張輪播的探索系列按鈕皆前往商城', async ({ page }) => {
   for (const slide of [1, 3]) {
     await page.goto('/');
     await page.getByRole('button', { name: `查看首頁輪播第 ${slide} 張`, exact: true }).click();
     const hero = page.locator('.home-hero');
     await expect(hero.getByRole('heading', { level: 1 })).toContainText(slide === 1 ? 'No.1 Pro Brand.' : 'Beyond Limits.');
-    await hero.getByRole('button', { name: '瀏覽保養商品', exact: true }).click();
+    await hero.getByRole('button', { name: '探索系列', exact: true }).click();
     await expect(page).toHaveURL('/shop');
     await expect(page.getByRole('heading', { name: '全部商品', exact: true })).toBeVisible();
   }

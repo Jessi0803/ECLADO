@@ -100,7 +100,8 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
   const professionalProgress = minimumRejected ? { eligible:false, freeShipping:false, remaining:minimumPreview?.remaining,
     message:'優惠後尚未達最低訂購金額 NT$ 5,000；暫時無法取得完整優惠試算，請稍後重試。' }
     : getProfessionalOrderProgress(finalSubtotal, user, shippingGroup);
-  const compactProgress = drawer && !minimumRejected;
+  const showMinimumBreakdown = Boolean(minimumPreview && (minimumPreview.hasActivity || minimumPreview.discount > 0));
+  const compactProgress = drawer && (!minimumRejected || (minimumPreview && !showMinimumBreakdown));
   const shipping = currentQuote?.shipping ?? calculateShipping(pricedCart, user, finalSubtotal, undefined, minimumRejected ? null : shippingGroup);
   const grandTotal = finalSubtotal + shipping;
   const professionalProgressNotice = professionalProgress ? (
@@ -124,12 +125,14 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
         maxWidth: compactProgress ? '68%' : undefined,
       }}
     >
-      {minimumPreview ? <div data-testid="cart-minimum-preview">
+      {showMinimumBreakdown ? <div data-testid="cart-minimum-preview">
         {minimumPreview.hasActivity && <strong style={{ display:'block', marginBottom:6 }}>已達活動優惠條件</strong>}
         <div>優惠後商品金額：NT$ {minimumPreview.merchandiseAmount.toLocaleString()}（不含運費）</div>
         <div>最低訂購金額 NT$ {minimumPreview.minimum.toLocaleString()}，還差 <strong>NT$ {minimumPreview.remaining.toLocaleString()}</strong>。</div>
         <div style={{ marginTop:6 }}>請再加入商品，折後滿 NT$ {minimumPreview.minimum.toLocaleString()} 即可結帳。</div>
-      </div> : professionalProgress.message}
+      </div> : minimumPreview
+        ? `尚差 NT$${minimumPreview.remaining.toLocaleString()} 可達最低訂購門檻。`
+        : professionalProgress.message}
       {professionalProgress.additionalOrder && (
         <span style={{ display:'block', marginTop:4, fontSize:compactProgress ? 9 : 11, fontWeight:400 }}>
           目前待出貨 NT${professionalProgress.currentAmount.toLocaleString()} · 本次 NT${professionalProgress.merchandiseAmount.toLocaleString()} · 追加後 NT${professionalProgress.projectedAmount.toLocaleString()}
@@ -191,9 +194,9 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
             <div className={drawer ? 'cart-drawer-summary' : ''} style={{ background:'var(--off-white)', padding: drawer ? '12px 22px 11px' : '28px', height:'fit-content', marginTop:0 }}>
               <div data-testid="cart-summary-header" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom: drawer ? 9 : 20 }}>
                 <h3 style={{ fontFamily:'var(--font-display)', fontSize:drawer ? 16 : 18, fontWeight:400, margin:0, flexShrink:0 }}>訂單摘要</h3>
-                {drawer && !minimumRejected && professionalProgressNotice}
+                {compactProgress && professionalProgressNotice}
               </div>
-              {(!drawer || minimumRejected) && professionalProgressNotice}
+              {(!drawer || !compactProgress) && professionalProgressNotice}
               {quoteLoading && <p role="status" style={{ fontSize:12, marginBottom:10 }}>正在確認活動優惠…</p>}
               {quoteError && <p role="status" style={{ fontSize:12, marginBottom:10 }}>優惠金額暫時無法確認，將於結帳時重新計算。</p>}
               {shippingGroupError && (

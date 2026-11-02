@@ -42,13 +42,20 @@ test('cart shows qualified activity, authoritative payable and shortage, then cl
 });
 
 
-test('full cart without an applied activity shows only its actual minimum shortfall',async({page})=>{
- await mockEcladoApis(page);
- await page.route('**/rest/v1/rpc/quote_order_pricing',route=>route.fulfill({status:400,json:{code:'22023',message:'專業會員單筆訂單最低金額為 NT$ 5,000',details:JSON.stringify({...details,subtotal:3000,discount:0,merchandise_amount:3000,remaining:2000,adjustments:[]})}}));
- await page.goto('/shop');await page.getByText('胜肽修護精華液').first().click();await page.getByRole('button',{name:/加入購物車/}).click();
- await page.goto('/cart');
- const notice=page.getByTestId('cart-minimum-preview');await expect(notice).toContainText('優惠後商品金額：NT$ 3,000');
- await expect(notice).toContainText('還差 NT$ 2,000');await expect(notice).not.toContainText('已達活動優惠條件');
- await expect(page.getByRole('button',{name:'前往結帳',exact:true})).toBeDisabled();
- expect(await page.locator('body').evaluate(el=>el.scrollWidth<=window.innerWidth)).toBe(true);
-});
+for (const view of ['full cart', 'cart drawer']) {
+ test(`${view} without an applied activity shows a compact actual minimum shortfall`,async({page})=>{
+  await mockEcladoApis(page);
+  await page.route('**/rest/v1/rpc/quote_order_pricing',route=>route.fulfill({status:400,json:{code:'22023',message:'專業會員單筆訂單最低金額為 NT$ 5,000',details:JSON.stringify({...details,subtotal:4620,discount:0,merchandise_amount:4620,remaining:380,adjustments:[]})}}));
+  await page.goto('/shop');await page.getByText('胜肽修護精華液').first().click();await page.getByRole('button',{name:/加入購物車/}).click();
+  if (view === 'full cart') await page.goto('/cart');
+  else await page.locator('nav').getByRole('button',{name:/^購物車/}).click();
+  const cart = view === 'full cart' ? page.locator('body') : page.getByRole('dialog',{name:'購物車'});
+  const notice=cart.getByTestId('cart-shipping-progress');
+  await expect(notice).toHaveText('尚差 NT$380 可達最低訂購門檻。');
+  await expect(cart.getByTestId('cart-minimum-preview')).toHaveCount(0);
+  await expect(cart.getByText(/優惠後商品金額|已達活動優惠條件|折後滿/)).toHaveCount(0);
+  if (view === 'cart drawer') await expect(cart.getByTestId('cart-summary-header').getByTestId('cart-shipping-progress')).toBeVisible();
+  await expect(cart.getByRole('button',{name:'前往結帳',exact:true})).toBeDisabled();
+  expect(await page.locator('body').evaluate(el=>el.scrollWidth<=window.innerWidth)).toBe(true);
+ });
+}
