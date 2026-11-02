@@ -26,9 +26,27 @@ for(const width of [320,390,1280])test(`checkout activity and gift text stays in
    {promotion_id:'gift',name:longGift,amount:0,gift_quantity:1,adjustment_type:'quantity_gift'}]}});
  });
  await page.goto('/shop');await page.getByText('胜肽修護精華液').first().click();await page.getByRole('button',{name:/加入購物車/}).click();
+ await page.evaluate(()=>window.scrollTo({top:document.documentElement.scrollHeight,behavior:'instant'}));
+ expect(await page.evaluate(()=>window.scrollY)).toBeGreaterThan(0);
  await page.locator('nav').getByRole('button',{name:/^購物車/}).click();await page.getByRole('button',{name:'前往結帳',exact:true}).click();
  await page.getByRole('button',{name:'訪客結帳',exact:true}).click();await expectContained(page);
+ await expect.poll(()=>page.evaluate(()=>window.scrollY)).toBe(0);
+ const expectLayout=async()=>{
+  const summary=await page.getByTestId('checkout-order-summary').boundingBox();
+  const fields=await page.getByTestId('checkout-fields').boundingBox();
+  expect(summary).not.toBeNull();expect(fields).not.toBeNull();
+  if(width<=900)expect(summary!.y+summary!.height).toBeLessThanOrEqual(fields!.y);
+  else expect(summary!.x).toBeGreaterThan(fields!.x+fields!.width);
+ };
+ await expectLayout();
  const inputs=page.locator('form input');await inputs.nth(0).fill('TEST');await inputs.nth(1).fill('0900000000');await inputs.nth(2).fill('layout@example.test');
  await page.getByPlaceholder('縣市').fill('TEST');await page.getByPlaceholder('區域').fill('TEST');await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('TEST');
  await page.getByRole('button',{name:'繼續確認付款',exact:true}).click();await expectContained(page);
+ await expectLayout();
+ if(width<=900){
+  await expect.poll(async()=>Math.abs((await page.getByTestId('checkout-fields').boundingBox())!.y-84)).toBeLessThanOrEqual(3);
+  await page.getByRole('button',{name:'修改',exact:true}).first().click();
+  await expect(page.getByPlaceholder('縣市')).toHaveValue('TEST');
+  await expect.poll(async()=>Math.abs((await page.getByTestId('checkout-fields').boundingBox())!.y-84)).toBeLessThanOrEqual(3);
+ }
 });

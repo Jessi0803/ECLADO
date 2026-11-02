@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import CheckoutField from '../components/checkout/CheckoutField.jsx';
 import CheckoutOrderSummary from '../components/checkout/CheckoutOrderSummary.jsx';
 import CheckoutSteps from '../components/checkout/CheckoutSteps.jsx';
@@ -89,6 +89,24 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   const invoiceDefaultsLoadedRef = useRef(false);
   const [copiedAtmNo, setCopiedAtmNo] = useState(false);
   const isMobile = useIsMobile();
+  const checkoutFieldsRef = useRef(null);
+  const previousStepRef = useRef(step);
+  useLayoutEffect(() => {
+    // A new checkout starts at the top regardless of the previous page's scroll.
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, []);
+  useLayoutEffect(() => {
+    if (previousStepRef.current === step) return;
+    previousStepRef.current = step;
+    if (step !== 1 && step !== 2) return;
+    if (isMobile && checkoutFieldsRef.current) {
+      // Align the new step below the fixed navigation, past the order summary.
+      const top = window.scrollY + checkoutFieldsRef.current.getBoundingClientRect().top - 84;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'instant' });
+    } else if (step === 2) {
+      window.scrollTo(0, 0);
+    }
+  }, [step, isMobile]);
   useEffect(() => {
     if (paymentError && errorAttemptRef.current) {
       const { attempt, details } = errorAttemptRef.current;
@@ -411,7 +429,6 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
         }
       }
       setInvoiceError('');
-      window.scrollTo(0, 0);
       setStep(2);
       return;
     }
@@ -682,8 +699,16 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
         <CheckoutSteps steps={STEPS} currentStep={step} />
 
         <form onSubmit={handleNext}>
-          <div className="gcheckout">
-            <div>
+          <div className="gcheckout gcheckout-flow">
+            <CheckoutOrderSummary
+              items={paymentSnapshot || couponQuote?.items || automaticSummary?.items || cart}
+              pricingNotice={paymentSummary || couponQuote ? '' : automaticNotice}
+              products={products}
+              summary={paymentSummary || checkoutSummary}
+              user={user}
+              fulfillmentMethod={paymentSummary?.fulfillmentMethod || fulfillmentMethod}
+            />
+            <div ref={checkoutFieldsRef} className="checkout-fields" data-testid="checkout-fields">
               {step === 1 && (
                 <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
                   <div>
@@ -969,15 +994,6 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                 </div>
               )}
             </div>
-
-            <CheckoutOrderSummary
-              items={paymentSnapshot || couponQuote?.items || automaticSummary?.items || cart}
-              pricingNotice={paymentSummary || couponQuote ? '' : automaticNotice}
-              products={products}
-              summary={paymentSummary || checkoutSummary}
-              user={user}
-              fulfillmentMethod={paymentSummary?.fulfillmentMethod || fulfillmentMethod}
-            />
           </div>
         </form>
       </div>
