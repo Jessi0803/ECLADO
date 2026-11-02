@@ -123,7 +123,7 @@ test.describe('重設密碼頁', () => {
     await inputs.nth(1).fill('different456');
     await page.getByRole('button', { name: '更新密碼' }).click();
 
-    await expect(page.getByText('兩次密碼不一致')).toBeVisible();
+    await expect(page.getByText('兩次輸入的密碼不同，請重新確認。')).toBeVisible();
     expect(updateUserCalled).toBe(false);
   });
 
@@ -181,7 +181,7 @@ test('密碼登入成功後進入首頁且不顯示網路異常', async ({ page 
   await page.locator('form').getByRole('button', { name: '登入' }).click();
 
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByText('網路異常，請確認連線')).not.toBeVisible();
+  await expect(page.getByText('目前無法連線，請確認網路後再試一次。')).not.toBeVisible();
 });
 
 test('密碼錯誤時顯示正確錯誤提示且不建立資料', async ({ page }) => {

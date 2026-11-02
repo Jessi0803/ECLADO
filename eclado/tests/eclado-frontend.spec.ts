@@ -114,8 +114,8 @@ async function createCheckoutPayment(
   await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('恢復路 1 號');
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
   await page.getByRole('button', { name: methodName }).click();
-  await page.getByRole('button', { name: /^建立付款單$/ }).click();
-  await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
+  await page.getByRole('button', { name: /^確認訂單$/ }).click();
+  await expect(page.getByRole('heading', { name: '請完成付款' })).toBeVisible();
 }
 
 async function openAdminCatalog(page: import('@playwright/test').Page) {
@@ -205,6 +205,18 @@ test('首頁依指定順序呈現熱門商品、品牌理念、三大系列與�
 
   await page.getByRole('button', { name: '瀏覽記憶系列商品' }).click();
   await expect(page).toHaveURL(/\/shop\/series\/cell$/);
+});
+
+test('首頁第一張與第三張輪播的瀏覽保養商品按鈕皆前往商城', async ({ page }) => {
+  for (const slide of [1, 3]) {
+    await page.goto('/');
+    await page.getByRole('button', { name: `查看首頁輪播第 ${slide} 張`, exact: true }).click();
+    const hero = page.locator('.home-hero');
+    await expect(hero.getByRole('heading', { level: 1 })).toContainText(slide === 1 ? 'No.1 Pro Brand.' : 'Beyond Limits.');
+    await hero.getByRole('button', { name: '瀏覽保養商品', exact: true }).click();
+    await expect(page).toHaveURL('/shop');
+    await expect(page.getByRole('heading', { name: '全部商品', exact: true })).toBeVisible();
+  }
 });
 
 test('首頁六篇專欄可進入完整文章、列表及上一篇下一篇且不顯示閱讀時間', async ({ page }) => {
@@ -357,7 +369,7 @@ test('商品新分類正確，院線商品不重複出現在一般分類', async
   await expect(page.getByText('急救修護安瓶組').first()).toHaveCount(0);
 
   await page.getByRole('link', { name: '其他', exact: true }).click();
-  await expect(page.getByText('此分類目前無商品')).toBeVisible();
+  await expect(page.getByText('此分類暫無商品，歡迎瀏覽其他分類。')).toBeVisible();
 });
 
 test('手機分類橫向選單會自動捲入目前選取項目', async ({ page, isMobile }) => {
@@ -594,6 +606,45 @@ for (const scenario of [
   });
 }
 
+for (const role of ['staff', 'consumer']) {
+  test(`會員身分尚未載入時保留院線購物車，確認 ${role} 身分後才校驗購買資格`, async ({ page }) => {
+    await mockEcladoApis(page, {
+      authUser: authUser(`${role}-slow@example.com`),
+      profiles: [profile(role, `${role}-slow@example.com`)],
+      promotions: [],
+    });
+    let releaseProfile!: () => void;
+    const profileGate = new Promise<void>(resolve => { releaseProfile = resolve; });
+    await page.route('**/rest/v1/profiles**', async route => {
+      await profileGate;
+      await route.fallback();
+    });
+    await page.addInitScript(() => {
+      if (!sessionStorage.getItem('seeded-slow-profile-cart')) {
+        localStorage.setItem('eclado_cart_v1', JSON.stringify([{ id: 7, qty: 2 }]));
+        sessionStorage.setItem('seeded-slow-profile-cart', '1');
+      }
+    });
+    try {
+      await page.goto('/shop');
+      await expect(page.getByText('胜肽修護精華液 · 30ml', { exact: true })).toBeVisible();
+      await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('eclado_cart_v1') || '[]').map((item: any) => item.id))).toEqual([7]);
+    } finally {
+      releaseProfile();
+    }
+    await expect(page.locator('nav').getByRole('button', { name: '會員專區' })).toBeVisible();
+    await page.goto('/cart');
+    if (role === 'staff') {
+      await expect(page.getByText('NK細胞活化安瓶', { exact: true })).toBeVisible();
+      await expect(page.getByTestId('cart-shipping-progress')).toContainText('內部人員固定免運');
+      await expect(page.getByRole('button', { name: '前往結帳', exact: true })).toBeEnabled();
+    } else {
+      await expect(page.getByText('購物車還沒有商品')).toBeVisible();
+      await expect(page.getByRole('button', { name: '前往結帳', exact: true })).toHaveCount(0);
+    }
+  });
+}
+
 test('內部人員以專業價五折購買院線商品、最低五千且固定免運、不使用追加規則', async ({ page }) => {
   await mockEcladoApis(page, {
     authUser: authUser('staff@example.com'),
@@ -672,11 +723,11 @@ test('專業會員購物車即時提示最低訂購與免運門檻', async ({ pa
   await page.getByRole('button', { name: /加入購物車/ }).click();
   const cartDrawer = await openCart(page);
 
-  const professionalStatus = cartDrawer.getByRole('status');
+  const professionalStatus = cartDrawer.getByTestId('cart-shipping-progress');
   const summaryHeader = cartDrawer.getByTestId('cart-summary-header');
   await expect(professionalStatus).toHaveText('尚差 NT$2,020 可達最低訂購門檻。');
   await expect(summaryHeader.getByRole('heading', { name: '訂單摘要' })).toBeVisible();
-  await expect(summaryHeader.getByRole('status')).toBeVisible();
+  await expect(summaryHeader.getByTestId('cart-shipping-progress')).toBeVisible();
   await expect(summaryHeader).toHaveCSS('display', 'flex');
   await expect(professionalStatus).toHaveCSS('border-left-width', '1px');
   await expect(professionalStatus).toHaveCSS('border-left-style', 'solid');
@@ -692,7 +743,7 @@ test('專業會員購物車即時提示最低訂購與免運門檻', async ({ pa
   await increaseQuantity.click();
   await increaseQuantity.click();
   await increaseQuantity.click();
-  await expect(cartDrawer.getByRole('status')).toHaveText('✓ 已享免運優惠。');
+  await expect(professionalStatus).toHaveText('✓ 已享免運優惠。');
   await expect(cartDrawer.getByText('免運', { exact: true })).toBeVisible();
   await expect(cartDrawer.getByRole('button', { name: '前往結帳' })).toBeEnabled();
 });
@@ -908,7 +959,7 @@ test('購物車中的商品收到下架更新後會被移除', async ({ page }) 
   products = products.map(product => product.id === 2 ? { ...product, active: false } : product);
   await triggerProductsRealtime(page);
 
-  await expect(cartDrawer.getByText('購物車是空的')).toBeVisible();
+  await expect(cartDrawer.getByText('購物車還沒有商品')).toBeVisible();
 });
 
 test('購物車中的商品價格變更後會以最新價格重算', async ({ page }) => {
@@ -945,7 +996,7 @@ test('購物車中的商品變成院線限定後一般會員不可繼續結帳',
   products = products.map(product => product.id === 2 ? { ...product, is_pro_only: true } : product);
   await triggerProductsRealtime(page);
 
-  await expect(page.getByText('購物車是空的')).toBeVisible();
+  await expect(page.getByText('購物車還沒有商品')).toBeVisible();
   await expect(page.getByRole('button', { name: /前往結帳/ })).toHaveCount(0);
 });
 
@@ -987,7 +1038,7 @@ test('現貨、預購、活動折扣與購物車操作', async ({ page }) => {
   await expect(cartDrawer.getByText('NT$ 7,284')).toBeVisible();
 
   await cartDrawer.getByRole('button', { name: /移除/ }).click();
-  await expect(cartDrawer.getByText('購物車是空的')).toBeVisible();
+  await expect(cartDrawer.getByText('購物車還沒有商品')).toBeVisible();
 });
 
 test('優惠券專用活動不會在輸入優惠碼前當成自動折扣', async ({ page }) => {
@@ -1002,7 +1053,7 @@ test('優惠券專用活動不會在輸入優惠碼前當成自動折扣', async
 
   const cartDrawer = await openCart(page);
   await expect(cartDrawer.getByText('E2E 測試活動')).toHaveCount(0);
-  await expect(cartDrawer.getByText(/活動指定商品/)).toHaveCount(0);
+  await expect(cartDrawer.getByText('目前有限時優惠，此購物車尚未套用折扣，請確認商品是否符合活動條件。')).toHaveCount(0);
   await expect(cartDrawer.getByText('NT$ 3,980').last()).toBeVisible();
 });
 
@@ -1056,23 +1107,25 @@ test('多個活動符合時套用折抵金額最高的一個', async ({ page }) 
   await page.getByText('胜肽修護精華液').first().click();
   await expect(page.getByText('NT$ 3,480')).toBeVisible();
   await page.getByRole('button', { name: /加入購物車/ }).click();
-  await openCart(page);
-  await expect(page.getByText('折五百活動')).toBeVisible();
-  await expect(page.getByText('NT$ 3,600')).toBeVisible();
+  const cartDrawer = await openCart(page);
+  await expect(cartDrawer.getByText('折五百活動', { exact: true })).toBeVisible();
+  await expect(cartDrawer.getByText('NT$ 3,600', { exact: true })).toBeVisible();
 });
 
 test('異常折扣率與負折抵活動會被忽略', async ({ page }) => {
   await mockEcladoApis(page, {
-    promotions: [{
-      ...activePromotion,
-      name: '異常折扣活動',
-      discount_rate: -1,
-      discount_amount: -100,
-    }],
+    promotions: [
+      { ...activePromotion, id: 'negative-rate', name: '負折扣率活動', discount_rate: -1, discount_amount: 0, label_text: '異常標籤' },
+      { ...activePromotion, id: 'negative-amount', name: '負折抵活動', discount_rate: 1, discount_amount: -100, label_text: '異常標籤' },
+      { ...activePromotion, id: 'excessive-rate', name: '超出範圍活動', discount_rate: 1.1, discount_amount: 0, label_text: '異常標籤' },
+    ],
   });
 
   await page.goto('/shop');
+  await expect(page.getByTestId('promotion-label')).toHaveCount(0);
   await page.getByText('胜肽修護精華液').first().click();
+  await expect(page.getByRole('region', { name: '活動說明' })).toHaveCount(0);
+  await expect(page.getByTestId('promotion-label')).toHaveCount(0);
   await expect(page.getByText('限時優惠')).toHaveCount(0);
   await expect(page.getByText('NT$ 3,980').first()).toBeVisible();
 });
@@ -1202,9 +1255,9 @@ test('結帳建立付款單但不寫入真實訂單或真金流', async ({ page 
 
   await expect(page.getByText('付款方式')).toBeVisible();
   await page.getByRole('button', { name: /虛擬帳號匯款/ }).click();
-  await page.getByRole('button', { name: /建立付款單/ }).click();
+  await page.getByRole('button', { name: /確認訂單/ }).click();
 
-  await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '請完成付款' })).toBeVisible();
   await expect(page.getByText('807 永豐銀行')).toBeVisible();
   await expect(page.getByText('8071234567890123')).toBeVisible();
   await expect(page.getByText('2026/08/19 23:59 前')).toBeVisible();
@@ -1244,7 +1297,7 @@ test('專業會員公司發票帶入預設值並以本次修改內容保存訂�
   await page.getByLabel('統一編號').fill('87654321');
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
   await expect(page.getByText('B 公司', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: /建立付款單/ }).click();
+  await page.getByRole('button', { name: /確認訂單/ }).click();
 
   await expect.poll(() => pricingRequest).not.toBeNull();
   expect(pricingRequest).toMatchObject({
@@ -1286,7 +1339,7 @@ test('一般會員公司發票不帶入會員預設值但可填寫本次訂單�
   await page.getByLabel('公司抬頭').fill('本次訂單公司');
   await page.getByLabel('統一編號').fill('87654321');
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
-  await page.getByRole('button', { name: /建立付款單/ }).click();
+  await page.getByRole('button', { name: /確認訂單/ }).click();
 
   await expect.poll(() => pricingRequest).not.toBeNull();
   expect(pricingRequest).toMatchObject({
@@ -1334,13 +1387,30 @@ for (const scenario of [
     expect(saved?.summary?.items).toHaveLength(1);
 
     await page.reload();
-    await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '請完成付款' })).toBeVisible();
     if (scenario.name === 'ATM') {
       await expect(page.getByText(scenario.restoredAction)).toBeVisible();
       await expect(page.getByRole('button', { name: '複製虛擬帳號' })).toBeVisible();
     } else {
       await expect(page.getByRole('button', { name: scenario.restoredAction })).toBeVisible();
     }
+  });
+}
+
+for (const state of ['paid', 'failed'] as const) {
+  test(`恢復 ${state} 付款時顯示對應標題並維持原付款限制`, async ({ page }) => {
+    await mockEcladoApis(page, { paymentQueryStatus: state });
+    await createCheckoutPayment(page, /信用卡/);
+    await page.reload();
+    await expect(page.getByRole('heading', { name: state === 'paid' ? '付款成功' : '付款未完成', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '前往付款頁' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '複製付款連結' })).toHaveCount(0);
+    if (state === 'failed') {
+      await expect(page.getByText('付款尚未完成，請至「訪客訂單查詢」，輸入查詢碼與結帳手機號碼後重新付款。')).toBeVisible();
+    }
+    await page.getByRole('button', { name: '重新選購商品', exact: true }).click();
+    await expect(page).toHaveURL('/shop');
+    expect(await page.evaluate(() => sessionStorage.getItem('eclado_pending_payment'))).toBeNull();
   });
 }
 
@@ -1360,7 +1430,7 @@ test('舊付款單已付款時清除恢復紀錄，新的購物車可建立新�
   await proceedToCheckout(page);
 
   await expect(page.getByRole('button', { name: /繼續確認付款/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: '付款單已建立' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: '請完成付款' })).toHaveCount(0);
   expect(await page.evaluate(() => sessionStorage.getItem('eclado_pending_payment'))).toBeNull();
 
   const checkoutInputs = page.locator('form input');
@@ -1371,8 +1441,8 @@ test('舊付款單已付款時清除恢復紀錄，新的購物車可建立新�
   await page.getByPlaceholder('區域').fill('中山區');
   await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('新訂單路 2 號');
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
-  await page.getByRole('button', { name: /^建立付款單$/ }).click();
-  await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
+  await page.getByRole('button', { name: /^確認訂單$/ }).click();
+  await expect(page.getByRole('heading', { name: '請完成付款' })).toBeVisible();
   expect(paymentRequests).toHaveLength(2);
 });
 
@@ -1386,6 +1456,7 @@ test('逾期付款單重新整理後停用付款入口且不建立第二張付�
   expect(paymentRequests).toHaveLength(1);
 
   await page.reload();
+  await expect(page.getByRole('heading', { name: '付款期限已過', exact: true })).toBeVisible();
   await expect(page.getByText('付款期限已過，此訂單已取消，無法重新付款。')).toBeVisible();
   await expect(page.getByRole('button', { name: '前往付款頁' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: '複製付款連結' })).toHaveCount(0);
@@ -1403,11 +1474,12 @@ test('後台取消訂單後清除本機付款恢復紀錄', async ({ page }) => 
   await createCheckoutPayment(page, /信用卡/);
 
   await page.reload();
+  await expect(page.getByRole('heading', { name: '訂單已取消', exact: true })).toBeVisible();
   await expect(page.getByText('此筆訂單已取消，無法重新付款。')).toBeVisible();
   expect(await page.evaluate(() => sessionStorage.getItem('eclado_pending_payment'))).toBeNull();
 
   await page.reload();
-  await expect(page.getByRole('heading', { name:'付款單已建立' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name:'請完成付款' })).toHaveCount(0);
   await expect(page.getByRole('button', { name:/繼續確認付款/ })).toBeVisible();
 });
 
@@ -1416,7 +1488,9 @@ test('付款查詢暫時失敗時可手動清除舊紀錄', async ({ page }) => 
   await createCheckoutPayment(page, /信用卡/);
 
   await page.reload();
-  await page.getByRole('button', { name:'清除舊付款紀錄並返回商城' }).click();
+  await expect(page.getByRole('heading', { name: '付款狀態待確認' })).toBeVisible();
+  await expect(page.getByText('付款狀態暫時無法確認，請稍後重新查詢，暫勿重複付款。')).toBeVisible();
+  await page.getByRole('button', { name:'返回商城' }).click();
   await expect(page).toHaveURL(/\/shop$/);
   expect(await page.evaluate(() => sessionStorage.getItem('eclado_pending_payment'))).toBeNull();
 });
@@ -1444,15 +1518,15 @@ test('後端成交價與預覽不同時須重新確認才建立付款單', async
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
 
   const dismissed=new Promise<void>(resolve=>page.once('dialog',async dialog=>{
-    expect(dialog.message()).toContain('商品或優惠金額已更新');await dialog.dismiss();resolve();
+    expect(dialog.message()).toContain('訂單金額已更新，請確認後繼續：應付金額 NT$');await dialog.dismiss();resolve();
   }));
-  await page.getByRole('button', { name: /^建立付款單$/ }).click();
+  await page.getByRole('button', { name: /^確認訂單$/ }).click();
   await dismissed;
-  await expect(page.getByRole('button', { name: /^建立付款單$/ })).toBeEnabled();
+  await expect(page.getByRole('button', { name: /^確認訂單$/ })).toBeEnabled();
   expect(paymentRequests).toHaveLength(0);
   page.once('dialog',dialog=>dialog.accept());
-  await page.getByRole('button', { name: /^建立付款單$/ }).click();
-  await expect(page.getByText('付款單已建立')).toBeVisible();
+  await page.getByRole('button', { name: /^確認訂單$/ }).click();
+  await expect(page.getByText('請完成付款')).toBeVisible();
   await expect(page.getByText('成交金額已由後端更新')).toHaveCount(0);
   expect(paymentRequests).toHaveLength(1);
   expect(paymentRequests[0].amount).toBe(3792);
@@ -1485,9 +1559,9 @@ test('登入會員結帳會寫入訂單 payload 與 user_id，付款前不扣庫
   await page.getByRole('button', { name: '×' }).click();
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
   await page.getByRole('button', { name: /虛擬帳號匯款/ }).click();
-  await page.getByRole('button', { name: /建立付款單/ }).click();
+  await page.getByRole('button', { name: /確認訂單/ }).click();
 
-  await expect(page.getByText('付款單已建立')).toBeVisible();
+  await expect(page.getByText('請完成付款')).toBeVisible();
   expect(capturedOrder).not.toBeNull();
   expect(capturedOrder?.user_id).toBe(TEST_USER_ID);
   expect(capturedOrder?.email).toBe('buyer@example.com');
@@ -1543,8 +1617,8 @@ test('登入會員可選擇購物金支付商品金額並保留至少一元外�
   await expect(page.getByText('尚需付款', { exact: true })).toBeVisible();
   await expect(page.getByText('NT$ 3,202', { exact: true })).toBeVisible();
 
-  await page.getByRole('button', { name: /^建立付款單$/ }).click();
-  await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
+  await page.getByRole('button', { name: /^確認訂單$/ }).click();
+  await expect(page.getByRole('heading', { name: '請完成付款' })).toBeVisible();
   expect(pricingRequest).toMatchObject({ p_shopping_credit_amount: 500 });
   expect(capturedOrder).toMatchObject({
     total: 3702,
@@ -1581,9 +1655,9 @@ test('全部為客訂規格時可選現場自取且後端訂單運費為零', as
   await inputs.nth(2).fill('pickup@example.com');
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
   await expect(page.getByText('現場自取（客訂商品）')).toBeVisible();
-  await page.getByRole('button', { name: /^建立付款單$/ }).click();
+  await page.getByRole('button', { name: /^確認訂單$/ }).click();
 
-  await expect(page.getByText('付款單已建立')).toBeVisible();
+  await expect(page.getByText('請完成付款')).toBeVisible();
   expect(capturedOrder?.fulfillment_method).toBe('onsite_pickup');
   expect(capturedOrder?.address).toBe('');
   expect(capturedOrder?.total).toBe(3582);
@@ -1642,7 +1716,7 @@ test('結帳可試算一組優惠碼並以同一代碼建立權威訂單', async
   await expect.poll(() => quoteRequests.length).toBe(1);
   expect(quoteRequests[0]).toMatchObject({ p_coupon_code:'E2ETEST', p_guest_email:'coupon@example.com' });
 
-  await page.getByRole('button', { name:'建立付款單' }).click();
+  await page.getByRole('button', { name:'確認訂單' }).click();
   await expect.poll(() => orderRequests.length).toBe(1);
   expect(orderRequests[0]).toMatchObject({ p_coupon_code:'E2ETEST' });
 });
@@ -1692,7 +1766,7 @@ test('訪客付款單顯示短查詢碼與訂單成立信寄送結果', async ({
   await page.getByPlaceholder('區域').fill('大安區');
   await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('訪客路 1 號');
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
-  await page.getByRole('button', { name: /^建立付款單$/ }).click();
+  await page.getByRole('button', { name: /^確認訂單$/ }).click();
   await expect(page.getByText('ABCDE-12345')).toBeVisible();
   await expect(page.getByText(/訂單成立信已寄出/)).toBeVisible();
   const saved = await page.evaluate(() => JSON.parse(sessionStorage.getItem('eclado_pending_payment') || 'null'));
@@ -1730,7 +1804,7 @@ test('訪客可用短查詢碼與結帳手機查看訂單，並在待付款時�
 
   await page.getByRole('button', { name: '查看付款資訊／繼續付款' }).click();
   await expect(page).toHaveURL(/\/checkout$/);
-  await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '請完成付款' })).toBeVisible();
   await expect(page.getByText('8071122334455667')).toBeVisible();
   expect(lookupRequests).toEqual([{ lookupCode: 'ABCDE-12345', phone: '0912-345-678' }]);
   const saved = await page.evaluate(() => JSON.parse(sessionStorage.getItem('eclado_pending_payment') || 'null'));
@@ -1876,9 +1950,9 @@ test('信用卡、Apple Pay、Google Pay 會送出對應金流 payType', async (
     await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('支付路 1 號');
     await page.getByRole('button', { name: /繼續確認付款/ }).click();
     await page.getByRole('button', { name: method.button }).click();
-    await page.getByRole('button', { name: /建立付款單/ }).click();
+    await page.getByRole('button', { name: /確認訂單/ }).click();
 
-    await expect(page.getByText('付款單已建立')).toBeVisible();
+    await expect(page.getByText('請完成付款')).toBeVisible();
     expect(paymentRequests.at(-1)?.payType).toBe(method.payType);
     expect(paymentRequests.at(-1)?.Param1).toBe(orderInserts.at(-1)?.id);
     expect(paymentRequests.at(-1)?.backendUrl).toContain(`orderNo=${encodeURIComponent(String(orderInserts.at(-1)?.id))}`);
@@ -1913,7 +1987,7 @@ test('信用卡付款使用同分頁按鈕，並在付款結果頁權威確認�
   await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('付款路 1 號');
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
   await page.getByRole('button', { name: /信用卡/ }).click();
-  await page.getByRole('button', { name: /建立付款單/ }).click();
+  await page.getByRole('button', { name: /確認訂單/ }).click();
 
   const goToPayment = page.getByRole('button', { name: '前往付款頁' });
   await expect(goToPayment).toBeVisible();
@@ -2008,8 +2082,8 @@ test('付款失敗頁保留原訂單並建立新的付款嘗試', async ({ page 
 
   await page.goto('/payment-result?orderNo=ECL-FAILED-001&result=failed');
   await expect(page.getByRole('heading', { name:'付款未完成' })).toBeVisible();
-  await expect(page.getByRole('alert')).toContainText('原訂單不會被視為已付款，也不會扣款出貨');
-  await expect(page.getByRole('alert')).toContainText('保留原訂單並重新建立付款單');
+  await expect(page.getByRole('alert')).toContainText('付款尚未完成，你可以點選「重新付款」繼續完成原訂單。');
+  await expect(page.getByRole('alert')).toContainText('逾期未付款，訂單將自動取消。');
   await page.getByRole('button', { name:'重新付款' }).click();
   await expect(page).toHaveURL('https://sandbox.sinopac.test/retry-pay');
   await page.goto('/');
@@ -2042,10 +2116,11 @@ test('金流建單失敗時顯示錯誤且不進入付款完成畫面', async ({
   await page.getByPlaceholder('區域').fill('大安區');
   await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('測試路 1 號');
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
-  await page.getByRole('button', { name: /建立付款單/ }).click();
+  await page.getByRole('button', { name: /確認訂單/ }).click();
 
-  await expect(page.getByText(/付款單建立失敗.*測試金流暫時不可用/)).toBeVisible();
-  await expect(page.getByText('付款單已建立')).toHaveCount(0);
+  await expect(page.getByText('目前無法繼續付款，請稍後再試，或聯繫客服協助。')).toBeVisible();
+  await expect(page.getByText('測試金流暫時不可用', { exact: false })).toHaveCount(0);
+  await expect(page.getByText('請完成付款')).toHaveCount(0);
 });
 
 test('快速重複點擊建立付款單只會送出一次金流請求', async ({ page }) => {
@@ -2071,14 +2146,14 @@ test('快速重複點擊建立付款單只會送出一次金流請求', async ({
   await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('防重複路 1 號');
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
 
-  const createPayment = page.getByRole('button', { name: /^建立付款單$/ });
+  const createPayment = page.getByRole('button', { name: /^確認訂單$/ });
   await createPayment.evaluate((button: HTMLButtonElement) => {
     button.click();
     button.click();
     button.click();
   });
 
-  await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '請完成付款' })).toBeVisible();
   expect(paymentRequests).toHaveLength(1);
 });
 
@@ -2105,10 +2180,11 @@ test('權威訂單建立失敗時不建立付款單', async ({ page }) => {
   await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('測試路 1 號');
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
   await page.getByRole('button', { name: /虛擬帳號匯款/ }).click();
-  await page.getByRole('button', { name: /建立付款單/ }).click();
+  await page.getByRole('button', { name: /確認訂單/ }).click();
 
-  await expect(page.getByText(/付款單建立失敗.*測試訂單寫入失敗/)).toBeVisible();
-  await expect(page.getByRole('heading', { name: '付款單已建立' })).toHaveCount(0);
+  await expect(page.getByText('目前無法繼續付款，請稍後再試，或聯繫客服協助。')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '請完成付款' })).toHaveCount(0);
+  await expect(page.getByText('測試訂單寫入失敗', { exact: false })).toHaveCount(0);
   expect(paymentRequests).toHaveLength(0);
 });
 
@@ -2353,7 +2429,7 @@ test('會員可從我的訂單安全返回尚未付款的原付款單', async ({
   await page.getByRole('button', { name: '查看付款資訊' }).click();
 
   await expect(page).toHaveURL(/\/checkout$/);
-  await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '請完成付款' })).toBeVisible();
   await expect(page.getByText('8079988776655443')).toBeVisible();
   await expect(page.getByRole('button', { name: '複製虛擬帳號' })).toBeVisible();
   expect(instructionRequests).toEqual([{
@@ -2634,9 +2710,9 @@ test('手機版購物到結帳建立付款單可完成', async ({ page, isMobile
   await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('手機路 1 號');
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
   await page.getByRole('button', { name: /虛擬帳號匯款/ }).click();
-  await page.getByRole('button', { name: /建立付款單/ }).click();
+  await page.getByRole('button', { name: /確認訂單/ }).click();
 
-  await expect(page.getByText('付款單已建立')).toBeVisible();
+  await expect(page.getByText('請完成付款')).toBeVisible();
   await expect(page.getByText('8071234567890123')).toBeVisible();
 });
 
@@ -2649,7 +2725,7 @@ test('未符合身分與訪客資格時不顯示自動活動或購物車折扣',
   await page.getByRole('button', {name:/加入購物車/}).click();
   const cartDrawer=await openCart(page);
   await expect(cartDrawer.getByText(activePromotion.name)).toHaveCount(0);
-  await expect(cartDrawer.getByText(/活動指定商品/)).toHaveCount(0);
+  await expect(cartDrawer.getByText('目前有限時優惠，此購物車尚未套用折扣，請確認商品是否符合活動條件。')).toHaveCount(0);
   await expect(cartDrawer.getByText('NT$ 3,980').last()).toBeVisible();
 });
 

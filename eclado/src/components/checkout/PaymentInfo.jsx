@@ -31,9 +31,9 @@ export default function PaymentInfo({
     expired: '付款期限已過，此訂單已取消，無法重新付款。',
     cancelled: '此筆訂單已取消，無法重新付款。',
     failed: paymentResult.lookupCode
-      ? '付款未完成，此付款單已關閉。請使用查詢碼與結帳手機號碼回到訪客訂單查詢，保留原訂單並重新付款。'
-      : '付款未完成，此付款單已關閉。請回到會員專區的「我的訂單」，保留原訂單並重新付款。',
-    error: '目前無法確認付款狀態。為避免重複付款，付款入口已暫時停用，請重新查詢。',
+      ? '付款尚未完成，請至「訪客訂單查詢」，輸入查詢碼與結帳手機號碼後重新付款。'
+      : '付款尚未完成，請至會員專區的「我的訂單」重新付款。',
+    error: '付款狀態暫時無法確認，請稍後重新查詢，暫勿重複付款。',
   }[paymentState] || '';
 
   return (
@@ -80,7 +80,7 @@ export default function PaymentInfo({
         </p>
       )}
       {atmNo && canPay && paymentDeadline && <p style={{ fontSize:12, color:'var(--dark)', marginTop:12, lineHeight:1.7 }}>請於期限前完成轉帳，逾期後訂單將自動取消。</p>}
-      {paymentResult.insertError && <p style={{ fontSize:12, color:'#b45309', marginTop:12, lineHeight:1.7 }}>付款單已建立，但本站訂單寫入失敗：{paymentResult.insertError}</p>}
+      {paymentResult.insertError && <p style={{ fontSize:12, color:'#b45309', marginTop:12, lineHeight:1.7 }}>訂單處理發生異常，請先記下訂單編號並聯繫客服，暫勿重複下單。</p>}
       {atmNo && canPay && (
         <div style={{ display:'flex', gap:10, marginTop:16, flexWrap:'wrap' }}>
           <button type="button" onClick={() => onCopyAtmNo(atmNo)} style={{ background:'var(--black)', border:'1px solid var(--black)', color:'var(--white)', padding:'11px 16px', fontSize:12, letterSpacing:'0.12em', cursor:'pointer', fontFamily:'var(--font-body)' }}>複製虛擬帳號</button>

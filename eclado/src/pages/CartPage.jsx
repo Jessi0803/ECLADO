@@ -149,7 +149,7 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
 
         {!displayQuote && !quoteLoading && !quoteError && cart.length > 0 && promotions.some(p => isPromotionLive(p, user)) && discount === 0 && (
           <div style={{ background:'var(--accent-tint)', border:'1px solid var(--accent)', padding:'14px 18px', marginBottom:24, fontSize:13, color:'var(--dark)', lineHeight:1.65 }}>
-            目前有<strong>限時優惠</strong>，但購物車內還沒有「活動指定商品」，所以尚無折抵。
+            目前有<strong>限時優惠</strong>，此購物車尚未套用折扣，請確認商品是否符合活動條件。
           </div>
         )}
 
@@ -159,7 +159,7 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
           </div>
         ) : cart.length === 0 ? (
           <div style={{ textAlign:'center', padding:'80px 0' }}>
-            <p style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:300, color:'var(--dark)', marginBottom:24 }}>購物車是空的</p>
+            <p style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:300, color:'var(--dark)', marginBottom:24 }}>購物車還沒有商品</p>
             <button onClick={() => setPage('shop')} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 36px', fontSize:12, letterSpacing:'0.15em', cursor:'pointer', fontFamily:'var(--font-body)' }}>繼續購物</button>
           </div>
         ) : (
@@ -195,10 +195,10 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
               </div>
               {(!drawer || minimumRejected) && professionalProgressNotice}
               {quoteLoading && <p role="status" style={{ fontSize:12, marginBottom:10 }}>正在確認活動優惠…</p>}
-              {quoteError && <p role="status" style={{ fontSize:12, marginBottom:10 }}>以下為估算金額；{quoteError}。結帳時會重新確認。</p>}
+              {quoteError && <p role="status" style={{ fontSize:12, marginBottom:10 }}>優惠金額暫時無法確認，將於結帳時重新計算。</p>}
               {shippingGroupError && (
                 <div role="alert" style={{ border:'1px solid #b87855', color:'#8a4c2d', padding:drawer ? '7px 9px' : '10px 12px', marginBottom:drawer ? 10 : 18, fontSize:drawer ? 10 : 12, lineHeight:1.6 }}>
-                  無法確認追加訂單資格：{shippingGroupError}
+                  暫時無法確認是否可合併出貨，請稍後再試。
                 </div>
               )}
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13 }}><span>小計</span><span style={{ fontFamily:'var(--font-display)' }}>NT$ {subtotal.toLocaleString()}</span></div>

@@ -37,7 +37,7 @@ test('cart shows qualified activity, authoritative payable and shortage, then cl
  await expect(notice).toHaveCount(0);await expect(cart.getByText('NT$ 5,607',{exact:true})).toBeVisible();
  await expect(cart.getByRole('button',{name:'前往結帳',exact:true})).toBeEnabled();
  malformed=true;await cart.getByRole('button',{name:'−',exact:true}).click();
- await expect(cart.getByText(/以下為估算金額/)).toBeVisible();await expect(notice).toHaveCount(0);
+ await expect(cart.getByText('優惠金額暫時無法確認，將於結帳時重新計算。')).toBeVisible();await expect(notice).toHaveCount(0);
  await expect(cart.getByRole('button',{name:'前往結帳',exact:true})).toBeDisabled();
 });
 

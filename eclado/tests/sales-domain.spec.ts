@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { buildSalesStats, getPopularProducts } from '../src/domain/sales.js';
+import { normalizeProfessionalSales, professionalQuarterKey, quarterTitle } from '../src/domain/professionalSales.js';
 
 test('客訂規格銷量不計入熱門商品統計', () => {
   const stats = buildSalesStats([{
@@ -43,7 +44,6 @@ test('只有客訂規格的商品不會被熱門商品 fallback 補入', () => {
 });
 
 test('專業資格歷程忽略同日開始又結束的空紀錄', async () => {
-  const { normalizeProfessionalSales } = await import('../src/domain/professionalSales.js');
   const sales = normalizeProfessionalSales({
     member_id: 'm1',
     memberships: [
@@ -56,7 +56,6 @@ test('專業資格歷程忽略同日開始又結束的空紀錄', async () => {
 });
 
 test('自然季使用年份與季度顯示並以 quarter_start 產生穩定識別', async () => {
-  const { normalizeProfessionalSales, professionalQuarterKey, quarterTitle } = await import('../src/domain/professionalSales.js');
   const sales = normalizeProfessionalSales({
     member_id: 'm1',
     memberships: [{ id: 'membership-1', role: 'instructor', started_on: '2026-09-07', ended_on: null }],

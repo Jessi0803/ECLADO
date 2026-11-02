@@ -23,11 +23,14 @@ import {
 export default function useAuth(setPageState) {
   const [user, setUser] = useState(null);
   const profileLoadSequence = useRef(0);
+  const profileLoading = useRef(false);
   const [authReady, setAuthReady] = useState(false);
   const [showProBanner, setShowProBanner] = useState(false);
 
   const loadUser = useCallback(async supabaseUser => {
     const sequence = ++profileLoadSequence.current;
+    profileLoading.current = true;
+    setAuthReady(false);
     const { data } = await fetchMemberProfile(supabaseUser.id);
     if (sequence !== profileLoadSequence.current) return;
     const displayName = data?.name
@@ -50,6 +53,9 @@ export default function useAuth(setPageState) {
       defaultInvoiceCompanyName: data?.default_invoice_company_name || '',
       defaultInvoiceTaxId: data?.default_invoice_tax_id || '',
     });
+    // Reconcile stored products only after this session's member role is known.
+    profileLoading.current = false;
+    setAuthReady(true);
 
     if (role === 'consumer') {
       const seenKey = `eclado_pro_banner_${supabaseUser.id}`;
@@ -135,7 +141,7 @@ export default function useAuth(setPageState) {
           await finishLineLoginRedirect(session);
         }
       } finally {
-        if (!cancelled) setAuthReady(true);
+        if (!cancelled && !profileLoading.current) setAuthReady(true);
       }
     }
 
@@ -150,7 +156,7 @@ export default function useAuth(setPageState) {
         if (isPendingLineLogin) finishLineLoginRedirect(session);
         else loadUser(session.user);
       }
-      setAuthReady(true);
+      if (!profileLoading.current) setAuthReady(true);
     });
 
     const { data: { subscription } } = onAuthStateChange(async (event, session) => {
@@ -176,8 +182,8 @@ export default function useAuth(setPageState) {
       }
 
       if (session?.user) loadUser(session.user);
-      else if (event === 'SIGNED_OUT') { profileLoadSequence.current++; setUser(null); }
-      if (!hasAuthCallbackInUrl()) setAuthReady(true);
+      else if (event === 'SIGNED_OUT') { profileLoadSequence.current++; profileLoading.current = false; setUser(null); }
+      if (!hasAuthCallbackInUrl() && !profileLoading.current) setAuthReady(true);
     });
 
     return () => {
@@ -199,6 +205,7 @@ export default function useAuth(setPageState) {
 
   const handleSignOut = useCallback(() => {
     profileLoadSequence.current++;
+    profileLoading.current = false;
     signOut();
     setUser(null);
   }, []);

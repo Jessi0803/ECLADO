@@ -9,13 +9,13 @@ export const PAYMENT_METHODS = {
     label: '虛擬帳號匯款',
     payType: 'A',
     pendingStatus: 'awaiting_confirm',
-    description: '由永豐產生虛擬帳號，付款後由系統通知店家。',
+    description: '取得專屬匯款帳號後，請於期限內完成轉帳。',
   },
   card: {
     label: '信用卡',
     payType: 'C',
     pendingStatus: 'unpaid',
-    description: '完成授權後即進入付款流程。',
+    description: '前往付款頁，輸入信用卡資料完成付款。',
   },
   apple: {
     label: 'Apple Pay',

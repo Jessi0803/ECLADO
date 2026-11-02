@@ -65,7 +65,7 @@ test('合計同額但活動分配改變，付款前仍需再次確認', async ({
   changed = true;
   let prompted = false;
   page.on('dialog', async dialog => { prompted = true; await dialog.dismiss(); });
-  await page.getByRole('button', { name: '建立付款單', exact: true }).click();
+  await page.getByRole('button', { name: '確認訂單', exact: true }).click();
   await expect.poll(() => prompted).toBe(true);
   await expect(page.getByText('更新後的活動', { exact: true })).toBeVisible();
   expect(created).toBe(0);

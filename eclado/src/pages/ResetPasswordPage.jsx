@@ -24,7 +24,7 @@ export default function ResetPasswordPage({ setPage }) {
   async function handleResetPassword(e) {
     e.preventDefault(); reset();
     if (password.length < 6) { setError('密碼至少需要 6 個字元'); return; }
-    if (password !== confirm) { setError('兩次密碼不一致'); return; }
+    if (password !== confirm) { setError('兩次輸入的密碼不同，請重新確認。'); return; }
     setLoading(true);
     try {
       const { error } = await updatePassword(password);

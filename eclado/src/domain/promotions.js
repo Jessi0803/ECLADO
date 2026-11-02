@@ -149,6 +149,9 @@ export function getProductDisplayPromotions(product, user, promotions = []) {
     const specifiedProducts = p.storefront_scope_type === 'products'
       || (p.storefront_scope_type == null && (!p.benefit_type || p.benefit_type === 'legacy_discount'));
     if (!specifiedProducts || !normProductIds(p).includes(Number(product.id))) return false;
+    // Legacy discount copy must pass the same validity checks as its display price.
+    // Gift and threshold activities have their own benefits and remain independent.
+    if ((!p.benefit_type || p.benefit_type === 'legacy_discount') && !isPromotionLive(p, user)) return false;
     if (p.active === false || p.archived_at || !promotionAllowsUser(p, user)) return false;
     if ((p.activation_type || 'automatic') !== 'automatic') return false;
     if (p.start_at && !(new Date(p.start_at).getTime() <= now)) return false;

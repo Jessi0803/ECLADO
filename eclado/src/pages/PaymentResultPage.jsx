@@ -87,7 +87,7 @@ export default function PaymentResultPage({ setPage }) {
     } catch (error) {
       setRetryError(error?.name === 'AbortError'
         ? '付款服務連線逾時，請稍後再試。'
-        : `重新建立付款單失敗。${error?.message ? `（${error.message}）` : ''}`);
+        : '暫時無法重新付款，請稍後再試，或聯繫客服協助。');
       setRetrying(false);
     }
   }
@@ -106,12 +106,12 @@ export default function PaymentResultPage({ setPage }) {
         {amount > 0 && <p style={{ fontSize:13, marginBottom:30 }}>付款金額：<strong>NT$ {amount.toLocaleString()}</strong></p>}
         {status === 'failed' && (
           <div role="alert" style={{ maxWidth:520, margin:'24px auto 0', border:'1px solid #c58a72', borderLeft:'4px solid #9a4a2b', background:'#fff6f2', color:'#6f341f', padding:'16px 18px', textAlign:'left', fontSize:13, lineHeight:1.8 }}>
-            這次付款沒有完成，原訂單不會被視為已付款，也不會扣款出貨。你可以保留原訂單並重新建立付款單；若未重新付款，訂單會依期限自動取消。
+            付款尚未完成，你可以點選「重新付款」繼續完成原訂單。逾期未付款，訂單將自動取消。
           </div>
         )}
         {retryError && <p role="alert" style={{ color:'#9a4a2b', fontSize:13, lineHeight:1.7, marginTop:18 }}>{retryError}</p>}
         <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap', marginTop:30 }}>
-          {status === 'failed' && <button onClick={retryPayment} disabled={retrying} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 22px', cursor:retrying ? 'wait' : 'pointer', opacity:retrying ? 0.65 : 1 }}>{retrying ? '正在建立付款單…' : '重新付款'}</button>}
+          {status === 'failed' && <button onClick={retryPayment} disabled={retrying} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 22px', cursor:retrying ? 'wait' : 'pointer', opacity:retrying ? 0.65 : 1 }}>{retrying ? '正在前往付款…' : '重新付款'}</button>}
           <button onClick={() => setPage('account')} style={{ background:status === 'failed' ? 'transparent' : 'var(--black)', color:status === 'failed' ? 'var(--black)' : 'var(--white)', border:'1px solid var(--black)', padding:'12px 22px', cursor:'pointer' }}>查看我的訂單</button>
           <button onClick={() => setPage('shop')} style={{ background:'transparent', color:'var(--black)', border:'1px solid var(--black)', padding:'12px 22px', cursor:'pointer' }}>繼續購物</button>
           <button onClick={() => setPage('home')} style={{ background:'transparent', color:'var(--dark)', border:'1px solid var(--light)', padding:'12px 22px', cursor:'pointer' }}>返回首頁</button>

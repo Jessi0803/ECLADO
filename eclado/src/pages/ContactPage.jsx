@@ -19,7 +19,7 @@ export default function ContactPage() {
     },
     {
       name: 'LINE 官方帳號',
-      description: '產品諮詢、訂單問題、售後服務。',
+      description: '選購建議、訂單查詢與售後服務，歡迎透過 LINE 聯繫。',
       action: '開啟 LINE →',
       href: 'https://lin.ee/5RLUjni',
     },
@@ -37,7 +37,7 @@ export default function ContactPage() {
         <div style={{ maxWidth:860, margin:'0 auto' }}>
           <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--accent)', textTransform:'uppercase', marginBottom:10 }}>Contact</p>
           <h1 style={{ fontFamily:'var(--font-display)', fontSize:isMobile ? 30 : 44, fontWeight:300, color:'var(--black)', marginBottom:12 }}>聯絡我們</h1>
-          <p style={{ fontSize:14, color:'var(--dark)', lineHeight:1.8 }}>有任何問題、諮詢或合作需求，歡迎透過以下方式與我們聯繫。</p>
+          <p style={{ fontSize:14, color:'var(--dark)', lineHeight:1.8 }}>想了解產品、查詢訂單，或洽談合作？歡迎透過以下方式與我們聯繫。</p>
         </div>
       </div>
       <div style={{ maxWidth:860, margin:'0 auto', padding:isMobile ? '48px 20px 72px' : '64px 32px 96px' }}>

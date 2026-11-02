@@ -101,7 +101,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     cart.map(item => [item.id, item.variantId || item.variant_id || item.variantSize, item.qty, getMemberPrice(item, user)])]);
   const automaticSummary = automaticQuote.key === automaticQuoteKey ? automaticQuote.summary : null;
   const automaticNotice = automaticQuote.key !== automaticQuoteKey ? '正在確認活動優惠…'
-    : automaticQuote.error ? `以下為估算金額；${automaticQuote.error}。付款前會重新確認。` : '';
+    : automaticQuote.error ? '優惠金額暫時無法確認，將於確認訂單時重新計算。' : '';
   // Browser arithmetic is only a temporary fallback while the server resolves
   // authoritative member prices and the complete automatic allocation.
   const { subtotal, discount, finalSubtotal, promotion } =
@@ -452,7 +452,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       });
       if (amountChanged || allocationChanged || itemChanged || walletChanged || (useRewardCredit&&Number(rewardCreditAmount)!==appliedRewardCredit)) {
         setCouponQuote(latestSummary);
-        if (!window.confirm(`商品或優惠金額已更新，最新銀行應付 NT$${Number(latestQuote.payment_amount??(latestQuote.total-appliedShoppingCredit)).toLocaleString()}，購物金 NT$${Number(latestQuote.shopping_credit_amount??appliedShoppingCredit).toLocaleString()}、返饋金 NT$${Number(latestQuote.reward_credit_amount||0).toLocaleString()}。請確認是否使用最新報價建立訂單。`)) return;
+        if (!window.confirm(`訂單金額已更新，請確認後繼續：應付金額 NT$${Number(latestQuote.payment_amount??(latestQuote.total-appliedShoppingCredit)).toLocaleString()}、使用購物金 NT$${Number(latestQuote.shopping_credit_amount??appliedShoppingCredit).toLocaleString()}、使用返饋金 NT$${Number(latestQuote.reward_credit_amount||0).toLocaleString()}。`)) return;
       }
       checkoutAttempt.record('order_requested');
       const authoritativeOrder = await createAuthoritativeOrder({
@@ -539,7 +539,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       if (saved) checkoutAttempt.record('recovery_saved');
       setPaymentResult({
         ...nextPaymentResult,
-        recoveryWarning: saved ? '' : '瀏覽器未能保存付款資訊，請勿重新整理或重複建立付款單，並請先記下訂單編號。',
+        recoveryWarning: saved ? '' : '請先記下訂單編號，暫勿重新整理頁面或重複下單。如需協助，請聯繫客服。',
       });
       setPaymentState('pending');
       if (saved) setCart([]);
@@ -551,7 +551,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       console.error(err);
       const message = err?.name === 'AbortError'
         ? '付款服務連線逾時，請稍後再試或聯繫客服。'
-        : '付款單建立失敗，請稍後再試或聯繫客服。' + (err?.message ? `（${err.message}）` : '');
+        : '目前無法繼續付款，請稍後再試，或聯繫客服協助。';
       setWalletRevision(r=>r+1);
       errorAttemptRef.current = { attempt: checkoutAttempt, details: checkoutErrorDetails(err) };
       setPaymentError(message);
@@ -582,7 +582,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   if (restoringPayment) return (
     <main style={{ minHeight:'75vh', paddingTop:68, display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div role="status" style={{ textAlign:'center', padding:'60px 20px' }}>
-        <p style={{ fontFamily:'var(--font-display)', fontSize:24, fontWeight:300, marginBottom:12 }}>正在確認原付款單</p>
+        <p style={{ fontFamily:'var(--font-display)', fontSize:24, fontWeight:300, marginBottom:12 }}>正在確認付款狀態…</p>
         <p style={{ color:'var(--dark)', fontSize:13 }}>請勿重新付款或關閉頁面。</p>
       </div>
     </main>
@@ -597,7 +597,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
 
         <div style={{ maxWidth:520, margin:'0 auto', textAlign:'center' }}>
           <div style={{ width:56, height:56, border:'1px solid var(--black)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', fontSize:22 }}>✓</div>
-          <h2 style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, marginBottom:10 }}>付款單已建立</h2>
+          <h2 style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, marginBottom:10 }}>{({ pending: '請完成付款', paid: '付款成功', failed: '付款未完成', expired: '付款期限已過', cancelled: '訂單已取消', error: '付款狀態待確認' })[paymentState] || '付款狀態待確認'}</h2>
           <p style={{ fontSize:13, color:'var(--dark)', marginBottom:26 }}>訂單編號：<strong style={{ color:'var(--dark)', letterSpacing:'0.06em', fontFamily:'var(--font-display)', fontVariantNumeric:'tabular-nums' }}>{orderNo}</strong></p>
         </div>
 
@@ -619,7 +619,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                   重新查詢付款狀態
                 </button>
                 <button type="button" onClick={startNewOrder} style={{ background:'transparent', color:'var(--dark)', border:'none', padding:'8px 0', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12, textDecoration:'underline', textUnderlineOffset:3 }}>
-                  清除舊付款紀錄並返回商城
+                  返回商城
                 </button>
               </div>
             )}
@@ -647,8 +647,8 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
             </div>}
 
             <p style={{ fontSize:12, color:'var(--dark)', lineHeight:1.8, textAlign:'center' }}>
-              請依付款頁或虛擬帳號完成付款。系統會在永豐通知後更新訂單狀態。<br />
-              如有疑問請透過官方 LINE 聯繫客服。
+              請依所選方式完成付款，付款確認後將更新訂單狀態。<br />
+              如需協助，歡迎透過官方 LINE 聯繫客服。
             </p>
 
             <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
@@ -657,7 +657,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
             </div>
             {['paid', 'expired', 'cancelled', 'failed'].includes(paymentState) && (
               <button type="button" onClick={startNewOrder} style={{ width:'100%', background:'transparent', color:'var(--dark)', border:'none', padding:'8px 0', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12, textDecoration:'underline', textUnderlineOffset:3 }}>
-                清除此付款紀錄並建立新訂單
+                重新選購商品
               </button>
             )}
           </div>
@@ -824,7 +824,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                   )}
                   {shippingGroupError && fulfillmentMethod === FULFILLMENT_DELIVERY && (
                     <div role="alert" style={{ border:'1px solid #b87855', color:'#8a4c2d', padding:'12px 14px', fontSize:12, lineHeight:1.6 }}>
-                      無法確認追加訂單資格：{shippingGroupError}
+                      暫時無法確認是否可合併出貨，請稍後再試。
                     </div>
                   )}
 
@@ -960,7 +960,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                     ⚠ <strong>退貨說明</strong>：本訂單商品為個人衛生用品，依《消費者保護法》第 19 條之 1，<strong>已拆封商品不適用七天猶豫期退貨</strong>。未拆封商品自收到次日起 7 日內可申請退貨（運費由消費者負擔）。如有品質瑕疵，不限拆封與否均可退換（運費由本公司負擔）。詳見<a href="/info" style={{ color:'#5a4a1e' }}>退換貨政策</a>。
                   </div>
                   <button type="submit" disabled={submitting||(useRewardCredit&&rewardCredit.loading)||(useShoppingCredit&&shoppingCredit.loading)} style={{ background: submitting ? 'var(--dark)' : 'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: submitting ? 'wait' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8, opacity: submitting ? 0.7 : 1 }}>
-                    {submitting ? '建立付款單中...' : '建立付款單'}
+                    {submitting ? '正在處理，請稍候…' : '確認訂單'}
                   </button>
                   {paymentError && <p style={{ fontSize:12, color:'#c0392b', textAlign:'center', lineHeight:1.6 }}>{paymentError}</p>}
                   <p style={{ fontSize:11, color:'var(--dark)', textAlign:'center', lineHeight:1.6 }}>

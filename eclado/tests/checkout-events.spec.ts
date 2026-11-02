@@ -49,10 +49,10 @@ test('付款連線失敗與重試以同流程、不同嘗試追蹤，保留現�
   });
   await checkout(page);
   expect(orders).toHaveLength(0);
-  const button = page.getByRole('button', { name: /^建立付款單$/ });
+  const button = page.getByRole('button', { name: /^確認訂單$/ });
   for (let i = 0; i < 2; i++) {
     await button.click();
-    await expect(page.getByText(/付款單建立失敗/)).toBeVisible();
+    await expect(page.getByText('目前無法繼續付款，請稍後再試，或聯繫客服協助。')).toBeVisible();
     await expect(button).toBeEnabled();
     await flush(page);
   }
@@ -84,8 +84,8 @@ test('追蹤 API 故障與 sessionStorage 被封鎖都不阻擋付款建立', as
   await mockEcladoApis(page, { promotions: [] });
   await page.route('**/api/checkout-events', route => route.fulfill({ status: 503, json: { ok: false } }));
   await checkout(page);
-  await page.getByRole('button', { name: /^建立付款單$/ }).click();
-  await expect(page.getByRole('heading', { name: '付款單已建立' })).toBeVisible();
+  await page.getByRole('button', { name: /^確認訂單$/ }).click();
+  await expect(page.getByRole('heading', { name: '請完成付款' })).toBeVisible();
 });
 
 test('追蹤送出失敗後重載會補送原事件 ID，成功後清空佇列', async ({ page }) => {

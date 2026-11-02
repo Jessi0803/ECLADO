@@ -463,12 +463,20 @@ test('後台側邊欄將操作紀錄歸在會員分類', async ({ page }) => {
 
 test('後台切換左側導覽時主內容自動回到頂部', async ({ page }) => {
   await page.setViewportSize({ width: 430, height: 700 });
-  await mockAdminApis(page);
+  await mockAdminApis(page, { profiles: [
+    ...adminProfileRows,
+    ...Array.from({ length: 12 }, (_, index) => ({ ...adminProfileRows[0], id: `scroll-member-${index}`, name: `捲動測試會員 ${index}`, email: `scroll-${index}@example.test` })),
+  ] });
 
   await page.goto('/admin');
   await openAdminSection(page, /會員管理/);
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await expect(page.locator('.app-main').getByText('捲動測試會員 0', { exact: true })).toHaveCount(1);
+  await page.evaluate(() => {
+    const main = document.querySelector('.app-main');
+    if (main) main.scrollTop = main.scrollHeight;
+    window.scrollTo(0, document.documentElement.scrollHeight);
+  });
+  await expect.poll(() => page.evaluate(() => Math.max(window.scrollY, document.querySelector('.app-main')?.scrollTop || 0))).toBeGreaterThan(0);
 
   await openAdminSection(page, /商品 & 庫存/);
   await expect.poll(() => page.evaluate(() => ({
@@ -911,7 +919,9 @@ test('診斷服務未部署時仍能查看原訂單，舊紀錄不捏造失敗�
   else await panel.getByRole('button',{name:'← 返回',exact:true}).click();
   fail=false;
   await page.getByText('E2E-ORDER-001',{exact:true}).click();
-  await expect(page.getByRole('region',{name:'永豐付款診斷'})).toContainText('無法回溯未保存的失敗原因');
+  await expect(panel.getByText('商品明細', { exact: true })).toBeVisible();
+  await expect(panel.getByRole('region', { name: '永豐付款診斷' })).toContainText('尚無詳細銀行診斷。');
+  await expect(panel.getByRole('region', { name: '永豐付款診斷' })).not.toContainText('最近明確資訊：');
 });
 
 test('訂單詳情顯示合併出貨批次、未付款提醒與人工處理警示', async ({ page }) => {
@@ -2244,9 +2254,10 @@ test('活動指定商品可全選及全取消', async ({ page }) => {
   await page.getByRole('button', { name:'+ 新增優惠活動' }).click();
   await page.getByText('指定商品', { exact:true }).click();
 
-  await page.getByRole('button', { name:'全選', exact:true }).click();
+  const picker = page.getByRole('group', { name: '指定商品', exact: true });
+  await picker.getByRole('button', { name:'全選', exact:true }).click();
   await expect(page.getByText(`指定商品（已選 ${adminProductRows.length}）`)).toBeVisible();
-  await expect(page.locator('input[type="checkbox"]:checked')).toHaveCount(adminProductRows.length + 7);
+  await expect(picker.getByRole('checkbox', { checked: true })).toHaveCount(adminProductRows.length);
 
   await page.getByRole('searchbox', { name:'搜尋指定商品' }).fill('不存在的商品xyz');
   await expect(page.getByText('找不到符合的商品')).toBeVisible();
@@ -2254,11 +2265,11 @@ test('活動指定商品可全選及全取消', async ({ page }) => {
   await page.getByRole('searchbox', { name:'搜尋指定商品' }).fill(adminProductRows[0].name_zh);
   await expect(page.getByText('找不到符合的商品')).toHaveCount(0);
   await page.getByRole('searchbox', { name:'搜尋指定商品' }).fill('');
-  await expect(page.locator('input[type="checkbox"]:checked')).toHaveCount(adminProductRows.length + 7);
+  await expect(picker.getByRole('checkbox', { checked: true })).toHaveCount(adminProductRows.length);
 
-  await page.getByRole('button', { name:'全取消', exact:true }).click();
+  await picker.getByRole('button', { name:'全取消', exact:true }).click();
   await expect(page.getByText('指定商品（已選 0）')).toBeVisible();
-  await expect(page.locator('input[type="checkbox"]:checked')).toHaveCount(7);
+  await expect(picker.getByRole('checkbox', { checked: true })).toHaveCount(0);
 });
 
 test('優惠券方案可打包多個優惠券專用活動', async ({ page }) => {
@@ -2434,11 +2445,11 @@ test('活動排程：排程中活動顯示「排程中」badge，已結束顯示
   await page.goto('/admin');
   await openAdminSection(page, /活動管理/);
 
-  const futureCard = page.locator('div').filter({ hasText: '未來活動' }).first();
-  await expect(futureCard.getByText('排程中')).toBeVisible();
+  const futureCard = page.getByRole('group', { name: '未來活動', exact: true });
+  await expect(futureCard.getByText('排程中', { exact: true })).toBeVisible();
 
-  const pastCard = page.locator('div').filter({ hasText: '過期活動' }).first();
-  await expect(pastCard.getByText('已結束')).toBeVisible();
+  const pastCard = page.getByRole('group', { name: '過期活動', exact: true });
+  await expect(pastCard.getByText('已結束', { exact: true })).toBeVisible();
 });
 
 test('後台核准美容師申請會同步 application status 與 profiles.role', async ({ page }) => {

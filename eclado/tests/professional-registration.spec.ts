@@ -254,6 +254,9 @@ test('審核中會員不能再次送出美容師申請', async ({ page }) => {
   });
 
   await page.goto('/professional-apply');
+  await expect(page.getByRole('heading', { name: '申請審核中', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '送出申請' })).toHaveCount(0);
+  await page.getByRole('button', { name: '前往會員專區', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: '會員專區' })).toBeVisible();
   await expect(page.getByText('審核中', { exact: true })).toBeVisible();
@@ -270,6 +273,9 @@ test('已是美容師會員不能再次送出美容師申請', async ({ page }) 
   });
 
   await page.goto('/professional-apply');
+  await expect(page.getByRole('heading', { name: '您已是專業會員', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '送出申請' })).toHaveCount(0);
+  await page.getByRole('button', { name: '前往會員專區', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: '會員專區' })).toBeVisible();
   await expect(page.getByText('會員類型')).toBeVisible();
@@ -294,6 +300,9 @@ test('DB 已有 pending 申請的 consumer 會員不能再次送出（DB 層防�
   });
 
   await page.goto('/professional-apply');
+  await expect(page.getByRole('heading', { name: '申請審核中', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '送出申請' })).toHaveCount(0);
+  await page.getByRole('button', { name: '前往會員專區', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: '會員專區' })).toBeVisible();
   await expect(page.getByText('美容師申請審核中')).toBeVisible();
@@ -309,7 +318,7 @@ test('會員可以在會員資料編輯自己的姓名', async ({ page }) => {
     onProfileUpdate: body => profileUpdates.push(body),
   });
 
-  await page.goto('/professional-apply');
+  await page.goto('/account');
   const memberInfo = page.getByRole('complementary').filter({ hasText: '會員資料' });
   await expect(memberInfo.getByText('已是美容師', { exact: true })).toBeVisible();
 

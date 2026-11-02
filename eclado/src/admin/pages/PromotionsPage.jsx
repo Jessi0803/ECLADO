@@ -145,7 +145,7 @@ function PromotionList({ list, scopes, products, onEdit, onCopy, onReload }) {
       const allSellable = promoScopes.some(scope => scope.target_type === 'all_sellable');
       const names = promoScopes.filter(scope => scope.target_type === 'product').map(scope => products.find(product => product.id === scope.product_id)?.nameZh).filter(Boolean);
       const legacy = !promo.benefit_type || promo.benefit_type === 'legacy_discount';
-      return <Card key={promo.id}>
+      return <Card key={promo.id} label={promo.name}>
         <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}><div><h3 style={{ fontSize:15, fontWeight:500, marginBottom:6 }}>{promo.name}</h3></div><span style={{ fontSize:10, color:'var(--mid)' }}>{promo.activation_type === 'coupon_only' ? '優惠券專用' : '自動活動'}</span></div>
         <LifecycleActions item={promo} table="promotions" noun="活動" onReload={onReload} actions={<>
           <button onClick={() => onEdit(promo)} style={{ ...secondaryButton, background:'var(--dark)', color:'#fff' }}>編輯活動</button>
@@ -392,7 +392,7 @@ function ProductPicker({ products, selected, onToggle, onSelectAll, onClear }) {
   const keyword = query.trim().toLocaleLowerCase();
   const filteredProducts = products.filter(product => [product.nameZh, product.name].some(name => String(name || '').toLocaleLowerCase().includes(keyword)));
   const allSelected = products.length > 0 && products.every(product => selected.has(product.id));
-  return <div>
+  return <div role="group" aria-label="指定商品">
     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:8, flexWrap:'wrap' }}>
       <span style={{ ...labelStyle, marginBottom:0 }}>指定商品（已選 {selected.size}）</span>
       <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap', flex:'1 1 300px' }}>
@@ -420,7 +420,7 @@ function getBenefitLabel(promotion, products) {
 }
 function Editor({ title, back, onClose, error, children }) { return <div><button onClick={onClose} style={{ background:'none', border:'none', padding:0, color:'var(--mid)', cursor:'pointer', fontSize:12, marginBottom:7 }}>← {back}</button><h1 style={{ fontFamily:'var(--font-d)', fontSize:28, fontWeight:400, marginBottom:24 }}>{title}</h1>{error && <div role="alert" style={{ maxWidth:920, color:'var(--red)', background:'oklch(0.60 0.18 25 / 0.08)', border:'1px solid oklch(0.60 0.18 25 / 0.3)', padding:'10px 14px', marginBottom:16, fontSize:13 }}>{error}</div>}{children}</div>; }
 function Field({ label, children }) { return <div><label style={labelStyle}>{label}</label>{children}</div>; }
-function Card({ children }) { return <div style={{ background:'var(--white)', border:'1px solid var(--border)', padding:'20px 22px', display:'flex', flexDirection:'column', gap:13, minHeight:190 }}>{children}</div>; }
+function Card({ children, label }) { return <div role={label ? 'group' : undefined} aria-label={label} style={{ background:'var(--white)', border:'1px solid var(--border)', padding:'20px 22px', display:'flex', flexDirection:'column', gap:13, minHeight:190 }}>{children}</div>; }
 function Empty({ text }) { return <div style={{ padding:48, textAlign:'center', color:'var(--mid)', border:'1px solid var(--border)', background:'var(--white)', fontSize:13 }}>{text}</div>; }
 function SaveButtons({ saving, disabled = false, onClose, label }) { return <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}><button type="button" onClick={onClose} style={{ ...secondaryButton, flex:'none', padding:'11px 22px' }}>取消</button><button disabled={saving || disabled} style={{ padding:'11px 26px', border:'none', background:saving ? 'var(--mid)' : 'var(--dark)', color:'#fff', cursor:saving ? 'wait' : 'pointer', fontSize:12 }}>{saving ? '儲存中…' : label}</button></div>; }
 function toLocalInput(value) { if (!value) return ''; const date = new Date(value); const offset = date.getTimezoneOffset() * 60000; return new Date(date.getTime() - offset).toISOString().slice(0,16); }

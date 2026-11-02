@@ -183,7 +183,7 @@ export default function ShopPage({
           padding:'14px 20px', textAlign:'center',
         }}>
           <span style={{ fontSize:13, color:'var(--dark)', letterSpacing:'0.04em', lineHeight:1.6 }}>
-            限時優惠進行中：購物車內含活動商品時會自動折抵。
+            限時優惠進行中，符合活動條件即可享優惠，實際折抵金額請於結帳時確認。
           </span>
         </div>
       )}
@@ -263,7 +263,7 @@ export default function ShopPage({
               {filtered.map(p => <ProductCard key={p.id} product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => onSelectProduct(p)} promotions={promotions} />)}
             </div>
             {filtered.length === 0 && <div style={{ textAlign:'center', padding:'80px 0', color:'var(--dark)', fontSize:14,lineHeight:1.8 }}>
-              <p>{searchTerms.length>0 ? '目前分類／系列找不到符合的商品，請調整搜尋或清除篩選條件。' : '此分類目前無商品'}</p>
+              <p>{searchTerms.length>0 ? '目前分類／系列找不到符合的商品，請調整搜尋或清除篩選條件。' : '此分類暫無商品，歡迎瀏覽其他分類。'}</p>
               {searchTerms.length>0&&<button type="button" onClick={clearAllFilters} style={{marginTop:20,padding:'12px 22px',border:'1px solid var(--black)',background:'var(--white)',color:'var(--black)',fontSize:12,letterSpacing:'.08em',cursor:'pointer'}}>清除所有條件</button>}
             </div>}
           </>

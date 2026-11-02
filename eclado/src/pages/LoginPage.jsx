@@ -71,14 +71,14 @@ export default function LoginPage({ setPage }) {
       const { error } = await signInWithPassword({ email, password });
       if (error) { setError(sbError(error.message)); return; }
       setPage(consumeCheckoutLoginRedirectPage());
-    } catch(err) { setError('網路異常，請確認連線'); }
+    } catch(err) { setError('目前無法連線，請確認網路後再試一次。'); }
     finally { setLoading(false); }
   }
 
   // ── 註冊 ──
   async function handleRegister(e) {
     e.preventDefault(); reset();
-    if (password !== confirm) { setError('兩次密碼不一致'); return; }
+    if (password !== confirm) { setError('兩次輸入的密碼不同，請重新確認。'); return; }
     setLoading(true);
     try {
       const normalizedEmail = email.trim().toLowerCase();
@@ -102,7 +102,7 @@ export default function LoginPage({ setPage }) {
         setSuccess('✓ 驗證信已發送！請查收 ' + normalizedEmail + ' 並點擊驗證連結後再登入。若未收到，請檢查垃圾郵件或稍後再試一次。');
       }
       setView('login');
-    } catch(err) { setError('網路異常，請確認連線'); }
+    } catch(err) { setError('目前無法連線，請確認網路後再試一次。'); }
     finally { setLoading(false); }
   }
 
@@ -116,7 +116,7 @@ export default function LoginPage({ setPage }) {
       );
       if (error) { setError(sbError(error.message)); return; }
       setSuccess('✓ 密碼重設信已發送至 ' + email + '，請查收信箱。');
-    } catch(err) { setError('網路異常，請確認連線'); }
+    } catch(err) { setError('目前無法連線，請確認網路後再試一次。'); }
     finally { setLoading(false); }
   }
 

@@ -8,5 +8,7 @@ export function getOrderPriceAdjustments(order = {}) {
       && Number.isFinite(Number(row.amount)) && Number(row.amount) > 0).map(row => ({ name: row.name || row.name_snapshot || '活動優惠', amount: (row.adjustment_type === 'student_price_restoration' ? -1 : 1) * Number(row.amount) }));
     if (rows.length && Math.abs(rows.reduce((total, row) => total + row.amount, 0) - discount) < 0.000001) return rows;
   }
-  return discount > 0 ? [{ name: order.promotion_name || order.promotionName || '活動／優惠券折抵', amount: discount }] : [];
+  const couponLabel = [order.coupon_name || order.couponName, order.coupon_code_mask || order.couponCodeMask].filter(Boolean).join(' · ');
+  const fallbackName = couponLabel ? `優惠券折抵（${couponLabel}）` : order.promotion_name || order.promotionName || '活動／優惠券折抵';
+  return discount > 0 ? [{ name: fallbackName, amount: discount }] : [];
 }

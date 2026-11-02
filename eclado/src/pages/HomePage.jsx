@@ -122,7 +122,7 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
                 </div>
                 <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 'clamp(34px,10vw,44px)' : 'min(clamp(36px,6.5vw,92px), var(--hero-title-height-limit))', fontWeight:300, color:'#fff', textShadow:'0 2px 16px rgba(0,0,0,0.22)', lineHeight:1.05, whiteSpace:'pre-line', marginBottom:20 }}>{HERO_SLIDES[slide].headline}</h1>
                 <p style={{ fontSize:15, color:'rgba(255,255,255,0.6)', letterSpacing:'0.06em', marginBottom:36, fontWeight:300, lineHeight:1.8 }}>{HERO_SLIDES[slide].sub}</p>
-                <button onClick={() => setPage('login')} style={{ background:'var(--accent)', color:'var(--white)', border:'none', padding:'13px 28px', fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}
+                <button onClick={() => setPage('shop')} style={{ background:'var(--accent)', color:'var(--white)', border:'none', padding:'13px 28px', fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, whiteSpace:'nowrap' }}
                   onMouseEnter={e=>e.target.style.opacity='0.85'}
                   onMouseLeave={e=>e.target.style.opacity='1'}
                 >{HERO_SLIDES[slide].cta}</button>
