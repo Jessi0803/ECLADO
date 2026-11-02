@@ -20,12 +20,21 @@ async function rpc(name, args, env, fetchImpl) {
 async function dispatchRewards({ env = process.env, fetchImpl = fetch, limit = 5 } = {}) {
   if (env.REWARD_BANK_ENCRYPTION_KEYS || env.REWARD_BANK_ACTIVE_KEY_ID) throw new Error('worker_requires_isolated_secrets');
   const recipients = String(env.REWARD_NOTIFICATION_ADMIN_EMAILS || '').split(',').map(s => s.trim()).filter(Boolean);
-  const jobs = await rpc('claim_reward_notifications', { p_limit: Math.min(5, Math.max(1, limit)), p_admin_emails: recipients, p_email_from: env.ORDER_EMAIL_FROM || null }, env, fetchImpl);
+  const bindingEnabled = env.INSTRUCTOR_STUDENT_NOTIFICATIONS_ENABLED === 'true';
+  const batchLimit = Math.min(5, Math.max(1, limit));
   const results = [];
-  for (const job of jobs) {
-    const delivery = await deliverRewardNotice(job, { env, fetchImpl });
-    const stored = await rpc('complete_reward_notification', { p_id: job.id, p_token: job.lease_token, p_result: delivery.result, p_provider_id: delivery.providerId || null }, env, fetchImpl);
-    results.push({ id: job.id, result: delivery.result, stored });
+  // Reserve up to two slots for bindings while retaining one shared five-job cap.
+  const queues = [{ claim: 'claim_reward_notifications', complete: 'complete_reward_notification', limit: bindingEnabled ? Math.max(1, batchLimit - 2) : batchLimit }];
+  if (bindingEnabled) queues.push({ claim: 'claim_instructor_student_notifications', complete: 'complete_instructor_student_notification' });
+  for (const queue of queues) {
+    const remaining = batchLimit - results.length;
+    if (!remaining) break;
+    const jobs = await rpc(queue.claim, { p_limit: queue.limit || remaining, p_admin_emails: queue.claim === 'claim_reward_notifications' ? recipients : [], p_email_from: env.ORDER_EMAIL_FROM || null }, env, fetchImpl);
+    for (const job of jobs) {
+      const delivery = await deliverRewardNotice(job, { env, fetchImpl });
+      const stored = await rpc(queue.complete, { p_id: job.id, p_token: job.lease_token, p_result: delivery.result, p_provider_id: delivery.providerId || null }, env, fetchImpl);
+      results.push({ id: job.id, result: delivery.result, stored });
+    }
   }
   return { checked: results.length, accepted: results.filter(r => r.result === 'accepted' && r.stored).length };
 }

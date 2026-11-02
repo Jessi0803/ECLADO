@@ -19,3 +19,6 @@ export const saveInstructorStudentBinding = ({ studentId, instructorId, bindingI
 // Phase 1B query foundations only; storefront pricing does not consume them yet.
 export const fetchMyStudentPricingContext = () => rpc('get_my_student_pricing_context');
 export const fetchMyInstructorStudents = () => rpc('get_my_instructor_students');
+export const fetchInstructorStudentNotifications = (studentId, offset = 0) => rpc('get_admin_instructor_student_notifications', {
+  p_student_id: studentId, p_offset: offset,
+});

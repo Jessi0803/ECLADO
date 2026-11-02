@@ -1,4 +1,5 @@
 const { buildBrandedEmailHtml } = require('./_email-template.js');
+const { instructorStudentNoticeMessage } = require('./_instructor-student-notice.js');
 
 const money = value => {
   if (!Number.isSafeInteger(Number(value)) || Number(value) < 0) throw new Error('Invalid notice amount');
@@ -27,7 +28,8 @@ async function deliverRewardNotice(job, { env = process.env, fetchImpl = fetch, 
   const credential = line ? env.LINE_CHANNEL_ACCESS_TOKEN : env.RESEND_API_KEY;
   if (!credential && line) return { result: 'line_unavailable' };
   if (!credential || (!line && !job.from && !env.ORDER_EMAIL_FROM)) return { result: 'configuration' };
-  const message = rewardNoticeMessage(job.payload, job.audience);
+  const message = job.payload.kind === 'instructor_student'
+    ? instructorStudentNoticeMessage(job.payload, job.audience) : rewardNoticeMessage(job.payload, job.audience);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {

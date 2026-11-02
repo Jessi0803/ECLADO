@@ -1,7 +1,7 @@
 // Host adapter only: no HTTP listener, dotenv, bank secrets, or new financial logic.
 const crypto=require('node:crypto');
 const {dispatchRewards}=require('../api/reward-notification-worker')._private;
-const ALLOWED=['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','SUPABASE_SERVICE_KEY','LINE_CHANNEL_ACCESS_TOKEN','RESEND_API_KEY','ORDER_EMAIL_FROM','REWARD_NOTIFICATION_ADMIN_EMAILS'];
+const ALLOWED=['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','SUPABASE_SERVICE_KEY','LINE_CHANNEL_ACCESS_TOKEN','RESEND_API_KEY','ORDER_EMAIL_FROM','REWARD_NOTIFICATION_ADMIN_EMAILS','INSTRUCTOR_STUDENT_NOTIFICATIONS_ENABLED'];
 function configuration(source){
  if(source.REWARD_BANK_ENCRYPTION_KEYS||source.REWARD_BANK_ACTIVE_KEY_ID)throw Error('bank_keys_forbidden');
  const env=Object.fromEntries(ALLOWED.filter(k=>source[k]).map(k=>[k,source[k]]));
@@ -27,6 +27,7 @@ async function run({action,source=process.env,fetchImpl=fetch,at=new Date(),runK
  if(action==='check')return {status:'configuration_valid',networkRequests:0};
  const rpcRoot=`${env.SUPABASE_URL}/rest/v1/rpc/`;
  const rpcNames=new Set(['claim_reward_notifications','complete_reward_notification','run_reward_reconciliation']);
+ if(env.INSTRUCTOR_STUDENT_NOTIFICATIONS_ENABLED==='true')for(const name of ['claim_instructor_student_notifications','complete_instructor_student_notification'])rpcNames.add(name);
  const restrictedFetch=async(url,options)=>{
   const target=String(url);
   const rpc=target.startsWith(rpcRoot)&&rpcNames.has(target.slice(rpcRoot.length));

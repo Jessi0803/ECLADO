@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { fetchInstructorStudentMember, fetchStudentPricingSettings, saveInstructorStudentType, saveInstructorStudentBinding } from '../../services/instructorStudents.js';
 
 import { formatFold } from '../../domain/memberPricing.js';
+import InstructorStudentNotifications from './InstructorStudentNotifications.jsx';
 
 const labels = { bind:'建立綁定', unbind:'解除綁定', rebind:'更換老師', instructor_type:'老師類型變更', member_deleted:'會員刪除結束綁定' };
 
@@ -107,6 +108,7 @@ export default function InstructorStudentSection({ member, members, canManage })
           </div>
         </>}
       </div>}
+      {(member.type === 'pro' || context?.has_binding) && <InstructorStudentNotifications studentId={member.id} revision={data} />}
       <details className="reward-details"><summary>師生異動歷史（最近100筆）</summary>
         {!data.history?.length ? <p>尚無異動</p> : data.history.map(entry => <div key={entry.id} style={{ padding:'8px 0', borderBottom:'1px solid var(--border)', overflowWrap:'anywhere' }}>
           {new Date(entry.created_at).toLocaleString('zh-TW', { timeZone:'Asia/Taipei' })} · {labels[entry.event_type] || entry.event_type}

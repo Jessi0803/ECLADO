@@ -1,0 +1,62 @@
+{
+  "date_taipei": "2026-11-02",
+  "project_ref": "ilvdvlkdpntwmaijncaz",
+  "approved_scope": "binding/rebinding/unbinding notifications, production SQL and existing VPS worker activation; no historical backfill or fake events",
+  "base_commit": "391a515",
+  "sql_sha256": "b6cd4b99243ac45d670c81b4bc2108c7cbee4b055eae216e65acb4674b2a2fed",
+  "verification": {
+    "rls_enabled": true,
+    "outbox_ready": true,
+    "admin_rpc_only": true,
+    "worker_claim_only": true,
+    "audit_trigger_ready": true,
+    "no_member_table_access": true,
+    "no_worker_table_access": true,
+    "worker_completion_only": true
+  },
+  "preserved": {
+    "bindings": 8,
+    "binding_audits": 15,
+    "binding_outbox": 0,
+    "binding_rpc_md5": "8c8240fcb23ea68eea877f8c423cf344",
+    "withdrawal_claim_md5": "0aabac5244041f11ecdae6187d417f52",
+    "withdrawal_completion_md5": "d8832e10b8c939fa12916f66e7e0d620"
+  },
+  "worker": {
+    "backup": "/opt/eclado-reward-worker/backups/binding-20261102T025935Z",
+    "manifest": {
+      "api/_instructor-student-notice.js": "cdb3604a402c3d32d12832f44aae9dceec803f6ca30f0aaa2f67c980808fc88a",
+      "api/_reward-notification-delivery.js": "265b7b25f89204a76756bac7d30f274d286bef64e3183f734b16a2771282a894",
+      "api/reward-notification-worker.js": "df5eca880543fd30e22303a62eb337aa9c9184697ab954cc2295c2ef3a9769fa",
+      "scripts/reward-worker-host.cjs": "215f927e44ca37b3f45d077ce81ff69a15d575d7439ff55ec54345243808a92d",
+      "tests/integration/instructor-student-notification-delivery.test.cjs": "43bb931cd349fb119aa441504b7809c6786b5a8ae5ff95c53089244f3d4f4f86",
+      "tests/integration/reward-notification-worker.test.cjs": "8d3593b28b7db5cf7d5e4e1e436dcd666f82fdfd7fa47ede4a3345c866a74387",
+      "tests/integration/reward-worker-host.test.cjs": "7188aa0c6938efd1868d6c5b10ced73fce67790e813bb3c4d67296d935a404fe"
+    },
+    "host_mock_tests_passed": 22,
+    "enabled": true,
+    "dispatch_timer": "active",
+    "reconcile_timer": "active",
+    "configuration_check": {
+      "status": "configuration_valid",
+      "networkRequests": 0
+    },
+    "first_tick": {
+      "status": "complete",
+      "action": "dispatch",
+      "checked": 0,
+      "accepted": 0
+    },
+    "payment_code_and_pid_unchanged": true,
+    "env_permissions": "640 root eclado-reward-worker"
+  },
+  "validation": {
+    "local_node_tests_passed": 23,
+    "local_desktop_mobile_cases_passed": 2,
+    "clean_candidate_build_exit_code": 0,
+    "modules": 498,
+    "seo_products": 62,
+    "seo_articles": 8
+  },
+  "real_test_notifications_sent": 0
+}
