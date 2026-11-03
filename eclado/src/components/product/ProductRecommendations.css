@@ -5,7 +5,8 @@
 .recommendation-label { font-size:10px; line-height:1.5; color:var(--dark); margin:0 0 6px; }
 .product-recommendations--compact { margin-top:16px; padding:16px 12px 8px; background:var(--off-white); }
 .product-recommendations--compact h2 { font-size:16px; margin:0 0 8px; }
-.recommendation-list { max-height:294px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
+.recommendation-list { max-height:294px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:none; }
+.recommendation-list::-webkit-scrollbar { display:none; }
 .recommendation-row { display:grid; grid-template-columns:40px minmax(0,1fr) 28px; gap:10px; align-items:center; height:84px; box-sizing:border-box; border-bottom:1px solid var(--light); }
 .recommendation-row:last-child { border-bottom:0; }
 .recommendation-row-image { width:40px; height:48px; }
