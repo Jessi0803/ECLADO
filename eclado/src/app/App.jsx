@@ -54,6 +54,7 @@ import { goProfessionalApply } from '../services/membership.js';
 import useNoIndex from '../hooks/useNoIndex.js';
 
 export default function App() {
+  const [productPath, setProductPath] = useState(() => window.location.pathname);
   const [journalArticleSlug, setJournalArticleSlug] = useState(() => journalSlugFromPath(window.location.pathname));
   const [page, setPageState] = useState(() => {
     if (isPasswordRecoveryUrl()) return 'reset-password';
@@ -82,6 +83,7 @@ export default function App() {
   function openProduct(product, from = page) {
     const path = `/products/${getProductSlug(product)}`;
     window.history.pushState({ page:'product', from }, '', path);
+    setProductPath(path);
     setPageState('product');
   }
   function closeProduct() {
@@ -94,6 +96,7 @@ export default function App() {
   function openEventProduct(product) {
     const path = `/events/limited/${getProductSlug(product)}`;
     window.history.pushState({ page: 'event-product', from: 'event-products' }, '', path);
+    setProductPath(path);
     setPageState('event-product');
   }
   function closeEventProduct() {
@@ -179,6 +182,7 @@ export default function App() {
   useEffect(() => {
     function onPopState(e) {
       setJournalArticleSlug(journalSlugFromPath(window.location.pathname));
+      setProductPath(window.location.pathname);
       setPageState(e.state?.page || pageFromPath(window.location.pathname));
     }
     window.addEventListener('popstate', onPopState);
@@ -203,9 +207,9 @@ export default function App() {
     switch (page) {
       case 'home':     return <HomePage announcementVisible={isAnnouncementVisible(announcement)} setPage={setPage} onSelectProduct={product => openProduct(product, 'home')} onOpenArticle={article => openJournalArticle(article, 'home')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
       case 'shop':     return <ShopPage onSelectProduct={product => openProduct(product, 'shop')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} productsStatus={productsStatus} productsError={productsError} salesStats={salesStats} />;
-      case 'product':  return <ProductPage productSlug={productSlugFromPath(window.location.pathname)} products={products} productsStatus={productsStatus} productsError={productsError} user={user} setCart={setCart} promotions={promotions} onBack={closeProduct} onShop={() => setPage('shop')} />;
+      case 'product':  return <ProductPage onSelectProduct={openProduct} cart={cart} productSlug={productSlugFromPath(productPath)} products={products} productsStatus={productsStatus} productsError={productsError} user={user} setCart={setCart} promotions={promotions} onBack={closeProduct} onShop={() => setPage('shop')} />;
       case 'event-products': return <EventProductsPage user={user} setCart={setCart} onSelectProduct={openEventProduct} products={eventProducts} productsStatus={eventStatus} productsError={eventErrorText} promotions={promotions} />;
-      case 'event-product': return <ProductPage productSlug={eventProductSlugFromPath(window.location.pathname)} products={eventProducts} productsStatus={eventStatus} productsError={eventErrorText} user={user} setCart={setCart} promotions={promotions} onBack={closeEventProduct} onShop={closeEventProduct} routeBase="/events/limited" noIndex />;
+      case 'event-product': return <ProductPage onSelectProduct={openProduct} cart={cart} productSlug={eventProductSlugFromPath(productPath)} products={eventProducts} productsStatus={eventStatus} productsError={eventErrorText} user={user} setCart={setCart} promotions={promotions} onBack={closeEventProduct} onShop={closeEventProduct} routeBase="/events/limited" noIndex />;
       case 'cart':     return <CartPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
       case 'checkout': return <CheckoutPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} products={products} />;
       case 'login':    return <LoginPage setPage={setPage} />;

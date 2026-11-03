@@ -1,6 +1,6 @@
 import React, { forwardRef, useState } from 'react';
 
-const ProductImage = forwardRef(function ProductImage({ src, alt, fallbackText = alt, style, ...props }, ref) {
+const ProductImage = forwardRef(function ProductImage({ src, alt, fallbackText = alt, fallbackStyle, style, ...props }, ref) {
   const [failedSrc, setFailedSrc] = useState(null);
 
   if (!src || failedSrc === src) {
@@ -11,6 +11,7 @@ const ProductImage = forwardRef(function ProductImage({ src, alt, fallbackText =
         boxSizing:'border-box', padding:24, background:'var(--off-white)',
         color:'var(--dark)', fontSize:14, lineHeight:1.6, textAlign:'center',
         overflowWrap:'anywhere', transform:'none',
+        ...fallbackStyle,
       }}>
         {fallbackText}
       </div>

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import ProductDetail from '../components/product/ProductDetail.jsx';
+import { addRecommendationToCart, isRecommendationProductAvailable } from '../domain/productRecommendations.js';
 import {
   getCartKey,
   canAccessProfessionalCatalog,
@@ -15,9 +16,11 @@ export default function ProductPage({
   productsError = '',
   user,
   setCart,
+  cart = [],
   promotions,
   onBack,
   onShop,
+  onSelectProduct,
   routeBase = '/products',
   noIndex = false,
 }) {
@@ -84,7 +87,7 @@ export default function ProductPage({
       const existing = previous.find(item => getCartKey(item) === cartKey);
       if (existing) {
         return previous.map(item => (
-          getCartKey(item) === cartKey ? { ...item, qty: item.qty + 1 } : item
+          getCartKey(item) === cartKey ? { ...item, qty: item.qty + 1, recommendationOnly: false } : item
         ));
       }
       return [...previous, { ...selectedProduct, cartKey, qty: 1 }];
@@ -126,6 +129,13 @@ export default function ProductPage({
       onAdd={addToCart}
       onBack={onBack}
       promotions={promotions}
+      products={products}
+      cart={cart}
+      onSelectRecommendation={onSelectProduct}
+      onAddRecommendation={selected => {
+        if (!isRecommendationProductAvailable(selected, user)) return;
+        setCart(previous => addRecommendationToCart(previous, selected));
+      }}
     />
   );
 }

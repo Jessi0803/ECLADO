@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import useIsMobile from '../../hooks/useIsMobile.js';
 import PromotionLabel from './PromotionLabel.jsx';
 import ProductImage from './ProductImage.jsx';
+import ProductRecommendations from './ProductRecommendations.jsx';
 import {
   applyVariantToProduct,
   getCartKey,
@@ -18,7 +19,7 @@ import {
   getProductDisplayPromotions,
 } from '../../domain/promotions.js';
 
-export default function ProductDetail({ product, user, onAdd, onBack, promotions = [] }) {
+export default function ProductDetail({ product, user, onAdd, onBack, promotions = [], products = [], cart = [], onAddRecommendation, onSelectRecommendation }) {
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
@@ -46,6 +47,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
   useEffect(() => {
+    window.scrollTo(0, 0);
     setActiveImage(0);
     setActiveVariant(0);
     setQty(1);
@@ -220,6 +222,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
             </div>
           ))}
         </div>
+        <ProductRecommendations key={product.id} sources={[product]} products={products} cart={cart} user={user} promotions={promotions} onAdd={onAddRecommendation} onSelect={onSelectRecommendation} />
       </div>
     </div>
   );

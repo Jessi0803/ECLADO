@@ -134,7 +134,7 @@ export default function ShopPage({
     setCart(prev => {
       const cartKey = getCartKey(product);
       const ex = prev.find(i => getCartKey(i) === cartKey);
-      if (ex) return prev.map(i => getCartKey(i) === cartKey ? { ...i, qty: i.qty+1 } : i);
+      if (ex) return prev.map(i => getCartKey(i) === cartKey ? { ...i, qty: i.qty+1, recommendationOnly:false } : i);
       return [...prev, { ...product, cartKey, qty:1 }];
     });
   }

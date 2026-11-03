@@ -1,6 +1,8 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import CheckoutField from '../components/checkout/CheckoutField.jsx';
 import CheckoutOrderSummary from '../components/checkout/CheckoutOrderSummary.jsx';
+import ProductRecommendations from '../components/product/ProductRecommendations.jsx';
+import { addRecommendationToCart, isRecommendationProductAvailable } from '../domain/productRecommendations.js';
 import CheckoutSteps from '../components/checkout/CheckoutSteps.jsx';
 import PaymentInfo from '../components/checkout/PaymentInfo.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
@@ -700,14 +702,24 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
 
         <form onSubmit={handleNext}>
           <div className="gcheckout gcheckout-flow">
-            <CheckoutOrderSummary
-              items={paymentSnapshot || couponQuote?.items || automaticSummary?.items || cart}
-              pricingNotice={paymentSummary || couponQuote ? '' : automaticNotice}
-              products={products}
-              summary={paymentSummary || checkoutSummary}
-              user={user}
-              fulfillmentMethod={paymentSummary?.fulfillmentMethod || fulfillmentMethod}
-            />
+            <div className="checkout-summary-column">
+              <CheckoutOrderSummary
+                items={paymentSnapshot || couponQuote?.items || automaticSummary?.items || cart}
+                pricingNotice={paymentSummary || couponQuote ? '' : automaticNotice}
+                products={products}
+                summary={paymentSummary || checkoutSummary}
+                user={user}
+                fulfillmentMethod={paymentSummary?.fulfillmentMethod || fulfillmentMethod}
+              />
+              <ProductRecommendations sources={cart} products={products} cart={cart} user={user} compact
+                disabled={submitting || couponState.loading}
+                onAdd={product => {
+                  if (submittingRef.current || couponState.loading || !isRecommendationProductAvailable(product, user)) return;
+                  setCouponQuote(null);
+                  setPaymentError('');
+                  setCart(previous => addRecommendationToCart(previous, product));
+                }} />
+            </div>
             <div ref={checkoutFieldsRef} className="checkout-fields" data-testid="checkout-fields">
               {step === 1 && (
                 <div style={{ display:'flex', flexDirection:'column', gap:20 }}>

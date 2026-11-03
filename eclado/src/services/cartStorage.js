@@ -25,6 +25,7 @@ export function loadStoredCart() {
         variantId,
         cartKey,
         qty: Math.min((previous?.qty || 0) + qty, MAX_CART_QUANTITY),
+        ...(item.recommendationOnly === true && (!previous || previous.recommendationOnly === true) ? { recommendationOnly: true } : {}),
       });
     });
 
@@ -40,6 +41,7 @@ export function saveStoredCart(cart) {
       id: Number(item.id),
       variantId: String(item.variantId || item.variantSize || ''),
       qty: normalizeQuantity(item.qty),
+      ...(item.recommendationOnly === true ? { recommendationOnly: true } : {}),
     })).filter(item => Number.isInteger(item.id) && item.id > 0 && item.qty > 0);
 
     if (items.length === 0) {

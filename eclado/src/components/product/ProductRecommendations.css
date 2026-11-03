@@ -1,0 +1,30 @@
+.product-recommendations { margin-top:48px; border-top:1px solid var(--light); padding-top:28px; min-width:0; }
+.product-recommendations h2 { font-family:var(--font-display); font-size:24px; font-weight:400; margin:0 0 24px; }
+.recommendation-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:32px 24px; }
+.recommendation-grid > * { min-width:0; }
+.recommendation-label { font-size:10px; line-height:1.5; color:var(--dark); margin:0 0 6px; }
+.product-recommendations--compact { margin-top:16px; padding:16px 12px 8px; background:var(--off-white); }
+.product-recommendations--compact h2 { font-size:16px; margin:0 0 8px; }
+.recommendation-list { max-height:294px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
+.recommendation-row { display:grid; grid-template-columns:40px minmax(0,1fr) 28px; gap:10px; align-items:center; height:84px; box-sizing:border-box; border-bottom:1px solid var(--light); }
+.recommendation-row:last-child { border-bottom:0; }
+.recommendation-row-image { width:40px; height:48px; }
+.recommendation-row-info { min-width:0; }
+.recommendation-row .recommendation-label { font-size:9px; margin:0 0 2px; }
+.recommendation-row-name { font-size:12px; line-height:1.5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin:0 0 3px; }
+.recommendation-row-details { display:flex; align-items:center; gap:8px; font-size:10px; color:var(--dark); line-height:1.6; }
+.recommendation-row-details > span { white-space:nowrap; }
+.recommendation-row-details > span:first-child { overflow:hidden; text-overflow:ellipsis; }
+.recommendation-row-details select { min-width:0; max-width:50%; padding:1px 2px; font-family:inherit; font-size:10px; color:inherit; border:1px solid var(--light); background:transparent; }
+.recommendation-add { display:flex; align-items:center; justify-content:center; width:28px; height:28px; padding:0; border:0; background:transparent; color:var(--black); font-size:22px; line-height:1; cursor:pointer; }
+.recommendation-add:disabled { cursor:default; opacity:0.35; }
+.recommendation-add { border-radius:50%; transition:background-color 180ms, color 180ms; }
+.recommendation-add--added { color:var(--accent); background:var(--accent-tint); }
+.recommendation-add-symbol { display:flex; align-items:center; justify-content:center; width:20px; height:20px; line-height:1; }
+.recommendation-add-symbol svg { display:block; }
+.recommendation-add--added .recommendation-add-symbol { animation:recommendation-added 320ms ease-out; }
+@keyframes recommendation-added { 0% { opacity:0; transform:translateY(5px) scale(0.5); } 65% { opacity:1; transform:translateY(-2px) scale(1.15); } 100% { opacity:1; transform:translateY(0) scale(1); } }
+@media(prefers-reduced-motion:reduce) { .recommendation-add { transition:none; } .recommendation-add--added .recommendation-add-symbol { animation:none; } }
+.recommendation-add:focus-visible, .recommendation-list:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.recommendation-add:focus-visible { outline-offset:-2px; }
+@media(max-width:900px) { .recommendation-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px 16px; } }

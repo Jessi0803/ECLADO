@@ -144,6 +144,7 @@
   .gcheckout{ display: grid; grid-template-columns: minmax(0,1fr) 320px; gap: 60px; }
   .gcheckout-flow { grid-template-areas: 'fields summary'; }
   .gcheckout-flow > [data-testid="checkout-order-summary"] { grid-area: summary; }
+  .gcheckout-flow > .checkout-summary-column { grid-area:summary; min-width:0; }
   .gcheckout-flow > .checkout-fields { grid-area: fields; }
   .gcart > *, .gcheckout > * { min-width:0; }
   .gstats   { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 360px; }

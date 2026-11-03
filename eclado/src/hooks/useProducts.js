@@ -116,7 +116,8 @@ export default function useProducts(user, setCart, authReady = true, includeEven
         }
         const nextProduct = applyVariantToProduct(product, variant);
         const qty = Math.min(Math.max(Math.floor(Number(item.qty) || 0), 1), 99);
-        return { ...nextProduct, cartKey: getCartKey(nextProduct), qty };
+        return { ...nextProduct, cartKey: getCartKey(nextProduct), qty,
+          ...(item.recommendationOnly === true ? { recommendationOnly: true } : {}) };
       }).filter(Boolean));
     }
 
