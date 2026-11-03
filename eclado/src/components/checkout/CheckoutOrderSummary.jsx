@@ -1,3 +1,4 @@
+import { useFulfillmentDisplay } from '../../hooks/useStorefrontDisplay.jsx';
 import React, { useState } from 'react';
 import {
   getCartKey,
@@ -26,6 +27,7 @@ function OrderProductImage({ source, fallback, name }) {
 }
 
 export default function CheckoutOrderSummary({ items, summary, user, fulfillmentMethod = 'delivery', products = [], pricingNotice = '' }) {
+  const showFulfillment = useFulfillmentDisplay();
   const hasPreorderItem = items.some(item => !item.is_gift && item.line_type !== 'gift' && getSummaryFulfillment(item).type === 'preorder');
 
   return (
@@ -33,8 +35,9 @@ export default function CheckoutOrderSummary({ items, summary, user, fulfillment
       <h3 style={{ fontFamily:'var(--font-display)', fontSize:16, fontWeight:400, marginBottom:20, letterSpacing:'0.04em' }}>訂單明細</h3>
       {pricingNotice && <p role="status" style={{ fontSize:12, marginBottom:12, lineHeight:1.6 }}>{pricingNotice}</p>}
       {hasPreorderItem && (
-        <div style={{ background:'var(--accent-tint)', border:'1px solid var(--accent)', padding:'12px 14px', marginBottom:16, fontSize:12, color:'var(--dark)', lineHeight:1.7 }}>
-          訂單含預購商品，預購品項出貨時間為 7-14 個工作天。
+        <div data-testid="checkout-shipping-notice" style={{ background:'var(--accent-tint)', border:'1px solid var(--accent)', padding:'12px 14px', marginBottom:16, fontSize:12, color:'var(--dark)', lineHeight:1.7 }}>
+          <strong style={{ display:'block', marginBottom:4 }}>出貨提醒</strong>
+          本次訂單含需備貨商品，預購品項預計約 7–14 個工作天出貨，請確認可接受等待時間後再付款。
         </div>
       )}
       <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:18 }}>
@@ -58,7 +61,7 @@ export default function CheckoutOrderSummary({ items, summary, user, fulfillment
               <div style={{ flex:1, minWidth:0 }}>
                 <p style={{ fontSize:12, color:'var(--black)', marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{isGift && <span style={{ marginRight:6, color:'var(--accent)', fontSize:10 }}>贈品</span>}{item.nameZh || item.name}</p>
                 <p style={{ fontSize:11, color:'var(--dark)' }}>{item.size}</p>
-                {fulfillment.type !== 'loading' && <p style={{ fontSize:10, color: fulfillment.type === 'preorder' ? 'var(--accent)' : 'var(--dark)', marginTop:3, lineHeight:1.45 }}>{fulfillment.label}{fulfillment.shipping ? ` · ${fulfillment.shipping.replace('出貨時間為 ', '')}` : ''}</p>}
+                {showFulfillment && fulfillment.type !== 'loading' && <p style={{ fontSize:10, color: fulfillment.type === 'preorder' ? 'var(--accent)' : 'var(--dark)', marginTop:3, lineHeight:1.45 }}>{fulfillment.label}{fulfillment.shipping ? ` · ${fulfillment.shipping.replace('出貨時間為 ', '')}` : ''}</p>}
               </div>
               <span style={{ fontSize:13, color:isGift ? 'var(--accent)' : 'var(--black)', flexShrink:0, fontFamily:'var(--font-display)' }}>{isGift ? '免費' : `NT$ ${(unitPrice * item.qty).toLocaleString()}`}</span>
             </div>

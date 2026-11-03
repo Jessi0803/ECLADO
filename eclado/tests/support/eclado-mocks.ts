@@ -241,6 +241,7 @@ export type MockEcladoApiOptions = {
   productVariants?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
   productImages?: Record<string, unknown>[] | (() => Record<string, unknown>[]);
   siteAnnouncement?: { content:string; enabled:boolean; start_at?:string|null; end_at?:string|null };
+  showFulfillment?: boolean;
   siteAnnouncementReadError?: boolean;
   siteAnnouncementSaveError?: boolean;
   onSiteAnnouncementSave?: (payload: Record<string, unknown>) => void;
@@ -1227,6 +1228,13 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       return json(route, []);
     }
     return json(route, []);
+  });
+
+  let showFulfillment = options.showFulfillment ?? true;
+  await page.route('**/rest/v1/storefront_display_settings**', route => json(route, {show_fulfillment:showFulfillment}));
+  await page.route('**/rest/v1/rpc/save_storefront_display_settings', route => {
+    showFulfillment = route.request().postDataJSON().p_show_fulfillment;
+    return json(route, {show_fulfillment:showFulfillment});
   });
 
   let siteAnnouncement = options.siteAnnouncement || {content:'', enabled:false, start_at:null, end_at:null};

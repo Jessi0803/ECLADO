@@ -1,3 +1,4 @@
+import { useFulfillmentDisplay } from '../../hooks/useStorefrontDisplay.jsx';
 import React, { useEffect, useState } from 'react';
 import useIsMobile from '../../hooks/useIsMobile.js';
 import PromotionLabel from './PromotionLabel.jsx';
@@ -20,6 +21,7 @@ import {
 } from '../../domain/promotions.js';
 
 export default function ProductDetail({ product, user, onAdd, onBack, promotions = [], products = [], cart = [], onAddRecommendation, onSelectRecommendation }) {
+  const showFulfillment = useFulfillmentDisplay();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
@@ -104,10 +106,10 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
             <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 26 : 34, fontWeight:300, color:'var(--black)', lineHeight:1.2, marginBottom:6 }}>{product.nameZh}</h1>
             {product.subtitle && <p style={{ fontSize:13, color:'var(--accent)', letterSpacing:'0.08em', marginBottom:8 }}>{product.subtitle}</p>}
             <p style={{ fontSize:12, color:'var(--dark)', letterSpacing:'0.1em', marginBottom:28 }}>{product.name} · {displayProduct.size}</p>
-            <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:10, marginBottom:22 }}>
+            {showFulfillment && <div data-testid="product-fulfillment" style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:10, marginBottom:22 }}>
               <span style={{ fontSize:11, letterSpacing:'0.12em', color:'var(--white)', background: fulfillment.type === 'preorder' ? 'var(--accent)' : fulfillment.type === 'loading' ? 'var(--mid)' : 'var(--black)', padding:'5px 10px' }}>{fulfillment.label}</span>
               {fulfillment.shipping && <span style={{ fontSize:13, color:'var(--dark)', lineHeight:1.6 }}>{fulfillment.shipping}</span>}
-            </div>
+            </div>}
 
             {displayPromotions.length > 0 && (
               <section aria-label="活動說明" style={{ background:'var(--accent-tint)', border:'1px solid var(--light)', padding:'16px 18px', marginBottom:20 }}>

@@ -1,3 +1,4 @@
+import { useFulfillmentDisplay } from '../hooks/useStorefrontDisplay.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import CheckoutChoiceModal from '../components/cart/CheckoutChoiceModal.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
@@ -20,6 +21,7 @@ import { getOrderMinimumPreview, isOrderMinimumRejection } from '../domain/order
 
 // ─── CART PAGE ────────────────────────────────────────────────────────────────
 export default function CartPage({ cart, setCart, setPage, user, promotions = [], drawer = false, onClose }) {
+  const showFulfillment = useFulfillmentDisplay();
   const isMobile = useIsMobile();
   const [showCheckoutChoice, setShowCheckoutChoice] = useState(false);
   const [itemsScrolling, setItemsScrolling] = useState(false);
@@ -176,7 +178,7 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
                     <div>
                       <p data-testid="cart-item-name" style={{ fontFamily:'var(--font-display)', fontSize:14, fontWeight:400, marginBottom:3 }}>{item.nameZh}</p>
                       <p data-testid="cart-item-specification" style={{ fontSize:12, color:'var(--dark)', marginBottom:6 }}>{item.size}</p>
-                      <p style={{ fontSize:11, color: fulfillment.type === 'preorder' ? 'var(--accent)' : 'var(--dark)', marginBottom:10, lineHeight:1.5 }}>{fulfillment.type === 'loading' ? '庫存資料載入中' : `${fulfillment.label} · ${fulfillment.shipping}`}</p>
+                      {showFulfillment && <p data-testid="cart-item-fulfillment" style={{ fontSize:11, color: fulfillment.type === 'preorder' ? 'var(--accent)' : 'var(--dark)', marginBottom:10, lineHeight:1.5 }}>{fulfillment.type === 'loading' ? '庫存資料載入中' : `${fulfillment.label} · ${fulfillment.shipping}`}</p>}
                       <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                         <button onClick={() => updateQty(getCartKey(item),-1)} style={{ width:26, height:26, border:'1px solid var(--light)', background:'none', cursor:'pointer', fontSize:15, lineHeight:1 }}>−</button>
                         <span style={{ fontSize:14, minWidth:20, textAlign:'center', fontFamily:'var(--font-display)' }}>{item.qty}</span>

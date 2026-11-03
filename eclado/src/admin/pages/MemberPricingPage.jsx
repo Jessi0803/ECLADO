@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PRICING_ROLES, PRICING_LABELS, parseFold, formatFold } from '../../domain/memberPricing.js';
 import { fetchMemberPricingSettings, saveMemberPricingSettings } from '../../services/memberPricing.js';
+import StorefrontDisplaySettings from '../components/StorefrontDisplaySettings.jsx';
 import StudentPricingSettingsSection from '../components/StudentPricingSettingsSection.jsx';
 
 export default function MemberPricingPage({ onSaved, canManageMemberPricing = true, canManageInstructorStudents = false }) {
@@ -48,7 +49,8 @@ export default function MemberPricingPage({ onSaved, canManageMemberPricing = tr
   }
   return <div>
     <h1 style={{ fontFamily:'var(--font-d)', fontSize:28, fontWeight:400, marginBottom:4 }}>系統設定</h1>
-    <p style={{ fontSize:13, color:'var(--mid)', marginBottom:28 }}>會員定價：設定師資、經銷商與內部人員的預設折數。</p>
+    <p style={{ fontSize:13, color:'var(--mid)', marginBottom:28 }}>管理前台商品顯示、會員定價與學生價格設定。</p>
+    {canManageMemberPricing && <StorefrontDisplaySettings />}
     {canManageMemberPricing && <form onSubmit={save} style={{ maxWidth:720, padding:24, background:'var(--white)', border:'1px solid var(--border)' }}>
       <h2 style={{ fontSize:18, marginBottom:18 }}>會員定價</h2>
       {PRICING_ROLES.map(role => <label key={role} style={{ display:'block', marginBottom:16, fontSize:13 }}>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { StorefrontDisplayProvider } from '../hooks/useStorefrontDisplay.jsx';
 import useAuth from '../hooks/useAuth.js';
 import useProducts from '../hooks/useProducts.js';
 import usePromotions from '../hooks/usePromotions.js';
@@ -54,6 +55,10 @@ import { goProfessionalApply } from '../services/membership.js';
 import useNoIndex from '../hooks/useNoIndex.js';
 
 export default function App() {
+  return <StorefrontDisplayProvider><StorefrontApp /></StorefrontDisplayProvider>;
+}
+
+function StorefrontApp() {
   const [productPath, setProductPath] = useState(() => window.location.pathname);
   const [journalArticleSlug, setJournalArticleSlug] = useState(() => journalSlugFromPath(window.location.pathname));
   const [page, setPageState] = useState(() => {
