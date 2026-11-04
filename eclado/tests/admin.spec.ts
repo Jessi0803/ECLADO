@@ -3783,3 +3783,51 @@ for (const benefit of ['percentage_discount','fixed_discount','amount_gift','qua
     if(benefit.endsWith('_gift')) expect(saves[0]).toMatchObject({gift_variant_id:101,gift_quantity:2,repeat_mode:'repeat'});
   });
 }
+
+for (const benefit of ['amount_gift','quantity_gift']) {
+  test(`${benefit} 可新增多項贈品、各自設定數量並移除`, async ({ page }) => {
+    const saves:Record<string,unknown>[]=[];
+    await mockAdminApis(page,{
+      productVariants:adminProductVariants.map(v=>({...v,gift_enabled:true,gift_stock:10})),
+      onDiscountPromotionSave:p=>saves.push(p),
+    });
+    await page.goto('/admin'); await openAdminSection(page,/活動管理/);
+    await page.getByRole('button',{name:'+ 新增優惠活動'}).click();
+    await page.getByPlaceholder('例：秋季保養 9 折').fill('多項贈品活動');
+    await page.getByLabel('優惠類型').selectOption(benefit);
+    await page.getByText(benefit==='amount_gift'?'滿額門檻（NT$）*':'滿幾件贈送 *',{exact:true}).locator('..').getByRole('spinbutton').fill(benefit==='amount_gift'?'3000':'3');
+    await page.getByLabel('贈品庫存',{exact:true}).selectOption('101');
+    await page.getByLabel('贈品 1 每次贈送數量').fill('2');
+    await page.getByRole('button',{name:'+ 新增贈品'}).click();
+    await expect(page.getByLabel('贈品 2 庫存').locator('option[value="101"]')).toBeDisabled();
+    await page.getByLabel('贈品 2 庫存').selectOption('201');
+    await page.getByLabel('贈品 2 每次贈送數量').fill('3');
+    await page.getByRole('button',{name:'+ 新增贈品'}).click();
+    await page.getByLabel('移除贈品 3').click();
+    await page.getByLabel('達標方式').selectOption('repeat');
+    await expect(page.getByText(/庫存不足時剩多少送多少/)).toBeVisible();
+    await page.getByRole('button',{name:'建立活動',exact:true}).click();
+    await expect.poll(()=>saves.length).toBe(1);
+    expect(saves[0]).toMatchObject({benefit_type:benefit,gift_rewards:[{variant_id:101,quantity:2},{variant_id:201,quantity:3}],repeat_mode:'repeat'});
+  });
+  test(`${benefit} 編輯與複製保留多項贈品及順序`, async ({ page }) => {
+    const saves:Record<string,unknown>[]=[];
+    const source={...activePromotion,id:'multi-gift',name:'多贈品原活動',benefit_type:benefit,activation_type:'automatic',
+      threshold_type:benefit==='amount_gift'?'amount':'quantity',threshold_value:3000,gift_variant_id:101,gift_quantity:2,repeat_mode:'once',
+      gift_rewards:[{variant_id:201,quantity:3,sort_order:1},{variant_id:101,quantity:2,sort_order:0}]};
+    await mockAdminApis(page,{promotions:[source],productVariants:adminProductVariants.map(v=>({...v,gift_enabled:true,gift_stock:10})),
+      promotionScopes:['benefit','qualification'].map(scope_role=>({promotion_id:source.id,scope_role,mode:'include',target_type:'all_regular'})),
+      onDiscountPromotionSave:p=>saves.push(p)});
+    await page.goto('/admin'); await openAdminSection(page,/活動管理/);
+    await page.getByRole('button',{name:'編輯活動',exact:true}).click();
+    await expect(page.getByLabel('贈品庫存',{exact:true})).toHaveValue('101');
+    await expect(page.getByLabel('贈品 2 庫存')).toHaveValue('201');
+    await page.getByRole('button',{name:'儲存變更',exact:true}).click();
+    await expect.poll(()=>saves.length).toBe(1);
+    await page.getByRole('button',{name:'複製',exact:true}).click();
+    await expect(page.getByLabel('贈品 2 每次贈送數量')).toHaveValue('3');
+    await page.getByRole('button',{name:'建立活動',exact:true}).click();
+    await expect.poll(()=>saves.length).toBe(2);
+    expect(saves[1]).toMatchObject({id:null,active:false,gift_rewards:[{variant_id:101,quantity:2},{variant_id:201,quantity:3}]});
+  });
+}
