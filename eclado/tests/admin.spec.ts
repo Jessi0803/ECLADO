@@ -890,6 +890,19 @@ test('訂單付款區分 API 成功與信用卡內層 3D 失敗，顯示銀行�
   await page.screenshot({path:`docs/evidence/sinopac-diagnostics-${test.info().project.name}.png`});
 });
 
+test('付款診斷顯示永豐建單備註長度錯誤', async ({ page }) => {
+  await mockAdminApis(page);
+  await page.route('**/rest/v1/rpc/get_admin_order_payment_diagnostics', route => route.fulfill({ json: [
+    { id:'create-1', attempt_no:1, source:'create', api_service:'OrderCreate', api_status:'F', api_message_code:'E1401', recorded_at:'2026-11-06T18:54:49Z' },
+  ] }));
+  await page.goto('/admin');
+  await openAdminSection(page, /訂單管理/);
+  await page.getByText('E2E-ORDER-001', { exact:true }).click();
+  const diagnostics = page.getByRole('region', { name:'永豐付款診斷' });
+  await expect(diagnostics.getByText('觀測來源：建立付款單 · OrderCreate')).toBeVisible();
+  await expect(diagnostics.getByText('API 執行：失敗（F） · E1401 備註長度錯誤')).toBeVisible();
+});
+
 test('付款診斷顯示 API 認證失敗，並保留訂單已付款的事實', async ({ page }) => {
   await mockAdminApis(page,{orders:adminOrderRows.map(row=>row.id==='E2E-ORDER-001'?{...row,status:'paid'}:row)});
   await page.route('**/rest/v1/rpc/get_admin_order_payment_diagnostics',route=>route.fulfill({json:[

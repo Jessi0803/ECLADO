@@ -250,8 +250,6 @@ function buildCreateBody(input) {
     QRCodeSize: Number(input.qrCodeSize || 350),
   };
 
-  if (input.memo) body.Memo = input.memo;
-
   if (payType === 'A') {
     body.ATMParam = {
       ExpireDate: input.expireDate,

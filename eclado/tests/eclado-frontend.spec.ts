@@ -1238,6 +1238,13 @@ test('數字型規格 ID 經 localStorage 還原後仍保留商品與正確價�
 });
 
 test('結帳建立付款單但不寫入真實訂單或真金流', async ({ page }) => {
+  const note = '請於出貨前聯繫收件人'.repeat(4);
+  let pricingRequest: Record<string, unknown> | undefined;
+  let paymentRequest: Record<string, unknown> | undefined;
+  await mockEcladoApis(page, {
+    onOrderPricingRequest: request => { pricingRequest = request; },
+    onPaymentRequest: request => { paymentRequest = request; },
+  });
   await page.goto('/shop');
   await page.getByText('胜肽修護精華液').first().click();
   await page.getByRole('button', { name: /加入購物車/ }).click();
@@ -1251,6 +1258,7 @@ test('結帳建立付款單但不寫入真實訂單或真金流', async ({ page 
   await page.getByPlaceholder('縣市').fill('台北市');
   await page.getByPlaceholder('區域').fill('大安區');
   await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('測試路 1 號');
+  await page.getByPlaceholder('如有特殊需求請於此備註').fill(note);
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
 
   await expect(page.getByText('付款方式')).toBeVisible();
@@ -1258,6 +1266,9 @@ test('結帳建立付款單但不寫入真實訂單或真金流', async ({ page 
   await page.getByRole('button', { name: /確認訂單/ }).click();
 
   await expect(page.getByRole('heading', { name: '請完成付款' })).toBeVisible();
+  expect(pricingRequest).toMatchObject({ p_note: note });
+  expect(paymentRequest).toBeDefined();
+  expect(paymentRequest).not.toHaveProperty('memo');
   await expect(page.getByText('807 永豐銀行')).toBeVisible();
   await expect(page.getByText('8071234567890123')).toBeVisible();
   await expect(page.getByText('2026/08/19 23:59 前')).toBeVisible();

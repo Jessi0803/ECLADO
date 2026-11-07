@@ -516,7 +516,6 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
         returnUrl: `${SINOPAC_PAYMENT_API}/return?orderNo=${encodeURIComponent(authoritativeOrderNo)}`,
         backendUrl: `${SINOPAC_NOTIFY_API}?orderNo=${encodeURIComponent(authoritativeOrderNo)}`,
         qrCodeStatus: 'Y',
-        memo: safeTrim(form.note),
         Param1: authoritativeOrderNo,
         checkoutTrace: checkoutAttempt.trace,
       };

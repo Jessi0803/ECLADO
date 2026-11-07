@@ -314,7 +314,7 @@ test('buildCreateBody: ATM 帶 ATMParam；金額為 0 應拋錯', () => {
   assert.throws(() => server.buildCreateBody({ orderNo: 'X', amount: 0, payType: 'A' }), /amount/);
 });
 
-test('buildAuthoritativeCreateBody: 忽略呼叫端 amount，使用資料庫實際應付額', async () => {
+test('buildAuthoritativeCreateBody: 使用資料庫實際應付額並忽略舊版前端的長備註', async () => {
   const originalFetch = global.fetch;
   global.fetch = async (url, options) => {
     if (String(url).includes('/rest/v1/orders?')) {
@@ -347,7 +347,9 @@ test('buildAuthoritativeCreateBody: 忽略呼叫端 amount，使用資料庫實�
       paymentToken: 'payment-token-test',
       amount: 1,
       payType: 'A',
+      memo: '請於出貨前聯繫收件人'.repeat(4),
     });
+    assert.equal(Object.hasOwn(body, 'Memo'), false);
     assert.equal(body.Amount, 398000);
     assert.equal(body.OrderNo, 'ECL-AUTH-001-R2');
     assert.equal(body.PrdtName, '胜肽修護精華液');
