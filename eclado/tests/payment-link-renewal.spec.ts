@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { mockEcladoApis } from './support/eclado-mocks';
+import { mockEcladoApis, mockProducts } from './support/eclado-mocks';
 
 test('到期的行動支付連結可在原訂單繼續付款，文案說明訂單仍保留', async ({ page }, testInfo) => {
   let orderWrites = 0;
@@ -122,4 +122,37 @@ test('建單連線中斷後查證並續付，全程沿用已建立的訂單', as
   expect(renewedOrderNo).toBe(originalOrderNo);
   expect(orderWrites).toBe(1);
   expect(creates).toBe(1);
+});
+
+test('結帳金額超過三萬元仍保留 ATM 選項並提示上限', async ({ page }) => {
+  let orderWrites = 0;
+  let paymentCreates = 0;
+  await mockEcladoApis(page, {
+    products:mockProducts.map(product => product.id === 2 ? {...product,price:40000,stock:20} : product),
+    promotions:[],
+    onOrderPricingRequest:() => { orderWrites++; },
+    onPaymentRequest:() => { paymentCreates++; },
+  });
+  await page.goto('/shop');
+  await page.getByText('胜肽修護精華液').first().click();
+  await page.getByRole('button',{name:/加入購物車/}).click();
+  await page.locator('nav').getByRole('button',{name:/^購物車/}).click();
+  await page.getByRole('dialog',{name:'購物車'}).getByRole('button',{name:/前往結帳/}).click();
+  const guest = page.getByRole('button',{name:/訪客結帳/});
+  if (await guest.isVisible()) await guest.click();
+  await page.getByLabel('收件人姓名（請填寫證件上的姓名）').fill('上限測試');
+  await page.getByLabel('手機號碼').fill('0912345678');
+  await page.getByLabel('電子信箱').fill('limit@example.test');
+  await page.getByPlaceholder('縣市').fill('台北市');
+  await page.getByPlaceholder('區域').fill('大安區');
+  await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('測試路 1 號');
+  await page.getByRole('button',{name:/繼續確認付款/}).click();
+  const atm = page.getByRole('button',{name:/虛擬帳號匯款/});
+  await expect(atm).toBeVisible();
+  await expect(atm).toBeEnabled();
+  await atm.click();
+  await page.getByRole('button',{name:/確認訂單/}).click();
+  await expect(page.getByText('ATM 轉帳單筆上限為 NT$ 30,000，請選擇其他付款方式。',{exact:true})).toBeVisible();
+  expect(orderWrites).toBe(0);
+  expect(paymentCreates).toBe(0);
 });

@@ -694,7 +694,7 @@ function paymentPresentationState(order, instruction) {
 }
 
 function customerPaymentError(error) {
-  return /^[\u3400-\u9fff]/.test(String(error?.message || ''))
+  return /^(?:ATM 轉帳單筆上限|[\u3400-\u9fff])/.test(String(error?.message || ''))
     ? error.message : '暫時無法繼續付款，請稍後再試，或聯繫客服協助。';
 }
 

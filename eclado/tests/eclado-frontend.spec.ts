@@ -1926,7 +1926,7 @@ test('訪客逾期或已取消訂單不可重新付款或建立第二張付款�
   await page.getByRole('button', { name: '查看訂單' }).click();
 
   await expect(page.locator('span').filter({ hasText: /^已取消$/ })).toBeVisible();
-  await expect(page.getByText('付款期限已過，無法重新付款或建立第二張付款單。')).toBeVisible();
+  await expect(page.getByText('訂單付款期限已過。如仍需購買，請重新下單。')).toBeVisible();
   await expect(page.getByRole('button', { name: '查看付款資訊／繼續付款' })).toHaveCount(0);
 });
 

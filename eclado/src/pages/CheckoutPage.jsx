@@ -581,7 +581,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       console.error(err);
       const message = err?.name === 'AbortError'
         ? '付款服務連線逾時，請稍後再試或聯繫客服。'
-        : /^[\u3400-\u9fff]/.test(err?.message || '') ? err.message : '目前無法繼續付款，請稍後再試，或聯繫客服協助。';
+        : /^(?:ATM 轉帳單筆上限|[\u3400-\u9fff])/.test(err?.message || '') ? err.message : '目前無法繼續付款，請稍後再試，或聯繫客服協助。';
       setWalletRevision(r=>r+1);
       errorAttemptRef.current = { attempt: checkoutAttempt, details: checkoutErrorDetails(err) };
       setPaymentError(message);

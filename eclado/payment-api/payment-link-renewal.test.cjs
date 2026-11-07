@@ -177,6 +177,19 @@ test('payment creation and renewal use only simulated bank/DB responses', async 
       assert.equal(bankRequests[0].inner.Amount, 2900000);
       assert.equal(order.shopping_credit_amount, 2000);
     });
+    await t.test('ATM over the limit returns the customer message without sending a bank request', async () => {
+      reset('atm');
+      authorization.created = false;
+      instruction = null;
+      order.total = 31200;
+      order.shopping_credit_amount = 1000;
+      order.payment_amount = 30200;
+      const result = await request('create-payment', {payType:'A'});
+      assert.equal(result.ok, false);
+      assert.equal(result.error, 'ATM 轉帳單筆上限為 NT$ 30,000，請選擇其他付款方式。');
+      assert.equal(creates, 0);
+      assert.equal(authorization.claimed, false);
+    });
     await t.test('new links never extend beyond the remaining order deadline', async () => {
       reset();
       authorization.created = false;
