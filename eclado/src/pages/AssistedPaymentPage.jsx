@@ -21,7 +21,7 @@ export default function AssistedPaymentPage(){
     if(Number(details?.order?.shopping_credit_amount)>0&&!details?.creditConsentRecorded&&!creditAgreed){setError('請先同意使用本訂單的購物金。');return;}
     if(operation.current)return;operation.current=true;setBusy(true);setError('');
     try{
-      if(details?.instruction?.provider_status && details.instruction?.payment_state==='failed'){
+      if(['failed','link_expired','initiated'].includes(details?.paymentState || details?.instruction?.payment_state)){
         const retry=await retrySinopacPayment({orderNo:access.orderNo,resultAccessToken:details.resultAccessToken});
         const target=new URL(retry.paymentLink);
         if(target.protocol!=='https:')throw new Error('付款連結格式錯誤');
@@ -71,7 +71,7 @@ export default function AssistedPaymentPage(){
       {!payable&&<p role="status" style={{marginTop:16}}>此訂單目前狀態：{({paid:'已付款',preparing:'備貨中',shipped:'已出貨',delivered:'已完成',cancelled:'已取消',returned:'已退貨',ready_for_pickup:'可取貨',picked_up:'已取貨'})[order.status]||order.status}，無需再次付款。</p>}
       {Number(order.shopping_credit_amount)>0&&<div style={{marginTop:16,lineHeight:1.8}}>
         {details.creditConsentRecorded?<p>已同意本訂單使用購物金 {money(order.shopping_credit_amount)}。</p>:payable&&<label style={{display:'flex',gap:10,alignItems:'flex-start'}}><input type="checkbox" checked={creditAgreed} onChange={event=>setCreditAgreed(event.target.checked)} style={{marginTop:7,accentColor:'var(--dark)'}}/>我已確認明細，同意本訂單使用購物金 {money(order.shopping_credit_amount)}。</label>}
-        {payable&&<p className="assisted-payment-hint">此金額已保留；同意後才建立銀行付款單。取消或到期未付款時會自動退回。</p>}
+        {payable&&<p className="assisted-payment-hint">此金額已為本訂單保留；確認使用後即可前往付款。取消訂單或逾期未付款時，將自動退回。</p>}
       </div>}
       {payable&&instruction?.atm_account&&<div className="assisted-payment-atm"><p>銀行：{instruction.atm_bank_code} 永豐銀行</p><p className="assisted-payment-account">虛擬帳號：{instruction.atm_account}</p><p>匯款金額：{money(order.payment_amount??order.total)}</p></div>}
       <div className="assisted-payment-actions">

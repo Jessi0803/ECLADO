@@ -7,6 +7,11 @@ process.env.SUPABASE_URL = 'https://supabase.example.test';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
 process.env.GUEST_LOOKUP_SECRET = 'test-guest-lookup-secret';
 process.env.PAYMENT_NOTIFY_SECRET = 'test-payment-notify-secret';
+Object.assign(process.env, {
+  SINOPAC_API_BASE_URL:'https://bank.example.test/api', SINOPAC_X_KEY:'fake-key', SINOPAC_SHOP_NO:'FAKE',
+  SINOPAC_A1:'65960834240E44B7', SINOPAC_A2:'2831076A098E49E7',
+  SINOPAC_B1:'CB1AFFBF915A492B', SINOPAC_B2:'7F242C0AA612454F',
+});
 const server = require('./server.js');
 
 test('retry authorization rejects unauthorized clients and sends legitimate retries through service RPC', async () => {
@@ -38,7 +43,15 @@ test('retry authorization rejects unauthorized clients and sends legitimate retr
     if (target.includes('/rest/v1/order_payment_instructions?')) return new Response(JSON.stringify([{
       order_id: id, payment_state: 'failed', payment_method: 'card', attempt_no: 1,
     }]));
-    if (target.endsWith('/rpc/begin_order_payment_retry')) {
+    if (target === 'https://bank.example.test/api/Nonce') return Response.json({Nonce:'1234567890ABCDEF'});
+    if (target === 'https://bank.example.test/api/Order') {
+      const request = JSON.parse(options.body);
+      const result = {Status:'S', OrderList:[{OrderNo:id, PayStatus:'1C250', PayType:'C'}]};
+      return Response.json({Nonce:request.Nonce,
+        Message:server.encryptMessage(server.getAesKey(),JSON.stringify(result),request.Nonce),
+        Sign:server.generateSign(result,server.getAesKey(),request.Nonce)});
+    }
+    if (target.endsWith('/rpc/begin_verified_order_payment_retry')) {
       retryCalls += 1;
       assert.equal(options.headers.Authorization, 'Bearer test-service-role-key');
       assert.equal(options.headers.apikey, 'test-service-role-key');
@@ -67,16 +80,16 @@ test('retry authorization rejects unauthorized clients and sends legitimate retr
     assert.equal(retryCalls, 0);
     memberId = 'owner';
     const memberResult = await request({}, 'owner-session');
-    assert.match(memberResult.error, /authorized retry boundary reached/);
+    assert.match(memberResult.error, /暫時無法繼續付款/);
     assert.equal(retryCalls, 1);
     assert.match((await request({ paymentToken: 'valid-payment-token' })).error,
-      /authorized retry boundary reached/);
+      /暫時無法繼續付款/);
     orderOwner = null;
     assert.match((await request({ guestAccessToken: server.createGuestAccessToken(id) })).error,
-      /authorized retry boundary reached/);
+      /暫時無法繼續付款/);
     orderOwner = 'owner';
     assert.match((await request({ resultAccessToken: server.createPaymentResultAccessToken(id) })).error,
-      /authorized retry boundary reached/);
+      /暫時無法繼續付款/);
     assert.equal(retryCalls, 4);
   } finally {
     global.fetch = originalFetch;

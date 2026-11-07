@@ -43,6 +43,7 @@ export async function createSinopacPayment(payload) {
       recoveryStored: data.recoveryStored === true,
       guestLookupCode: data.guestLookupCode || '',
       orderEmailSent: data.orderEmailSent === true,
+      linkExpiresAt: data.linkExpiresAt || '',
     };
   } finally {
     clearTimeout(timeout);
@@ -77,6 +78,7 @@ export async function querySinopacPayment({ orderNo, paymentToken, guestAccessTo
       response: data.response || {},
       order: data.order || null,
       paymentState: data.paymentState || '',
+      linkExpiresAt: data.linkExpiresAt || '',
     };
   } finally {
     clearTimeout(timeout);
@@ -102,9 +104,9 @@ export async function retrySinopacPayment({ orderNo, paymentToken, guestAccessTo
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || data.ok === false) {
-      throw new Error(data.error || `重新建立付款單失敗（HTTP ${response.status}）`);
+      throw new Error(data.error || '暫時無法繼續付款，請稍後再試。');
     }
-    if (!data.paymentLink) throw new Error('付款服務未回傳付款網址');
+    if (!data.paymentLink) throw new Error('暫時無法開啟付款頁，請稍後再試。');
     return data;
   } finally {
     clearTimeout(timeout);

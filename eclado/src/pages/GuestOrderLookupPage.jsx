@@ -138,6 +138,7 @@ export default function GuestOrderLookupPage({ setPage }) {
       paymentLink: instruction.payment_url || '',
       paymentDeadline: paymentDeadlineFromIso(instruction.payment_due_at || order.payment_due_at),
       paymentDueAt: instruction.payment_due_at || order.payment_due_at,
+      linkExpiresAt: instruction.link_expires_at,
       response: {
         Status: instruction.provider_status || '',
         Description: instruction.provider_description || '',
@@ -188,6 +189,7 @@ export default function GuestOrderLookupPage({ setPage }) {
         method:instruction?.payment_method || 'card',
         methodLabel:PAYMENT_METHODS[instruction?.payment_method]?.label || '付款',
         paymentLink:retry.paymentLink,
+        linkExpiresAt:retry.linkExpiresAt,
         paymentDueAt:authoritativeOrder.payment_due_at || order.payment_due_at,
         response:retry.response,
         summary:{
@@ -204,7 +206,7 @@ export default function GuestOrderLookupPage({ setPage }) {
       if (!saved) throw new Error('瀏覽器無法保存新的付款資訊');
       window.location.assign(retry.paymentLink);
     } catch (retryError) {
-      setError(retryError?.message || '重新建立付款單失敗，請稍後再試。');
+      setError(retryError?.message || '暫時無法繼續付款，請稍後再試。');
       setLoading(false);
     }
   }
@@ -240,7 +242,7 @@ export default function GuestOrderLookupPage({ setPage }) {
     && ['awaiting_confirm', 'unpaid'].includes(order?.status)
     && !paymentExpired
     && !!instruction;
-  const canRetryPayment = result?.paymentState === 'failed'
+  const canRetryPayment = ['failed', 'link_expired', 'initiated'].includes(result?.paymentState)
     && order?.status === 'unpaid'
     && !paymentExpired
     && ['card', 'apple', 'google'].includes(String(instruction?.payment_method || '').toLowerCase());
@@ -323,8 +325,8 @@ export default function GuestOrderLookupPage({ setPage }) {
                   {instruction?.payment_method && <div style={{ fontSize:11, color:'var(--dark)', marginBottom:5 }}>付款方式：{PAYMENT_METHODS[instruction.payment_method]?.label || instruction.payment_method}</div>}
                   {instruction?.payment_due_at && result.paymentState === 'pending' && <div style={{ fontSize:11, color:'var(--dark)', lineHeight:1.6 }}>付款期限：{formatDateTime(instruction.payment_due_at)}</div>}
                   {canResumePayment && <button type="button" onClick={openPayment} style={{ width:'100%', marginTop:16, border:'none', background:'var(--black)', color:'var(--white)', padding:'12px 14px', fontFamily:'inherit', fontSize:12, letterSpacing:'0.08em', cursor:'pointer' }}>查看付款資訊／繼續付款</button>}
-                  {canRetryPayment && <button type="button" disabled={loading} onClick={retryPayment} style={{ width:'100%', marginTop:16, border:'none', background:'var(--black)', color:'var(--white)', padding:'12px 14px', fontFamily:'inherit', fontSize:12, letterSpacing:'0.08em', cursor:loading ? 'wait' : 'pointer', opacity:loading ? 0.65 : 1 }}>{loading ? '正在建立付款單…' : '重新付款'}</button>}
-                  {!canResumePayment && ['expired', 'cancelled'].includes(result.paymentState) && <p style={{ marginTop:12, fontSize:11, color:'#8a3c2c', lineHeight:1.6 }}>付款期限已過，無法重新付款或建立第二張付款單。</p>}
+                  {canRetryPayment && <button type="button" disabled={loading} onClick={retryPayment} style={{ width:'100%', marginTop:16, border:'none', background:'var(--black)', color:'var(--white)', padding:'12px 14px', fontFamily:'inherit', fontSize:12, letterSpacing:'0.08em', cursor:loading ? 'wait' : 'pointer', opacity:loading ? 0.65 : 1 }}>{loading ? '正在確認付款狀態…' : result.paymentState === 'link_expired' ? '繼續付款' : '重新付款'}</button>}
+                  {!canResumePayment && ['expired', 'cancelled'].includes(result.paymentState) && <p style={{ marginTop:12, fontSize:11, color:'#8a3c2c', lineHeight:1.6 }}>訂單付款期限已過。如仍需購買，請重新下單。</p>}
                 </div>
 
                 <div style={{ background:'var(--white)', border:'1px solid var(--light)', padding:22 }}>

@@ -21,7 +21,7 @@ function fixture({bankFailure=false,rejected=false,duplicate=false,malformed=fal
     buildCreate:async input=>{if(claimed)throw new Error('claim exists');claimed=true;calls.push({name:'claim',input});return {OrderNo:'ORDER',Amount:1120};},
     callBank:async()=>{calls.push({name:'bank'});await new Promise(resolve=>setTimeout(resolve,5));if(bankFailure)throw new Error('timeout');return {data:malformed?{}:{Status:rejected||duplicate?'F':'S',Description:duplicate?'Duplicate order exists':rejected?'E0001 rejected':'S0000',PayToken:'test'}};},
     gatewayError:data=>data.Status==='F'?'Rejected':'',
-    saveInstruction:async()=>{if(persistFailure)throw new Error('database unavailable');instruction={payment_url:'https://bank.example.test/pay',payment_state:'pending'};},
+    saveInstruction:async(_order,_input,response,state='pending')=>{if(persistFailure)throw new Error('database unavailable');instruction={payment_url:state==='pending'?'https://bank.example.test/pay':null,payment_state:state,provider_status:response.Status};},
     saveAttempt:async()=>{},sendEmail:async()=>{},publicInstruction:entry=>entry,resultToken:()=> 'SHORT_RESULT',
   });
   async function request(action,body={orderNo:'ORDER',linkToken:'valid'}){
@@ -89,14 +89,14 @@ test('Apple/Google Pay use the existing wallet gateway mapping from the saved me
 });
 test('definite rejection releases claim but retains original order for same-ID retry',async()=>{
   const f=fixture({rejected:true});assert.equal((await f.request('payment')).statusCode,400);
-  assert.equal((await f.request('payment')).statusCode,400);assert.equal(f.calls.filter(call=>call.name==='bank').length,2);
+  assert.equal((await f.request('payment')).statusCode,409);assert.equal(f.calls.filter(call=>call.name==='bank').length,1);
   assert.equal(f.calls.find(call=>call.name==='resolve_assisted_payment_claim').args.p_outcome,'rejected');
 });
 test('duplicate bank response, malformed response and persistence failure never admit another creation',async()=>{
   for(const options of [{duplicate:true},{malformed:true},{persistFailure:true}]){
     const f=fixture(options);assert.equal((await f.request('payment')).statusCode,409);
-    assert.equal((await f.request('payment')).statusCode,409);assert.equal(f.calls.filter(call=>call.name==='bank').length,1);
-    assert.equal(f.calls.some(call=>call.name==='resolve_assisted_payment_claim'&&call.args.p_outcome==='rejected'),false);
+    assert.equal((await f.request('payment')).statusCode,409);assert.equal(f.calls.filter(call=>call.name==='bank').length,options.persistFailure?0:1);
+    assert.equal(f.calls.some(call=>call.name==='resolve_assisted_payment_claim'&&call.args.p_outcome==='rejected'),Boolean(options.persistFailure));
   }
 });
 test('paid/cancelled/expired orders cannot create payment',async()=>{

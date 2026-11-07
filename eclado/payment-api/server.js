@@ -117,7 +117,7 @@ function summarizePaymentWebhook(body) {
 
 function isPaidLike(value) {
   const v = String(value || '').trim().toUpperCase();
-  return ['Y', 'S', 'PAID', 'SUCCESS', 'OK', '1', '1C300', '1M400'].includes(v) || /^1[A-Z](300|400)$/.test(v);
+  return ['Y', 'S', 'PAID', 'SUCCESS', 'OK', '1', '1C300', '1M400'].includes(v) || /^1[A-Z](300|400|900)$/.test(v);
 }
 
 function isPendingLike(value) {
@@ -144,6 +144,7 @@ async function sinopacPost(path, body) {
       'X-KeyID': xKey,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(12000),
   }); } catch (error) {
     error.sinopacDiagnostic = { kind: ['AbortError','TimeoutError'].includes(error.name) ? 'timeout' : 'network' };
     throw error;
@@ -226,31 +227,56 @@ function recordResolvedPaymentDiagnostics(payment, orderId, providerOrderNo, sou
   if (payment?.raw?.orderQuery) void recordBankDiagnostic({ orderId, providerOrderNo, source, apiService:'OrderQuery' }, payment.raw.orderQuery);
 }
 
+function validateBankAmount(amount, payType) {
+  if (!Number.isSafeInteger(amount) || amount <= 0 || amount * 100 > 999999999) throw new Error('付款金額超出可受理範圍，請聯繫客服。');
+  if (payType === 'A' && amount > 30000) throw new Error('ATM 轉帳單筆上限為 NT$ 30,000，請選擇其他付款方式。');
+}
+
 function buildCreateBody(input) {
   const shopNo = must(process.env.SINOPAC_SHOP_NO, 'SINOPAC_SHOP_NO');
   const amount = Number(input.amount);
-  if (!Number.isFinite(amount) || amount <= 0) throw new Error('amount is required');
-  if (!input.orderNo) throw new Error('orderNo is required');
+  validateBankAmount(amount, input.payType || 'A');
+  if (!input.orderNo || Array.from(String(input.orderNo)).length > 50 || /['"%]/.test(String(input.orderNo))) throw new Error('訂單資料有誤，請聯繫客服。');
 
   const payType = input.payType || 'A';
   const publicUrl = process.env.PAYMENT_PUBLIC_URL || 'https://pay.ecladotaiwan.com';
+  if (!['A', 'C', 'M', 'W', 'P'].includes(payType)) throw new Error('請選擇可使用的付款方式。');
+  const qrCodeSize = Number(input.qrCodeSize ?? 350);
+  if (!Number.isInteger(qrCodeSize) || qrCodeSize < 350 || qrCodeSize > 800) throw new Error('付款資訊設定有誤，請聯繫客服。');
+  const qrCodeStatus = input.qrCodeStatus ?? 'Y';
+  if (!['Y', 'N'].includes(qrCodeStatus)) throw new Error('付款資訊設定有誤，請聯繫客服。');
+  const expMinutes = Number(input.expMinutes ?? 10);
+  if (!Number.isInteger(expMinutes) || expMinutes < 1 || expMinutes > 30) throw new Error('付款連結時間設定有誤，請聯繫客服。');
 
   const body = {
     ShopNo: shopNo,
     OrderNo: String(input.orderNo),
     Amount: Math.round(amount * 100),
     CurrencyID: 'TWD',
-    PrdtName: input.prdtName || 'ECLADO訂單',
+    PrdtName: 'ECLADO訂單',
     PayType: payType,
     ReturnURL: input.returnUrl || `${publicUrl}/return`,
     // 統一由 Vultr 接收所有付款方式的非同步通知（信用卡/ATM/Apple）。
     // 忽略前端傳入的 backendUrl，確保正式環境只走已加入 IP 白名單的本機固定 IP。
     BackendURL: `${publicUrl}/api/sinopac/notify`,
-    QRCodeStatus: input.qrCodeStatus || 'Y',
-    QRCodeSize: Number(input.qrCodeSize || 350),
+    QRCodeStatus: qrCodeStatus,
+    QRCodeSize: qrCodeSize,
   };
+  for (const key of ['ReturnURL', 'BackendURL']) {
+    let url;
+    try { url = new URL(body[key]); } catch { throw new Error('付款頁面設定有誤，請聯繫客服。'); }
+    if (!['http:', 'https:'].includes(url.protocol) || body[key].length > 255 || /['"]/.test(body[key])
+      || (key === 'BackendURL' && body[key].includes('%'))) throw new Error('付款頁面設定有誤，請聯繫客服。');
+  }
 
   if (payType === 'A') {
+    const date = String(input.expireDate || '');
+    const time = String(input.expireTime || '2359');
+    const expiry = new Date(`${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}T${time.slice(0, 2)}:${time.slice(2, 4)}:00+08:00`);
+    if (!/^\d{8}$/.test(date) || !/^([01]\d|2[0-3])[0-5]\d$/.test(time)
+      || !Number.isFinite(expiry.getTime())) {
+      throw new Error('付款期限已過或設定有誤，請重新確認訂單。');
+    }
     body.ATMParam = {
       ExpireDate: input.expireDate,
       ExpireTime: input.expireTime,
@@ -260,17 +286,20 @@ function buildCreateBody(input) {
   if (payType === 'C' || payType === 'P') {
     body.CardParam = {
       AutoBilling: input.autoBilling === false ? 'N' : 'Y',
+      ExpMinutes: expMinutes,
     };
   }
 
   if (payType === 'M') {
     body.MobileParam = {
-      ExpMinutes: Number(input.expMinutes || 10),
+      ExpMinutes: expMinutes,
     };
+    if (input.choosePay && !['A', 'G', 'S'].includes(input.choosePay)) throw new Error('請選擇可使用的付款方式。');
     if (input.choosePay) body.MobileParam.ChoosePay = input.choosePay;
   }
 
   if (payType === 'W') {
+    if (input.payTypeSub && !['Jko', 'Line', 'Plus', 'Px', 'IPass'].includes(input.payTypeSub)) throw new Error('請選擇可使用的付款方式。');
     body.WalletParam = {
       PayTypeSub: input.payTypeSub || 'Line',
     };
@@ -357,9 +386,11 @@ async function claimSupabaseOrder(orderNo, paymentToken) {
   return order;
 }
 
-async function beginSupabasePaymentRetry(orderNo) {
-  const retry = await callSupabaseRpc('begin_order_payment_retry', {
+async function beginSupabasePaymentRetry(orderNo, providerOrderNo, bankPayStatus) {
+  const retry = await callSupabaseRpc('begin_verified_order_payment_retry', {
     p_order_id: orderNo,
+    p_provider_order_no: providerOrderNo,
+    p_bank_pay_status: bankPayStatus,
   });
   if (!retry?.payment_token || !retry?.provider_order_no) {
     throw new Error('Payment retry authorization is incomplete');
@@ -533,6 +564,7 @@ function toPublicGuestPaymentInstruction(instruction, paymentState) {
     provider_status: instruction.provider_status,
     provider_description: instruction.provider_description,
     payment_due_at: instruction.payment_due_at,
+    link_expires_at: paymentLinkExpiresAt(instruction),
     gateway_created_at: instruction.gateway_created_at,
     order_email_sent_at: instruction.order_email_sent_at,
   };
@@ -637,14 +669,53 @@ function getPaymentRetryBlockReason(order, instruction, now = Date.now()) {
   if (order?.status !== 'unpaid') return 'Order is not eligible for another payment attempt';
   const dueTime = new Date(order?.payment_due_at || '').getTime();
   if (!Number.isFinite(dueTime) || dueTime <= now) return 'Order payment has expired';
-  if (instruction?.payment_state !== 'failed') return 'Only a failed payment can be retried';
+  if (!['failed', 'expired', 'initiated'].includes(instruction?.payment_state)
+    && !(instruction?.payment_state === 'pending' && Date.parse(paymentLinkExpiresAt(instruction)) <= now)) return 'Only a failed payment can be retried';
   if (!['card', 'apple', 'google'].includes(String(instruction?.payment_method || '').toLowerCase())) {
     return 'This payment method cannot be retried';
   }
   return '';
 }
 
-async function saveOrderPaymentInstruction(order, input, gatewayResponse) {
+function paymentLinkExpiresAt(instruction) {
+  if (!['card', 'apple', 'google'].includes(instruction?.payment_method)) return null;
+  if (instruction.link_expires_at) return instruction.link_expires_at;
+  const created = Date.parse(instruction.gateway_created_at);
+  return Number.isFinite(created) ? new Date(created + 10 * 60000).toISOString() : null;
+}
+
+function paymentPresentationState(order, instruction) {
+  const terminal = resolveStoredTerminalPaymentState(order);
+  if (terminal) return terminal;
+  const linkExpired = instruction?.payment_state === 'expired'
+    || (instruction?.payment_state === 'pending' && Date.parse(paymentLinkExpiresAt(instruction)) <= Date.now());
+  if (['card', 'apple', 'google'].includes(instruction?.payment_method) && linkExpired) return 'link_expired';
+  return instruction?.payment_state || 'pending';
+}
+
+function customerPaymentError(error) {
+  return /^[\u3400-\u9fff]/.test(String(error?.message || ''))
+    ? error.message : '暫時無法繼續付款，請稍後再試，或聯繫客服協助。';
+}
+
+function requireCreatedPayment(response, inner) {
+  if (response?.Status !== 'S') throw new Error('正在確認付款資訊，請稍後查看原訂單。');
+  if (response.OrderNo !== inner.OrderNo || response.ShopNo !== inner.ShopNo || !/^\d+$/.test(String(response.Amount)) || Number(response.Amount) !== inner.Amount
+    || response.PayType !== inner.PayType || typeof response.TSNo !== 'string' || !response.TSNo || response.TSNo.length > 20) throw new Error('正在確認付款資訊，請稍後查看原訂單。');
+  const field = { A: ['ATMParam', 'WebAtmURL'], C: ['CardParam', 'CardPayURL'], P: ['CardParam', 'CardPayURL'],
+    M: ['MobileParam', 'MobilePayURL'], W: ['WalletParam', 'WalletPayURL'] }[inner.PayType];
+  const url = response[field[0]]?.[field[1]];
+  let parsedUrl;
+  try { parsedUrl = new URL(url); } catch { throw new Error('正在確認付款資訊，請稍後查看原訂單。'); }
+  if (typeof url !== 'string' || !['http:', 'https:'].includes(parsedUrl.protocol)
+    || (inner.PayType === 'A' && !/^\d{14}$/.test(String(response.ATMParam?.AtmPayNo || '')))) {
+    throw new Error('正在確認付款資訊，請稍後查看原訂單。');
+  }
+}
+
+async function saveOrderPaymentInstruction(order, input, gatewayResponse, paymentState = 'pending') {
+  const now = new Date();
+  const minutes = Number(input.expMinutes ?? 10);
   const record = {
     order_id: order.id,
     provider_order_no: String(input.providerOrderNo || input.orderNo || order.id),
@@ -653,12 +724,14 @@ async function saveOrderPaymentInstruction(order, input, gatewayResponse) {
     provider_transaction_no: gatewayResponse?.TSNo || null,
     provider_status: gatewayResponse?.Status || null,
     provider_description: gatewayResponse?.Description || null,
-    payment_state: 'pending',
+    payment_state: paymentState,
     atm_bank_code: gatewayResponse?.ATMParam?.AtmPayNo ? '807' : null,
     atm_account: gatewayResponse?.ATMParam?.AtmPayNo || null,
     payment_url: extractServerPaymentLink(gatewayResponse),
     payment_due_at: order.payment_due_at,
-    gateway_created_at: new Date().toISOString(),
+    link_expires_at: ['C', 'M', 'P'].includes(input.payType) && paymentState === 'pending'
+      ? new Date(Math.min(Date.parse(input.linkExpiresAt) || now.getTime() + minutes * 60000, Date.parse(order.payment_due_at))).toISOString() : null,
+    gateway_created_at: now.toISOString(),
     updated_at: new Date().toISOString(),
   };
   const response = await fetch(`${supabaseUrl}/rest/v1/order_payment_instructions?on_conflict=order_id`, {
@@ -716,7 +789,7 @@ async function updatePaymentInstructionState(orderNo, paymentState, payment = {}
       Prefer: 'return=minimal',
     },
     body: JSON.stringify({
-      payment_state: paymentState,
+      payment_state: paymentState === 'link_expired' ? 'expired' : paymentState,
       provider_status: payment.payStatus || payment.payFlag || null,
       provider_description: payment.description || null,
       updated_at: new Date().toISOString(),
@@ -737,7 +810,7 @@ async function updatePaymentAttemptState(providerOrderNo, paymentState, payment 
       Prefer: 'return=minimal',
     },
     body: JSON.stringify({
-      payment_state: paymentState,
+      payment_state: paymentState === 'link_expired' ? 'expired' : paymentState,
       provider_status: payment.payStatus || payment.payFlag || null,
       provider_description: payment.description || null,
       updated_at: new Date().toISOString(),
@@ -770,7 +843,7 @@ async function persistVerifiedRewardPayment(orderNo,providerOrderNo,payment) {
 async function getOrderPaymentInstruction(orderNo) {
   const params = new URLSearchParams({
     order_id: `eq.${orderNo}`,
-    select: 'order_id,provider_order_no,attempt_no,payment_method,provider_transaction_no,provider_status,provider_description,payment_state,atm_bank_code,atm_account,payment_url,payment_due_at,gateway_created_at,order_email_sent_at',
+    select: 'order_id,provider_order_no,attempt_no,payment_method,provider_transaction_no,provider_status,provider_description,payment_state,atm_bank_code,atm_account,payment_url,payment_due_at,link_expires_at,gateway_created_at,order_email_sent_at',
     limit: '1',
   });
   const response = await fetch(`${supabaseUrl}/rest/v1/order_payment_instructions?${params}`, {
@@ -814,7 +887,7 @@ async function getMemberOrderPaymentSummaries(req) {
   const orderIds = orders.map(order => String(order.id)).filter(Boolean);
   const instructionParams = new URLSearchParams({
     order_id: `in.(${orderIds.join(',')})`,
-    select: 'order_id,payment_method,payment_state,payment_due_at',
+    select: 'order_id,payment_method,payment_state,payment_due_at,link_expires_at,gateway_created_at',
   });
   const instructionResponse = await fetch(`${supabaseUrl}/rest/v1/order_payment_instructions?${instructionParams}`, {
     headers: { apikey: supabaseServiceKey, Authorization: `Bearer ${supabaseServiceKey}` },
@@ -828,7 +901,8 @@ async function getMemberOrderPaymentSummaries(req) {
     return {
       order_id: instruction.order_id,
       payment_method: instruction.payment_method,
-      payment_state: instruction.payment_state,
+      payment_state: paymentPresentationState(order, instruction),
+      link_expires_at: paymentLinkExpiresAt(instruction),
       payment_due_at: instruction.payment_due_at || order?.payment_due_at,
       can_retry: !getPaymentRetryBlockReason(order, instruction),
     };
@@ -967,6 +1041,7 @@ function resolvePaymentQueryState(order, gatewayResponse) {
   if (storedState) return storedState;
 
   const payStatus = String(gatewayOrder?.PayStatus || '').trim().toUpperCase();
+  if (['1C250', '1M250'].includes(payStatus)) return 'link_expired';
   const payFlag = String(gatewayOrder?.PayFlag || '').trim().toUpperCase();
   if ((payStatus && !isPendingLike(payStatus) && !['1C200', '1A200', '1M200', '0'].includes(payStatus))
     || (payFlag && !isPendingLike(payFlag) && !['N', '0'].includes(payFlag))) {
@@ -1001,20 +1076,33 @@ async function buildAuthoritativeCreateBody(input) {
     || creditAmount < 0 || Math.abs(grossTotal - creditAmount - rewardCreditAmount - gatewayAmount) > 0.001) {
     throw new Error('Order payment snapshot is inconsistent');
   }
+  let expMinutes = Number(input.expMinutes ?? 10);
+  validateBankAmount(gatewayAmount, input.payType || 'A');
+  if (!Number.isInteger(expMinutes) || expMinutes < 1 || expMinutes > 30) throw new Error('付款連結時間設定有誤，請聯繫客服。');
+  if (['C', 'M', 'P'].includes(input.payType) && paymentOrder.payment_due_at) {
+    const remainingMinutes = Math.floor((Date.parse(paymentOrder.payment_due_at) - Date.now()) / 60000);
+    if (!Number.isFinite(remainingMinutes) || remainingMinutes < 1) throw new Error('訂單付款期限將至，請聯繫客服協助。');
+    expMinutes = Math.min(expMinutes, remainingMinutes);
+  }
   const order = await claimSupabaseOrder(String(input.orderNo), String(input.paymentToken));
-  const productName = Array.isArray(order.items) && order.items.length
-    ? `${order.items[0].name || order.items[0].nameZh || 'ECLADO訂單'}${order.items.length > 1 ? ` 等 ${order.items.length} 項商品` : ''}`
-    : 'ECLADO訂單';
-  const deadline = formatSinopacDeadline(order.payment_due_at);
-  if (!deadline) throw new Error('Order payment deadline is missing or invalid');
-  return buildCreateBody({
-    ...input,
-    orderNo: order.provider_order_no || input.orderNo,
-    amount: gatewayAmount,
-    prdtName: productName,
-    expireDate: deadline.expireDate,
-    expireTime: deadline.expireTime,
-  });
+  try {
+    const deadline = formatSinopacDeadline(order.payment_due_at);
+    if (!deadline) throw new Error('Order payment deadline is missing or invalid');
+    return buildCreateBody({
+      ...input,
+      orderNo: order.provider_order_no || input.orderNo,
+      amount: gatewayAmount,
+      expMinutes,
+      expireDate: deadline.expireDate,
+      expireTime: deadline.expireTime,
+    });
+  } catch (error) {
+    // No bank call has started. Release only this local validation failure.
+    await callSupabaseRpc('complete_order_payment_claim', {
+      p_order_id: String(input.orderNo), p_payment_token: String(input.paymentToken), p_success: false,
+    });
+    throw error;
+  }
 }
 
 function formatSinopacDeadline(value) {
@@ -1173,6 +1261,32 @@ async function queryPayByToken(payToken) {
   return result.data;
 }
 
+async function verifyPaymentForRetry(order, instruction) {
+  const providerOrderNo = instruction.provider_order_no || order.id;
+  const response = await queryOrderByOrderNo(providerOrderNo);
+  const absent = (response.Status === 'F' && /^E2601\b/.test(String(response.Description || '')))
+    || (response.Status === 'S' && /^S0001\b/.test(String(response.Description || ''))
+      && Array.isArray(response.OrderList) && response.OrderList.length === 0);
+  if (instruction.payment_state === 'failed' && instruction.provider_status === 'F' && absent
+    && (response.ShopNo == null || response.ShopNo === process.env.SINOPAC_SHOP_NO)) return 'NOT_CREATED';
+  const bankOrder = requireBankOrder(response, providerOrderNo);
+  const paid = isPaidLike(bankOrder.PayStatus) || isPaidLike(bankOrder.PayFlag);
+  if (paid) {
+    const payment = { paid: true, orderNo: providerOrderNo, raw: { orderQuery: response } };
+    requireBankPaymentAmount(payment, order);
+    await persistVerifiedRewardPayment(order.id, providerOrderNo, payment);
+    await forwardPaidNotification(order.id);
+    await updateSupabaseOrder(order.id, { status: 'paid' }, 'payment-retry-verification');
+    throw new Error('已確認收到付款，請重新整理訂單查看。');
+  }
+  const terminalStatuses = instruction.payment_method === 'card'
+    ? ['1C250', '1C350', '1C351'] : ['1M250', '1M350', '1M351'];
+  if (!terminalStatuses.includes(bankOrder.PayStatus) || isPaidLike(bankOrder.PayFlag)) {
+    throw new Error('正在確認付款狀態，請稍後再試；原訂單會為你保留。');
+  }
+  return bankOrder.PayStatus;
+}
+
 function requireBankQuerySuccess(response) {
   if (response?.Status !== 'S') throw new Error('Bank payment query was not successful');
   const shopNo = must(process.env.SINOPAC_SHOP_NO, 'SINOPAC_SHOP_NO');
@@ -1304,10 +1418,17 @@ app.get('/health', (req, res) => {
 mountAssistedRoutes(app, {
   rpc:callSupabaseRpc, getOrder:getSupabaseOrderPaymentState,
   getInstruction:getOptionalOrderPaymentInstruction, paymentRequest:method => method === 'atm' ? {payType:'A'} : paymentRequestFromStoredMethod(method),
-  buildCreate:buildAuthoritativeCreateBody, callBank:callOrderApi, gatewayError:getSinopacPaymentError,
+  buildCreate:buildAuthoritativeCreateBody,
+  callBank:async (service, inner, context) => {
+    const result = await callOrderApi(service, inner, context);
+    if (!getSinopacPaymentError(result.data)) requireCreatedPayment(result.data, inner);
+    return result;
+  },
+  gatewayError:getSinopacPaymentError,
   saveInstruction:saveOrderPaymentInstruction, saveAttempt:saveOrderPaymentAttempt,
   sendEmail:sendGuestOrderCreatedEmail, rateLimit:enforceSharedRateLimit,
   publicInstruction:toPublicGuestPaymentInstruction, resultToken:createPaymentResultAccessToken,
+  presentationState:paymentPresentationState,
 });
 
 function buildPaymentResultUrl(orderNo, result = 'pending', resultAccessToken = '') {
@@ -1383,17 +1504,27 @@ app.post('/api/sinopac/create-payment', async (req, res) => {
   const checkoutTrace = createPaymentTrace(req.body?.checkoutTrace, orderNo, { url: supabaseUrl, key: supabaseServiceKey });
   let claimed = false;
   let gatewaySucceeded = false;
+  let bankStarted = false;
   try {
     if (!await enforceSharedRateLimit(req, res, 'payment:create', 20)) return;
     checkoutTrace.record('payment_api_received');
     void checkoutTrace.flush();
     const inner = await buildAuthoritativeCreateBody(req.body || {});
     claimed = true;
+    const pendingOrder = await getSupabaseOrderPaymentState(orderNo);
+    const pendingInput = { ...req.body, providerOrderNo: inner.OrderNo,
+      linkExpiresAt: ['C', 'M', 'P'].includes(inner.PayType)
+        ? new Date(Date.now() + Number(inner.CardParam?.ExpMinutes || inner.MobileParam?.ExpMinutes || 10) * 60000).toISOString() : null };
+    await saveOrderPaymentInstruction(pendingOrder, pendingInput, {}, 'initiated');
+    await saveOrderPaymentAttempt(pendingOrder, pendingInput, {}, 'initiated');
     checkoutTrace.record('payment_claimed');
     checkoutTrace.record('gateway_requested');
     void checkoutTrace.flush();
+    bankStarted = true;
     const result = await callOrderApi('OrderCreate', inner, { orderId:orderNo, providerOrderNo:inner.OrderNo, source:'create' });
+    if (isAmbiguousGatewayFailure(result.data)) throw new Error('正在確認付款狀態，請稍後查看原訂單。');
     const sinopacError = getSinopacPaymentError(result.data);
+    if (sinopacError && result.data?.Status !== 'F') throw new Error('正在確認付款資訊，請稍後查看原訂單。');
     if (sinopacError) {
       checkoutTrace.record('gateway_rejected', { code: /^E\d{4}/.exec(String(result.data?.Description || ''))?.[0] });
       await callSupabaseRpc('complete_order_payment_claim', {
@@ -1402,15 +1533,12 @@ app.post('/api/sinopac/create-payment', async (req, res) => {
         p_success: false,
       });
       claimed = false;
-      const failure=await persistVerifiedRewardPayment(orderNo,orderNo,{raw:{orderQuery:{OrderList:[{OrderNo:orderNo,PayStatus:'F'}]}}});
-      if(failure?.applicable){
-        const failedOrder=await getSupabaseOrderPaymentState(orderNo);
-        await saveOrderPaymentInstruction(failedOrder,req.body,result.data);
-        await updatePaymentInstructionState(orderNo,'failed',{},orderNo);
-        await saveOrderPaymentAttempt(failedOrder,req.body,result.data,'failed');
-      }
-      return res.status(400).json({ ok: false, error: sinopacError, request: inner, response: result.data });
+      await persistVerifiedRewardPayment(orderNo,inner.OrderNo,{raw:{orderQuery:{OrderList:[{OrderNo:inner.OrderNo,PayStatus:'F'}]}}});
+      await saveOrderPaymentInstruction(pendingOrder, pendingInput, result.data, 'failed');
+      await saveOrderPaymentAttempt(pendingOrder, pendingInput, result.data, 'failed');
+      return res.status(400).json({ ok: false, error: '付款暫時無法完成，請稍後再試，或聯繫客服協助。' });
     }
+    requireCreatedPayment(result.data, inner);
     gatewaySucceeded = true;
     checkoutTrace.record('gateway_succeeded');
     await callSupabaseRpc('complete_order_payment_claim', {
@@ -1425,7 +1553,7 @@ app.post('/api/sinopac/create-payment', async (req, res) => {
     try {
       order = await getSupabaseOrderPaymentState(orderNo);
       const paymentInput = {
-        ...(req.body || {}),
+        ...pendingInput,
         providerOrderNo: inner.OrderNo,
         attemptNo: Number(req.body?.attemptNo) || 1,
       };
@@ -1448,10 +1576,11 @@ app.post('/api/sinopac/create-payment', async (req, res) => {
       recoveryStored,
       guestLookupCode: order && !order.user_id ? normalizeLookupCode(order.public_lookup_code) : '',
       orderEmailSent,
+      linkExpiresAt: pendingInput.linkExpiresAt,
     });
   } catch (error) {
     checkoutTrace.record('payment_api_error', error);
-    if (claimed && !gatewaySucceeded) {
+    if (claimed && !gatewaySucceeded && !bankStarted) {
       try {
         await callSupabaseRpc('complete_order_payment_claim', {
           p_order_id: orderNo,
@@ -1462,7 +1591,7 @@ app.post('/api/sinopac/create-payment', async (req, res) => {
         console.error('[create-payment] claim release failed', releaseError.message);
       }
     }
-    res.status(400).json({ ok: false, error: error.message });
+    res.status(400).json({ ok: false, error: bankStarted ? '正在確認付款狀態，請稍後查看原訂單。' : customerPaymentError(error) });
   } finally {
     void checkoutTrace.flush();
   }
@@ -1473,17 +1602,20 @@ app.post('/api/sinopac/retry-payment', async (req, res) => {
   let retry = null;
   let claimed = false;
   let gatewaySucceeded = false;
-  let assisted = false;
+  let bankStarted = false;
   try {
     if (!await enforceSharedRateLimit(req, res, 'payment:retry', 10)) return;
     if (!orderNo) throw new Error('orderNo is required');
     const order = await authorizePaymentRequest(req, orderNo, String(req.body?.paymentToken || '').trim());
-    assisted = order.order_source === 'admin_assisted';
     const instruction = await getOrderPaymentInstruction(orderNo);
     const retryBlockReason = getPaymentRetryBlockReason(order, instruction);
     if (retryBlockReason) throw new Error(retryBlockReason);
     const methodInput = paymentRequestFromStoredMethod(instruction.payment_method);
-    retry = await beginSupabasePaymentRetry(orderNo);
+    const bankPayStatus = await verifyPaymentForRetry(order, instruction);
+    const deadline = formatSinopacDeadline(order.payment_due_at);
+    buildCreateBody({ ...methodInput, orderNo: instruction.provider_order_no || orderNo,
+      amount: Number(order.payment_amount), expireDate: deadline?.expireDate, expireTime: deadline?.expireTime });
+    retry = await beginSupabasePaymentRetry(orderNo, instruction.provider_order_no || orderNo, bankPayStatus);
     const publicUrl = process.env.PAYMENT_PUBLIC_URL || 'https://pay.ecladotaiwan.com';
     const retryInput = {
       orderNo,
@@ -1494,14 +1626,19 @@ app.post('/api/sinopac/retry-payment', async (req, res) => {
       returnUrl: `${publicUrl}/return?orderNo=${encodeURIComponent(orderNo)}`,
       qrCodeStatus: 'Y',
       Param1: orderNo,
+      linkExpiresAt: new Date(Date.now() + 10 * 60000).toISOString(),
     };
     const inner = await buildAuthoritativeCreateBody(retryInput);
+    retryInput.expMinutes = inner.CardParam?.ExpMinutes || inner.MobileParam?.ExpMinutes || 10;
+    retryInput.linkExpiresAt = new Date(Date.now() + retryInput.expMinutes * 60000).toISOString();
     claimed = true;
+    bankStarted = true;
     const result = await callOrderApi('OrderCreate', inner, { orderId:orderNo, providerOrderNo:inner.OrderNo, source:'retry' });
-    if (assisted && (!result.data || !String(result.data.Status || '').trim() || isAmbiguousGatewayFailure(result.data))) {
+    if (isAmbiguousGatewayFailure(result.data)) {
       throw new Error('銀行付款結果待確認；原訂單保留，請勿取消重建或重複開單。');
     }
     const sinopacError = getSinopacPaymentError(result.data);
+    if (sinopacError && result.data?.Status !== 'F') throw new Error('正在確認付款資訊，請稍後查看原訂單。');
     if (sinopacError) {
       await callSupabaseRpc('complete_order_payment_claim', {
         p_order_id: orderNo,
@@ -1511,8 +1648,10 @@ app.post('/api/sinopac/retry-payment', async (req, res) => {
       claimed = false;
       await persistVerifiedRewardPayment(orderNo,retry.provider_order_no,{raw:{orderQuery:{OrderList:[{OrderNo:retry.provider_order_no,PayStatus:'F'}]}}});
       await saveOrderPaymentAttempt(order, retryInput, result.data, 'failed').catch(() => null);
-      return res.status(400).json({ ok: false, error: sinopacError });
+      await updatePaymentInstructionState(orderNo, 'failed', {payStatus:'F'}, retry.provider_order_no);
+      return res.status(400).json({ ok: false, error: '付款暫時無法完成，請稍後再試，或聯繫客服協助。' });
     }
+    requireCreatedPayment(result.data, inner);
     gatewaySucceeded = true;
     await callSupabaseRpc('complete_order_payment_claim', {
       p_order_id: orderNo,
@@ -1531,9 +1670,10 @@ app.post('/api/sinopac/retry-payment', async (req, res) => {
       paymentLink,
       resultAccessToken: createPaymentResultAccessToken(orderNo),
       attemptNo: retry.attempt_no,
+      linkExpiresAt: retryInput.linkExpiresAt,
     });
   } catch (error) {
-    if (claimed && retry?.payment_token && !gatewaySucceeded && !assisted) {
+    if (claimed && retry?.payment_token && !gatewaySucceeded && !bankStarted) {
       try {
         await callSupabaseRpc('complete_order_payment_claim', {
           p_order_id: orderNo,
@@ -1544,7 +1684,7 @@ app.post('/api/sinopac/retry-payment', async (req, res) => {
         console.error('[retry-payment] claim release failed', releaseError.message);
       }
     }
-    res.status(400).json({ ok: false, error: error.message });
+    res.status(400).json({ ok: false, error: bankStarted ? '正在確認付款狀態，請稍後查看原訂單。' : customerPaymentError(error) });
   }
 });
 
@@ -1570,7 +1710,9 @@ app.post('/api/sinopac/query-payment', async (req, res) => {
     const inner = buildQueryBody({ ...(req.body || {}), orderNo: providerOrderNo });
     const result = await callOrderApi('OrderQuery', inner, { orderId:orderNo, providerOrderNo, source:'query' });
     requireBankOrder(result.data, providerOrderNo);
-    const paymentState = resolvePaymentQueryState(order, result.data);
+    const bankState = resolvePaymentQueryState(order, result.data);
+    const paymentState = bankState === 'pending' && instruction?.payment_state === 'initiated'
+      ? 'initiated' : bankState;
     requireBankPaymentAmount({ paid: paymentState === 'paid', orderNo: providerOrderNo, raw: { orderQuery: result.data } }, order);
     await persistVerifiedRewardPayment(orderNo,providerOrderNo,{raw:{orderQuery:result.data}});
     try {
@@ -1584,7 +1726,9 @@ app.post('/api/sinopac/query-payment', async (req, res) => {
     } catch (stateError) {
       console.error('[query-payment] payment state save failed', stateError.message);
     }
-    res.json({ ok: true, request: inner, response: result.data, order: toPublicOrderPaymentState(order), paymentState });
+    res.json({ ok: true, request: inner, response: result.data, order: toPublicOrderPaymentState(order),
+      paymentState: paymentState === 'pending' && paymentPresentationState(order, instruction) === 'link_expired' ? 'link_expired' : paymentState,
+      linkExpiresAt: paymentLinkExpiresAt(instruction) });
   } catch (error) {
     const message = String(error?.message || '付款查詢失敗');
     const orderNotFound = message.startsWith('Order not found:');
@@ -1612,7 +1756,7 @@ app.post('/api/orders/payment-instructions', async (req, res) => {
     if (!orderNo) throw new Error('orderNo is required');
     const order = await authorizeMemberOrderAccess(req, orderNo);
     const instruction = await getOrderPaymentInstruction(orderNo);
-    const paymentState = resolvePaymentQueryState(order, {});
+    const paymentState = paymentPresentationState(order, instruction);
     res.json({
       ok: true,
       order: toPublicOrderPaymentState(order),
@@ -1635,7 +1779,7 @@ app.post('/api/orders/guest-lookup', async (req, res) => {
       throw new Error('Invalid guest lookup');
     }
     const instruction = await getOptionalOrderPaymentInstruction(order.id);
-    const paymentState = resolvePaymentQueryState(order, {});
+    const paymentState = paymentPresentationState(order, instruction);
     res.json({
       ok: true,
       order: toPublicOrderPaymentState(order),
@@ -1658,7 +1802,7 @@ app.post('/api/orders/guest-details', async (req, res) => {
     const order = await getSupabaseOrderPaymentState(orderNo);
     if (order.user_id) throw new Error('Guest access is not valid for member orders');
     const instruction = await getOptionalOrderPaymentInstruction(order.id);
-    const paymentState = resolvePaymentQueryState(order, {});
+    const paymentState = paymentPresentationState(order, instruction);
     res.json({
       ok: true,
       order: toPublicOrderPaymentState(order),
@@ -1822,6 +1966,10 @@ module.exports = {
   paymentMethodFromRequest,
   paymentRequestFromStoredMethod,
   getPaymentRetryBlockReason,
+  paymentLinkExpiresAt,
+  paymentPresentationState,
+  requireCreatedPayment,
+  verifyPaymentForRetry,
   normalizeLookupCode,
   normalizePhone,
   createGuestAccessToken,

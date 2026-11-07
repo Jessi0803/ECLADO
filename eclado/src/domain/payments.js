@@ -47,11 +47,12 @@ export const ORDER_STATUS_LABELS = {
 };
 
 export const PAYMENT_STATE_LABELS = {
-  initiated: '付款單建立中',
+  initiated: '正在確認付款資訊',
   pending: '等待付款',
   paid: '付款成功',
   failed: '付款失敗',
   expired: '付款已逾期',
+  link_expired: '付款連結已到期',
   cancelled: '付款已取消',
 };
 

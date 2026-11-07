@@ -54,6 +54,7 @@ export function savePendingPayment(payment) {
       paymentLink: String(payment.paymentLink || ''),
       paymentDeadline: payment.paymentDeadline || null,
       paymentDueAt: String(payment.paymentDueAt || ''),
+      linkExpiresAt: String(payment.linkExpiresAt || ''),
       response: sanitizeResponse(payment.response),
       summary: sanitizeSummary(payment.summary),
       createdAt: payment.createdAt || new Date().toISOString(),

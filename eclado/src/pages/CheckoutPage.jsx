@@ -26,7 +26,7 @@ import {
   safeTrim,
 } from '../domain/payments.js';
 import { createAuthoritativeOrder, quoteAuthoritativeOrder } from '../services/orders.js';
-import { createSinopacPayment, querySinopacPayment } from '../services/paymentApi.js';
+import { createSinopacPayment, querySinopacPayment, retrySinopacPayment } from '../services/paymentApi.js';
 import { beginCheckoutAttempt, checkoutErrorDetails } from '../services/checkoutEvents.js';
 import '../components/account/InstructorRewards.css';
 import {getMyRewardCredit} from '../services/instructorRewards.js';
@@ -198,6 +198,8 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       response: payment.response || queryResponse || {},
       paymentDeadline: payment.paymentDeadline || null,
       paymentLink: payment.paymentLink || '',
+      linkExpiresAt: payment.linkExpiresAt || '',
+      paymentDueAt: payment.paymentDueAt || '',
       lookupCode: payment.lookupCode || '',
       orderEmailSent: typeof payment.orderEmailSent === 'boolean' ? payment.orderEmailSent : null,
       insertError: '',
@@ -207,10 +209,11 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
   }
 
   async function restorePayment() {
-    if (!storedPayment) return;
+    const savedPayment = getPendingPayment() || storedPayment;
+    if (!savedPayment) return;
     setRestoringPayment(true);
     try {
-      const result = await querySinopacPayment(storedPayment);
+      const result = await querySinopacPayment(savedPayment);
       const gatewayState = getPaymentResultStatus(result.response);
       const deadlineTime = new Date(
         result.order?.payment_due_at || storedPayment.paymentDueAt || '',
@@ -218,17 +221,17 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       const deadlineExpired = Number.isFinite(deadlineTime) && deadlineTime <= Date.now();
       const state = result.paymentState
         || (gatewayState !== 'pending' ? gatewayState : deadlineExpired ? 'expired' : 'pending');
-      if (isTerminalPaymentState(state)) {
+      if (isTerminalPaymentState(state) && state !== 'failed') {
         clearPendingPayment();
         // A non-empty cart means the customer intentionally started a new
         // checkout. Do not replace it with the completed historical payment.
         if (cart.length > 0) return;
       }
-      let payment = storedPayment;
+      let payment = { ...savedPayment, linkExpiresAt: result.linkExpiresAt || savedPayment.linkExpiresAt };
       if (result.order?.shopping_credit_amount != null && result.order?.payment_amount != null) {
         const { total, shoppingCreditAmount, rewardCreditAmount, paymentAmount } = getOrderPaymentAmounts(result.order);
         payment = {
-          ...storedPayment,
+          ...payment,
           amount: paymentAmount,
           summary: {
             ...storedPayment.summary,
@@ -247,7 +250,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
         setPage('shop');
         return;
       }
-      hydrateStoredPayment(storedPayment, 'error');
+      hydrateStoredPayment(savedPayment, 'error');
     } finally {
       setRestoringPayment(false);
     }
@@ -355,12 +358,6 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     return e => setForm(f => ({ ...f, [name]: e.target.value }));
   }
 
-  function productNameForPayment() {
-    if (!cart.length) return 'ECLADO訂單';
-    if (cart.length === 1) return cart[0].nameZh;
-    return `${cart[0].nameZh} 等 ${cart.length} 項商品`;
-  }
-
   function toPaymentSummary(authoritativeOrder) {
     const items = authoritativeOrder.items.map(item => ({ ...item }));
     return {
@@ -450,7 +447,10 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     setPaymentError('');
     setSubmitting(true);
     const checkoutAttempt = beginCheckoutAttempt();
+    let createdOrderNo = '';
+    let createdPayment = null;
     try {
+      if (method.payType === 'A' && checkoutSummary.paymentTotal > 30000) throw new Error('ATM 轉帳單筆上限為 NT$ 30,000，請選擇其他付款方式。');
       checkoutAttempt.record('quote_requested');
       const latestQuote = await quoteAuthoritativeOrder({
         items:cart, fulfillmentMethod, couponCode:appliedCouponCode, email:form.email,
@@ -500,18 +500,27 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
           checkoutTrace: checkoutAttempt.trace,
         });
       const authoritativeOrderNo = authoritativeOrder.order_id;
+      createdOrderNo = authoritativeOrderNo;
       checkoutAttempt.setOrder(authoritativeOrderNo);
       checkoutAttempt.record('order_received');
       setOrderNo(authoritativeOrderNo);
       const authoritativeSummary = toPaymentSummary(authoritativeOrder);
       setPaymentSnapshot(authoritativeSummary.items);
       setPaymentSummary(authoritativeSummary);
+      createdPayment = {
+        orderNo: authoritativeOrderNo,
+        paymentToken: authoritativeOrder.paymentToken,
+        amount: authoritativeOrder.payment_amount,
+        method: paymentMethod, methodLabel: method.label,
+        paymentDueAt: authoritativeOrder.payment_due_at,
+        summary: authoritativeSummary,
+      };
+      savePendingPayment(createdPayment);
 
       const payload = {
         orderNo: authoritativeOrderNo,
         paymentToken: authoritativeOrder.paymentToken,
         amount: authoritativeOrder.payment_amount,
-        prdtName: productNameForPayment(),
         payType: method.payType,
         returnUrl: `${SINOPAC_PAYMENT_API}/return?orderNo=${encodeURIComponent(authoritativeOrderNo)}`,
         backendUrl: `${SINOPAC_NOTIFY_API}?orderNo=${encodeURIComponent(authoritativeOrderNo)}`,
@@ -536,6 +545,8 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
         response: apiResponse,
         paymentDeadline: paymentApiResult.paymentDeadline,
         paymentLink,
+        linkExpiresAt: paymentApiResult.linkExpiresAt,
+        paymentDueAt: paymentApiResult.order?.payment_due_at || authoritativeOrder.payment_due_at,
         lookupCode: paymentApiResult.guestLookupCode,
         orderEmailSent: paymentApiResult.orderEmailSent,
         insertError: '',
@@ -548,7 +559,8 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
         methodLabel: method.label,
         paymentLink,
         paymentDeadline: paymentApiResult.paymentDeadline,
-        paymentDueAt: paymentApiResult.order?.payment_due_at,
+        paymentDueAt: paymentApiResult.order?.payment_due_at || authoritativeOrder.payment_due_at,
+        linkExpiresAt: paymentApiResult.linkExpiresAt,
         lookupCode: paymentApiResult.guestLookupCode,
         orderEmailSent: paymentApiResult.orderEmailSent,
         response: apiResponse,
@@ -569,10 +581,15 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
       console.error(err);
       const message = err?.name === 'AbortError'
         ? '付款服務連線逾時，請稍後再試或聯繫客服。'
-        : '目前無法繼續付款，請稍後再試，或聯繫客服協助。';
+        : /^[\u3400-\u9fff]/.test(err?.message || '') ? err.message : '目前無法繼續付款，請稍後再試，或聯繫客服協助。';
       setWalletRevision(r=>r+1);
       errorAttemptRef.current = { attempt: checkoutAttempt, details: checkoutErrorDetails(err) };
       setPaymentError(message);
+      const savedPayment = getPendingPayment() || createdPayment;
+      if (createdOrderNo && savedPayment?.orderNo === createdOrderNo) {
+        hydrateStoredPayment(savedPayment, 'error');
+        setStep(3);
+      }
     } finally {
       checkoutAttempt.finish();
       submittingRef.current = false;
@@ -580,13 +597,41 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
     }
   }
 
+  useEffect(() => {
+    if (paymentState !== 'pending' || !paymentResult?.linkExpiresAt) return undefined;
+    const expires = Date.parse(paymentResult.linkExpiresAt);
+    if (!Number.isFinite(expires)) return undefined;
+    const timer = window.setTimeout(() => setPaymentState('link_expired'), Math.max(0, expires - Date.now()));
+    return () => window.clearTimeout(timer);
+  }, [paymentState, paymentResult?.linkExpiresAt]);
+
   function copyAtmNo(atmNo) {
     navigator.clipboard?.writeText(atmNo);
     setCopiedAtmNo(true);
     setTimeout(() => setCopiedAtmNo(false), 2200);
   }
 
-  function goToPayment() {
+  async function goToPayment() {
+    if (submittingRef.current) return;
+    if (['link_expired', 'failed'].includes(paymentState)
+      || (paymentState === 'pending' && Date.parse(paymentResult?.linkExpiresAt) <= Date.now())) {
+      submittingRef.current = true;
+      setSubmitting(true);
+      setPaymentError('');
+      try {
+        const savedPayment = getPendingPayment(orderNo) || { paymentToken: paymentResult?.request?.paymentToken };
+        const result = await retrySinopacPayment({ ...savedPayment, orderNo });
+        savePendingPayment({ ...savedPayment, orderNo, paymentToken: '', resultAccessToken: result.resultAccessToken,
+          paymentLink: result.paymentLink, response: result.response, linkExpiresAt: result.linkExpiresAt });
+        window.location.assign(result.paymentLink);
+      } catch (error) {
+        setPaymentError(error.message || '正在確認付款狀態，請稍後再試。');
+      } finally {
+        submittingRef.current = false;
+        setSubmitting(false);
+      }
+      return;
+    }
     if (paymentState !== 'pending' || !paymentResult?.paymentLink) return;
     window.location.assign(paymentResult.paymentLink);
   }
@@ -615,7 +660,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
 
         <div style={{ maxWidth:520, margin:'0 auto', textAlign:'center' }}>
           <div style={{ width:56, height:56, border:'1px solid var(--black)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', fontSize:22 }}>✓</div>
-          <h2 style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, marginBottom:10 }}>{({ pending: '請完成付款', paid: '付款成功', failed: '付款未完成', expired: '付款期限已過', cancelled: '訂單已取消', error: '付款狀態待確認' })[paymentState] || '付款狀態待確認'}</h2>
+          <h2 style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:300, marginBottom:10 }}>{({ pending: '請完成付款', paid: '付款成功', failed: '付款未完成', link_expired: '付款連結已到期', expired: '付款期限已過', cancelled: '訂單已取消', error: '付款狀態待確認' })[paymentState] || '付款狀態待確認'}</h2>
           <p style={{ fontSize:13, color:'var(--dark)', marginBottom:26 }}>訂單編號：<strong style={{ color:'var(--dark)', letterSpacing:'0.06em', fontFamily:'var(--font-display)', fontVariantNumeric:'tabular-nums' }}>{orderNo}</strong></p>
         </div>
 
@@ -628,10 +673,12 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
               orderNo={orderNo}
               paymentResult={paymentResult}
               paymentState={paymentState}
+              renewing={submitting}
               total={paymentSummary?.paymentTotal ?? paymentSummary?.total ?? total}
             />
+            {paymentError && <p role="alert" style={{ color:'#8a3c2c', fontSize:12, lineHeight:1.7 }}>{paymentError}</p>}
 
-            {paymentState === 'error' && (
+            {['error', 'initiated'].includes(paymentState) && (
               <div style={{ display:'grid', gap:10 }}>
                 <button type="button" onClick={restorePayment} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 18px', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:12, letterSpacing:'0.12em' }}>
                   重新查詢付款狀態

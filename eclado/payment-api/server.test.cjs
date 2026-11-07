@@ -303,7 +303,7 @@ test('buildCreateBody: 信用卡 AutoBilling=Y，且 BackendURL 強制指向本�
   });
   assert.equal(body.PayType, 'C');
   assert.equal(body.Amount, 10000, '金額需 ×100（含小數二位）');
-  assert.deepEqual(body.CardParam, { AutoBilling: 'Y' });
+  assert.deepEqual(body.CardParam, { AutoBilling: 'Y', ExpMinutes: 10 });
   assert.equal(body.BackendURL, 'https://pay.ecladotaiwan.com/api/sinopac/notify', 'BackendURL 應強制走本服務，忽略傳入值');
 });
 
@@ -311,7 +311,7 @@ test('buildCreateBody: ATM 帶 ATMParam；金額為 0 應拋錯', () => {
   const atm = server.buildCreateBody({ orderNo: 'ECL-UNIT-002', amount: 50, payType: 'A', expireDate: '20260701', expireTime: '1200' });
   assert.equal(atm.PayType, 'A');
   assert.ok(atm.ATMParam, '應帶 ATMParam');
-  assert.throws(() => server.buildCreateBody({ orderNo: 'X', amount: 0, payType: 'A' }), /amount/);
+  assert.throws(() => server.buildCreateBody({ orderNo: 'X', amount: 0, payType: 'A' }), /付款金額/);
 });
 
 test('buildAuthoritativeCreateBody: 使用資料庫實際應付額並忽略舊版前端的長備註', async () => {
@@ -352,7 +352,7 @@ test('buildAuthoritativeCreateBody: 使用資料庫實際應付額並忽略舊�
     assert.equal(Object.hasOwn(body, 'Memo'), false);
     assert.equal(body.Amount, 398000);
     assert.equal(body.OrderNo, 'ECL-AUTH-001-R2');
-    assert.equal(body.PrdtName, '胜肽修護精華液');
+    assert.equal(body.PrdtName, 'ECLADO訂單');
     assert.equal(body.ATMParam.ExpireDate, '20260731');
     assert.equal(body.ATMParam.ExpireTime, '1530');
   } finally {
@@ -663,7 +663,7 @@ test('會員付款摘要查詢登入會員自己的全部訂單並標示可重�
     }
     if (String(url).includes('/rest/v1/order_payment_instructions?')) {
       return new Response(JSON.stringify([{
-        order_id:'ECL-MEMBER-FAILED-001', payment_method:'card', payment_state:'failed', payment_due_at:'2099-01-01T00:00:00.000Z',
+        order_id:'ECL-MEMBER-FAILED-001', payment_method:'card', payment_state:'failed', link_expires_at:null, payment_due_at:'2099-01-01T00:00:00.000Z',
       }]), { status:200 });
     }
     throw new Error(`Unexpected fetch: ${url}`);
@@ -677,7 +677,7 @@ test('會員付款摘要查詢登入會員自己的全部訂單並標示可重�
     const body = await response.json();
     assert.equal(response.status, 200);
     assert.deepEqual(body.summaries, [{
-      order_id:'ECL-MEMBER-FAILED-001', payment_method:'card', payment_state:'failed', payment_due_at:'2099-01-01T00:00:00.000Z', can_retry:true,
+      order_id:'ECL-MEMBER-FAILED-001', payment_method:'card', payment_state:'failed', link_expires_at:null, payment_due_at:'2099-01-01T00:00:00.000Z', can_retry:true,
     }]);
     assert.equal(calls.some(url => url.includes('user_id=eq.member-summary-001')), true);
   } finally {

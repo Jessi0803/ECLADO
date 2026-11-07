@@ -15,6 +15,7 @@ export default function PaymentInfo({
   orderNo,
   paymentResult,
   paymentState = 'pending',
+  renewing = false,
   total,
 }) {
   if (!paymentResult) return null;
@@ -30,10 +31,10 @@ export default function PaymentInfo({
     paid: '此筆訂單已完成付款，不需要再次付款。',
     expired: '付款期限已過，此訂單已取消，無法重新付款。',
     cancelled: '此筆訂單已取消，無法重新付款。',
-    failed: paymentResult.lookupCode
-      ? '付款尚未完成，請至「訪客訂單查詢」，輸入查詢碼與結帳手機號碼後重新付款。'
-      : '付款尚未完成，請至會員專區的「我的訂單」重新付款。',
+    failed: '付款尚未完成，訂單仍為你保留。你可以再次確認付款狀態，繼續完成原訂單。',
     error: '付款狀態暫時無法確認，請稍後重新查詢，暫勿重複付款。',
+    initiated: '正在確認付款資訊，訂單已為你保留，請稍後再查詢。',
+    link_expired: '付款連結已到期，訂單仍為你保留至原付款期限。點選「繼續付款」，我們會先確認付款狀態，再帶你前往付款。',
   }[paymentState] || '';
 
   return (
@@ -45,6 +46,10 @@ export default function PaymentInfo({
       <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'8px 20px', fontSize:13 }}>
         <span style={{ color:'var(--dark)' }}>訂單編號</span>
         <span style={{ color:'var(--black)', letterSpacing:'0.08em', fontFamily:'var(--font-display)', fontVariantNumeric:'tabular-nums' }}>{orderNo}</span>
+        {!atmNo && paymentResult.paymentDueAt && <>
+          <span style={{ color:'var(--dark)' }}>訂單保留至</span>
+          <span>{new Date(paymentResult.paymentDueAt).toLocaleString('zh-TW', { timeZone:'Asia/Taipei', hour12:false })}</span>
+        </>}
         {response?.TSNo && <>
           <span style={{ color:'var(--dark)' }}>交易編號</span>
           <span style={{ color:'var(--black)', letterSpacing:'0.08em', fontFamily:'var(--font-display)', fontVariantNumeric:'tabular-nums' }}>{response.TSNo}</span>
@@ -71,7 +76,8 @@ export default function PaymentInfo({
           {stateMessage}
         </div>
       )}
-      {response?.Description && <p style={{ fontSize:12, color:'var(--dark)', marginTop:12, lineHeight:1.7 }}>{response.Description}</p>}
+      {paymentResult.linkExpiresAt && canPay && <p style={{ fontSize:12, color:'var(--dark)', marginTop:12, lineHeight:1.7 }}>付款連結有效至 {new Date(paymentResult.linkExpiresAt).toLocaleString('zh-TW', { timeZone:'Asia/Taipei', hour12:false })}。連結到期後，可於訂單付款期限內繼續付款。</p>}
+      {['link_expired','failed'].includes(paymentState) && ['card','apple','google'].includes(paymentResult.method) && <button type="button" disabled={renewing} onClick={onGoToPayment} style={{ marginTop:16, padding:'11px 16px', background:'var(--black)', color:'var(--white)', border:0, cursor:renewing ? 'wait' : 'pointer' }}>{renewing ? '正在確認付款狀態…' : '繼續付款'}</button>}
       {paymentResult.lookupCode && typeof paymentResult.orderEmailSent === 'boolean' && (
         <p role="status" style={{ fontSize:12, color:paymentResult.orderEmailSent ? '#176b3a' : '#8a3c2c', marginTop:12, lineHeight:1.7 }}>
           {paymentResult.orderEmailSent

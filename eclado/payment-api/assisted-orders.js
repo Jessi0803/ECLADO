@@ -2,7 +2,7 @@
 function isAmbiguousGatewayFailure(response) {
   // Duplicate/existing requests and processing/timeouts are not evidence that
   // the bank created nothing. Keep the original claim for reconciliation.
-  return /duplicate|already|exist|timeout|timed? out|processing|重複|已存在|已受理|逾時|超時|處理中|稍後/i.test(String(response?.Description || ''));
+  return /E0302|E0304|E2740|duplicate|already|exist|timeout|timed? out|processing|重複|重覆|已存在|已受理|確認中|逾時|超時|處理中|稍後/i.test(String(response?.Description || ''));
 }
 function publicAssistedOrder(order) {
   return {
@@ -31,7 +31,7 @@ function publicAssistedOrder(order) {
 
 function mountAssistedRoutes(app, dependencies) {
   const { rpc, getOrder, getInstruction, paymentRequest, buildCreate, callBank, gatewayError,
-    saveInstruction, saveAttempt, sendEmail, rateLimit, publicInstruction, resultToken } = dependencies;
+    saveInstruction, saveAttempt, sendEmail, rateLimit, publicInstruction, resultToken, presentationState } = dependencies;
   async function read(req) {
     const orderNo = String(req.body?.orderNo || '');
     const credential = await rpc('authorize_assisted_link', {
@@ -45,17 +45,17 @@ function mountAssistedRoutes(app, dependencies) {
       if (!await rateLimit(req,res,'assisted:details',30)) return;
       const { order, credential } = await read(req);
       const instruction = await getInstruction(order.id);
-      const state = ['paid','preparing','ready_for_pickup','picked_up','shipped','delivered'].includes(order.status) ? 'paid'
+      const state = presentationState ? presentationState(order, instruction) : ['paid','preparing','ready_for_pickup','picked_up','shipped','delivered'].includes(order.status) ? 'paid'
         : order.status==='cancelled' ? 'cancelled' : instruction?.payment_state || 'pending';
       res.json({ ok:true, order:publicAssistedOrder(order), paymentMethod:credential.payment_method,
-        instruction:publicInstruction(instruction,state), creditConsentRecorded:Boolean(credential.credit_consent_at),resultAccessToken:resultToken(order.id) });
+        instruction:publicInstruction(instruction,state), paymentState:state, creditConsentRecorded:Boolean(credential.credit_consent_at),resultAccessToken:resultToken(order.id) });
     } catch {
       res.status(403).json({ok:false,error:'連結無效或已到期，請使用會員中心／訪客訂單查詢。'});
     }
   });
   app.post('/api/orders/assisted-payment', async (req,res) => {
     res.set('Cache-Control','no-store');
-    let credential; let orderNo; let gatewayStarted=false;
+    let credential; let orderNo; let gatewayStarted=false; let claimed=false;
     try {
       if (!await rateLimit(req,res,'assisted:payment',10)) return;
       const context = await read(req);
@@ -78,7 +78,7 @@ function mountAssistedRoutes(app, dependencies) {
       }
       const existing = await getInstruction(orderNo);
       if (existing) {
-        if (existing.payment_state!=='pending') return res.status(409).json({ok:false,error:'付款已結束，請由原有訂單查詢入口確認或重新付款。'});
+        if (existing.payment_state!=='pending') return res.status(409).json({ok:false,error:'請重新查看訂單的付款狀態，再繼續付款；原訂單已為你保留。'});
         return res.json({ok:true,recovered:true,instruction:publicInstruction(existing,'pending')});
       }
       const publicUrl=process.env.PAYMENT_PUBLIC_URL || 'https://pay.ecladotaiwan.com';
@@ -86,6 +86,10 @@ function mountAssistedRoutes(app, dependencies) {
         returnUrl:`${publicUrl}/return?orderNo=${encodeURIComponent(orderNo)}`, qrCodeStatus:'Y',Param1:orderNo};
       // Database row lock admits only one claimant, including separate browsers.
       const inner=await buildCreate(input);
+      claimed=true;
+      input.providerOrderNo = inner.OrderNo;
+      await saveInstruction(order,input,{},'initiated');
+      await saveAttempt(order,input,{},'initiated');
       gatewayStarted=true;
       const result=await callBank('OrderCreate',inner,{orderId:orderNo,providerOrderNo:inner.OrderNo,source:'assisted_create'});
       if (!result.data || !String(result.data.Status || '').trim()) throw new Error('Incomplete bank response');
@@ -95,7 +99,9 @@ function mountAssistedRoutes(app, dependencies) {
         // Only a definite rejection releases the claim. A timeout/transport
         // exception deliberately leaves it locked: success may have occurred.
         await rpc('resolve_assisted_payment_claim',{p_order_id:orderNo,p_payment_token:credential.payment_token,p_outcome:'rejected'});
-        return res.status(400).json({ok:false,error:'銀行未接受此付款單，原訂單保留，可再次重試。'});
+        await saveInstruction(order,input,result.data,'failed');
+        await saveAttempt(order,input,result.data,'failed');
+        return res.status(400).json({ok:false,error:'付款暫時無法完成，訂單已為你保留。請稍後再試，或聯繫客服。'});
       }
       await rpc('resolve_assisted_payment_claim',{p_order_id:orderNo,p_payment_token:credential.payment_token,p_outcome:'success'});
       await saveInstruction(order,input,result.data);
@@ -104,9 +110,12 @@ function mountAssistedRoutes(app, dependencies) {
       await sendEmail(order).catch(()=>null);
       res.json({ok:true,instruction:publicInstruction(instruction,'pending')});
     } catch (error) {
+      if (claimed && !gatewayStarted) {
+        await rpc('resolve_assisted_payment_claim',{p_order_id:orderNo,p_payment_token:credential.payment_token,p_outcome:'rejected'}).catch(()=>{});
+      }
       // Never clear a possibly successful bank request on an exception.
       console.error('[assisted-payment]',gatewayStarted ? 'gateway result unresolved' : 'payment not created');
-      res.status(409).json({ok:false,error:'原訂單已保留；付款可能正在處理或結果待確認。請重新讀取付款資訊，勿取消重建或重複開單；若仍無資訊，請聯繫管理員確認銀行結果。'});
+      res.status(409).json({ok:false,error:'原訂單已為你保留，正在確認付款狀態。請稍後重新查看；如需協助，請聯繫客服。'});
     }
   });
 }

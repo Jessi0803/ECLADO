@@ -9,6 +9,8 @@ const CONTENT = {
   paid: ['付款成功', '款項已確認，我們已開始處理你的訂單。'],
   pending: ['付款結果仍在確認中', '請勿重新付款，可稍後回到會員訂單查看最新狀態。'],
   failed: ['付款未完成', '目前沒有確認到成功付款，請查看訂單或聯絡客服。'],
+  link_expired: ['付款連結已到期', '訂單仍為你保留。點選繼續付款，我們會先確認付款狀態，再帶你前往付款。'],
+  initiated: ['正在確認付款狀態', '訂單已保留，請稍後再確認付款狀態。'],
   expired: ['付款期限已過', '此訂單已取消，無法重新付款；如仍需購買，請重新建立訂單。'],
   cancelled: ['訂單已取消', '此付款單已關閉，無法重新付款。'],
 };
@@ -82,12 +84,13 @@ export default function PaymentResultPage({ setPage }) {
         paymentLink: result.paymentLink,
         amount: Number(result.order?.payment_amount ?? result.order?.total) || amount,
         response: result.response,
+        linkExpiresAt: result.linkExpiresAt,
       });
       window.location.assign(result.paymentLink);
     } catch (error) {
       setRetryError(error?.name === 'AbortError'
         ? '付款服務連線逾時，請稍後再試。'
-        : '暫時無法重新付款，請稍後再試，或聯繫客服協助。');
+        : /^[\u3400-\u9fff]/.test(error?.message || '') ? error.message : '暫時無法重新付款，請稍後再試，或聯繫客服協助。');
       setRetrying(false);
     }
   }
@@ -104,14 +107,14 @@ export default function PaymentResultPage({ setPage }) {
         <p style={{ color:'var(--dark)', fontSize:13, lineHeight:1.8, marginBottom:24 }}>{description}</p>
         {orderNo && <p style={{ fontSize:13, marginBottom:8 }}>訂單編號：<strong>{orderNo}</strong></p>}
         {amount > 0 && <p style={{ fontSize:13, marginBottom:30 }}>付款金額：<strong>NT$ {amount.toLocaleString()}</strong></p>}
-        {status === 'failed' && (
+        {['failed', 'link_expired'].includes(status) && (
           <div role="alert" style={{ maxWidth:520, margin:'24px auto 0', border:'1px solid #c58a72', borderLeft:'4px solid #9a4a2b', background:'#fff6f2', color:'#6f341f', padding:'16px 18px', textAlign:'left', fontSize:13, lineHeight:1.8 }}>
             付款尚未完成，你可以點選「重新付款」繼續完成原訂單。逾期未付款，訂單將自動取消。
           </div>
         )}
         {retryError && <p role="alert" style={{ color:'#9a4a2b', fontSize:13, lineHeight:1.7, marginTop:18 }}>{retryError}</p>}
         <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap', marginTop:30 }}>
-          {status === 'failed' && <button onClick={retryPayment} disabled={retrying} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 22px', cursor:retrying ? 'wait' : 'pointer', opacity:retrying ? 0.65 : 1 }}>{retrying ? '正在前往付款…' : '重新付款'}</button>}
+          {['failed', 'link_expired'].includes(status) && <button onClick={retryPayment} disabled={retrying} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'12px 22px', cursor:retrying ? 'wait' : 'pointer', opacity:retrying ? 0.65 : 1 }}>{retrying ? '正在確認付款狀態…' : status === 'link_expired' ? '繼續付款' : '重新付款'}</button>}
           <button onClick={() => setPage('account')} style={{ background:status === 'failed' ? 'transparent' : 'var(--black)', color:status === 'failed' ? 'var(--black)' : 'var(--white)', border:'1px solid var(--black)', padding:'12px 22px', cursor:'pointer' }}>查看我的訂單</button>
           <button onClick={() => setPage('shop')} style={{ background:'transparent', color:'var(--black)', border:'1px solid var(--black)', padding:'12px 22px', cursor:'pointer' }}>繼續購物</button>
           <button onClick={() => setPage('home')} style={{ background:'transparent', color:'var(--dark)', border:'1px solid var(--light)', padding:'12px 22px', cursor:'pointer' }}>返回首頁</button>

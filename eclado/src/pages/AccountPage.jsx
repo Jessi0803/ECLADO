@@ -158,7 +158,7 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
     setPaymentErrors(current => ({ ...current, [order.id]: '' }));
     try {
       const result = await getMemberPaymentInstructions(order.id);
-      if (result.paymentState === 'failed') {
+      if (['failed', 'link_expired', 'initiated'].includes(result.paymentState)) {
         await retryFailedPayment(order, result.instruction);
         return;
       }
@@ -183,6 +183,7 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
         paymentLink: instruction.payment_url || '',
         paymentDeadline: paymentDeadlineFromIso(instruction.payment_due_at || authoritativeOrder.payment_due_at),
         paymentDueAt: instruction.payment_due_at || authoritativeOrder.payment_due_at,
+        linkExpiresAt: instruction.link_expires_at,
         response: {
           Status: instruction.provider_status || '',
           Description: instruction.provider_description || '',
@@ -257,6 +258,7 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
         amount:paymentAmount,
         method:instruction.payment_method || paymentSummaries[order.id]?.payment_method || 'card',
         paymentLink:result.paymentLink,
+        linkExpiresAt:result.linkExpiresAt,
         paymentDueAt:authoritativeOrder.payment_due_at || order.payment_due_at,
         response:result.response,
         summary:{
@@ -672,7 +674,7 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
                             disabled={openingPaymentOrder === order.id}
                             style={{ marginTop:12, border:'1px solid var(--black)', background:'var(--black)', color:'var(--white)', padding:'9px 12px', fontSize:11, letterSpacing:'0.08em', cursor:openingPaymentOrder === order.id ? 'wait' : 'pointer', fontFamily:'inherit', opacity:openingPaymentOrder === order.id ? 0.65 : 1 }}
                           >
-                            {openingPaymentOrder === order.id ? (isAssisted ? '正在開啟…' : canRetryPayment ? '正在建立付款單…' : '正在讀取…') : (isAssisted ? '確認明細與付款' : canRetryPayment ? '重新付款' : '查看付款資訊')}
+                            {openingPaymentOrder === order.id ? (isAssisted ? '正在開啟…' : canRetryPayment ? '正在確認付款狀態…' : '正在讀取…') : (isAssisted ? '確認明細與付款' : canRetryPayment ? (paymentState === 'failed' ? '重新付款' : '繼續付款') : '查看付款資訊')}
                           </button>
                         )}
                         {paymentExpired && ['awaiting_confirm', 'unpaid'].includes(order.status) && (
