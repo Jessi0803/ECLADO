@@ -118,14 +118,12 @@ function productSeo(product) {
   const items = [{ name: '首頁', path: '/' }, { name: '全部商品', path: '/shop' }, { name: nameZh, path }];
   return {
     title: `${nameZh}｜ECLADO`, description: String(description).replace(/\s+/g, ' ').slice(0, 155), path, image, type: 'product',
-    jsonLd: [{
+    jsonLd: [...(!product.is_pro_only && !product.isProOnly && Number.isFinite(price) && price > 0 ? [{
       '@context': 'https://schema.org', '@type': 'Product', name: nameZh,
       alternateName: product.name || undefined, description, image: product.image_urls?.length ? product.image_urls : [image],
       sku: primaryVariant?.sku || product.sku || undefined, brand: { '@type': 'Brand', name: 'ECLADO' },
-      ...(price > 0 ? {
-        offers: { '@type': 'Offer', url: absoluteUrl(path), priceCurrency: 'TWD', price, availability: Number(stock) > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder' },
-      } : {}),
-    }, breadcrumbSchema(items)],
+      offers: { '@type': 'Offer', url: absoluteUrl(path), priceCurrency: 'TWD', price, availability: Number(stock) > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder' },
+    }] : []), breadcrumbSchema(items)],
   };
 }
 

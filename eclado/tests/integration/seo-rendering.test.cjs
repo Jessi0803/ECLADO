@@ -25,11 +25,20 @@ test('SEO renderer places product content and metadata in initial HTML', () => {
   assert.match(html, /<link rel="canonical" href="https:\/\/ecladotaiwan\.com\/products\/test-toner">/);
   assert.match(html, /<meta property="og:title"/);
   assert.match(html, /"@type":"Product"/);
+  assert.equal(productSeo(product).jsonLd[0].offers.price, 1200);
   assert.match(html, /"@type":"BreadcrumbList"/);
   assert.match(html, /<h1>測試化妝水<\/h1>/);
   assert.match(html, /<h2>商品描述<\/h2><p>商品說明<\/p>/);
   assert.match(html, /<a href="\/shop">/);
   assert.match(html, /<script src="\/assets\/main\.js"><\/script>/);
+});
+
+test('product pages without a public offer keep breadcrumbs but omit Product markup', () => {
+  const product = { slug: 'ac-jet-ampoule', name_zh: '屏護舒緩安瓶' };
+  for (const pricing of [{ price: 0 }, { price: 1200, is_pro_only: true }]) {
+    const { jsonLd } = productSeo({ ...product, ...pricing });
+    assert.deepEqual(jsonLd.map(schema => schema['@type']), ['BreadcrumbList']);
+  }
 });
 
 test('legacy slugs and Vercel routing preserve real redirect and 404 handling', () => {

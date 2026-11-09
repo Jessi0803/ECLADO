@@ -33,6 +33,7 @@ export default function ProductPage({
   const canonicalPath = product ? `${routeBase}/${getProductSlug(product)}` : undefined;
   const seoDescription = product?.desc || product?.subtitle || (product ? `選購 ${product.nameZh}，查看產品特色、成分與適合膚質。` : '找不到此商品');
   const publicPrice = Number(product?.price || 0);
+  const hasPublicOffer = !product?.isProOnly && Number.isFinite(publicPrice) && publicPrice > 0;
   useDocumentMeta({
     title: product ? `${product.nameZh}｜ECLADO` : '找不到商品｜ECLADO',
     description: seoDescription,
@@ -41,7 +42,7 @@ export default function ProductPage({
     type: 'product',
     robots: noIndex || (productsStatus === 'ready' && !product) ? 'noindex,nofollow' : 'index,follow',
     jsonLd: product && !noIndex ? [
-      {
+      ...(hasPublicOffer ? [{
         '@context': 'https://schema.org',
         '@type': 'Product',
         name: product.nameZh,
@@ -50,16 +51,14 @@ export default function ProductPage({
         image: product.imageUrls?.length ? product.imageUrls : [product.img].filter(Boolean),
         sku: product.variants?.[0]?.sku || undefined,
         brand: { '@type': 'Brand', name: 'ECLADO' },
-        ...(publicPrice > 0 ? {
-          offers: {
-            '@type': 'Offer',
-            url: `https://ecladotaiwan.com${canonicalPath}`,
-            priceCurrency: 'TWD',
-            price: publicPrice,
-            availability: Number(product.stock) > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder',
-          },
-        } : {}),
-      },
+        offers: {
+          '@type': 'Offer',
+          url: `https://ecladotaiwan.com${canonicalPath}`,
+          priceCurrency: 'TWD',
+          price: publicPrice,
+          availability: Number(product.stock) > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder',
+        },
+      }] : []),
       {
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
