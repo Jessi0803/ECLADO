@@ -1566,9 +1566,13 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       })
       .map(promotion => {
         const productIds = new Set(((promotion.product_ids as number[]) || []).map(Number));
-        const eligibleSubtotal = authoritativeItems
-          .filter(item => item.publication_status === 'active' && productIds.has(Number(item.product_id)))
-          .reduce((sum, item) => sum + item.line_total, 0);
+        const eligibleItems = authoritativeItems
+          .filter(item => item.publication_status === 'active' && productIds.has(Number(item.product_id)));
+        const eligibleSubtotal = eligibleItems.reduce((sum, item) => sum + item.line_total, 0);
+        const qualification = promotion.threshold_type === 'quantity'
+          ? eligibleItems.reduce((sum, item) => sum + item.qty, 0)
+          : eligibleSubtotal;
+        if (qualification < Number(promotion.threshold_value ?? 0)) return null;
         const rate = Number(promotion.discount_rate);
         const amount = Number(promotion.discount_amount);
         if (

@@ -1057,6 +1057,41 @@ test('優惠券專用活動不會在輸入優惠碼前當成自動折扣', async
   await expect(cartDrawer.getByText('NT$ 3,980').last()).toBeVisible();
 });
 
+for (const scenario of [
+  { name:'滿 3 件折 300 元', benefit_type:'fixed_discount', threshold_type:'quantity', threshold_value:3,
+    discount_rate:1, discount_amount:300, prematurePrice:'NT$ 3,680', total:'NT$ 11,760' },
+  { name:'滿 8,000 元打 9 折', benefit_type:'percentage_discount', threshold_type:'amount', threshold_value:8000,
+    discount_rate:0.9, discount_amount:0, prematurePrice:'NT$ 3,582', total:'NT$ 10,866' },
+]) {
+  test(`${scenario.name}僅在購物車達標後折抵`, async ({ page }) => {
+    const { prematurePrice, total, ...activity } = scenario;
+    await mockEcladoApis(page, { promotions:[{
+      ...activePromotion, ...activity, storefront_scope_type:'products',
+      label_text:activity.name, description:`活動條件：${activity.name}`,
+    }] });
+    await page.goto('/shop');
+    const card = page.locator('article').filter({ has:page.getByText('胜肽修護精華液 · 30ml', { exact:true }) });
+    await expect(card.getByTestId('promotion-label')).toHaveText(activity.name);
+    await expect(card.getByText('NT$ 3,980', { exact:true })).toBeVisible();
+    await expect(card.getByText(prematurePrice, { exact:true })).toHaveCount(0);
+    await card.getByRole('link').last().click();
+    await expect(page.getByRole('region', { name:'活動說明' })).toContainText(`活動條件：${activity.name}`);
+    await expect(page.getByText('NT$ 3,980', { exact:true }).first()).toBeVisible();
+    await expect(page.getByText(prematurePrice, { exact:true })).toHaveCount(0);
+    await page.getByRole('button', { name:/加入購物車/ }).click();
+
+    const cart = await openCart(page);
+    await expect(cart.getByText('NT$ 4,100', { exact:true })).toBeVisible();
+    await expect(cart.getByText(activity.name, { exact:true })).toHaveCount(0);
+    await cart.getByRole('button', { name:'+', exact:true }).first().click();
+    await expect(cart.getByText('NT$ 8,080', { exact:true })).toBeVisible();
+    await expect(cart.getByText(activity.name, { exact:true })).toHaveCount(0);
+    await cart.getByRole('button', { name:'+', exact:true }).first().click();
+    await expect(cart.getByText(activity.name, { exact:true })).toBeVisible();
+    await expect(cart.getByText(total, { exact:true })).toBeVisible();
+  });
+}
+
 test('活動折扣可先減金額再打折', async ({ page }) => {
   await mockEcladoApis(page, {
     promotions: [{

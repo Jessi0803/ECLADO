@@ -49,6 +49,10 @@ export function applyPromotionFormula(base, rate, amount, order) {
   return Math.max(0, subtotal * discountRate - discountAmount);
 }
 
+function requiresOrderQuote(promotion) {
+  return promotion.benefit_type === 'fixed_discount' || promotion.benefit_type === 'percentage_discount';
+}
+
 // 用購物車與目前生效的活動，回傳折扣計算結果
 export function calculateDiscount(cart, promotions, user) {
   const unit = item => getMemberPrice(item, user);
@@ -58,7 +62,8 @@ export function calculateDiscount(cart, promotions, user) {
     return { subtotal, discount: 0, finalSubtotal: subtotal, promotion: null };
   }
   const candidates = promotions
-    .filter(p => isPromotionLive(p, user))
+    // The order quote checks discount thresholds against the cart.
+    .filter(p => !requiresOrderQuote(p) && isPromotionLive(p, user))
     .map(p => {
       const ids = new Set(normProductIds(p));
       const promoItems = cart.filter(i => ids.has(Number(i.id)));
@@ -103,7 +108,7 @@ export function calculateDiscount(cart, promotions, user) {
 export function getPromoDisplayPrice(product, user, promotions) {
   const basePrice = getMemberPrice(product, user);
   const candidates = (promotions || [])
-    .filter(p => isPromotionLive(p, user) && normProductIds(p).includes(Number(product.id)))
+    .filter(p => !requiresOrderQuote(p) && isPromotionLive(p, user) && normProductIds(p).includes(Number(product.id)))
     .filter(p => !(p.allow_student_price_stacking === false && getMemberRole(user) === 'pro'
       && user?.uid && product.studentPriceUserId === user.uid))
     .map(p => {
