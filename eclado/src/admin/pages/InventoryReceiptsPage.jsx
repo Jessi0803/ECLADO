@@ -265,6 +265,16 @@ export default function InventoryReceiptsPage({ initialReceipt, onInitialReceipt
     });
   }
 
+  function deleteDraft() {
+    if (!window.confirm(`確定要刪除入庫單 #${receipt.receipt_no} 的草稿嗎？刪除後無法復原。`)) return;
+    run(async () => {
+      await request('delete_inventory_receipt_draft', { p_id: receipt.id, p_version: receipt.version });
+      setOffset(0);
+      returnToList();
+      setNotice('已刪除入庫單草稿。');
+    });
+  }
+
   return (
     <div className="procurement-page inventory-receipts">
       <div className="procurement-header">
@@ -275,6 +285,9 @@ export default function InventoryReceiptsPage({ initialReceipt, onInitialReceipt
           <p>{mode === 'list' ? '建立入庫單、預覽成本及查詢歷史紀錄' : '依各商品規格的入庫總重量分攤費用'}</p>
         </div>
         <div className="procurement-header-actions">
+          {(mode === 'edit' || mode === 'preview') && receipt?.receipt_no && !receipt.posted_at && (
+            <button className="admin-secondary-btn procurement-delete" type="button" disabled={busy} onClick={deleteDraft}>刪除草稿</button>
+          )}
           {mode === 'list' && <button className="admin-primary-btn" type="button" disabled={busy} onClick={() => editReceipt(newReceipt())}>新增入庫單</button>}
           {mode === 'edit' && (
             <button className="admin-primary-btn" type="submit" form="inventory-receipt-form" disabled={busy || !receipt.items.length}>
