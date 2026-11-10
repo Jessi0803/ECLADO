@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import ProductCostReport from '../components/ProductCostReport.jsx';
 import { StatCard } from '../components/DashboardWidgets.jsx';
 import { fetchAdminAnalytics } from '../../services/adminAnalytics.js';
 import { maximumEndDate, periodBuckets, presetRange, productRanking, rangeError } from '../domain/analyticsPeriod.js';
@@ -11,7 +12,7 @@ const MEMBER_GROUPS = [
   ['instructor','師資','#577e6b'], ['distributor','經銷商','#87739c'], ['staff','內部人員','#ba7a61'], ['other','其他／未記錄','#77736b'],
 ];
 
-export default function Analytics() {
+export default function Analytics({ canApproveCosts }) {
   const [draft, setDraft] = useState(() => presetRange('month'));
   const [query, setQuery] = useState(() => ({ ...presetRange('month'), version: 0 }));
   const [data, setData] = useState(null);
@@ -83,20 +84,24 @@ export default function Analytics() {
       <p className="analytics-note">查詢期間：{data.startDate} ～ {data.endDate}（依目前付款狀態更新；後續付款可能使數字增加）</p>
       <div className="analytics-stats">
         <StatCard label="期間營業額" value={money(summary.revenue)} sub="沿用訂單總額（含運費）" icon="◐" />
-        <StatCard label="有效訂單數" value={summary.orders} sub="已付款及後續履約訂單" icon="◫" />
+        <StatCard label="有效訂單數" value={summary.orders} icon="◫"
+          sub={summary.orders === 0
+            ? <span className="analytics-note" role="status">此期間沒有符合條件的銷售訂單。</span>
+            : '已付款及後續履約訂單'} />
         <StatCard label="平均客單價" value={money(summary.orders ? Math.round(summary.revenue / summary.orders) : 0)} sub="期間營業額 ÷ 有效訂單數" icon="◈" />
         <StatCard label="商品銷售數量" value={quantities.quantity} sub={`另贈送 ${quantities.gifts} 件，不計入銷售排行`} icon="◧" />
       </div>
-      {summary.orders === 0 && <p role="status">此期間沒有符合條件的銷售訂單。</p>}
       <section className="analytics-panel" aria-label="會員身分營收分布">
-        <div className="analytics-section-header">
-          <h2>會員身分營收分布</h2>
+        <div className="analytics-section-header analytics-section-header-split">
+          <div className="analytics-section-copy">
+            <h2>會員身分營收分布</h2>
+            <p className="analytics-note">查看所選期間各會員身分的消費金額與占比。</p>
+          </div>
           <div className="analytics-chart-toggle" role="group" aria-label="會員營收圖表類型">
             <button type="button" aria-pressed={memberChart === 'pie'} onClick={() => setMemberChart('pie')}>圓餅圖</button>
             <button type="button" aria-pressed={memberChart === 'bar'} onClick={() => setMemberChart('bar')}>柱狀圖</button>
           </div>
         </div>
-        <p className="analytics-note">查看所選期間各會員身分的消費金額與占比。</p>
         {memberChart === 'pie' ? <div className="analytics-member-pie-layout">
           <div className="analytics-member-pie" role="img" aria-label={summary.revenue ? `會員身分營收圓餅圖，總營業額 ${money(summary.revenue)}` : '此期間沒有營收'} style={{background:pieStops.length ? `conic-gradient(${pieStops.join(',')})` : 'var(--light)'}}>
             {!summary.revenue && <span>尚無營收</span>}
@@ -132,12 +137,20 @@ export default function Analytics() {
           {!detailRows.length && <tr><td colSpan={6}>此期間沒有符合條件的訂單，可勾選「顯示無訂單日期」查看完整明細。</td></tr>}
         </tbody></table></div>
       </section>
+    </>}
+    <ProductCostReport key={query.version} from={query.start} to={query.end} canApprove={canApproveCosts} />
+    {data && !loading && <>
       <section className="analytics-panel">
-        <div className="analytics-section-header"><h2>商品銷售排行</h2><div className="analytics-controls">
-          <label>商品統計方式<select value={mode} onChange={e => setMode(e.target.value)}><option value="product">依商品合併</option><option value="variant">依規格拆分</option></select></label>
-          <label>排行範圍<select value={scope} onChange={e => setScope(e.target.value)}><option value="all">整段期間</option>{buckets.map(row => <option key={row.key} value={row.key}>{periodLabel(row)}</option>)}</select></label>
-        </div></div>
-        <p className="analytics-note">{selectedBucket ? periodLabel(selectedBucket) : `${data.startDate} ～ ${data.endDate}`} · 依銷售件數排序；贈品另計。已下架商品保留，缺少規格的舊訂單顯示「未記錄規格」。</p>
+        <div className="analytics-section-header analytics-section-header-split">
+          <div className="analytics-section-copy">
+            <h2>商品銷售排行</h2>
+            <p className="analytics-note">{selectedBucket ? periodLabel(selectedBucket) : `${data.startDate} ～ ${data.endDate}`} · 依銷售件數排序；贈品另計。已下架商品保留，缺少規格的舊訂單顯示「未記錄規格」。</p>
+          </div>
+          <div className="analytics-controls analytics-ranking-controls">
+            <label>商品統計方式<select value={mode} onChange={e => setMode(e.target.value)}><option value="product">依商品合併</option><option value="variant">依規格拆分</option></select></label>
+            <label>排行範圍<select value={scope} onChange={e => setScope(e.target.value)}><option value="all">整段期間</option>{buckets.map(row => <option key={row.key} value={row.key}>{periodLabel(row)}</option>)}</select></label>
+          </div>
+        </div>
         <div className="table-scroll"><table><thead><tr>{['排名','商品名稱','規格','銷售數量','銷售件數占比'].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>
           {ranking.map((row,index) => <tr key={row.key}><td>{index+1}</td><td>{row.name}</td><td>{row.size}</td><td>{row.quantity}</td><td>{(row.quantity/rankedTotal*100).toFixed(1)}%</td></tr>)}
           {!ranking.length && <tr><td colSpan={5}>此期間沒有商品銷售紀錄。</td></tr>}

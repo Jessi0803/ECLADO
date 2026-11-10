@@ -76,7 +76,9 @@ export default function Catalog({ products, memberPricing = null, onSaveProduct,
       expectedPricingOverrides: { ...p.pricingOverrides },
       pricingDraft: Object.fromEntries(PRICING_ROLES.map(role => [role, p.pricingOverrides?.[role] == null ? '' : String(formatFold(p.pricingOverrides[role]))])),
       features: Array.isArray(p.features) ? [...p.features] : [],
-      variants: (p.variants || []).map(variant => ({ ...variant })),
+      variants: (p.variants || [])
+        .filter(variant => !variant.removedAt)
+        .map(variant => ({ ...variant, expectedStock: variant.stock })),
       productImages: (p.productImages || []).map(image => ({ ...image })),
     };
     initialDraftRef.current = JSON.stringify(draft);
@@ -139,7 +141,9 @@ export default function Catalog({ products, memberPricing = null, onSaveProduct,
     setEditing(prev => ({
       ...prev,
       variants: prev.variants.map((variant, variantIndex) => (
-        variantIndex === index ? { ...variant, [field]: value } : variant
+        variantIndex === index
+          ? { ...variant, [field]: value, ...(field === 'unitWeightG' ? { unitWeightChanged: true } : {}) }
+          : variant
       )),
     }));
   }
@@ -350,6 +354,11 @@ export default function Catalog({ products, memberPricing = null, onSaveProduct,
       sortOrder: index,
       active: variant.active !== false,
     }));
+    if (normalizedVariants.some(variant => variant.unitWeightChanged && variant.unitWeightG !== ''
+      && (!/^\d{1,9}(\.\d{1,3})?$/.test(variant.unitWeightG) || Number(variant.unitWeightG) <= 0))) {
+      setError('分攤重量須大於 0 g，最多三位小數。');
+      return;
+    }
     const invalidVariant = normalizedVariants.find(variant => (
       !variant.sku || !variant.size || variant.price < 0 || variant.proPrice < 0 || variant.stock < 0
       || (variant.procurementUnitCostUsd !== ''
@@ -818,6 +827,15 @@ export default function Catalog({ products, memberPricing = null, onSaveProduct,
                             </label>
                           )}
                         </div>
+                        {canManageProcurementCost && (
+                          <div className="catalog-variant-primary-fields">
+                            <label>
+                              <span>每件分攤重量（g）</span>
+                              <input aria-label={`規格 ${index + 1} 每件分攤重量（g）`} type="number" min="0.001" step="0.001" value={variant.unitWeightG ?? ''}
+                                onChange={e => updateVariant(index, 'unitWeightG', e.target.value)} style={inp} placeholder="含商品包裝" />
+                            </label>
+                          </div>
+                        )}
                       </div>
 
                       <div className="catalog-variant-options">
@@ -841,7 +859,7 @@ export default function Catalog({ products, memberPricing = null, onSaveProduct,
                     </section>
                   ))}
                 </div>
-                <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 7 }}>移除既有規格後，資料庫會將它停用並保留歷史紀錄；預設規格不可停用。</p>
+                <p style={{ fontSize: 11, color: 'var(--mid)', marginTop: 7 }}>停用販售的規格仍可編輯。移除並儲存後，規格會從編輯清單移除，歷史紀錄仍可查閱。</p>
               </div>
 
               <div>

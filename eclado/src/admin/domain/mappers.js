@@ -215,7 +215,9 @@ export function normalizeProductVariant(row, index = 0) {
     isDefault: !!(row.is_default ?? row.isDefault),
     sortOrder: Math.max(0, Number(row.sort_order ?? row.sortOrder) || index),
     active: row.active !== false,
+    removedAt: row.removed_at ?? null,
     isCustomOrder: !!(row.is_custom_order ?? row.isCustomOrder),
+    unitWeightG: row.unit_weight_g == null ? '' : String(row.unit_weight_g),
     procurementUnitCostUsd: row.procurement_unit_cost_usd == null
       ? ''
       : Number(row.procurement_unit_cost_usd),

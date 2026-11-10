@@ -19,6 +19,7 @@ const Analytics = lazy(() => import('./pages/AnalyticsPage.jsx'));
 const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage.jsx'));
 const Catalog = lazy(() => import('./pages/CatalogPage.jsx'));
 const BackordersPage = lazy(() => import('./pages/BackordersPage.jsx'));
+const InventoryReceiptsPage = lazy(() => import('./pages/InventoryReceiptsPage.jsx'));
 const InventoryCountsPage = lazy(() => import('./pages/InventoryCountsPage.jsx'));
 import Dashboard from './pages/DashboardPage.jsx';
 const Members = lazy(() => import('./pages/MembersPage.jsx'));
@@ -43,6 +44,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
   const [membersDefaultFilter, setMembersDefaultFilter] = useState('all');
   // 訂單 ↔ 會員互相跳轉：記住來源，讓詳情面板顯示返回列。
   const [crossLink, setCrossLink] = useState(null);
+  const [purchaseReceipt, setPurchaseReceipt] = useState(null);
   const [products, setProducts] = useState([]);
   const [memberPricing, setMemberPricing] = useState(null);
   const [members, setMembers] = useState([]);
@@ -495,6 +497,9 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
       price: Number(variant.price) || 0,
       pro_price: Number(variant.proPrice) || 0,
       stock: Math.max(0, Number(variant.stock) || 0),
+      ...(variant.expectedStock != null ? { expected_stock: variant.expectedStock } : {}),
+      ...(canManageProcurementCost && variant.unitWeightChanged
+        ? { unit_weight_g: variant.unitWeightG === '' ? null : Number(variant.unitWeightG) } : {}),
       is_default: !!variant.isDefault,
       sort_order: index,
       active: variant.active !== false,
@@ -734,11 +739,13 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
       case 'products':
       case 'inventory': return <Catalog products={products} memberPricing={memberPricing} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'promotions': return <Promotions products={products} />;
-      case 'procurement': return <ProcurementPage />;
+      case 'procurement': return <ProcurementPage onOpenReceipt={receipt => { setPurchaseReceipt(receipt); setPage('inventory_receipts'); }} />;
+      case 'inventory_receipts': return <InventoryReceiptsPage initialReceipt={purchaseReceipt}
+        onInitialReceiptOpened={() => setPurchaseReceipt(null)} onInventoryChanged={fetchAll} />;
       case 'members': return <Members members={members} orders={orders} products={products} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} onCreateHistoricalOrder={canWriteOrders ? createMemberHistoricalOrder : null} onCreateAssistedOrder={canCreateAssistedOrder ? openAssistedOrder : null} defaultFilter={membersDefaultFilter} memberNotes={memberNotes} onSaveMemberNote={canWriteMembers ? saveMemberNote : null} focusMemberId={crossLink?.memberId || ''} backToOrderId={crossLink?.backOrderId || ''} onOpenOrder={canReadOrders ? openOrderFromMember : null} onClearCrossLink={() => setCrossLink(null)} canManageShoppingCredit={canManageShoppingCredit} canManageInstructorStudents={canManageInstructorStudents} />;
       case 'renewals': return <ProfessionalRenewalsPage canWrite={canWriteMembers} />;
       case 'applications': return <Members members={members} orders={orders} products={products} applications={applications} applicationsLoading={applicationsLoading} applicationsError={applicationsError} onChangeMemberRole={changeMemberRole} onChangeMembershipStart={changeMembershipStart} onSaveSalesAdjustment={saveSalesAdjustment} onUpdateApplicationStatus={updateApplicationStatus} onSendApplicationNotice={sendApplicationNotice} onDeleteMember={canWriteMembers ? deleteMemberWithSync : null} currentAdminUserId={adminUserId} onAssignGuestOrder={assignGuestOrderToMember} onCreateHistoricalOrder={canWriteOrders ? createMemberHistoricalOrder : null} defaultFilter="app_pending" canManageShoppingCredit={canManageShoppingCredit} canManageInstructorStudents={canManageInstructorStudents} />;
-      case 'analytics': return <Analytics />;
+      case 'analytics': return <Analytics canApproveCosts={canManageProcurementCost} />;
       case 'ai': return <AIReorder products={activeProducts} orders={orders} />;
       default: return null;
     }

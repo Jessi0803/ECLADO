@@ -20,6 +20,7 @@ const MENU_GROUPS = [
       { id: 'inventory_counts', icon: 'inventory_counts', label: '庫存盤點' },
       { id: 'backorders', icon: 'backorders', label: '待補商品' },
       { id: 'procurement', icon: 'procurement', label: '叫貨管理' },
+      { id: 'inventory_receipts', icon: 'procurement', label: '入庫單管理' },
       { id: 'promotions', icon: 'promotions', label: '活動管理' },
       { id: 'ai', icon: 'ai', label: 'AI 補貨建議' },
     ],

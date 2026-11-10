@@ -1,0 +1,7 @@
+.inventory-receipts .receipt-costs h2 { margin-bottom: 10px; font-size: 18px; }
+.inventory-receipts .receipt-fields { border: 0; margin: 0; padding: 0; min-width: 0; }
+.inventory-receipts .receipt-actions { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+.inventory-receipts .receipt-summary { display: flex; flex-wrap: wrap; gap: 12px 24px; margin: 12px 0; }
+.inventory-receipts .receipt-summary dt { font-size: 12px; color: var(--mid); }
+.inventory-receipts .receipt-summary dd { margin: 3px 0 0; font-weight: 600; }
+.inventory-receipts .receipt-costs th { white-space: nowrap; }

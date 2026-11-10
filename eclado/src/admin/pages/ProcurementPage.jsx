@@ -74,13 +74,17 @@ function orderFromStored(stored) {
   });
 }
 
-export default function ProcurementPage() {
+export default function ProcurementPage({ onOpenReceipt }) {
+  const [openingReceipt, setOpeningReceipt] = useState(false);
   const [data, setData] = useState({ product_variants: [], addresses: [], orders: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [mode, setMode] = useState('list');
   const [draft, setDraft] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [receivingProgress, setReceivingProgress] = useState(null);
+  const receivingOrderId = mode === 'detail' && selectedOrder ? String(selectedOrder.id) : null;
+  const progress = receivingProgress?.orderId === receivingOrderId ? receivingProgress : null;
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSearch, setPickerSearch] = useState('');
   const [pickerFilter, setPickerFilter] = useState('all');
@@ -113,6 +117,19 @@ export default function ProcurementPage() {
   }
 
   useEffect(() => { loadData(); }, []);
+
+  useEffect(() => {
+    if (!receivingOrderId) {
+      setReceivingProgress(null);
+      return;
+    }
+    let active = true;
+    supabase.rpc('get_purchase_receiving_progress', { p_purchase_order_id: receivingOrderId })
+      .then(({ data, error }) => {
+        if (active) setReceivingProgress({ orderId: receivingOrderId, data, error });
+      });
+    return () => { active = false; };
+  }, [receivingOrderId]);
 
   const filteredPickerItems = useMemo(() => {
     const keyword = pickerSearch.trim().toLowerCase();
@@ -249,6 +266,22 @@ export default function ProcurementPage() {
       setMode('detail');
     } else {
       setMode('list');
+    }
+  }
+
+  async function openReceipt() {
+    setOpeningReceipt(true);
+    setError('');
+    try {
+      const { data: receipt, error: failure } = await supabase.rpc('open_purchase_inventory_receipt', {
+        p_purchase_order_id: String(selectedOrder.id),
+      });
+      if (failure) throw failure;
+      onOpenReceipt(receipt);
+    } catch (failure) {
+      setError(failure.message || '無法開啟入庫草稿。');
+    } finally {
+      setOpeningReceipt(false);
     }
   }
 
@@ -394,7 +427,10 @@ export default function ProcurementPage() {
       {mode === 'detail' && selectedOrder && <>
         <div className="procurement-header">
           <div><button className="procurement-back" onClick={() => setMode('list')}>← 返回叫貨單</button><h1>{selectedOrder.po_number}</h1><p>{selectedOrder.supplier_name} · {new Date(selectedOrder.created_at).toLocaleString('zh-TW')}</p></div>
-          <div className="procurement-header-actions">{DELETABLE_STATUSES.has(selectedOrder.status) && <button className="admin-secondary-btn" onClick={() => editOrder(selectedOrder)}>編輯</button>}<button className="admin-secondary-btn" onClick={() => duplicateOrder(selectedOrder)}>複製新單</button>{DELETABLE_STATUSES.has(selectedOrder.status) && <button className="admin-secondary-btn procurement-delete" onClick={() => deleteOrder(selectedOrder)} disabled={deleting}>{deleting ? '刪除中...' : '永久刪除'}</button>}<button className="admin-primary-btn" onClick={() => setPreviewOpen(true)}>預覽與匯出</button></div>
+          <div className="procurement-header-actions">
+            {onOpenReceipt && FINAL_STATUS_SET.has(selectedOrder.status) && <button type="button" className="admin-secondary-btn"
+              disabled={openingReceipt || !progress || progress.data?.complete} onClick={openReceipt}>{openingReceipt ? '開啟中…' : '建立入庫草稿'}</button>}
+            {DELETABLE_STATUSES.has(selectedOrder.status) && <button className="admin-secondary-btn" onClick={() => editOrder(selectedOrder)}>編輯</button>}<button className="admin-secondary-btn" onClick={() => duplicateOrder(selectedOrder)}>複製新單</button>{DELETABLE_STATUSES.has(selectedOrder.status) && <button className="admin-secondary-btn procurement-delete" onClick={() => deleteOrder(selectedOrder)} disabled={deleting}>{deleting ? '刪除中...' : '永久刪除'}</button>}<button className="admin-primary-btn" onClick={() => setPreviewOpen(true)}>預覽與匯出</button></div>
         </div>
         <div className="procurement-detail-status"><span className={`procurement-status status-${selectedOrder.status}`}>{STATUS_LABELS[selectedOrder.status]}</span>{selectedOrder.status !== 'cancelled' && <select aria-label="叫貨單狀態" value={selectedOrder.status} onChange={event => updateStatus(selectedOrder.id, event.target.value)}>{ACTIVE_STATUS_OPTIONS.filter(([status]) => !FINAL_STATUS_SET.has(selectedOrder.status) || FINAL_STATUS_SET.has(status)).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>}</div>
         <div className="procurement-detail-financials">
@@ -402,6 +438,29 @@ export default function ProcurementPage() {
           <div><span>匯率</span><strong>1 : {number(displayedOrder.exchange_rate).toFixed(4)}</strong></div>
           <div><span>台幣估算</span><strong>{formatTwd(displayedOrder.total_twd)}</strong></div>
         </div>
+        <details className="procurement-section-card procurement-receiving-progress" key={receivingOrderId}>
+          <summary>
+            <span>入庫進度</span>
+            {progress?.data?.complete && <span className="procurement-status status-received">已全部入庫</span>}
+          </summary>
+          {!progress ? <p role="status">載入入庫進度中…</p> : progress.error ? (
+            <p role="alert">無法載入入庫進度，請重新開啟叫貨單。</p>
+          ) : progress.data?.items?.length ? (
+            <div className="table-scroll">
+              <table className="responsive-admin-table procurement-items-table">
+                <thead><tr><th scope="col">商品規格</th><th scope="col">叫貨數量</th><th scope="col">已入庫數量</th><th scope="col">剩餘數量</th></tr></thead>
+                <tbody>{progress.data.items.map(item => (
+                  <tr key={item.variant_id}>
+                    <td data-label="商品規格"><strong>{item.sku} · {item.product_name} · {item.variant_name}</strong></td>
+                    <td data-label="叫貨數量">{item.ordered_quantity} 件</td>
+                    <td data-label="已入庫數量">{item.received_quantity} 件</td>
+                    <td data-label="剩餘數量">{item.remaining_quantity} 件</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          ) : <p>這張叫貨單沒有商品。</p>}
+        </details>
         <div className="procurement-document-shell"><PurchaseOrderDocument order={displayedOrder} /></div>
       </>}
 
