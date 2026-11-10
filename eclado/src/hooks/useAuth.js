@@ -24,13 +24,15 @@ export default function useAuth(setPageState) {
   const [user, setUser] = useState(null);
   const profileLoadSequence = useRef(0);
   const profileLoading = useRef(false);
+  const resolvedProfileUserId = useRef(null);
   const [authReady, setAuthReady] = useState(false);
   const [showProBanner, setShowProBanner] = useState(false);
 
   const loadUser = useCallback(async supabaseUser => {
     const sequence = ++profileLoadSequence.current;
     profileLoading.current = true;
-    setAuthReady(false);
+    // Keep the current screen mounted during same-member background refreshes.
+    if (resolvedProfileUserId.current !== supabaseUser.id) setAuthReady(false);
     const { data } = await fetchMemberProfile(supabaseUser.id);
     if (sequence !== profileLoadSequence.current) return;
     const displayName = data?.name
@@ -54,6 +56,7 @@ export default function useAuth(setPageState) {
       defaultInvoiceTaxId: data?.default_invoice_tax_id || '',
     });
     // Reconcile stored products only after this session's member role is known.
+    resolvedProfileUserId.current = supabaseUser.id;
     profileLoading.current = false;
     setAuthReady(true);
 
@@ -182,7 +185,12 @@ export default function useAuth(setPageState) {
       }
 
       if (session?.user) loadUser(session.user);
-      else if (event === 'SIGNED_OUT') { profileLoadSequence.current++; profileLoading.current = false; setUser(null); }
+      else if (event === 'SIGNED_OUT') {
+        profileLoadSequence.current++;
+        profileLoading.current = false;
+        resolvedProfileUserId.current = null;
+        setUser(null);
+      }
       if (!hasAuthCallbackInUrl() && !profileLoading.current) setAuthReady(true);
     });
 
@@ -206,6 +214,7 @@ export default function useAuth(setPageState) {
   const handleSignOut = useCallback(() => {
     profileLoadSequence.current++;
     profileLoading.current = false;
+    resolvedProfileUserId.current = null;
     signOut();
     setUser(null);
   }, []);

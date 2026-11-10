@@ -197,6 +197,32 @@ test('美容師申請發票資料可留白，填寫時需同時提供公司抬�
   expect(insertCount).toBe(0);
 });
 
+test('背景更新會員資料時保留美容師申請的選檔欄位', async ({ page }) => {
+  await mockEcladoApis(page, {
+    authUser: loggedInUser('consumer@example.com'),
+    profiles: [consumerProfile()],
+  });
+  await page.goto('/professional-apply');
+  const fileInput = page.locator('input[type="file"]');
+  await expect(fileInput).toBeVisible();
+  await fileInput.evaluate(input => input.setAttribute('data-picker-instance', 'original'));
+
+  let releaseProfile!: () => void;
+  const profileGate = new Promise<void>(resolve => { releaseProfile = resolve; });
+  await page.route('**/rest/v1/profiles**', async route => {
+    await profileGate;
+    await route.fallback();
+  });
+  try {
+    const refresh = page.waitForRequest('**/rest/v1/profiles**');
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await refresh;
+    await expect(fileInput).toHaveAttribute('data-picker-instance', 'original');
+  } finally {
+    releaseProfile();
+  }
+});
+
 for (const fallback of [false, true]) {
 test(`美容師申請可選填上傳最多三張私人證照圖片${fallback ? '（JPEG 備援）' : ''}`, async ({ page }) => {
   if (fallback) await page.addInitScript(() => {
