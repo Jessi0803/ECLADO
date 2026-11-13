@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { seriesDisplayName } from '../../app/navigation.js';
 import { goInfoSection } from '../../app/infoNavigation.js';
 import { goShopFilter, shopPath } from '../../app/shopNavigation.js';
 import { goProfessionalApply } from '../../services/membership.js';
@@ -43,7 +44,7 @@ export default function MobileNavSection({ item, setPage, user, close }) {
                 ))}
               </div>
               {item.children.find(group => group.view === productView)?.items.map(child => (
-                <a key={child} href={shopPath(productView, child)} onClick={event => { event.preventDefault(); goShopFilter(productView, child, setPage); close(); }} style={{ display:'block', width:'100%', textAlign:'left', color:'var(--dark)', padding:'10px 16px', letterSpacing:'0.04em', fontFamily:'var(--font-body)', fontSize:13, textDecoration:'none', boxSizing:'border-box' }}>{child}</a>
+                <a key={child} href={shopPath(productView, child)} onClick={event => { event.preventDefault(); goShopFilter(productView, child, setPage); close(); }} style={{ display:'block', width:'100%', textAlign:'left', color:'var(--dark)', padding:'10px 16px', letterSpacing:'0.04em', fontFamily:'var(--font-body)', fontSize:13, textDecoration:'none', boxSizing:'border-box' }}>{productView === 'series' ? seriesDisplayName(child) : child}</a>
               ))}
             </>
           )}

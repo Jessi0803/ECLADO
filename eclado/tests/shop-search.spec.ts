@@ -59,7 +59,7 @@ test('shop search intersects category and series; clear all resets both', async 
   await expect(input).toHaveValue('');
   await expect(page.locator('.g4lg article')).toHaveCount(mockProducts.length);
   await page.getByRole('link',{name:'依系列分類',exact:true}).click();
-  await page.locator('.filter-tabs').getByRole('link',{name:'Cell',exact:true}).click();
+  await page.locator('.filter-tabs').getByRole('link',{name:'記憶',exact:true}).click();
   await input.fill('清潔泡沫');
   await expect(page.locator('.g4lg article')).toHaveCount(0);
   await page.getByRole('button',{name:'清除所有條件'}).click();

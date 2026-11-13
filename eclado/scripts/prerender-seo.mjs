@@ -6,7 +6,7 @@ import { createServer } from 'vite';
 const require = createRequire(import.meta.url);
 const {
   SITE_ORIGIN, absoluteUrl, breadcrumb, breadcrumbSchema, escapeHtml,
-  fetchStorefrontCatalog, injectSeoDocument, productSeo, renderProductBody, siteNavigation,
+  fetchStorefrontCatalog, injectSeoDocument, productSeo, renderProductBody, seriesDisplayName, siteNavigation,
 } = require('../api/_seo.js');
 
 const rootDir = process.cwd();
@@ -99,7 +99,9 @@ for (const [category, slug] of Object.entries(CATEGORY_SLUGS)) {
 }
 for (const [series, slug] of Object.entries(SERIES_SLUGS)) {
   const route = `/shop/series/${slug}`;
-  const page = shopPage(`${series} 系列`, route, products.filter(product => String(product.series || '') === series), `瀏覽 ECLADO ${series} 系列商品與專業保養資訊。`);
+  const name = seriesDisplayName(series);
+  const matchingProducts = products.filter(product => seriesDisplayName(product.series) === name);
+  const page = shopPage(`${name} 系列`, route, matchingProducts, `瀏覽 ECLADO ${name} 系列商品與專業保養資訊。`);
   await writeRoute(route, page.seo, page.body);
 }
 

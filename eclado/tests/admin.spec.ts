@@ -1859,7 +1859,11 @@ test('商品管理可編輯名稱、規格價格與院線限定並透過 RPC 儲
   await panel.getByLabel('中文名稱').fill('胜肽全效修護精華液');
   await panel.getByLabel('規格 1 市場價').fill('4200');
   await panel.getByLabel('規格 1 專業價').fill('3100');
-  await panel.getByLabel('系列分類').selectOption('Cell');
+  await expect(productRow.getByText('記憶', { exact: true })).toBeVisible();
+  const series = panel.getByLabel('系列分類');
+  await expect(series.locator('option:checked')).toHaveText('記憶');
+  await expect(series.getByRole('option', { name: '呼吸' })).toHaveAttribute('value', 'SOS');
+  await series.selectOption({ label: '呼吸' });
   await panel.getByLabel('規格 1 客訂規格').check();
   await panel.getByLabel(/院線限定/).check();
   await panel.getByRole('button', { name: '儲存' }).click();
@@ -1868,7 +1872,7 @@ test('商品管理可編輯名稱、規格價格與院線限定並透過 RPC 儲
   expect(savedRequest?.p_product).toMatchObject({
     id: 2,
     name_zh: '胜肽全效修護精華液',
-    series: 'Cell',
+    series: 'SOS',
     is_pro_only: true,
   });
   expect(savedRequest?.p_variants?.[0]).toMatchObject({ price: 4200, pro_price: 3100, is_custom_order: true });

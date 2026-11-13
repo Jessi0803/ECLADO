@@ -419,8 +419,11 @@ test('導覽列所有產品下拉分類會帶入商城分類並保留可分享�
 test('商城可在功效分類與系列分類間切換並保留系列網址', async ({ page }) => {
   await page.goto('/shop?view=series&series=Cell');
 
+  await expect(page.locator('.filter-tabs').getByRole('link', { name: '呼吸', exact: true }))
+    .toHaveAttribute('href', '/shop/series/respiration');
+
   await expect(page.getByRole('link', { name: '依系列分類', exact: true }).last()).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByRole('link', { name: 'Cell', exact: true }).last()).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('link', { name: '記憶', exact: true }).last()).toHaveAttribute('aria-current', 'page');
   await expect(page.getByText('胜肽修護精華液').first()).toBeVisible();
   await expect(page.getByText('深層清潔泡沫洗面乳').first()).toHaveCount(0);
 

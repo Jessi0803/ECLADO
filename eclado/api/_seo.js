@@ -1,3 +1,9 @@
+const seriesDisplayNames = require('../src/domain/seriesDisplayNames.json');
+
+function seriesDisplayName(series) {
+  return Object.hasOwn(seriesDisplayNames, series) ? seriesDisplayNames[series] : series;
+}
+
 const SITE_ORIGIN = 'https://ecladotaiwan.com';
 const { resolveSupabaseAnonKey, resolveSupabaseUrl } = require('./_supabase-env.js');
 
@@ -90,7 +96,7 @@ function renderProductBody(product) {
   const items = [{ name: '首頁', path: '/' }, { name: '全部商品', path: '/shop' }, { name: nameZh, path }];
   return `<main class="seo-shell">${breadcrumb(items)}<article>
     ${image ? `<img class="seo-hero" src="${escapeHtml(image)}" alt="${escapeHtml(nameZh)}">` : ''}
-    <p class="seo-muted">${escapeHtml([product.category, product.series].filter(Boolean).join('｜'))}</p>
+    <p class="seo-muted">${escapeHtml([product.category, seriesDisplayName(product.series)].filter(Boolean).join('｜'))}</p>
     <h1>${escapeHtml(nameZh)}</h1><p>${escapeHtml(name)}${product.size ? ` · ${escapeHtml(product.size)}` : ''}</p>
     ${price ? `<p class="seo-price">NT$ ${price.toLocaleString('en-US')}</p>` : ''}
     <h2>商品描述</h2>${String(description).split(/\n+/).filter(Boolean).map(text => `<p>${escapeHtml(text)}</p>`).join('')}
@@ -156,6 +162,7 @@ async function fetchStorefrontCatalog() {
       variants: variants.filter(variant => Number(variant.product_id) === Number(product.id)),
     }));
 }
+  seriesDisplayName,
 
 module.exports = {
   LEGACY_PRODUCT_SLUGS, SITE_ORIGIN, absoluteUrl, breadcrumb, breadcrumbSchema, escapeHtml,

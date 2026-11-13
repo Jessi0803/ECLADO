@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { SERIES_LINKS } from '../../app/navigation.js';
+import { SERIES_LINKS, seriesDisplayName } from '../../app/navigation.js';
 import { normalizeProductImageScale } from '../domain/mappers.js';
 import usePanelHistory from '../hooks/usePanelHistory.js';
 import { PRICING_ROLES, PRICING_LABELS, LEGACY_PRICING_DEFAULTS, formatFold, parseFold } from '../../domain/memberPricing.js';
@@ -560,7 +560,7 @@ export default function Catalog({ products, memberPricing = null, onSaveProduct,
                         <div style={{ fontSize: 11, color: 'var(--mid)' }}>{p.name}</div>
                       </td>
                       <td data-label="功效分類" style={{ padding: '13px 14px', fontSize: 12, color: 'var(--mid)' }}>{p.category}</td>
-                      <td data-label="系列分類" style={{ padding: '13px 14px', fontSize: 12, color: p.series ? 'var(--mid)' : 'var(--light)' }}>{p.series || '未設定'}</td>
+                      <td data-label="系列分類" style={{ padding: '13px 14px', fontSize: 12, color: p.series ? 'var(--mid)' : 'var(--light)' }}>{seriesDisplayName(p.series) || '未設定'}</td>
                       <td data-label="規格" style={{ padding: '13px 14px', fontSize: 12 }}>{p.size}</td>
                       <td data-label={listMode === 'gift_inventory' ? 'SKU' : '售價'} style={{ padding: '13px 14px', fontSize: 12, fontWeight: 500 }}>{listMode === 'gift_inventory' ? p.giftVariant.sku : `NT$ ${p.price.toLocaleString()}`}</td>
                       <td data-label={listMode === 'gift_inventory' ? '警示值' : '專業價'} style={{ padding: '13px 14px', fontSize: 12, color: 'var(--gold)' }}>{listMode === 'gift_inventory' ? p.giftVariant.giftMinStock : `NT$ ${p.proPrice.toLocaleString()}`}</td>
@@ -688,7 +688,7 @@ export default function Catalog({ products, memberPricing = null, onSaveProduct,
                   <select id="productSeries" value={editing.series || ''} onChange={setF('series')}
                     style={{ ...inp, cursor: 'pointer' }}>
                     <option value="">未設定系列</option>
-                    {SERIES_LINKS.map(series => <option key={series} value={series}>{series}</option>)}
+                    {SERIES_LINKS.map(series => <option key={series} value={series}>{seriesDisplayName(series)}</option>)}
                   </select>
                 </div>
               </div>

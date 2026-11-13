@@ -1,4 +1,4 @@
-import { PRODUCT_NAV_LINKS, PRODUCT_SERIES_LINKS } from './navigation.js';
+import { PRODUCT_NAV_LINKS, PRODUCT_SERIES_LINKS, seriesKey } from './navigation.js';
 
 export const SHOP_CATEGORY_EVENT = 'eclado-shop-category-change';
 
@@ -46,7 +46,7 @@ export function shopFilterFromLocation() {
   const view = params.get('view') === 'series' ? 'series' : 'category';
   if (view === 'series') {
     const rawSeries = params.get('series');
-    const requested = rawSeries === '呼吸系列' || rawSeries === '呼吸' ? 'SOS' : rawSeries;
+    const requested = seriesKey(rawSeries === '呼吸系列' ? '呼吸' : rawSeries);
     return { view, value: PRODUCT_SERIES_LINKS.includes(requested) ? requested : '所有系列' };
   }
   const requested = params.get('category');

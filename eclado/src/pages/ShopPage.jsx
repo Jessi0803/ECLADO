@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import useIsMobile from '../hooks/useIsMobile.js';
-import { PRODUCT_NAV_LINKS, PRODUCT_SERIES_LINKS } from '../app/navigation.js';
+import { PRODUCT_NAV_LINKS, PRODUCT_SERIES_LINKS, seriesDisplayName, seriesKey } from '../app/navigation.js';
 import {
   SHOP_CATEGORY_EVENT,
   shopFilterFromLocation,
@@ -46,7 +46,7 @@ function isProductInCategory(product, category) {
 
 function isProductInSeries(product, series) {
   if (series === '所有系列') return true;
-  return String(product.series || '') === series;
+  return seriesKey(product.series) === series;
 }
 
 export default function ShopPage({
@@ -154,7 +154,7 @@ export default function ShopPage({
 
   const livePromosShop = promotions.filter(p => isPromotionLive(p, user));
   const filterTitle = activeFilter.view === 'series'
-    ? (activeFilter.value === '所有系列' ? '所有系列' : `${activeFilter.value} 系列`)
+    ? (activeFilter.value === '所有系列' ? '所有系列' : `${seriesDisplayName(activeFilter.value)} 系列`)
     : (activeFilter.value === '所有產品' ? '全部商品' : activeFilter.value);
   const canonicalPath = shopPath(activeFilter.view, activeFilter.value);
   useDocumentMeta({
@@ -241,7 +241,7 @@ export default function ShopPage({
                 borderBottom: activeFilter.value===item ? '2px solid var(--black)' : '2px solid transparent',
                 fontWeight: activeFilter.value===item ? 500 : 300, transition:'all 0.2s', textDecoration:'none', whiteSpace:'nowrap',
               }}
-            >{item}</a>
+            >{activeFilter.view === 'series' ? seriesDisplayName(item) : item}</a>
           ))}
           </div>
         </div>

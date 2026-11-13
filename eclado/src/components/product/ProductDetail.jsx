@@ -1,5 +1,6 @@
 import { useFulfillmentDisplay } from '../../hooks/useStorefrontDisplay.jsx';
 import React, { useEffect, useState } from 'react';
+import { seriesDisplayName } from '../../app/navigation.js';
 import useIsMobile from '../../hooks/useIsMobile.js';
 import PromotionLabel from './PromotionLabel.jsx';
 import ProductImage from './ProductImage.jsx';
@@ -102,7 +103,7 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
 
           {/* 右：資訊 */}
           <div>
-            <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--accent)', textTransform:'uppercase', marginBottom:10 }}>{[product.category, product.series].filter(Boolean).join('｜')}</p>
+            <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--accent)', textTransform:'uppercase', marginBottom:10 }}>{[product.category, seriesDisplayName(product.series)].filter(Boolean).join('｜')}</p>
             <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 26 : 34, fontWeight:300, color:'var(--black)', lineHeight:1.2, marginBottom:6 }}>{product.nameZh}</h1>
             {product.subtitle && <p style={{ fontSize:13, color:'var(--accent)', letterSpacing:'0.08em', marginBottom:8 }}>{product.subtitle}</p>}
             <p style={{ fontSize:12, color:'var(--dark)', letterSpacing:'0.1em', marginBottom:28 }}>{product.name} · {displayProduct.size}</p>

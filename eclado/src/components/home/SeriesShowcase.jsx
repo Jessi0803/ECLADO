@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { seriesKey } from '../../app/navigation.js';
 import { goShopSeries } from '../../app/shopNavigation.js';
 import ProductCard from '../product/ProductCard.jsx';
 
@@ -95,7 +96,7 @@ export default function SeriesShowcase({ products, user, onAdd, onSelect, setPag
           <SeriesProductRow
             key={item.series}
             item={item}
-            products={products.filter(product => product.series === item.series)}
+            products={products.filter(product => seriesKey(product.series) === item.series)}
             user={user}
             onAdd={onAdd}
             onSelect={onSelect}

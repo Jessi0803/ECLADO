@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { seriesDisplayName } from '../../app/navigation.js';
 import { goInfoSection } from '../../app/infoNavigation.js';
 import { goShopCategory, goShopFilter, shopPath } from '../../app/shopNavigation.js';
 import { goProfessionalApply } from '../../services/membership.js';
@@ -51,7 +52,7 @@ export default function DesktopNavItem({ item, scrolled, setPage, user }) {
             <div key={group.view}>
               <div style={{ padding:'6px 12px 8px', fontSize:11, color:'var(--accent)', letterSpacing:'0.12em' }}>{group.label}</div>
               {group.items.map(child => (
-                <a key={child} href={shopPath(group.view, child)} onClick={event => { event.preventDefault(); goProductFilter(group.view, child); }} style={{ display:'block', width:'100%', textAlign:'left', background:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:13, color:'var(--dark)', padding:'9px 12px', letterSpacing:'0.04em', transition:'background 0.15s', textDecoration:'none', boxSizing:'border-box' }} onMouseEnter={event => { event.currentTarget.style.background='var(--off-white)'; event.currentTarget.style.color='var(--black)'; }} onMouseLeave={event => { event.currentTarget.style.background='none'; event.currentTarget.style.color='var(--dark)'; }}>{child}</a>
+                <a key={child} href={shopPath(group.view, child)} onClick={event => { event.preventDefault(); goProductFilter(group.view, child); }} style={{ display:'block', width:'100%', textAlign:'left', background:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:13, color:'var(--dark)', padding:'9px 12px', letterSpacing:'0.04em', transition:'background 0.15s', textDecoration:'none', boxSizing:'border-box' }} onMouseEnter={event => { event.currentTarget.style.background='var(--off-white)'; event.currentTarget.style.color='var(--black)'; }} onMouseLeave={event => { event.currentTarget.style.background='none'; event.currentTarget.style.color='var(--dark)'; }}>{group.view === 'series' ? seriesDisplayName(child) : child}</a>
               ))}
             </div>
           ))}

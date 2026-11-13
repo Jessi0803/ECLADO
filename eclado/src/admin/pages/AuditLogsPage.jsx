@@ -1,3 +1,4 @@
+import { seriesDisplayName } from '../../app/navigation.js';
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../services/supabase.js';
 
@@ -53,7 +54,8 @@ function formatTime(value) {
   });
 }
 
-function formatValue(value) {
+function formatValue(value, field) {
+  if (field === 'series') value = seriesDisplayName(value);
   if (value == null || value === '') return '—';
   if (typeof value === 'boolean') return value ? '是' : '否';
   if (Array.isArray(value)) return value.join('、') || '—';
@@ -187,7 +189,7 @@ export default function AuditLogsPage() {
             <div style={{ padding: 14, background: 'var(--off)', border: '1px solid var(--border)', fontSize: 12, lineHeight: 1.9, marginBottom: 20 }}><div>時間：{formatTime(selected.created_at)}</div><div>執行者：{actorLabel(selected)}</div><div>來源：{selected.metadata?.source || '—'}</div><div>Request ID：{selected.request_id || '—'}</div></div>
             <h3 style={{ fontSize: 14, marginBottom: 12 }}>修改前後</h3>
             <div style={{ display: 'grid', gap: 10 }}>
-              {changedFields(selected).map(field => <div key={field} style={{ border: '1px solid var(--border)', padding: '12px 14px' }}><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 8 }}>{FIELD_LABELS[field] || field}</div><div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto minmax(0,1fr)', gap: 10, alignItems: 'center', fontSize: 12 }}><div style={{ overflowWrap: 'anywhere' }}>{formatValue(selected.before_data?.[field])}</div><span style={{ color: 'var(--gold)' }}>→</span><div style={{ overflowWrap: 'anywhere', fontWeight: 500 }}>{formatValue(selected.after_data?.[field])}</div></div></div>)}
+              {changedFields(selected).map(field => <div key={field} style={{ border: '1px solid var(--border)', padding: '12px 14px' }}><div style={{ fontSize: 11, color: 'var(--mid)', marginBottom: 8 }}>{FIELD_LABELS[field] || field}</div><div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto minmax(0,1fr)', gap: 10, alignItems: 'center', fontSize: 12 }}><div style={{ overflowWrap: 'anywhere' }}>{formatValue(selected.before_data?.[field], field)}</div><span style={{ color: 'var(--gold)' }}>→</span><div style={{ overflowWrap: 'anywhere', fontWeight: 500 }}>{formatValue(selected.after_data?.[field], field)}</div></div></div>)}
             </div>
           </div>
         </>
