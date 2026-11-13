@@ -162,9 +162,9 @@ async function fetchStorefrontCatalog() {
       variants: variants.filter(variant => Number(variant.product_id) === Number(product.id)),
     }));
 }
-  seriesDisplayName,
 
 module.exports = {
+  seriesDisplayName,
   LEGACY_PRODUCT_SLUGS, SITE_ORIGIN, absoluteUrl, breadcrumb, breadcrumbSchema, escapeHtml,
   fetchStorefrontCatalog, injectSeoDocument, pageHead, productSeo, renderProductBody, safeJson, siteNavigation,
 };
