@@ -7,6 +7,7 @@ import {
   getCartKey,
   getFulfillmentInfo,
   getMemberPrice,
+  getMemberTier,
 } from '../domain/catalog.jsx';
 import {
   calculateDiscount,
@@ -96,6 +97,12 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
   const quoteLoading = pricedCart.length > 0 && quoteState.key !== quoteKey;
   const estimate = calculateDiscount(pricedCart, promotions, user);
   const subtotal = displayQuote?.subtotal ?? estimate.subtotal;
+  const memberTier = getMemberTier(user);
+  const professionalSubtotal = memberTier.multiplier
+    ? pricedCart.reduce((total, item) => total + getMemberPrice(item, { role: 'pro' }) * item.qty, 0)
+    : subtotal;
+  const memberDiscount = Math.max(0, professionalSubtotal - subtotal);
+  const displayedSubtotal = memberDiscount > 0 ? professionalSubtotal : subtotal;
   const discount = displayQuote?.discount ?? estimate.discount;
   const finalSubtotal = subtotal - discount;
   const promotion = currentQuote?.promotion ?? estimate.promotion;
@@ -206,7 +213,13 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
                   暫時無法確認是否可合併出貨，請稍後再試。
                 </div>
               )}
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13 }}><span>小計</span><span style={{ fontFamily:'var(--font-display)' }}>NT$ {subtotal.toLocaleString()}</span></div>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13 }}><span>{memberDiscount > 0 ? '專業價小計' : '小計'}</span><span style={{ fontFamily:'var(--font-display)' }}>NT$ {displayedSubtotal.toLocaleString()}</span></div>
+              {memberDiscount > 0 && (
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13, color:'var(--accent)' }}>
+                  <span>{memberTier.label}資格折扣</span>
+                  <span style={{ fontFamily:'var(--font-display)' }}>−NT$ {memberDiscount.toLocaleString()}</span>
+                </div>
+              )}
               {displayQuote ? <OrderPriceAdjustments order={displayQuote} style={{ marginBottom: drawer ? 5 : 10, fontSize:13 }} /> : discount > 0 && promotion && (
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13, color:'var(--accent)' }}>
                   <span>{promotion.name}</span>
