@@ -85,12 +85,50 @@
   overflow-wrap: anywhere;
 }
 
-.home-promotions-products {
+.home-promotions-products,
+.home-promotions-gifts {
   display: flex;
   gap: var(--promotion-gap);
+}
+
+.home-promotions-gift-label {
+  align-self: center;
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  block-size: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.home-promotions-gift-name {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: var(--dark);
+  font-size: 12px;
+}
+
+.home-promotions-gift-quantity {
+  display: flex;
+  align-items: center;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 500;
 }
 
 .home-promotions-product {
   flex: 0 0 var(--promotion-card-width);
   min-width: 0;
+}
+
+.home-promotions-gifts {
+  flex: 0 0 auto;
+}
+
+.home-promotions-gifts .home-promotions-product {
+  inline-size: var(--promotion-card-width);
 }

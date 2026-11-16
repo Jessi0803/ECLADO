@@ -202,8 +202,6 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
         promotions={promotions}
       />
 
-      <KnowledgeJournal isMobile={isMobile} onOpenArticle={onOpenArticle} onOpenJournal={() => setPage('journal')} />
-
       {/* LIVE PROMOTIONS */}
       <div id="eclado-promotions">
         <PromoSection
@@ -215,6 +213,8 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
           products={products}
         />
       </div>
+
+      <KnowledgeJournal isMobile={isMobile} onOpenArticle={onOpenArticle} onOpenJournal={() => setPage('journal')} />
 
       {/* PRO SECTION */}
       <section style={{ background:'var(--dark)', padding: isMobile ? '60px 0' : '100px 0' }}>

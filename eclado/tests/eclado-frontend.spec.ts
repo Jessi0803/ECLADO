@@ -1196,7 +1196,7 @@ test('首頁優惠商品排成單列，捲動時固定各活動標題', async ({
   const groups = track.locator(':scope > article');
   await expect(groups).toHaveCount(2);
   const firstGroup = track.getByRole('article', { name: '首頁第一筆活動' });
-  await expect(firstGroup.getByText('胜肽修護精華液')).toBeVisible();
+  await expect(firstGroup.getByRole('link', { name: '查看胜肽修護精華液', exact: true })).toBeVisible();
   await expect(firstGroup.locator('.home-promotions-product')).toHaveCount(6);
 
   const layout = await track.evaluate(element => {
@@ -1224,6 +1224,41 @@ test('首頁優惠商品排成單列，捲動時固定各活動標題', async ({
   expect(layout.stickyTitleOffset).toBeCloseTo(layout.groupPadding, 0);
   expect(layout.cardDistance).toBeCloseTo(300, 0);
   expect(layout.nextTitleVisible).toBe(true);
+});
+
+test('首頁滿件贈與滿額贈在指定商品右側顯示贈品卡', async ({ page }) => {
+  await mockEcladoApis(page, {
+    promotions: [
+      { ...activePromotion, id: 'quantity-gift', name: '滿件贈活動', benefit_type: 'quantity_gift' },
+      { ...activePromotion, id: 'amount-gift', name: '滿額贈活動', benefit_type: 'amount_gift' },
+    ],
+  });
+  await page.route('**/rest/v1/rpc/get_storefront_promotion_gifts', route => route.fulfill({
+    json: [
+      { promotion_id: 'quantity-gift', variant_id: 501, publication_status: 'gift_only', name: '贈品專用矽膠刷', quantity: 2 },
+      { promotion_id: 'quantity-gift', variant_id: 502, publication_status: 'gift_only', name: '贈品旅行組', size: '10ml', quantity: 1, image_url: '/assets/images/journal-hydration-cover.png' },
+      { promotion_id: 'amount-gift', variant_id: 503, product_id: 2, publication_status: 'active', quantity: 1 },
+    ],
+  }));
+
+  const track = page.getByRole('group', { name: '優惠活動與商品' });
+  await page.goto('/');
+  const quantityPromotion = track.getByRole('article', { name: '滿件贈活動' });
+  const gifts = quantityPromotion.getByRole('group', { name: '贈品' });
+  await expect(gifts.getByText('贈', { exact: true })).toBeVisible();
+  await expect(gifts.getByRole('img', { name: '贈品專用矽膠刷' })).toBeVisible();
+  await expect(gifts.getByText('贈品 × 2', { exact: true })).toBeVisible();
+  await expect(gifts.getByText('贈品旅行組 · 10ml')).toBeVisible();
+  await expect(gifts.getByRole('img', { name: '贈品旅行組' })).toHaveAttribute('src', '/assets/images/journal-hydration-cover.png');
+  await expect(gifts.getByRole('button')).toHaveCount(0);
+  const ordered = await quantityPromotion.evaluate(element => {
+    const row = element.querySelector('.home-promotions-products')!;
+    return row.firstElementChild!.getBoundingClientRect().right
+      < row.lastElementChild!.getBoundingClientRect().left;
+  });
+  expect(ordered).toBe(true);
+  const productGift = track.getByRole('article', { name: '滿額贈活動' }).getByRole('group', { name: '贈品' });
+  await expect(productGift.getByRole('link', { name: '查看胜肽修護精華液', exact: true })).toBeVisible();
 });
 
 test('活動開始與結束時間邊界依排程精確生效', async ({ page }) => {
