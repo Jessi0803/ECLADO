@@ -10,6 +10,7 @@ const MENU_GROUPS = [
     items: [
       { id: 'dashboard', icon: 'dashboard', label: '儀表板' },
       { id: 'orders', icon: 'orders', label: '訂單管理' },
+      { id: 'courses', icon: 'catalog', label: '課程管理' },
       { id: 'reward_management', icon: 'analytics', label: '師資返饋管理' },
     ],
   },

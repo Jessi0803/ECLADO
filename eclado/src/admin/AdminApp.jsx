@@ -22,6 +22,7 @@ const BackordersPage = lazy(() => import('./pages/BackordersPage.jsx'));
 const InventoryReceiptsPage = lazy(() => import('./pages/InventoryReceiptsPage.jsx'));
 const InventoryCountsPage = lazy(() => import('./pages/InventoryCountsPage.jsx'));
 import Dashboard from './pages/DashboardPage.jsx';
+const AdminCoursesPage = lazy(() => import('./pages/CoursesPage.jsx'));
 const Members = lazy(() => import('./pages/MembersPage.jsx'));
 const Orders = lazy(() => import('./pages/OrdersPage.jsx'));
 const AssistedOrderDialog = lazy(() => import('./components/AssistedOrderDialog.jsx'));
@@ -343,10 +344,10 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
   }
 
   const isDashboard = page === 'dashboard';
-  const dataMode = isDashboard ? 'dashboard' : page === 'analytics' ? 'analytics' : page === 'orders' ? 'orders' : 'full';
+  const dataMode = isDashboard ? 'dashboard' : ['analytics', 'courses'].includes(page) ? page : page === 'orders' ? 'orders' : 'full';
   useEffect(() => {
     // Analytics owns its aggregate query; do not load raw orders or member data.
-    if (dataMode === 'analytics') return;
+    if (dataMode === 'analytics' || dataMode === 'courses') return;
     // Keep full order/member/catalog payloads off the dashboard startup path.
     const refresh = isDashboard ? fetchDashboard : dataMode === 'orders'
       ? () => setOrderRefreshVersion(version => version + 1) : fetchAll;
@@ -723,6 +724,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
         : null;
     }
     switch (page) {
+      case 'courses': return <AdminCoursesPage canNotify={hasPermission(BACKOFFICE_PERMISSIONS.NOTIFICATIONS_SEND)} />;
       case 'dashboard': return <Dashboard summary={dashboard} loading={dashboardLoading} error={dashboardError} onRetry={fetchDashboard} adminEmail={adminEmail} onGoToPendingMembers={() => { setMembersDefaultFilter('app_pending'); setPage('members'); }} onGoToOrders={() => { setOrdersDefaultFilter('all'); setPage('orders'); }} onGoToAnalytics={canAccessBackofficePage(backofficeAccess, 'analytics') ? () => setPage('analytics') : undefined} />;
       case 'orders': return <Orders refreshVersion={orderRefreshVersion} persistOrderPatch={persistOrderPatch} onSaveInvoiceNumber={saveOrderInvoiceNumber} onDeleteCancelledOrder={deleteCancelledOrder} onCancelHistoricalOrder={cancelHistoricalOrder} onAssignGuestOrder={canWriteOrders && canWriteMembers && canReadMembers ? assignGuestOrderToMember : null} defaultFilter={ordersDefaultFilter} focusOrderId={crossLink?.orderId || ''} backToMember={crossLink?.backMemberId ? { id: crossLink.backMemberId, name: crossLink.backMemberName } : null} onOpenMember={canReadMembers ? openMemberFromOrder : null} onClearCrossLink={() => setCrossLink(null)} onCreateAssistedOrder={canCreateAssistedOrder ? ()=>openAssistedOrder() : null} canConfirmPayments={canWriteOrders && ['admin','super_admin'].includes(backofficeAccess?.role)} />;
       case 'reward_management':
@@ -774,7 +776,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
 
       <Sidebar page={page} setPage={setPage} open={drawerOpen} onClose={() => setDrawerOpen(false)} adminEmail={adminEmail} backofficeAccess={backofficeAccess} onSignOut={onSignOut} favorites={sidebarFavorites} onToggleFavorite={sidebarFavorites ? toggleSidebarFavorite : null} />
       <main ref={mainRef} className="app-main">
-        {loadError && (
+        {page !== 'courses' && loadError && (
           <div style={{ background: 'oklch(0.60 0.18 25 / 0.08)', border: '1px solid oklch(0.60 0.18 25 / 0.3)', padding: '10px 16px', marginBottom: 20, fontSize: 12, color: 'var(--red)' }}>
             ⚠ {loadError}
           </div>

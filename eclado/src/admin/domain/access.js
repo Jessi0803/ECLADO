@@ -1,4 +1,5 @@
 export const BACKOFFICE_PERMISSIONS = Object.freeze({
+  COURSES_MANAGE: 'courses.manage',
   CATALOG_READ: 'catalog.read',
   CATALOG_WRITE: 'catalog.write',
   MEMBER_PRICING_MANAGE: 'member_pricing.manage',
@@ -26,6 +27,7 @@ export const BACKOFFICE_ROLE_LABELS = Object.freeze({
 });
 
 export const PAGE_PERMISSIONS = Object.freeze({
+  courses: BACKOFFICE_PERMISSIONS.COURSES_MANAGE,
   dashboard: BACKOFFICE_PERMISSIONS.ORDERS_READ,
   orders: BACKOFFICE_PERMISSIONS.ORDERS_READ,
   catalog: BACKOFFICE_PERMISSIONS.CATALOG_READ,

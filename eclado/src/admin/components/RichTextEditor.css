@@ -1,0 +1,78 @@
+.admin-course-rich { display: grid; min-width: 0; }
+.admin-course-rich-label { margin-bottom: 7px; color: var(--mid); font-size: 11px; letter-spacing: .04em; }
+.admin-course-rich-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 7px;
+  border: 1px solid var(--border);
+  background: var(--off);
+}
+.admin-course-rich-tools select {
+  min-height: 36px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--dark);
+  font: 400 12px/1.4 var(--font);
+  letter-spacing: .04em;
+}
+.admin-course-rich-tool-group {
+  display: flex;
+  gap: 2px;
+  padding-inline-start: 6px;
+  border-inline-start: 1px solid var(--border);
+}
+.admin-course-rich-tools button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--dark);
+  cursor: pointer;
+}
+.admin-course-rich-tools button[aria-pressed="true"] { background: var(--dark); color: var(--white); }
+.admin-course-rich-tools button:hover:not(:disabled):not([aria-pressed="true"]) { background: var(--white); }
+.admin-course-rich-tools button:disabled { opacity: .4; cursor: default; }
+.admin-course-rich-input {
+  min-height: 160px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-top: 0;
+  background: var(--white);
+  white-space: pre-wrap;
+}
+/* Toggling a list can leave a browser-generated font size on inline text. */
+.admin-course-rich-input :is(span, font) { font-size: inherit !important; }
+.admin-course-rich-input.course-description-content img {
+  max-width: min(100%, 220px);
+  max-height: 140px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.admin-course-rich-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-top: 0;
+  background: var(--off);
+}
+.admin-course-rich-link p { grid-column: 1 / -1; margin: 0; }
+.admin-course-rich-link[data-editing="true"] { grid-template-columns: minmax(0, 1fr) auto auto; }
+
+.admin-course-rich .admin-course-rich-link input {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--dark);
+  font: 400 12px/1.4 var(--font);
+}
