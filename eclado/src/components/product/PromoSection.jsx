@@ -1,52 +1,53 @@
 import React from 'react';
-import {
-  canAccessProfessionalCatalog,
-} from '../../domain/catalog.jsx';
+import { canAccessProfessionalCatalog } from '../../domain/catalog.jsx';
 import { normProductIds } from '../../domain/promotions.js';
 import ProductCard from './ProductCard.jsx';
+import './PromoSection.css';
 
-export default function PromoSection({ promo, user, addToCart, onSelect, isMobile, promotions = [], products = [] }) {
-  const ids = normProductIds(promo);
-  const items = ids
-    .map(id => products.find(p => p.id === id))
-    .filter(Boolean)
-    .filter(p => !p.isProOnly || canAccessProfessionalCatalog(user));
-  if (items.length === 0) {
-    return (
-      <section style={{ background:'var(--white)', padding: isMobile ? '48px 0' : '72px 0', borderTop:'1px solid var(--light)', borderBottom:'1px solid var(--light)' }}>
-        <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
-          <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--accent)', marginBottom:10 }}>限時優惠</p>
-          <p style={{ fontSize:14, color:'#555', lineHeight:1.75 }}>
-            活動「<strong style={{ color:'var(--black)' }}>{promo.name}</strong>」已建立，但目前<strong>沒有可顯示的商品</strong>。
-            請到後台確認已勾選商品，且商品編號需與官網一致。
-            {ids.length === 0 && '（目前 product_ids 為空）'}
-          </p>
-        </div>
-      </section>
-    );
-  }
+export default function PromoSection({ livePromotions, user, addToCart, onSelect, promotions, products }) {
+  if (!livePromotions.length) return null;
+
+  const canViewProfessionalProducts = canAccessProfessionalCatalog(user);
 
   return (
-    <section style={{ background:'var(--white)', padding: isMobile ? '60px 0' : '100px 0', borderTop:'1px solid var(--light)', borderBottom:'1px solid var(--light)' }}>
-      <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="px-page">
-        <div style={{ marginBottom: isMobile ? 36 : 56 }}>
-          <p style={{ fontSize:11, letterSpacing:'0.28em', color:'var(--accent)', marginBottom:10 }}>限時優惠</p>
-          <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(26px,4vw,52px)', fontWeight:300, lineHeight:1.1, color:'var(--black)', marginBottom:12 }}>{promo.name}</h2>
-          {promo.description && (
-            <p style={{ fontSize:14, color:'#555', lineHeight:1.75, maxWidth:560, marginBottom:0 }}>{promo.description}</p>
-          )}
-        </div>
+    <section className="home-promotions" aria-labelledby="home-promotions-title">
+      <div className="home-promotions-inner px-page">
+        <h2 id="home-promotions-title">
+          限時優惠 <span className="home-promotions-count" aria-label={`${livePromotions.length} 個現行活動`}>{livePromotions.length}</span>
+        </h2>
+        <div className="home-promotions-track" role="group" aria-label="優惠活動與商品" tabIndex={0}>
+          {livePromotions.map(promo => {
+            const items = normProductIds(promo)
+              .map(id => products.find(product => product.id === id))
+              .filter(product => product && (!product.isProOnly || canViewProfessionalProducts));
+            const titleId = `home-promotion-${promo.id}`;
 
-        <div className="g4">
-          {items.map(p => (
-            <div key={p.id} style={{ background:'var(--off-white)', color:'var(--black)', padding:14, border:'1px solid var(--light)' }}>
-              <ProductCard product={p} user={user} onAdd={() => addToCart(p)} onSelect={() => onSelect(p)} promotions={promotions} />
-            </div>
-          ))}
+            return (
+              <article key={promo.id} className="home-promotions-group" aria-labelledby={titleId}>
+                <header className="home-promotions-heading">
+                  <h3 id={titleId}>{promo.name}</h3>
+                  {promo.description && <p className="home-promotions-description">{promo.description}</p>}
+                </header>
+                {items.length ? (
+                  <div className="home-promotions-products">
+                    {items.map(product => (
+                      <div key={product.id} className="home-promotions-product">
+                        <ProductCard
+                          product={product}
+                          user={user}
+                          onAdd={() => addToCart(product)}
+                          onSelect={() => onSelect(product)}
+                          promotions={promotions}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="home-promotions-description">目前沒有可顯示的活動商品。</p>}
+              </article>
+            );
+          })}
         </div>
       </div>
     </section>
   );
 }
-
-// ─── SHOP PAGE ────────────────────────────────────────────────────────────────

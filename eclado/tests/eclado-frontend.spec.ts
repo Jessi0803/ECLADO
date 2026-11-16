@@ -1181,6 +1181,51 @@ test('尚未開始與已結束的活動不會套用折扣', async ({ page }) => 
   }
 });
 
+test('首頁優惠商品排成單列，捲動時固定各活動標題', async ({ page }) => {
+  await mockEcladoApis(page, {
+    promotions: [
+      { ...activePromotion, id: 'home-first', name: '首頁第一筆活動', product_ids: [2, 1, 3, 4, 5, 6] },
+      { ...activePromotion, id: 'home-second', name: '首頁第二筆活動', product_ids: [1, 3, 4, 5] },
+      { ...activePromotion, id: 'home-coupon', name: '首頁優惠碼活動', activation_type: 'coupon_only' },
+    ],
+  });
+
+  await page.goto('/');
+  const track = page.getByRole('group', { name: '優惠活動與商品' });
+  await expect(page.getByRole('heading', { name: /限時優惠/ })).toHaveText('限時優惠 2');
+  const groups = track.locator(':scope > article');
+  await expect(groups).toHaveCount(2);
+  const firstGroup = track.getByRole('article', { name: '首頁第一筆活動' });
+  await expect(firstGroup.getByText('胜肽修護精華液')).toBeVisible();
+  await expect(firstGroup.locator('.home-promotions-product')).toHaveCount(6);
+
+  const layout = await track.evaluate(element => {
+    const cards = [...element.querySelectorAll('.home-promotions-product')];
+    const [firstTitle, secondTitle] = element.querySelectorAll('h3');
+    const start = element.getBoundingClientRect().left;
+    const firstCardLeft = cards[0].getBoundingClientRect().left;
+    const groupPadding = parseFloat(getComputedStyle(cards[0].closest('article.home-promotions-group')!).paddingInlineStart);
+
+    element.scrollLeft = 300;
+    const stickyTitleOffset = firstTitle.getBoundingClientRect().left - start;
+    const cardDistance = firstCardLeft - cards[0].getBoundingClientRect().left;
+
+    element.scrollLeft = element.scrollWidth;
+    return {
+      rows: new Set(cards.map(card => card.getBoundingClientRect().top)).size,
+      stickyTitleOffset,
+      groupPadding,
+      cardDistance,
+      nextTitleVisible: secondTitle.getBoundingClientRect().left < element.getBoundingClientRect().right,
+    };
+  });
+
+  expect(layout.rows).toBe(1);
+  expect(layout.stickyTitleOffset).toBeCloseTo(layout.groupPadding, 0);
+  expect(layout.cardDistance).toBeCloseTo(300, 0);
+  expect(layout.nextTitleVisible).toBe(true);
+});
+
 test('活動開始與結束時間邊界依排程精確生效', async ({ page }) => {
   await page.addInitScript(() => {
     (window as any).__ecladoTestNow = Date.parse('2030-05-01T10:00:00.000Z');

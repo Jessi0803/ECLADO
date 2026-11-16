@@ -1,0 +1,96 @@
+.home-promotions {
+  padding: clamp(32px, 5vw, 64px) 0;
+  background: var(--white);
+  border-block: 1px solid var(--light);
+}
+
+.home-promotions-inner {
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: 24px;
+  container-type: inline-size;
+}
+
+.home-promotions h2 {
+  margin: 0 0 16px;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+}
+
+.home-promotions-count {
+  display: inline-grid;
+  place-items: center;
+  min-inline-size: 20px;
+  min-block-size: 20px;
+  padding-inline: 5px;
+  border-radius: 999px;
+  background: var(--off-white);
+  font-size: 12px;
+  letter-spacing: normal;
+}
+
+.home-promotions-track {
+  --promotion-card-width: clamp(152px, 39cqw, 248px);
+  --promotion-gap: clamp(12px, 2cqw, 24px);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  grid-template-rows: auto auto;
+  column-gap: var(--promotion-gap);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.home-promotions-track::-webkit-scrollbar {
+  display: none;
+}
+
+.home-promotions-group {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  row-gap: 16px;
+  min-width: calc(var(--promotion-card-width) + 2 * var(--promotion-gap));
+  padding: var(--promotion-gap);
+  border: 1px solid var(--light);
+  background: var(--off-white);
+}
+
+.home-promotions-heading {
+  position: sticky;
+  inset-inline-start: var(--promotion-gap);
+  align-self: start;
+  width: fit-content;
+  max-width: min(100%, calc(100cqw - 2 * var(--promotion-gap)), 560px);
+  background: var(--off-white);
+  z-index: 1;
+}
+
+.home-promotions h3 {
+  margin: 0;
+  color: var(--black);
+  font-size: clamp(17px, 2vw, 23px);
+  font-weight: 500;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.home-promotions-description {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.home-promotions-products {
+  display: flex;
+  gap: var(--promotion-gap);
+}
+
+.home-promotions-product {
+  flex: 0 0 var(--promotion-card-width);
+  min-width: 0;
+}

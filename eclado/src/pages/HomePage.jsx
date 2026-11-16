@@ -206,9 +206,14 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
 
       {/* LIVE PROMOTIONS */}
       <div id="eclado-promotions">
-        {livePromos.map(promo => (
-          <PromoSection key={promo.id} promo={promo} user={user} addToCart={addToCart} onSelect={onSelectProduct} isMobile={isMobile} promotions={promotions} products={products} />
-        ))}
+        <PromoSection
+          livePromotions={livePromos}
+          user={user}
+          addToCart={addToCart}
+          onSelect={onSelectProduct}
+          promotions={promotions}
+          products={products}
+        />
       </div>
 
       {/* PRO SECTION */}
