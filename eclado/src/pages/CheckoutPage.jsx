@@ -4,6 +4,7 @@ import CheckoutOrderSummary from '../components/checkout/CheckoutOrderSummary.js
 import ProductRecommendations from '../components/product/ProductRecommendations.jsx';
 import { addRecommendationToCart, isRecommendationProductAvailable } from '../domain/productRecommendations.js';
 import CheckoutSteps from '../components/checkout/CheckoutSteps.jsx';
+import PaymentMethodOptions from '../components/checkout/PaymentMethodOptions.jsx';
 import PaymentInfo from '../components/checkout/PaymentInfo.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
 import { isProfessionalMember, getMemberPrice, getMemberRole } from '../domain/catalog.jsx';
@@ -1003,41 +1004,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                     {rewardCredit.error&&<p role="alert" className="reward-message">{rewardCredit.error}</p>}<p className="reward-note">師資返饋金僅可折抵商品金額，可與購物金一起使用，結帳時仍需支付至少 NT$1。</p>
                   </div>}
 
-                  <div>
-                    <p style={{ fontSize:10, letterSpacing:'0.2em', color:'var(--dark)', textTransform:'uppercase', marginBottom:14 }}>付款方式</p>
-                    <div style={{ display:'grid', gap:12 }}>
-                      {Object.entries(PAYMENT_METHODS).map(([key, method]) => {
-                        const active = paymentMethod === key;
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            onClick={() => setPaymentMethod(key)}
-                            style={{
-                              width:'100%',
-                              textAlign:'left',
-                              border: active ? '2px solid var(--black)' : '1px solid var(--light)',
-                              background: active ? 'var(--off-white)' : 'var(--white)',
-                              padding:'16px 18px',
-                              cursor:'pointer',
-                            }}
-                          >
-                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12 }}>
-                              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                                <div style={{ width:18, height:18, borderRadius:'50%', border:active ? '2px solid var(--black)' : '2px solid var(--mid)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                                  {active && <div style={{ width:8, height:8, borderRadius:'50%', background:'var(--black)' }} />}
-                                </div>
-                                <div>
-                                  <div style={{ fontSize:14, fontWeight:500, color:'var(--black)', fontFamily:'var(--font-body)' }}>{method.label}</div>
-                                  <div style={{ fontSize:11, color:'var(--dark)', marginTop:2, fontFamily:'var(--font-body)' }}>{method.description}</div>
-                                </div>
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <PaymentMethodOptions value={paymentMethod} onChange={setPaymentMethod} />
 
                   <div style={{ background:'#fffbf0', border:'1px solid #e8d9b0', padding:'12px 14px', fontSize:11, color:'#5a4a1e', lineHeight:1.85, marginBottom:10 }}>
                     ⚠ <strong>退貨說明</strong>：本訂單商品為個人衛生用品，依《消費者保護法》第 19 條之 1，<strong>已拆封商品不適用七天猶豫期退貨</strong>。未拆封商品自收到次日起 7 日內可申請退貨（運費由消費者負擔）。如有品質瑕疵，不限拆封與否均可退換（運費由本公司負擔）。詳見<a href="/info" style={{ color:'#5a4a1e' }}>退換貨政策</a>。

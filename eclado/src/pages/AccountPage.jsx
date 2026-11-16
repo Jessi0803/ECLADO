@@ -33,11 +33,17 @@ import { savePendingPayment } from '../services/pendingPayment.js';
 import { fetchMyProfessionalSales } from '../services/professionalSales.js';
 import { normalizeRenewalPayload } from '../domain/professionalRenewals.js';
 import { fetchMyProfessionalRenewal } from '../services/professionalRenewals.js';
+import useCourseHistory from '../hooks/useCourseHistory.js';
+
+import MyCoursesPanel from '../components/account/MyCoursesPanel.jsx';
 
 export default function AccountPage({ user, setPage, onSignOut, onUserUpdated }) {
   const isMobile = useIsMobile();
   const isAdmin = useAdminAccess(user?.uid);
-  const [accountTab, setAccountTab] = useState('orders');
+  const [requestedTab, setAccountTab] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'courses' ? 'courses' : 'orders');
+  const { courses, hasRegistrations: hasCoursesTab, error: courseHistoryError, retry } = useCourseHistory(user?.uid);
+  const accountTab = requestedTab === 'courses' && !hasCoursesTab ? 'orders' : requestedTab;
+  const showCoursesTab = accountTab === 'courses';
   const hasRewardsTab = getMemberRole(user) === 'instructor';
   const showRewardsTab = hasRewardsTab && accountTab === 'rewards';
   const hasProfessionalTab = isQuarterlySalesRole(getMemberRole(user));
@@ -540,16 +546,20 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
           </aside>
 
           <section>
-            {hasProfessionalTab && (
-              <div role="tablist" aria-label="會員專區內容" style={{ display:'flex', gap:isMobile ? 24 : 32, borderBottom:'1px solid var(--light)', marginBottom:28 }}>
-                {[['orders', '我的訂單'], ['professional', '專業資格'], ...(hasRewardsTab ? [['rewards', '師資返饋金']] : [])].map(([value, label]) => (
+            {requestedTab === 'courses' && courseHistoryError && (
+              <p role="alert">無法載入課程。 <button type="button" onClick={retry}>重新載入</button></p>
+            )}
+            <div role="tablist" aria-label="會員專區內容" style={{ display:'flex', flexWrap:'wrap', columnGap:isMobile ? 20 : 32, borderBottom:'1px solid var(--light)', marginBottom:28 }}>
+                {[['orders', '我的訂單'], ...(hasCoursesTab ? [['courses', '我的課程']] : []), ...(hasProfessionalTab ? [['professional', '專業資格']] : []), ...(hasRewardsTab ? [['rewards', '師資返饋金']] : [])].map(([value, label]) => (
                   <button key={value} type="button" role="tab" id={`account-tab-${value}`} aria-selected={accountTab === value} aria-controls={`account-panel-${value}`} onClick={() => setAccountTab(value)}
                     style={{ border:'none', borderBottom:accountTab === value ? '2px solid var(--black)' : '2px solid transparent', background:'none', color:accountTab === value ? 'var(--black)' : 'var(--mid)', padding:'12px 0', fontSize:14, fontFamily:'inherit', cursor:'pointer' }}>
                     {label}
                   </button>
                 ))}
-              </div>
-            )}
+            </div>
+            {showCoursesTab && <div role="tabpanel" id="account-panel-courses" aria-labelledby="account-tab-courses">
+              <MyCoursesPanel courses={courses} />
+            </div>}
             {showProfessionalTab && (
               <div role="tabpanel" id="account-panel-professional" aria-labelledby="account-tab-professional">
               <QuarterlySalesPanel
@@ -569,8 +579,8 @@ export default function AccountPage({ user, setPage, onSignOut, onUserUpdated })
               </div>
             )}
             {showRewardsTab && <div role="tabpanel" id="account-panel-rewards" aria-labelledby="account-tab-rewards"><InstructorRewardsPanel key={user.uid} userId={user.uid} /></div>}
-            {!showProfessionalTab && !showRewardsTab && (
-              <div role={hasProfessionalTab ? 'tabpanel' : undefined} id="account-panel-orders" aria-labelledby={hasProfessionalTab ? 'account-tab-orders' : undefined}>
+            {!showProfessionalTab && !showRewardsTab && !showCoursesTab && (
+              <div role="tabpanel" id="account-panel-orders" aria-labelledby="account-tab-orders">
             <ShoppingCreditPanel userId={user.uid} isMobile={isMobile} />
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:16, marginBottom:22 }}>
               <h2 style={{ fontFamily:'var(--font-display)', fontSize:isMobile ? 24 : 32, fontWeight:300, color:'var(--black)' }}>我的訂單</h2>

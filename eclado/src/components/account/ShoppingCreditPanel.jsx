@@ -13,6 +13,8 @@ const EVENT_LABELS = Object.freeze({
 const REASON_LABELS = Object.freeze({
   customer_service_compensation: '客服補償',
   campaign_grant: '活動贈送',
+  course_pro_grant: '課程報名購物金',
+  course_delegated_grant: '課程代報購物金',
   order_return_adjustment: '訂單／退貨調整',
   wrong_account_correction: '錯帳更正',
   eligibility_revocation: '資格撤回',

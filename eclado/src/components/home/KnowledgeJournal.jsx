@@ -58,7 +58,7 @@ export default function KnowledgeJournal({ isMobile, onOpenArticle, onOpenJourna
                 ))}
               </div>
             </div>
-            <div style={{ overflowX:'auto', paddingBottom:4 }}>
+            <div className="home-journal-scroll">
               <div style={{ display:'grid', gridAutoFlow:'column', gridAutoColumns:'minmax(280px, 1fr)', gap:18, minWidth: supportingArticles.length > 3 ? 1180 : 'auto' }}>
                 {supportingArticles.slice(2).map(article => (
                   <a key={article.title} href={`/journal/${article.slug}`} onClick={event => { event.preventDefault(); onOpenArticle(article); }} style={{ color:'inherit', textDecoration:'none', border:'1px solid var(--light)', background:'var(--off-white)', minHeight:300, display:'flex', flexDirection:'column' }}>

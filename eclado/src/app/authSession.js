@@ -1,3 +1,12 @@
+import { courseIdFromPath } from './routes.js';
+
+export const COURSE_LINE_RETURN_KEY = 'eclado_course_line_return';
+
+export function courseRegistrationReturnPath(path) {
+  const courseId = courseIdFromPath(path);
+  return courseId && path.endsWith('/register') ? `/courses/${courseId}/register` : null;
+}
+
 export const POST_LOGIN_PAGE_KEY = 'eclado_post_login';
 export const LOGIN_NOTICE_KEY = 'eclado_login_notice';
 export const CHECKOUT_LOGIN_REDIRECT_KEY = 'eclado_checkout_login_redirect';

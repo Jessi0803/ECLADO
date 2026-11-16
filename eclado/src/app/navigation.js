@@ -15,6 +15,7 @@ export const PRODUCT_SERIES_LINKS = ['所有系列', ...SERIES_LINKS];
 export const NAV_ITEMS = [
   {
     label: '所有產品',
+    courseLink: { label: '專業教育', href: '/courses' },
     children: [
       { label: '依功效分類', view: 'category', items: PRODUCT_NAV_LINKS },
       { label: '依系列分類', view: 'series', items: PRODUCT_SERIES_LINKS },

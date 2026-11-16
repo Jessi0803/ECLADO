@@ -3,6 +3,8 @@ import AuthForms from '../components/auth/AuthForms.jsx';
 import BackHomeButton from '../components/auth/BackHomeButton.jsx';
 import {
   consumeCheckoutLoginRedirectPage,
+  COURSE_LINE_RETURN_KEY,
+  courseRegistrationReturnPath,
   LINE_LOGIN_PENDING_KEY,
   LOGIN_NOTICE_KEY,
 } from '../app/authSession.js';
@@ -25,6 +27,7 @@ import {
 import { LINE_LOGIN_ENABLED } from '../config/runtime.js';
 
 export default function LoginPage({ setPage }) {
+  const courseReturn = courseRegistrationReturnPath(new URLSearchParams(window.location.search).get('next'));
   const [view, setView]         = useState('login'); // 'login' | 'register' | 'forgot'
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -70,7 +73,9 @@ export default function LoginPage({ setPage }) {
     try {
       const { error } = await signInWithPassword({ email, password });
       if (error) { setError(sbError(error.message)); return; }
-      setPage(consumeCheckoutLoginRedirectPage());
+      const nextPage = consumeCheckoutLoginRedirectPage();
+      if (courseReturn) window.location.replace(courseReturn);
+      else setPage(nextPage);
     } catch(err) { setError('目前無法連線，請確認網路後再試一次。'); }
     finally { setLoading(false); }
   }
@@ -121,6 +126,8 @@ export default function LoginPage({ setPage }) {
   }
 
   function signInWithLine() {
+    if (courseReturn) sessionStorage.setItem(COURSE_LINE_RETURN_KEY, courseReturn);
+    else sessionStorage.removeItem(COURSE_LINE_RETURN_KEY);
     sessionStorage.setItem(LINE_LOGIN_PENDING_KEY, '1');
     window.location.href = '/api/line-login';
   }

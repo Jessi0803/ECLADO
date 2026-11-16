@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   LINE_LOGIN_PENDING_KEY,
+  COURSE_LINE_RETURN_KEY,
+  courseRegistrationReturnPath,
   consumeCheckoutLoginRedirectPage,
 } from '../app/authSession.js';
 import { PAGE_PATHS } from '../app/routes.js';
@@ -94,6 +96,12 @@ export default function useAuth(setPageState) {
       if (session?.user) await loadUser(session.user);
       sessionStorage.removeItem(LINE_LOGIN_PENDING_KEY);
       const nextPage = getLineLoginNextPage();
+      const courseReturn = courseRegistrationReturnPath(sessionStorage.getItem(COURSE_LINE_RETURN_KEY));
+      sessionStorage.removeItem(COURSE_LINE_RETURN_KEY);
+      if (courseReturn && session?.user) {
+        window.location.replace(courseReturn);
+        return;
+      }
       cleanAuthCallbackFromUrl(PAGE_PATHS[nextPage] || '/account');
       setPageState(nextPage);
     }

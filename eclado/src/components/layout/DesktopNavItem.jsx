@@ -31,13 +31,14 @@ export default function DesktopNavItem({ item, scrolled, setPage, user }) {
     goShopFilter(view, value, setPage);
   }
 
+  const menuPadding = 16;
   const color = scrolled ? 'var(--dark)' : 'rgba(255,255,255,0.88)';
   const topHref = item.label === '所有產品' ? '/shop'
     : item.label === '品牌故事' ? '/about'
       : item.label === '會員登錄' ? (user ? '/account' : '/login')
         : item.label === '購物說明' ? '/info' : '/';
   return (
-    <div ref={ref} style={{ position:'relative' }} onMouseEnter={() => item.children && setOpen(true)} onMouseLeave={() => setOpen(false)}>
+    <div ref={ref} style={{ position:'relative' }} onMouseEnter={() => item.children && setOpen(true)} onMouseLeave={() => setOpen(false)} onFocus={() => item.courseLink && setOpen(true)} onBlur={event => { if (item.courseLink && !event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
       <a href={topHref} onClick={event => { event.preventDefault(); if (item.label === '所有產品') go('所有產品'); else if (item.children) setOpen(value => !value); else go(); }} style={{ background:'none', cursor:'pointer', fontFamily:'var(--font-body)', fontSize:13, fontWeight:400, letterSpacing:'0.06em', color, padding:'8px 18px', display:'flex', alignItems:'center', gap:5, height:68, whiteSpace:'nowrap', transition:'color 0.3s', textDecoration:'none' }}>
         {item.label}
         {item.children && (
@@ -47,7 +48,7 @@ export default function DesktopNavItem({ item, scrolled, setPage, user }) {
         )}
       </a>
       {item.children && open && item.label === '所有產品' && (
-        <div style={{ position:'absolute', top:'100%', left:'50%', transform:'translateX(-50%)', background:'rgba(250,250,249,0.98)', backdropFilter:'blur(16px)', border:'1px solid var(--light)', minWidth:520, boxShadow:'0 8px 32px rgba(0,0,0,0.08)', zIndex:200, padding:16, animation:'fadeInDown 0.18s ease', display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+        <div style={{ position:'absolute', top:'100%', left:'50%', transform:'translateX(-50%)', background:'rgba(250,250,249,0.98)', backdropFilter:'blur(16px)', border:'1px solid var(--light)', minWidth:620, boxShadow:'0 8px 32px rgba(0,0,0,0.08)', zIndex:200, padding:menuPadding, animation:'fadeInDown 0.18s ease', display:'grid', gridTemplateColumns:'1fr 1fr 120px', gap:16 }}>
           {item.children.map(group => (
             <div key={group.view}>
               <div style={{ padding:'6px 12px 8px', fontSize:11, color:'var(--accent)', letterSpacing:'0.12em' }}>{group.label}</div>
@@ -56,6 +57,16 @@ export default function DesktopNavItem({ item, scrolled, setPage, user }) {
               ))}
             </div>
           ))}
+          {item.courseLink && (
+            <div style={{ borderInlineStart:'1px solid var(--light)', paddingInlineStart:menuPadding }}>
+              <a href={item.courseLink.href} onClick={event => {
+                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                setOpen(false);
+                setPage('courses');
+              }} style={{ display:'block', padding:'6px 12px 8px', color:'var(--dark)', fontSize:13, letterSpacing:'0.04em', textDecoration:'none' }}>{item.courseLink.label}</a>
+            </div>
+          )}
         </div>
       )}
       {item.children && open && item.label !== '所有產品' && (

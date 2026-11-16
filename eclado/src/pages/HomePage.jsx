@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import EducationPreview from '../components/home/EducationPreview.jsx';
 import KnowledgeJournal from '../components/home/KnowledgeJournal.jsx';
 import SeriesShowcase from '../components/home/SeriesShowcase.jsx';
 import TopProductsCarousel from '../components/home/TopProductsCarousel.jsx';
@@ -214,6 +215,7 @@ export default function HomePage({ setPage, onSelectProduct, onOpenArticle, user
         />
       </div>
 
+      <EducationPreview />
       <KnowledgeJournal isMobile={isMobile} onOpenArticle={onOpenArticle} onOpenJournal={() => setPage('journal')} />
 
       {/* PRO SECTION */}

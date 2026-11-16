@@ -1,0 +1,27 @@
+.course-meeting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.course-meeting .course-meeting-actions a,
+.course-meeting .course-meeting-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 7px 13px;
+  border: 1px solid var(--black);
+  font: 400 13px/1.8 var(--font-body);
+  letter-spacing: normal;
+}
+.course-meeting .course-meeting-actions a {
+  background: var(--black);
+  color: var(--white);
+  text-decoration: none;
+}
+.course-meeting .course-meeting-actions button {
+  background: var(--white);
+  color: var(--black);
+  cursor: pointer;
+}
+.course-meeting > p[role="status"] { margin: 6px 0 0; }

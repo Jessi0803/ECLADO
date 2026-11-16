@@ -1,0 +1,43 @@
+.payment-method-heading {
+  margin-bottom: 14px;
+  color: var(--dark);
+  font-size: 10px;
+  letter-spacing: .2em;
+}
+.payment-method-options { display: grid; gap: 12px; }
+.payment-method-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 18px;
+  border: 1px solid var(--light);
+  background: var(--white);
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+}
+.payment-method-option[aria-pressed="true"] {
+  border: 2px solid var(--black);
+  background: var(--off-white);
+}
+.payment-method-option:disabled { opacity: .55; cursor: default; }
+.payment-method-indicator {
+  display: grid;
+  place-items: center;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--mid);
+  border-radius: 50%;
+}
+.payment-method-option[aria-pressed="true"] .payment-method-indicator { border-color: var(--black); }
+.payment-method-option[aria-pressed="true"] .payment-method-indicator::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--black);
+}
+.payment-method-name { display: block; color: var(--black); font-size: 14px; font-weight: 500; }
+.payment-method-description { display: block; margin-top: 2px; color: var(--dark); font-size: 11px; }

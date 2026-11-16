@@ -1,0 +1,298 @@
+.course-store {
+  max-width: 1200px;
+  margin-inline: auto;
+  padding: 124px 32px 100px;
+  color: var(--dark);
+}
+.course-store.course-store--list { max-width: none; min-height: 100vh; padding: 68px 0 100px; }
+.course-store-list-content { max-width: 1280px; margin-inline: auto; padding: 32px 32px 0; }
+.course-store--registration { max-width: 960px; padding: 128px 40px 60px; }
+.course-store-heading { max-width: 760px; margin-bottom: 54px; }
+.course-store h1 {
+  margin: 0;
+  color: var(--black);
+  font: 300 34px/1.2 var(--font-display);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+  .course-store-list-content { padding: 24px 24px 0; }
+}
+.course-store-account-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 1px solid var(--light);
+  color: var(--dark);
+  font: 400 13px/1.4 var(--font-body);
+  text-decoration: none;
+}
+.course-store-account-link:hover, .course-store-account-link:focus-visible { border-color: var(--dark); }
+.course-store--registration h1 { font-size: 36px; margin-bottom: 36px; }
+.course-store-back {
+  display: inline-block;
+  margin-bottom: 24px;
+  color: var(--dark);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-underline-offset: 3px;
+}
+.course-store-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid var(--light);
+  background: var(--off-white);
+}
+.course-store-card:hover h3 { text-decoration: underline; text-underline-offset: 3px; }
+.course-store-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: var(--off-white);
+}
+.course-store-card-content { display: flex; flex: 1; flex-direction: column; gap: 10px; padding: 20px 20px 24px; }
+.course-store-card-content h3 { margin: 0; color: var(--black); font: 300 22px/1.45 var(--font-display); }
+.course-store-card-content p { margin: 0; font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
+.course-store-card-description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.course-store-card-content .course-store-time { color: var(--accent); font-size: 11px; letter-spacing: .08em; }
+.course-store-time:has(.course-store-duration) { display: flex; flex-wrap: wrap; gap: 4px 8px; }
+.course-store-duration { color: #666; white-space: nowrap; }
+.course-store-card-content .course-store-price { margin-top: auto; color: var(--black); font-weight: 600; }
+.course-instructor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.course-instructor img {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 25%;
+}
+.course-instructor-label { flex: none; color: #666; font-size: 12px; }
+.course-instructor-name { color: var(--black); overflow-wrap: anywhere; }
+.course-detail-copy .course-instructor { gap: 10px; margin-block: 16px; font-size: 14px; }
+.course-detail-copy .course-instructor img { width: 40px; height: 40px; }
+
+.course-store-detail {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 72px;
+}
+.course-store-detail .course-store-image { position: sticky; top: 90px; aspect-ratio: 1; object-fit: contain; }
+.course-detail-category { color: var(--accent); font-size: 10px; letter-spacing: .2em; margin-bottom: 10px; }
+.course-detail-copy .course-store-time { font-size: 12px; letter-spacing: .1em; margin: 10px 0 28px; }
+.course-detail-copy .course-store-price { font: 300 30px/1.2 var(--font-display); color: var(--black); margin: 0 0 28px; }
+.course-detail-copy .course-credit-note { margin: -16px 0 28px; }
+.course-store .course-credit-note { color: #666; font-size: 13px; line-height: 1.7; }
+.course-detail-description { margin-bottom: 28px; }
+.course-detail-description h2 { margin: 0 0 10px; font-size: 10px; font-weight: 400; letter-spacing: .22em; }
+.course-store-description { white-space: pre-line; overflow-wrap: anywhere; color: #555; font-size: 14px; line-height: 1.9; }
+
+.course-registration { max-width: 740px; }
+.course-registration h2 { margin: 0 0 18px; font: 300 24px/1.4 var(--font-display); color: var(--black); }
+.course-registration h3 { font-size: 12px; font-weight: 600; letter-spacing: .1em; margin: 16px 0 8px; }
+.course-registration p { font-size: 13px; line-height: 1.8; margin: 10px 0; }
+.course-registration [role="alert"] { border-inline-start: 2px solid var(--accent); background: var(--accent-tint); padding: 10px 14px; }
+.course-registration form > fieldset { border: 0; padding: 0; min-width: 0; }
+.course-registration-form { padding: 24px; border: 1px solid var(--light); }
+.course-registration button:where(:not(.payment-method-option)), .course-action-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 10px 18px;
+  border: 1px solid var(--light);
+  background: var(--white);
+  color: var(--dark);
+  cursor: pointer;
+  font: 400 12px/1.4 var(--font-body);
+  letter-spacing: .1em;
+}
+.course-registration button:disabled { opacity: .45; cursor: not-allowed; }
+.course-registration .course-action-primary, a.course-action-primary {
+  min-height: 48px;
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--white);
+  text-decoration: none;
+  letter-spacing: .16em;
+}
+.course-detail-copy .course-action-primary { width: 100%; }
+.course-ended-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 10px 18px;
+  border: 1px solid var(--black);
+  background: var(--white);
+  color: var(--black);
+  font: 400 12px/1.4 var(--font-body);
+  letter-spacing: .16em;
+}
+.course-ended-status + .course-action-primary { margin-top: 8px; }
+.course-participant, .course-order {
+  margin: 14px 0;
+  border: 1px solid var(--light);
+  padding: 18px;
+  min-width: 0;
+}
+.course-participant legend, .course-participant label { font-size: 11px; letter-spacing: .12em; }
+.course-participant label { display: grid; gap: 7px; margin: 8px 0 14px; }
+.course-participant input, .course-participant select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid var(--light);
+  background: transparent;
+  color: var(--black);
+  font: 400 14px var(--font-body);
+}
+.course-participant input:focus-visible, .course-participant select:focus-visible { outline: 1px solid var(--black); outline-offset: 2px; }
+.course-self { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.course-self input { accent-color: var(--black); }
+.course-name-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.course-registration p.course-registration-total { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--light); margin-top: 20px; padding-top: 14px; }
+.course-registration-total strong { font: 300 24px/1.2 var(--font-display); color: var(--black); }
+.course-registration-orders { margin-top: 32px; }
+.course-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.course-order ul { padding-inline-start: 20px; margin: 12px 0; font-size: 13px; line-height: 1.8; }
+@media (max-width: 900px) { .course-store-detail { gap: 36px; } }
+@media (max-width: 680px) {
+  .course-store { padding: 100px 20px 60px; }
+  .course-store-heading { margin-bottom: 32px; }
+  .course-store--detail h1 { font-size: 26px; }
+  .course-store--registration h1 { font-size: 28px; }
+  .course-store-detail { grid-template-columns: 1fr; }
+  .course-store-detail .course-store-image { position: static; }
+  .course-registration-form { padding: 16px; }
+}
+
+.course-payment-method { margin: 12px 0 16px; }
+.course-atm-details { padding: 8px 14px; border: 1px solid var(--light); background: var(--off-white); }
+
+.course-order { scroll-margin-top: 100px; }
+
+.course-store-no-upcoming { font-size: 13px; color: #767676; }
+.course-store-no-upcoming + .course-store-list-section,
+.course-store-list-section + .course-store-list-section { margin-top: 40px; }
+.course-store-list-section > h2 { margin: 0 0 16px; font-size: 18px; font-weight: 500; }
+
+.course-store--list .course-store-hero {
+  min-height: clamp(420px, 43vw, 680px);
+  display: flex;
+  color: var(--white);
+  background: linear-gradient(90deg, #172432a8, #17243238 55%, transparent 80%),
+    #273746 url('/assets/images/faculty/education-poster-wide.webp') right center / cover no-repeat;
+}
+.education-hero-subtitle {
+  max-width: 32em;
+  margin: 14px 0 0;
+  color: #f4f6f8;
+  font-size: 15px;
+  line-height: 1.7;
+}
+.course-store--list .course-store-hero-inner {
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  padding: 48px 32px;
+}
+.course-store--list .course-store-hero h1 {
+  color: var(--white);
+  font-weight: 500;
+  max-width: 14em;
+  font-size: clamp(32px, 4vw, 60px);
+}
+.course-store--list .education-jumps {
+  flex-flow: column nowrap;
+  align-items: center;
+  width: fit-content;
+  gap: 16px;
+  margin-top: 24px;
+}
+.course-store--list .education-jump-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgb(255 255 255 / 70%);
+  color: var(--white);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.course-store--list .education-jump-button:is(:hover, :focus-visible) {
+  border-color: var(--white);
+  background: rgb(255 255 255 / 12%);
+}
+
+.education-faq {
+  width: min(calc(100% - 64px), 760px);
+  margin-inline: auto;
+  margin-top: clamp(56px, 8vw, 104px);
+}
+.education-faq h2 {
+  margin: 0 0 18px;
+  font: 400 clamp(24px, 3vw, 36px)/1.3 var(--font-display);
+}
+.education-faq details { border-top: 1px solid var(--light); }
+.education-faq details:last-child { border-bottom: 1px solid var(--light); }
+.education-faq summary { padding: 16px 4px; cursor: pointer; font-size: 15px; }
+.education-faq details p {
+  max-width: 46em;
+  margin: 0;
+  padding: 0 4px 18px;
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+@media (min-width: 681px) {
+  .course-store--list .course-store-hero {
+    position: relative;
+    isolation: isolate;
+  }
+  .course-store--list .course-store-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    backdrop-filter: blur(10px);
+    mask-image: linear-gradient(to right, #000, #000 8%, transparent 33.33%);
+  }
+}
+@media (max-width: 680px) {
+  .education-faq { width: calc(100% - 48px); }
+  .course-store--list .course-store-hero {
+    min-height: 390px;
+    background: linear-gradient(0deg, #172432ee, #17243255 46%, transparent 75%),
+      #273746 url('/assets/images/faculty/education-poster-clean.webp') center 58% / cover no-repeat;
+  }
+  .education-hero-subtitle { font-size: 13px; }
+  .course-store--list .course-store-hero-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 32px 24px;
+  }
+}

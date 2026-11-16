@@ -1,0 +1,8 @@
+.course-description-content { color: #555; font-size: 14px; font-weight: 400; line-height: 1.9; overflow-wrap: anywhere; }
+.course-description-content h3 { margin: 1em 0 .4em; color: var(--black); font-size: 1.55em; font-weight: 500; }
+.course-description-content p { margin: 0 0 .75em; }
+.course-description-content ul, .course-description-content ol { padding-inline-start: 1.5em; margin: .6em 0; }
+.course-description-content a { color: var(--accent, #041384); text-decoration: underline; }
+.course-description-content img { display: block; max-width: 100%; height: auto; margin: .8em 0; }
+.course-description-content h4 { margin: .8em 0 .35em; color: var(--black); font-size: 1.2em; font-weight: 400; }
+.course-description-content :is(b, strong) { font-weight: 700; }

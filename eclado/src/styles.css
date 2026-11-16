@@ -261,3 +261,5 @@
   @media (prefers-reduced-motion: reduce) {
     .cart-drawer, .cart-drawer-backdrop { animation: none; }
   }
+.home-journal-scroll { overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.home-journal-scroll::-webkit-scrollbar { display: none; }

@@ -13,6 +13,7 @@ import {
 } from './authSession.js';
 import {
   PAGE_PATHS,
+  courseIdFromPath,
   eventProductSlugFromPath,
   getProductSlug,
   journalSlugFromPath,
@@ -26,6 +27,8 @@ import AboutPage from '../pages/AboutPage.jsx';
 import AccountPage from '../pages/AccountPage.jsx';
 import CartPage from '../pages/CartPage.jsx';
 import CheckoutPage from '../pages/CheckoutPage.jsx';
+import CourseRegistrationPage from '../pages/CourseRegistrationPage.jsx';
+import CoursesPage from '../pages/CoursesPage.jsx';
 import ContactPage from '../pages/ContactPage.jsx';
 import EventProductsPage from '../pages/EventProductsPage.jsx';
 import HomePage from '../pages/HomePage.jsx';
@@ -59,6 +62,7 @@ export default function App() {
 }
 
 function StorefrontApp() {
+  const [courseId, setCourseId] = useState(() => courseIdFromPath(window.location.pathname));
   const [productPath, setProductPath] = useState(() => window.location.pathname);
   const [journalArticleSlug, setJournalArticleSlug] = useState(() => journalSlugFromPath(window.location.pathname));
   const [page, setPageState] = useState(() => {
@@ -78,6 +82,7 @@ function StorefrontApp() {
       // Clicking the current story navigation is a back-to-top action, not a new history entry.
       if (page === 'about') return;
     }
+    if (newPage === 'courses') window.scrollTo(0, 0);
     const path = PAGE_PATHS[newPage] || '/';
     const state = newPage === 'order-lookup'
       ? { page: newPage, from: page }
@@ -85,6 +90,13 @@ function StorefrontApp() {
     window.history.pushState(state, '', path);
     setPageState(newPage);
   }
+  function openCourse(id) {
+    window.history.pushState({ page: 'course-detail' }, '', `/courses/${id}`);
+    setCourseId(id);
+    setPageState('course-detail');
+    window.scrollTo(0, 0);
+  }
+
   function openProduct(product, from = page) {
     const path = `/products/${getProductSlug(product)}`;
     window.history.pushState({ page:'product', from }, '', path);
@@ -186,6 +198,7 @@ function StorefrontApp() {
   // 瀏覽器返回 / 前進
   useEffect(() => {
     function onPopState(e) {
+      setCourseId(courseIdFromPath(window.location.pathname));
       setJournalArticleSlug(journalSlugFromPath(window.location.pathname));
       setProductPath(window.location.pathname);
       setPageState(e.state?.page || pageFromPath(window.location.pathname));
@@ -211,6 +224,9 @@ function StorefrontApp() {
   function renderPage() {
     switch (page) {
       case 'home':     return <HomePage announcementVisible={isAnnouncementVisible(announcement)} setPage={setPage} onSelectProduct={product => openProduct(product, 'home')} onOpenArticle={article => openJournalArticle(article, 'home')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
+      case 'course-register': return <CourseRegistrationPage courseId={courseId} user={user} authReady={authReady} />;
+      case 'courses': return <CoursesPage onOpenCourse={openCourse} memberId={user?.uid} />;
+      case 'course-detail': return <CoursesPage courseId={courseId} memberId={authReady ? user?.uid : null} canRegister={['pro', 'instructor'].includes(user?.role)} />;
       case 'shop':     return <ShopPage onSelectProduct={product => openProduct(product, 'shop')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} productsStatus={productsStatus} productsError={productsError} salesStats={salesStats} />;
       case 'product':  return <ProductPage onSelectProduct={openProduct} cart={cart} productSlug={productSlugFromPath(productPath)} products={products} productsStatus={productsStatus} productsError={productsError} user={user} setCart={setCart} promotions={promotions} onBack={closeProduct} onShop={() => setPage('shop')} />;
       case 'event-products': return <EventProductsPage user={user} setCart={setCart} onSelectProduct={openEventProduct} products={eventProducts} productsStatus={eventStatus} productsError={eventErrorText} promotions={promotions} />;

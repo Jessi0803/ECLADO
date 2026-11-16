@@ -46,6 +46,13 @@ export default function MobileNavSection({ item, setPage, user, close }) {
               {item.children.find(group => group.view === productView)?.items.map(child => (
                 <a key={child} href={shopPath(productView, child)} onClick={event => { event.preventDefault(); goShopFilter(productView, child, setPage); close(); }} style={{ display:'block', width:'100%', textAlign:'left', color:'var(--dark)', padding:'10px 16px', letterSpacing:'0.04em', fontFamily:'var(--font-body)', fontSize:13, textDecoration:'none', boxSizing:'border-box' }}>{productView === 'series' ? seriesDisplayName(child) : child}</a>
               ))}
+              {item.courseLink && (
+                <a href={item.courseLink.href} onClick={event => {
+                  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                  event.preventDefault();
+                  go('courses');
+                }} style={{ display:'block', padding:'10px 16px', marginTop:8, borderTop:'1px solid var(--light)', color:'var(--dark)', fontSize:13, letterSpacing:'0.04em', textDecoration:'none' }}>{item.courseLink.label}</a>
+              )}
             </>
           )}
           {item.label !== '所有產品' && item.children.map(child => (
