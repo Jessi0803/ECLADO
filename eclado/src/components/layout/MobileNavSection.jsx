@@ -18,18 +18,18 @@ export default function MobileNavSection({ item, setPage, user, close }) {
     else go(user ? 'account' : 'login');
   }
 
-  const topHref = item.label === '所有產品' ? '/shop'
+  const topHref = item.href || (item.label === '所有產品' ? '/shop'
     : item.label === '品牌故事' ? '/about'
       : item.label === '會員登錄' ? (user ? '/account' : '/login')
-        : '/info';
+        : '/info');
 
   return (
     <div style={{ borderBottom:'1px solid var(--light)' }}>
-      <a href={topHref} onClick={event => { event.preventDefault(); item.children ? setOpen(value => !value) : go(
-        item.label === '品牌故事' ? 'about'
+      <a href={topHref} onClick={event => { if (item.href && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return; event.preventDefault(); item.children ? setOpen(value => !value) : go(
+        item.page || (item.label === '品牌故事' ? 'about'
         : item.label === '會員登錄' ? (user ? 'account' : 'login')
         : item.label === '所有產品' ? 'shop'
-        : 'info'
+        : 'info')
       ); }} style={{ width:'100%', background:'none', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', padding:'18px 0', fontSize:15, color:'var(--dark)', fontFamily:'var(--font-body)', letterSpacing:'0.04em', textDecoration:'none', boxSizing:'border-box' }}>
         {item.label}
         {item.children && <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{ transition:'transform 0.2s', transform: open ? 'rotate(180deg)' : 'none' }}><path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>}
@@ -46,13 +46,6 @@ export default function MobileNavSection({ item, setPage, user, close }) {
               {item.children.find(group => group.view === productView)?.items.map(child => (
                 <a key={child} href={shopPath(productView, child)} onClick={event => { event.preventDefault(); goShopFilter(productView, child, setPage); close(); }} style={{ display:'block', width:'100%', textAlign:'left', color:'var(--dark)', padding:'10px 16px', letterSpacing:'0.04em', fontFamily:'var(--font-body)', fontSize:13, textDecoration:'none', boxSizing:'border-box' }}>{productView === 'series' ? seriesDisplayName(child) : child}</a>
               ))}
-              {item.courseLink && (
-                <a href={item.courseLink.href} onClick={event => {
-                  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-                  event.preventDefault();
-                  go('courses');
-                }} style={{ display:'block', padding:'10px 16px', marginTop:8, borderTop:'1px solid var(--light)', color:'var(--dark)', fontSize:13, letterSpacing:'0.04em', textDecoration:'none' }}>{item.courseLink.label}</a>
-              )}
             </>
           )}
           {item.label !== '所有產品' && item.children.map(child => (
