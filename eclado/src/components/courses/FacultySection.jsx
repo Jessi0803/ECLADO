@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import './FacultySection.css';
 import counties from './taiwanCountyPaths.json';
 
@@ -19,8 +19,8 @@ export default function FacultySection() {
   const facultyGridRef = useRef(null);
   const revealedProfiles = useRef(new Set());
 
-  useEffect(() => {
-    if (!window.matchMedia('(max-width: 680px) and (hover: none)').matches ||
+  useLayoutEffect(() => {
+    if (!window.matchMedia('(max-width: 680px)').matches ||
         window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
         !window.IntersectionObserver) return;
 
@@ -32,12 +32,21 @@ export default function FacultySection() {
         revealed.add(target.dataset.profile);
         target.style.setProperty('--profile-reveal-delay', `${delay}ms`);
         target.classList.add('education-profile-reveal');
+        target.classList.remove('education-profile-pending');
         observer.unobserve(target);
-        delay += 60;
+        delay += 70;
       }
-    }, { threshold: 0.1 });
+    }, { rootMargin: '0px 0px 32px 0px' });
     for (const card of facultyGridRef.current.children) {
-      if (!revealed.has(card.dataset.profile)) observer.observe(card);
+      if (revealed.has(card.dataset.profile)) continue;
+      const { top, bottom } = card.getBoundingClientRect();
+      if (top < window.innerHeight && bottom > 0) {
+        revealed.add(card.dataset.profile);
+        card.classList.remove('education-profile-pending');
+        continue;
+      }
+      card.classList.add('education-profile-pending');
+      observer.observe(card);
     }
     return () => observer.disconnect();
   }, [selected]);

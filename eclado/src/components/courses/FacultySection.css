@@ -191,10 +191,9 @@
   place-items: center;
   width: 21px;
   height: 21px;
-  border-radius: 6px;
-  background: radial-gradient(circle at 25% 100%, #ffd36a 0%, #f77737 28%, #d62976 58%, #833ab4 90%);
-  color: #fff;
+  color: #465360;
 }
+.education-profile-instagram-icon svg { width: 20px; height: 20px; }
 .education-profile:is(:hover, :focus-visible) .education-profile-instagram { color: var(--accent); }
 .education-course-heading { border-top: 1px solid var(--light); padding-top: 32px; margin-bottom: 24px; }
 .education-course-heading h2 { margin: 8px 0; font: 400 clamp(26px, 4vw, 40px)/1.2 var(--font-display); }
@@ -219,14 +218,11 @@
   .education-map-island path, .education-pin::before, .education-regions button { transition: none; }
 }
 
-@media (max-width: 680px) and (hover: none) and (prefers-reduced-motion: no-preference) {
+@media (max-width: 680px) and (prefers-reduced-motion: no-preference) {
+  .education-profile-pending:not(:focus-visible) { opacity: .25; }
   .education-profile-reveal:not(:focus-visible) {
-    animation: education-profile-enter .26s ease-out var(--profile-reveal-delay, 0ms) backwards;
+    transition: opacity .55s ease-out var(--profile-reveal-delay, 0ms);
   }
-}
-@keyframes education-profile-enter {
-  from { opacity: .25; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 .education-region-portraits {
