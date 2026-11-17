@@ -304,7 +304,7 @@ export default function InventoryReceiptsPage({ initialReceipt, onInitialReceipt
       {notice && <p role="status">{notice}</p>}
       {mode === 'list' && (
         <section className="procurement-form-card" aria-label="入庫單紀錄">
-          {listLoading ? <p role="status">載入中…</p> : list.length === 0 ? <p>目前沒有入庫單。</p> : (
+          {listLoading ? <p role="status">載入中…</p> : list.length === 0 ? <p className="admin-list-empty-message">目前沒有入庫單。</p> : (
             <div className="table-scroll">
               <table className="responsive-admin-table procurement-items-table">
                 <thead><tr><th>單號</th><th>入庫日期</th><th>狀態</th><th>全單成本（TWD）</th><th>明細</th></tr></thead>

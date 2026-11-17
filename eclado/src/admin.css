@@ -385,6 +385,7 @@ input, select, textarea { font-family: var(--font); }
 .procurement-list-table small, .procurement-items-table small { display: block; margin-top: 4px; color: var(--mid); font-size: 10px; line-height: 1.5; }
 .procurement-link { padding: 0; border: 0; background: transparent; color: var(--dark); font-size: 12px; font-weight: 600; text-decoration: underline; text-decoration-color: var(--light); text-underline-offset: 3px; }
 .procurement-empty { padding: 50px 20px !important; text-align: center; color: var(--mid); }
+.admin-list-empty-message { color: var(--mid); font-size: 13px; text-align: center; }
 .procurement-status { display: inline-flex; align-items: center; min-height: 24px; padding: 4px 9px; background: var(--off); color: var(--mid); font-size: 10px; white-space: nowrap; }
 .procurement-status.status-pending { background: oklch(0.78 0.14 80 / .12); color: oklch(0.55 0.13 75); }
 .procurement-status.status-ordered, .procurement-status.status-shipping { background: oklch(0.60 0.12 240 / .1); color: var(--blue); }

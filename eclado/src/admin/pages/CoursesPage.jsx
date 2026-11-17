@@ -253,7 +253,7 @@ export default function AdminCoursesPage({ canNotify }) {
             {notice && <p className="admin-course-feedback" role="status">{notice}</p>}
             {error && <p className="procurement-error" role="alert">{error}</p>}
             {!courses && !error && <p className="procurement-loading" role="status">載入課程中…</p>}
-            {courses?.length === 0 && <p className="procurement-empty procurement-list-wrap">目前沒有課程。</p>}
+            {courses?.length === 0 && <p className="procurement-empty procurement-list-wrap admin-list-empty-message">目前沒有課程。</p>}
             {courses?.length > 0 && (
               <div className="table-scroll procurement-list-wrap admin-course-table">
                 <table className="responsive-admin-table procurement-items-table">
