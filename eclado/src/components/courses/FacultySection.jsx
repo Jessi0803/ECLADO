@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import './FacultySection.css';
 import counties from './taiwanCountyPaths.json';
 
@@ -11,9 +11,9 @@ const regions = [
 ];
 
 export default function FacultySection() {
-  const curlId = useId();
   const [selected, setSelected] = useState(null);
   const [hovered, setHovered] = useState(null);
+  const [scrollRegion, setScrollRegion] = useState(null);
   const cardsRef = useRef(null);
   const mapRef = useRef(null);
   const facultyGridRef = useRef(null);
@@ -78,7 +78,42 @@ export default function FacultySection() {
     };
   }, []);
 
-  const highlighted = hovered || selected;
+  useEffect(() => {
+    const map = mapRef.current;
+    const mobileMotion = window.matchMedia('(max-width: 680px) and (prefers-reduced-motion: no-preference)');
+    let frame = 0;
+    function updateRegion() {
+      frame = 0;
+      if (!mobileMotion.matches) {
+        setScrollRegion(null);
+        return;
+      }
+      const { top, height } = map.getBoundingClientRect();
+      const progress = (window.innerHeight * 0.55 - top) / height;
+      const region = progress >= 0 && progress < 1
+        ? regions[Math.floor(progress * regions.length)]
+        : null;
+      setScrollRegion(region);
+    }
+    function scheduleUpdate() {
+      if (!frame) frame = window.requestAnimationFrame(updateRegion);
+    }
+    window.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', scheduleUpdate);
+    mobileMotion.addEventListener('change', scheduleUpdate);
+    const observer = new ResizeObserver(scheduleUpdate);
+    observer.observe(map);
+    updateRegion();
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener('scroll', scheduleUpdate);
+      window.removeEventListener('resize', scheduleUpdate);
+      mobileMotion.removeEventListener('change', scheduleUpdate);
+    };
+  }, []);
+
+  const highlighted = hovered || selected || scrollRegion;
   const visible = selected ? faculty.filter(item => selected.cities.includes(item[2])) : faculty;
 
   return (
@@ -136,7 +171,7 @@ export default function FacultySection() {
         <div ref={facultyGridRef} className="education-faculty-grid">
           {visible.map(([id, name, city, instagram, specialties, highlights]) => (
             <a key={id} data-profile={id} className="education-profile" href={`https://www.instagram.com/${instagram}/`}
-              target="_blank" rel="noopener noreferrer" aria-label={`${name} 老師的 Instagram（在新分頁開啟）`}>
+              target="_blank" rel="noopener noreferrer" aria-label={`${name} 老師的 Instagram @${instagram}（在新分頁開啟）`}>
               <img src={`/assets/images/faculty/${id}.webp`} alt={`${name} 老師`} loading="lazy" />
               <div className="education-profile-copy">
                 <div className="education-profile-header">
@@ -155,28 +190,21 @@ export default function FacultySection() {
                     {highlights.map(item => <li key={item}>{item}</li>)}
                   </ul>
                 </div>
-                <span className="education-profile-instagram">
-                  <span>@{instagram}</span>
-                  <span className="education-profile-instagram-icon" aria-hidden="true">
+                <span className="education-profile-instagram" aria-hidden="true">
+                  <span className="education-profile-instagram-handle" title={`@${instagram.toUpperCase()}`}>@{instagram}</span>
+                  <span className="education-profile-instagram-icons">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                       <rect x="3" y="3" width="18" height="18" rx="5" />
                       <circle cx="12" cy="12" r="4" />
                       <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
                     </svg>
+                    <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                      strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 12 12 4M6 4h6v6" />
+                    </svg>
                   </span>
                 </span>
               </div>
-              <svg className="education-profile-curl" viewBox="0 0 64 64" aria-hidden="true">
-                <defs>
-                  <linearGradient id={`${curlId}-${id}`} x1="30%" y1="30%" x2="75%" y2="78%">
-                    <stop offset="0" stopColor="#fff" />
-                    <stop offset=".48" stopColor="#f9f8f6" />
-                    <stop offset="1" stopColor="#d5d3ce" />
-                  </linearGradient>
-                </defs>
-                <path d="M0 64 C27 63 60 36 64 0 C60 22 51 24 36 25 C24 26 31 50 0 64Z"
-                  fill={`url(#${curlId}-${id})`} />
-              </svg>
             </a>
           ))}
         </div>

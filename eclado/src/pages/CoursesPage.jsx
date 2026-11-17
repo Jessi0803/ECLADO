@@ -14,7 +14,6 @@ const courseQuestions = [
   ['誰可以報名專業課程？', '開放具美容師資格的會員報名。登入後，選擇想參加的課程並完成付款即可。'],
   ['怎麼確認報名成功？', '付費課程須完成付款，報名才會成立。登入會員中心，在「我的課程」查看報名狀態。顯示「報名成立」即代表報名成功。'],
   ['報名後如何進入課程？', '報名成立後，登入會員中心，前往「我的課程」並點選「開啟 Zoom 會議」即可加入。也可以從該課程的報名紀錄進入。若由師資代為報名，請向代報師資索取上課連結。Zoom 連結可查看至課程結束。'],
-  ['報名後可以取消嗎？', '如需取消報名，請在課程結束前聯繫客服協助。退款方式由客服確認後說明。'],
   ['購物金什麼時候會入帳？', '完成付款且報名仍有效，課程結束後會發放購物金給會員。登入會員中心，前往「我的訂單」上方的「購物金」區塊，點選「查看異動明細」即可確認入帳。'],
 ];
 
@@ -117,10 +116,12 @@ export default function CoursesPage({ courseId = null, canRegister, memberId, on
             {hasRegistrations && <a className="course-store-account-link" href="/account?tab=courses">查看我的課程 <span aria-hidden="true">→</span></a>}
           </div>
         )}
-        {!courseId && current?.courses?.length > 0 && upcoming.length === 0 && <p className="course-store-no-upcoming">目前沒有開放報名的課程。</p>}
         {!current && <p role="status">載入課程中…</p>}
         {current?.failed && <p role="alert">目前無法載入課程。 <button type="button" onClick={() => setRequest(n => n + 1)}>重新載入</button></p>}
-        {current?.courses?.length === 0 && <p>{courseId ? '找不到此課程，或課程已下架。' : '目前沒有上架的課程。'}</p>}
+        {courseId && current?.courses?.length === 0 && <p>找不到此課程，或課程已下架。</p>}
+        {!courseId && current?.courses && upcoming.length === 0 && (
+          <p className="course-store-no-upcoming">新課程正在規劃中，敬請期待。</p>
+        )}
         {course && (
           <div className="course-store-detail">
             <CourseImage path={course.image_path} alt={course.name} className="course-store-image" />
@@ -144,13 +145,13 @@ export default function CoursesPage({ courseId = null, canRegister, memberId, on
           </div>
         )}
         {[
-          ['可報名課程', upcoming],
-          ['進行中課程', inProgress],
-          ['歷年課程', past],
-        ].map(([label, items]) => items.length > 0 && (
-          <section key={label} className="course-store-list-section" aria-label={label}>
+          ['upcoming', '可報名課程', upcoming],
+          ['ongoing', '進行中課程', inProgress],
+          ['past', '歷年課程', past],
+        ].map(([kind, label, items]) => items.length > 0 && (
+          <section key={kind} className={`course-store-list-section course-store-list-section--${kind}`} aria-label={label}>
             <h2>{label}</h2>
-            <div className="journal-list-grid">
+            <div className="course-store-list-grid">
               {items.map(item => (
                 <a key={item.id} className="course-store-card" href={`/courses/${item.id}`} onClick={event => follow(event, () => onOpenCourse(item.id))}>
                   <CourseImage path={item.image_path} alt="" className="course-store-image" />
