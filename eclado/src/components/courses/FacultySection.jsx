@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import './FacultySection.css';
 import counties from './taiwanCountyPaths.json';
 
@@ -11,6 +11,7 @@ const regions = [
 ];
 
 export default function FacultySection() {
+  const curlId = useId();
   const [selected, setSelected] = useState(null);
   const [hovered, setHovered] = useState(null);
   const cardsRef = useRef(null);
@@ -145,8 +146,28 @@ export default function FacultySection() {
                     {highlights.map(item => <li key={item}>{item}</li>)}
                   </ul>
                 </div>
-                <span className="education-profile-instagram">@{instagram}</span>
+                <span className="education-profile-instagram">
+                  <span>@{instagram}</span>
+                  <span className="education-profile-instagram-icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <rect x="3" y="3" width="18" height="18" rx="5" />
+                      <circle cx="12" cy="12" r="4" />
+                      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+                    </svg>
+                  </span>
+                </span>
               </div>
+              <svg className="education-profile-curl" viewBox="0 0 64 64" aria-hidden="true">
+                <defs>
+                  <linearGradient id={`${curlId}-${id}`} x1="30%" y1="30%" x2="75%" y2="78%">
+                    <stop offset="0" stopColor="#fff" />
+                    <stop offset=".48" stopColor="#f9f8f6" />
+                    <stop offset="1" stopColor="#d5d3ce" />
+                  </linearGradient>
+                </defs>
+                <path d="M0 64 C27 63 60 36 64 0 C60 22 51 24 36 25 C24 26 31 50 0 64Z"
+                  fill={`url(#${curlId}-${id})`} />
+              </svg>
             </a>
           ))}
         </div>

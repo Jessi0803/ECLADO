@@ -111,6 +111,7 @@
 .education-faculty-heading button { border: 0; background: none; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
 .education-faculty-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
 .education-profile {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -119,16 +120,35 @@
   color: inherit;
   text-decoration: none;
 }
+.education-profile-curl {
+  position: absolute;
+  inset: auto 0 0 auto;
+  width: 50px;
+  height: 50px;
+  overflow: visible;
+  pointer-events: none;
+  transform-origin: bottom right;
+  filter: drop-shadow(1px 3px 3px #302b2340);
+}
 .education-profile:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
+.education-profile:active { background: var(--accent-tint); }
 @media (hover: hover) and (pointer: fine) {
-  .education-profile:hover { z-index: 1; box-shadow: 0 6px 20px #14283c20; }
+  .education-profile-instagram-icon { opacity: 0; }
+  .education-profile-curl {
+    width: 64px;
+    height: 64px;
+    transform: scale(0);
+  }
+  .education-profile:is(:hover, :focus-visible) .education-profile-curl { transform: scale(1); }
+  .education-profile:is(:hover, :focus-visible) .education-profile-instagram-icon { opacity: 1; }
 }
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .education-profile { transition: transform .2s ease, box-shadow .2s ease; }
-  .education-profile:hover { transform: scale(1.025); }
+  .education-profile-curl { transition: transform 450ms cubic-bezier(.35, 0, .25, 1); }
+  .education-profile-instagram-icon { transition: opacity 175ms ease; }
+  .education-profile:is(:hover, :focus-visible) .education-profile-instagram-icon { transition-delay: 145ms; }
 }
 .education-profile img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; object-position: center 24%; background: var(--off-white); }
 .education-profile-copy { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 10px; padding: 18px; }
@@ -150,13 +170,30 @@
 }
 .education-profile-city { color: #535d66; }
 .education-profile-instagram {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
   margin-top: auto;
   padding-top: 10px;
+  padding-inline-end: 35px;
   color: #535d66;
   font-size: 11px;
   letter-spacing: .035em;
   overflow-wrap: anywhere;
   text-transform: uppercase;
+}
+.education-profile-instagram > :first-child { min-width: 0; }
+.education-profile-instagram-icon {
+  position: absolute;
+  inset: auto 6px 6px auto;
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border-radius: 6px;
+  background: radial-gradient(circle at 25% 100%, #ffd36a 0%, #f77737 28%, #d62976 58%, #833ab4 90%);
+  color: #fff;
 }
 .education-profile:is(:hover, :focus-visible) .education-profile-instagram { color: var(--accent); }
 .education-course-heading { border-top: 1px solid var(--light); padding-top: 32px; margin-bottom: 24px; }
