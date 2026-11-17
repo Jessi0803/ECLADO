@@ -10,6 +10,59 @@ import './CoursesPage.css';
 
 const instructorNames = faculty.map(([, name]) => name);
 
+function keepCourseEditorInViewport(panel) {
+  const viewport = window.visualViewport;
+  const mobile = window.matchMedia('(max-width: 900px)');
+  if (!viewport) return;
+
+  let frame;
+  function updateViewport() {
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(() => {
+      if (!mobile.matches) {
+        panel.style.removeProperty('--course-viewport-top');
+        panel.style.removeProperty('--course-viewport-bottom');
+        return;
+      }
+      panel.style.setProperty('--course-viewport-top', `${viewport.offsetTop}px`);
+      panel.style.setProperty('--course-viewport-bottom', `${viewport.offsetTop + viewport.height}px`);
+
+      const field = document.activeElement;
+      if (!panel.contains(field) || !field.matches('input:not([type="file"], [type="checkbox"]), textarea, [contenteditable="true"]')) return;
+
+      const panelRect = panel.getBoundingClientRect();
+      let fieldRect = field.getBoundingClientRect();
+      if (field.isContentEditable) {
+        const selection = window.getSelection();
+        if (selection?.rangeCount && field.contains(selection.focusNode)) {
+          const caret = selection.getRangeAt(0).getBoundingClientRect();
+          if (caret.height) fieldRect = caret;
+        }
+      }
+      const top = panelRect.top + 12;
+      const bottom = panelRect.bottom - 12;
+      if (fieldRect.top < top || fieldRect.height > bottom - top) {
+        panel.scrollTop += fieldRect.top - top;
+      } else if (fieldRect.bottom > bottom) {
+        panel.scrollTop += fieldRect.bottom - bottom;
+      }
+    });
+  }
+
+  viewport.addEventListener('resize', updateViewport);
+  viewport.addEventListener('scroll', updateViewport);
+  mobile.addEventListener('change', updateViewport);
+  panel.addEventListener('focusin', updateViewport);
+  updateViewport();
+  return () => {
+    cancelAnimationFrame(frame);
+    viewport.removeEventListener('resize', updateViewport);
+    viewport.removeEventListener('scroll', updateViewport);
+    mobile.removeEventListener('change', updateViewport);
+    panel.removeEventListener('focusin', updateViewport);
+  };
+}
+
 function CourseEditor({ course, onSaved, onClose }) {
   const [form, setForm] = useState(() => ({
     name: course?.name || '', description: course?.description || '',
@@ -141,6 +194,7 @@ export default function AdminCoursesPage({ canNotify }) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const editorTitle = useRef(null);
+  const editorPanel = useRef(null);
   const editorTrigger = useRef(null);
   const closeEditor = usePanelHistory(Boolean(editor), () => setEditor(null));
 
@@ -150,6 +204,10 @@ export default function AdminCoursesPage({ canNotify }) {
       editorTrigger.current.focus();
       editorTrigger.current = null;
     }
+  }, [editor]);
+
+  useEffect(() => {
+    if (editor && editorPanel.current) return keepCourseEditorInViewport(editorPanel.current);
   }, [editor]);
 
   function openEditor(event, course) {
@@ -240,7 +298,7 @@ export default function AdminCoursesPage({ canNotify }) {
       {editor && (
         <>
           <button type="button" className="detail-panel-backdrop" tabIndex={-1} aria-label="關閉課程表單" onClick={closeEditor} />
-          <div className="detail-panel detail-panel-wide admin-course-editor-panel" role="dialog" aria-modal="true"
+          <div ref={editorPanel} className="detail-panel detail-panel-wide admin-course-editor-panel" role="dialog" aria-modal="true"
             aria-labelledby="course-editor-title" onKeyDown={event => {
               if (event.key === 'Escape') closeEditor();
             }}>

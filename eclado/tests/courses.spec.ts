@@ -55,6 +55,32 @@ test('管理員可以新增、編輯、上下架課程，公開頁面可直接�
   await page.locator('.app-sidebar button:not(.sidebar-star)').filter({ hasText: /^課程管理$/ }).click();
   await page.getByRole('button', { name: '新增課程' }).click();
   await page.getByLabel('課程名稱').fill('專業護膚課程');
+  if ((page.viewportSize()?.width || 0) <= 900) {
+    const panel = page.getByRole('dialog', { name: '新增課程' });
+    const zoom = panel.getByLabel('Zoom 會議連結');
+    await zoom.focus();
+    // Playwright's mobile profile does not open a native software keyboard.
+    await page.evaluate(() => {
+      const viewport = window.visualViewport!;
+      Object.defineProperty(viewport, 'height', { configurable: true, value: 390 });
+      Object.defineProperty(viewport, 'offsetTop', { configurable: true, value: 80 });
+      viewport.dispatchEvent(new Event('resize'));
+    });
+    await expect(zoom).toBeFocused();
+    await expect.poll(async () => zoom.evaluate(field => {
+      const bounds = field.getBoundingClientRect();
+      const drawer = field.closest('[role="dialog"]')!.getBoundingClientRect();
+      return drawer.top === 80 && drawer.bottom === 470 &&
+        bounds.top >= drawer.top && bounds.bottom <= drawer.bottom;
+    })).toBe(true);
+    await expect(panel.getByLabel('課程名稱')).toHaveValue('專業護膚課程');
+    await page.evaluate(() => {
+      const viewport = window.visualViewport!;
+      Reflect.deleteProperty(viewport, 'height');
+      Reflect.deleteProperty(viewport, 'offsetTop');
+      viewport.dispatchEvent(new Event('resize'));
+    });
+  }
   await page.getByLabel('授課講師').selectOption('April');
   await page.getByLabel('課程概述').fill('練習護膚手技');
   await page.getByRole('textbox', { name: '課程介紹', exact: true }).fill('實作演練與課後問答。');

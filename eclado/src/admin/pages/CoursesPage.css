@@ -83,6 +83,16 @@ dialog.course-cancel-dialog {
   background: var(--white);
   border: 1px solid var(--border);
 }
+@media (max-width: 900px) {
+  .detail-panel.detail-panel-wide.admin-course-editor-panel {
+    top: max(56px, var(--course-viewport-top, 0px));
+    height: calc(var(--course-viewport-bottom, 100dvh) - max(56px, var(--course-viewport-top, 0px))) !important;
+  }
+  .admin-course-editor input:not([type="checkbox"]), .admin-course-editor select,
+  .admin-course-editor textarea, .admin-course-editor [contenteditable="true"] {
+    font-size: 16px;
+  }
+}
 .admin-course-editor-heading {
   display: flex;
   justify-content: space-between;
