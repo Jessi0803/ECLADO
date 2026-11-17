@@ -1,7 +1,7 @@
 // Host adapter only: no HTTP listener, dotenv, bank secrets, or new financial logic.
 const crypto=require('node:crypto');
-const {dispatchRewards}=require('../api/reward-notification-worker')._private;
-const ALLOWED=['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','SUPABASE_SERVICE_KEY','LINE_CHANNEL_ACCESS_TOKEN','RESEND_API_KEY','ORDER_EMAIL_FROM','REWARD_NOTIFICATION_ADMIN_EMAILS','INSTRUCTOR_STUDENT_NOTIFICATIONS_ENABLED'];
+const {dispatchRewards,dispatchCourseNotifications}=require('../api/reward-notification-worker')._private;
+const ALLOWED=['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','SUPABASE_SERVICE_KEY','LINE_CHANNEL_ACCESS_TOKEN','RESEND_API_KEY','ORDER_EMAIL_FROM','REWARD_NOTIFICATION_ADMIN_EMAILS','INSTRUCTOR_STUDENT_NOTIFICATIONS_ENABLED','COURSE_SHOPPING_CREDIT_ENABLED','COURSE_NOTIFICATIONS_ENABLED'];
 function configuration(source){
  if(source.REWARD_BANK_ENCRYPTION_KEYS||source.REWARD_BANK_ACTIVE_KEY_ID)throw Error('bank_keys_forbidden');
  const env=Object.fromEntries(ALLOWED.filter(k=>source[k]).map(k=>[k,source[k]]));
@@ -28,6 +28,13 @@ async function run({action,source=process.env,fetchImpl=fetch,at=new Date(),runK
  const rpcRoot=`${env.SUPABASE_URL}/rest/v1/rpc/`;
  const rpcNames=new Set(['claim_reward_notifications','complete_reward_notification','run_reward_reconciliation']);
  if(env.INSTRUCTOR_STUDENT_NOTIFICATIONS_ENABLED==='true')for(const name of ['claim_instructor_student_notifications','complete_instructor_student_notification'])rpcNames.add(name);
+ const courseCreditEnabled = action === 'dispatch' && env.COURSE_SHOPPING_CREDIT_ENABLED === 'true';
+ if (courseCreditEnabled) rpcNames.add('grant_finished_course_shopping_credit');
+ const courseNotificationsEnabled = action === 'dispatch' && env.COURSE_NOTIFICATIONS_ENABLED === 'true';
+ if (courseNotificationsEnabled) {
+  rpcNames.add('claim_course_notification');
+  rpcNames.add('complete_course_notification');
+ }
  const restrictedFetch=async(url,options)=>{
   const target=String(url);
   const rpc=target.startsWith(rpcRoot)&&rpcNames.has(target.slice(rpcRoot.length));
@@ -35,7 +42,17 @@ async function run({action,source=process.env,fetchImpl=fetch,at=new Date(),runK
   if(!rpc&&!provider)throw Error('destination_forbidden');
   return fetchImpl(url,options);
  };
- if(action==='dispatch')return {status:'complete',action,...await dispatchRewards({env,fetchImpl:restrictedFetch,limit:5})};
+ if (action === 'dispatch') {
+  const tasks = [dispatchRewards({env, fetchImpl:restrictedFetch, limit:5})];
+  if (courseCreditEnabled) tasks.push(grantCourseShoppingCredit(env, restrictedFetch, rpcRoot).then(courseCredit => ({courseCredit})));
+  if (courseNotificationsEnabled) {
+   tasks.push(dispatchCourseNotifications({env, fetchImpl:restrictedFetch}).then(courseNotifications => ({courseNotifications})));
+  }
+  const results = await Promise.allSettled(tasks);
+  const failure = results.find(result => result.status === 'rejected');
+  if (failure) throw failure.reason;
+  return Object.assign({status:'complete', action}, ...results.map(result => result.value));
+ }
  const key=runKey||dailyRunKey(env.SUPABASE_URL,at);
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key))throw Error('run_key_configuration');
  const service=env.SUPABASE_SERVICE_ROLE_KEY||env.SUPABASE_SERVICE_KEY;
@@ -43,6 +60,21 @@ async function run({action,source=process.env,fetchImpl=fetch,at=new Date(),runK
  if(!response.ok)throw Error('reconciliation_request_failed');
  const report=await response.json();
  return {status:report.status||'unknown',action,runKey:key,checked:report.checked||0,findings:report.findings||0};
+}
+async function grantCourseShoppingCredit(env, fetchImpl, rpcRoot) {
+ const service = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_KEY;
+ const response = await fetchImpl(rpcRoot + 'grant_finished_course_shopping_credit', {
+  method: 'POST',
+  signal: AbortSignal.timeout(5000),
+  headers: {apikey:service, Authorization:`Bearer ${service}`, 'Content-Type':'application/json'},
+  body: '{}',
+ });
+ if (!response.ok) throw Error('course_credit_request_failed');
+ const {status, granted} = await response.json();
+ if (!['complete', 'busy'].includes(status) || !Number.isInteger(granted) || granted < 0 || granted > 100) {
+  throw Error('course_credit_response_invalid');
+ }
+ return {status, granted};
 }
 if(require.main===module){
  const action=process.argv[2];

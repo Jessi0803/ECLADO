@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const crypto = require('crypto');
 const { mountAssistedRoutes, isAmbiguousGatewayFailure } = require('./assisted-orders');
 const { verifiedRewardPaymentEvidence, verifiedRewardPaymentFailure, rewardBankAmount } = require('./reward-payment-evidence.cjs');
+const { mountCoursePaymentRoutes } = require('./course-payments.cjs');
 const { createPaymentTrace } = require('./checkout-events.cjs');
 const { createDiagnosticWriter } = require('./sinopac-diagnostics.cjs');
 
@@ -1398,14 +1399,23 @@ async function resolvePaymentStateFromWebhook(body, { requirePayTokenOrder = fal
 
 app.use(helmet());
 app.set('trust proxy', 'loopback');
+const courseStorefrontOrigin = new URL(process.env.COURSE_STOREFRONT_ORIGIN || 'https://ecladotaiwan.com').origin;
 app.use(cors({
   origin: [
+    courseStorefrontOrigin,
     'https://www.ecladotaiwan.com',
     'https://ecladotaiwan.com',
   ],
 }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+mountCoursePaymentRoutes(app, {
+  storefrontOrigin: courseStorefrontOrigin,
+  rpc: callSupabaseRpc, authenticate: getSupabaseAuthUser, rateLimit: enforceSharedRateLimit,
+  buildCreateBody, callOrderApi, requireCreatedPayment, formatSinopacDeadline,
+  resolvePayment: resolvePaymentStateFromWebhook, requireBankPaymentAmount, requirePaymentOrderHints,
+});
 
 app.get('/health', (req, res) => {
   res.json({

@@ -281,6 +281,9 @@ export type MockEcladoApiOptions = {
 };
 
 export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions = {}) {
+  if (process.env.ECLADO_TEST_BLOCK_EXTERNAL === '1') {
+    await page.route('https://**/*', route => route.abort());
+  }
   const products = () => typeof options.products === 'function'
     ? options.products()
     : (options.products || mockProducts);
@@ -328,9 +331,12 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   };
 
   if (authUser) {
-    await page.addInitScript(session => {
-      window.localStorage.setItem('sb-ilvdvlkdpntwmaijncaz-auth-token', JSON.stringify(session));
-    }, authSessionPayload(authUser));
+    const project = process.env.VITE_SUPABASE_URL
+      ? new URL(process.env.VITE_SUPABASE_URL).hostname.split('.')[0]
+      : 'ilvdvlkdpntwmaijncaz';
+    await page.addInitScript(({ key, session }) => {
+      window.localStorage.setItem(key, JSON.stringify(session));
+    }, { key: `sb-${project}-auth-token`, session: authSessionPayload(authUser) });
   }
 
   await page.route('**/auth/v1/token**', async route => {
@@ -1791,7 +1797,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   });
 
   if (options.paymentMode !== 'live') {
-    await page.route('https://pay.ecladotaiwan.com/api/sinopac/create-payment', async route => {
+    await page.route('**/api/sinopac/create-payment', async route => {
       const request = route.request().postDataJSON();
       options.onPaymentRequest?.(request);
       if (options.paymentResponseDelayMs) {
@@ -1837,7 +1843,7 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
         },
       });
     });
-    await page.route('https://pay.ecladotaiwan.com/api/sinopac/query-payment', async route => {
+    await page.route('**/api/sinopac/query-payment', async route => {
       if (options.paymentQueryError) {
         return json(route, { ok:false, code:'PAYMENT_QUERY_FAILED', error:options.paymentQueryError }, 503);
       }

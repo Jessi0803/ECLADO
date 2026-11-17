@@ -38,6 +38,25 @@ async function dispatchRewards({ env = process.env, fetchImpl = fetch, limit = 5
   }
   return { checked: results.length, accepted: results.filter(r => r.result === 'accepted' && r.stored).length };
 }
+async function dispatchCourseNotifications({ env, fetchImpl }) {
+  let checked = 0;
+  let accepted = 0;
+  for (let index = 0; index < 4; index++) {
+    const job = await rpc('claim_course_notification', {
+      p_line_available: Boolean(env.LINE_CHANNEL_ACCESS_TOKEN),
+      p_email_from: env.ORDER_EMAIL_FROM || null,
+    }, env, fetchImpl);
+    if (!job) break;
+    const delivery = await deliverRewardNotice(job, { env, fetchImpl });
+    const stored = await rpc('complete_course_notification', {
+      p_id: job.id, p_token: job.lease_token, p_result: delivery.result,
+    }, env, fetchImpl);
+    checked++;
+    if (stored && delivery.result === 'accepted') accepted++;
+  }
+  return { checked, accepted };
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -63,4 +82,4 @@ module.exports = async function handler(req, res) {
     return res.status(503).json({ error: 'Reward background work did not finish; retry with the same run key' });
   }
 };
-module.exports._private = { dispatchRewards, authorized };
+module.exports._private = { dispatchRewards, dispatchCourseNotifications, authorized };

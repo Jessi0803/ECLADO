@@ -23,7 +23,7 @@ test ! -e "$release" || { echo 'Release already exists; use a new commit or the 
 cd "$upload"
 sha256sum -c payment-api.tgz.sha256
 contents=$(tar -tzf payment-api.tgz | LC_ALL=C sort)
-allowed=$(printf '%s\n' assisted-orders.js checkout-events.cjs package-lock.json package.json reward-payment-evidence.cjs server.js sinopac-diagnostics.cjs sinopac-status-codes.json | LC_ALL=C sort)
+allowed=$(printf '%s\n' assisted-orders.js checkout-events.cjs course-payments.cjs package-lock.json package.json reward-payment-evidence.cjs server.js sinopac-diagnostics.cjs sinopac-status-codes.json | LC_ALL=C sort)
 test "$contents" = "$allowed" || { echo 'Unexpected runtime archive contents.' >&2; exit 7; }
 test -z "$(tar -tvzf payment-api.tgz | cut -c1 | tr -d '\n-')" || { echo 'Archive must contain regular files only.' >&2; exit 7; }
 mkdir "$release"
@@ -32,6 +32,7 @@ cd "$release"
 npm ci --omit=dev --ignore-scripts
 node --check server.js
 node --check assisted-orders.js
+node --check course-payments.cjs
 node --check reward-payment-evidence.cjs
 node --check checkout-events.cjs
 node --check sinopac-diagnostics.cjs

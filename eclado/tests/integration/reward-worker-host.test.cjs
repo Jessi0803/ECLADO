@@ -25,3 +25,55 @@ test('host: reconciliation never calls providers and configuration has no paymen
  const env=configuration({...source,QPAY_API_KEY:'secret',CRON_SECRET:'secret'});assert.equal(env.QPAY_API_KEY,undefined);assert.equal(env.CRON_SECRET,undefined);
  let calls=0;await assert.rejects(run({action:'reconcile',source,fetchImpl:async()=>{calls++;return new Response('{}',{status:500});}}),/reconciliation_request_failed/);assert.equal(calls,1);
 });
+
+test('host: scheduled dispatch opts into the course credit RPC without altering notification dispatch', async () => {
+ const calls = [];
+ const enabled = {...source, COURSE_SHOPPING_CREDIT_ENABLED:'true'};
+ const result = await run({action:'dispatch', source:enabled, fetchImpl:async (url, options) => {
+  const rpc = new URL(url).pathname.split('/').pop();
+  calls.push(rpc);
+  if (rpc === 'claim_reward_notifications') return new Response('[]');
+  assert.equal(rpc, 'grant_finished_course_shopping_credit');
+  assert.deepEqual(JSON.parse(options.body), {});
+  return new Response('{"status":"complete","granted":2}');
+ }});
+ assert.deepEqual(calls.sort(), ['claim_reward_notifications', 'grant_finished_course_shopping_credit']);
+ assert.deepEqual(result.courseCredit, {status:'complete', granted:2});
+ assert.equal(result.accepted, 0);
+});
+
+test('host: course dispatch sends the payer a single reminder and records provider acceptance', async () => {
+ const enabled = {...source, COURSE_NOTIFICATIONS_ENABLED:'true', LINE_CHANNEL_ACCESS_TOKEN:'mock-line'};
+ const id = '10000000-0000-4000-8000-000000000001';
+ const token = '10000000-0000-4000-8000-000000000002';
+ let claimed = false;
+ let sent = 0;
+ const result = await run({action:'dispatch', source:enabled, fetchImpl:async (url, options) => {
+  const body = JSON.parse(options.body);
+  if (url === 'https://api.line.me/v2/bot/message/push') {
+   assert.equal(body.to, 'teacher-line');
+   assert.match(body.messages[0].text, /課前提醒.*護膚課程/);
+   assert.match(body.messages[0].text, /台北時間/);
+   assert.match(body.messages[0].text, /轉知您代報名的參加者/);
+   assert.match(body.messages[0].text, /https:\/\/zoom.us\/j\/123/);
+   assert.equal(options.headers['X-Line-Retry-Key'], id);
+   sent++;
+   return new Response('{}');
+  }
+  const rpc = new URL(url).pathname.split('/').pop();
+  if (rpc === 'claim_reward_notifications') return new Response('[]');
+  if (rpc === 'claim_course_notification') {
+   if (claimed) return new Response('null');
+   claimed = true;
+   assert.deepEqual(body, {p_line_available:true, p_email_from:'sender@example.test'});
+   return Response.json({id, lease_token:token, key:id, channel:'line', target:'teacher-line',
+    payload:{kind:'course', name:'護膚課程', automatic:true, delegated:true,
+     starts_at:'2030-11-11T02:00:00Z', ends_at:'2030-11-11T04:00:00Z', zoom_url:'https://zoom.us/j/123'}});
+  }
+  assert.equal(rpc, 'complete_course_notification');
+  assert.deepEqual(body, {p_id:id, p_token:token, p_result:'accepted'});
+  return new Response('true');
+ }});
+ assert.equal(sent, 1);
+ assert.deepEqual(result.courseNotifications, {checked:1, accepted:1});
+});

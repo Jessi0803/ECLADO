@@ -1,3 +1,4 @@
+const { courseNoticeMessage } = require('./_course-notice.js');
 const { buildBrandedEmailHtml } = require('./_email-template.js');
 const { instructorStudentNoticeMessage } = require('./_instructor-student-notice.js');
 
@@ -28,8 +29,12 @@ async function deliverRewardNotice(job, { env = process.env, fetchImpl = fetch, 
   const credential = line ? env.LINE_CHANNEL_ACCESS_TOKEN : env.RESEND_API_KEY;
   if (!credential && line) return { result: 'line_unavailable' };
   if (!credential || (!line && !job.from && !env.ORDER_EMAIL_FROM)) return { result: 'configuration' };
-  const message = job.payload.kind === 'instructor_student'
-    ? instructorStudentNoticeMessage(job.payload, job.audience) : rewardNoticeMessage(job.payload, job.audience);
+  let message;
+  switch (job.payload.kind) {
+    case 'course': message = courseNoticeMessage(job.payload); break;
+    case 'instructor_student': message = instructorStudentNoticeMessage(job.payload, job.audience); break;
+    default: message = rewardNoticeMessage(job.payload, job.audience);
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
