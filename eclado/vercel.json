@@ -3,7 +3,9 @@
   "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false,
+  "functions": { "api/remind-abandoned-carts.js": { "maxDuration": 120 } },
   "crons": [
+    { "path": "/api/remind-abandoned-carts", "schedule": "*/10 * * * *" },
     {
       "path": "/api/cancel-expired-orders",
       "schedule": "0 0 * * *"

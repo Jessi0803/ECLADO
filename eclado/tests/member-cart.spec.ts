@@ -167,3 +167,80 @@ test('同一會員的兩個分頁可同步新增與移除', async ({ page, conte
   await second.evaluate(() => window.dispatchEvent(new Event('focus')));
   await expect(second.getByText('購物車還沒有商品')).toBeVisible();
 });
+
+test('購物車頁可由導覽列收合，側欄從視窗頂端覆蓋導覽列', async ({ page }) => {
+  const api = backend([item(2)]);
+  await setup(page, api);
+  await page.goto('/cart');
+  await expect(page.getByTestId('cart-item-name')).toBeVisible();
+  const navCart = page.locator('nav').getByRole('button', { name:'購物車', exact:true });
+  await expect(navCart).toHaveAttribute('aria-expanded','true');
+  await navCart.click();
+  await expect(page).toHaveURL(/\/shop$/);
+  await expect(navCart).toHaveAttribute('aria-expanded','false');
+  await navCart.click();
+  const drawer = page.getByRole('dialog', { name:'購物車' });
+  await expect(drawer).toBeVisible();
+  await expect(navCart).toHaveAttribute('aria-expanded','true');
+  await expect(drawer).toHaveCSS('top','0px');
+  const drawerBox = await drawer.boundingBox();
+  expect(drawerBox?.y).toBe(0);
+  await expect(drawer).toHaveAttribute('aria-modal','true');
+  await drawer.getByRole('button',{name:'關閉購物車',exact:true}).click();
+  await expect(drawer).toHaveCount(0);
+  await expect(navCart).toHaveAttribute('aria-expanded','false');
+  await page.goto('/cart');
+  await expect(page.getByRole('button',{name:'← 繼續購物',exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'關閉購物車',exact:true}).click();
+  await expect(page).toHaveURL(/\/shop$/);
+  expect(api.carts.get(uid)).toEqual([item(2)]);
+});
+
+test('提醒連結未登入時可登入並還原會員購物車', async ({ page }) => {
+  const api = backend([item(2)]);
+  await mockEcladoApis(page,{signInUser:user(),profiles:[profile()],promotions:[]});
+  await api.attach(page);
+  await page.goto('/cart');
+  await page.getByRole('button',{name:'登入並還原購物車'}).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await page.locator('form input[type="email"]').fill('member-cart-a@example.com');
+  await page.locator('form input[type="password"]').fill('mock-password');
+  await page.locator('form').getByRole('button',{name:'登入',exact:true}).click();
+  await expect(page).toHaveURL(/\/cart$/);
+  await expect(page.getByTestId('cart-item-name')).toHaveText('胜肽修護精華液');
+});
+
+test('LINE 登入提醒連結後回到會員購物車',async({page})=>{
+  const api=backend([item(2)]);
+  await setup(page,api);
+  await page.addInitScript(()=>{
+    sessionStorage.setItem('eclado_checkout_login_redirect','cart');
+    sessionStorage.setItem('eclado_line_login_pending','1');
+  });
+  await page.goto('/line-callback#access_token=mock-access-token&refresh_token=mock-refresh-token&expires_in=3600&token_type=bearer&type=magiclink');
+  await expect(page).toHaveURL(/\/cart$/);
+  await expect(page.getByTestId('cart-item-name')).toHaveText('胜肽修護精華液');
+});
+
+test('購物車側欄遇到導覽或瀏覽器返回會收合並恢復頁面捲動',async({page})=>{
+  const api=backend([item(2)]);
+  await setup(page,api);
+  await page.goto('/cart');
+  await expect(page.getByRole('button',{name:'← 繼續購物',exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'關閉購物車',exact:true}).click();
+  const navCart=page.locator('nav').getByRole('button',{name:'購物車',exact:true});
+  await navCart.click();
+  await expect(page.getByRole('dialog',{name:'購物車'})).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/cart$/);
+  await expect(page.getByRole('dialog',{name:'購物車'})).toHaveCount(0);
+  await expect(page.locator('body')).not.toHaveCSS('overflow','hidden');
+  await navCart.click();
+  await navCart.click();
+  await expect(page.getByRole('dialog',{name:'購物車'})).toBeVisible();
+  await page.getByRole('dialog',{name:'購物車'}).getByRole('button',{name:'關閉購物車',exact:true}).click();
+  await page.locator('nav').getByRole('link',{name:'ECLADO Laboratory'}).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('dialog',{name:'購物車'})).toHaveCount(0);
+  await expect(page.locator('body')).not.toHaveCSS('overflow','hidden');
+});

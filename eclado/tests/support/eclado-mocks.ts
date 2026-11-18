@@ -1,3 +1,4 @@
+import cartReminderConfig from '../../src/config/cartReminder.json';
 import type { Page, Route } from '@playwright/test';
 import { buildMonthlyRevenue } from '../../src/admin/domain/analytics.js';
 import { normalizeOrder, normalizeProduct } from '../../src/admin/domain/mappers.js';
@@ -234,6 +235,7 @@ export type MockEcladoApiOptions = {
   authoritativePriceDelta?: number;
   authUser?: MockAuthUser | null;
   memberCartItems?: Record<string, unknown>[];
+  onCartReminderSettingsSave?: (payload: Record<string, unknown>) => void;
   signInUser?: MockAuthUser;
   signInError?: string;
   adminAccess?: boolean;
@@ -1257,6 +1259,17 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
       return json(route, []);
     }
     return json(route, []);
+  });
+
+  let cartReminderSettings = { enabled:false, content:cartReminderConfig.defaultContent, version:0, enabled_at:null as string | null };
+  await page.route('**/rest/v1/rpc/get_cart_reminder_settings', route => json(route,cartReminderSettings));
+  await page.route('**/rest/v1/rpc/save_cart_reminder_settings', route => {
+    const body = route.request().postDataJSON();
+    options.onCartReminderSettingsSave?.(body);
+    if (body.p_expected_version !== cartReminderSettings.version) return json(route,{message:'設定已被其他管理員修改'},409);
+    cartReminderSettings = { enabled:body.p_enabled, content:body.p_content, version:cartReminderSettings.version+1,
+      enabled_at:body.p_enabled ? new Date().toISOString() : null };
+    return json(route,cartReminderSettings);
   });
 
   let showFulfillment = options.showFulfillment ?? true;

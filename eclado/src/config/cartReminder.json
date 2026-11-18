@@ -1,0 +1,8 @@
+{
+  "defaultContent": "ECLADO 提醒您：\n您選購的商品尚未完成結帳，若已挑選好需要的保養品，點擊下方即可返回購物車。\n\n如果對產品挑選、搭配方式或結帳操作有任何疑問，歡迎私訊我們。\n\n🛒 繼續結帳：[購物車連結]\n\n若已完成訂購，請忽略此則提醒。",
+  "cartUrl": "https://ecladotaiwan.com/cart",
+  "subject": "ECLADO｜購物車未結帳提醒",
+  "placeholder": "[購物車連結]",
+  "maxLength": 2000,
+  "maxExpandedLength": 3000
+}

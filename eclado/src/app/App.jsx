@@ -73,6 +73,7 @@ function StorefrontApp() {
   useNoIndex(['cart', 'checkout', 'login', 'pro-login', 'reset-password', 'professional-apply', 'account', 'line-callback', 'payment-result', 'order-lookup','order-payment'].includes(page));
 
   function setPage(newPage) {
+    setCartOpen(false);
     if (newPage === 'about') {
       window.scrollTo({ top: 0, left: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
       // Clicking the current story navigation is a back-to-top action, not a new history entry.
@@ -152,6 +153,11 @@ function StorefrontApp() {
   const announcement = useSiteAnnouncement();
   const cartCount = cart.reduce((sum,i) => sum+i.qty, 0);
 
+  function toggleCart() {
+    if (page === 'cart') setPage('shop');
+    else setCartOpen(open => !open);
+  }
+
   useEffect(() => {
     if (!cartOpen) return undefined;
     const previousOverflow = document.body.style.overflow;
@@ -183,6 +189,7 @@ function StorefrontApp() {
   // 瀏覽器返回 / 前進
   useEffect(() => {
     function onPopState(e) {
+      setCartOpen(false);
       setCourseId(courseIdFromPath(window.location.pathname));
       setJournalArticleSlug(journalSlugFromPath(window.location.pathname));
       setProductPath(window.location.pathname);
@@ -219,7 +226,7 @@ function StorefrontApp() {
       case 'product':  return <ProductPage onSelectProduct={openProduct} cart={cart} productSlug={productSlugFromPath(productPath)} products={products} productsStatus={productsStatus} productsError={productsError} user={user} setCart={setCart} promotions={promotions} onBack={closeProduct} onShop={() => setPage('shop')} />;
       case 'event-products': return <EventProductsPage user={user} setCart={setCart} onSelectProduct={openEventProduct} products={eventProducts} productsStatus={eventStatus} productsError={eventErrorText} promotions={promotions} />;
       case 'event-product': return <ProductPage onSelectProduct={openProduct} cart={cart} productSlug={eventProductSlugFromPath(productPath)} products={eventProducts} productsStatus={eventStatus} productsError={eventErrorText} user={user} setCart={setCart} promotions={promotions} onBack={closeEventProduct} onShop={closeEventProduct} routeBase="/events/limited" noIndex />;
-      case 'cart':     return <CartPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
+      case 'cart':     return <CartPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} onClose={() => setPage('shop')} />;
       case 'checkout': return <CheckoutPage key={user?.uid || 'guest'} cart={cart} cartReady={cartCatalogReady && cart.every(item => item.nameZh && Number.isFinite(Number(item.price)))} onCartPurchased={consumeCart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} products={products} />;
       case 'login':    return <LoginPage setPage={setPage} />;
       case 'pro-login': return <LoginPage setPage={setPage} />;
@@ -252,7 +259,7 @@ function StorefrontApp() {
   return (
     <>
       <BrowserDebugPanel />
-      {!authPage && <Nav setPage={setPage} onOpenCart={() => setCartOpen(true)} cartCount={cartCount} user={user} setUser={handleSignOut} page={page} announcement={announcement} />}
+      {!authPage && <Nav setPage={setPage} onOpenCart={toggleCart} cartOpen={cartOpen || page === 'cart'} cartCount={cartCount} user={user} setUser={handleSignOut} page={page} announcement={announcement} />}
       {authPage && <div style={{ position:'fixed', top:0, left:0, right:0, zIndex:100 }}><AnnouncementMarquee announcement={announcement} /></div>}
       {page !== 'home' && isAnnouncementVisible(announcement) && <div aria-hidden="true" data-testid="announcement-spacer" style={{ height:36 }} />}
       {showPromoBar && (
@@ -273,7 +280,7 @@ function StorefrontApp() {
       {cartOpen && !authPage && page !== 'cart' && (
         <>
           <button type="button" className="cart-drawer-backdrop" aria-label="關閉購物車" onClick={() => setCartOpen(false)} />
-          <aside className="cart-drawer" role="dialog" aria-modal="true" aria-label="購物車">
+          <aside id="cart-drawer" className="cart-drawer" role="dialog" aria-modal="true" aria-label="購物車">
             <CartPage
               cart={cart}
               setCart={setCart}

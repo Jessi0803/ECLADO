@@ -71,6 +71,10 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
     setShowCheckoutChoice(false);
     setPage('login');
   }
+  function handleRestoreMemberCart() {
+    sessionStorage.setItem(CHECKOUT_LOGIN_REDIRECT_KEY, 'cart');
+    setPage('login');
+  }
   function handleGuestCheckout() {
     setShowCheckoutChoice(false);
     setPage('checkout');
@@ -151,13 +155,18 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
   ) : null;
 
   return (
-    <div className={drawer ? 'cart-drawer-page' : ''} style={{ paddingTop: drawer ? 0 : 68, minHeight: drawer ? '100%' : '80vh' }}>
+    <div id={drawer ? undefined : 'cart-page'} className={drawer ? 'cart-drawer-page' : ''} style={{ paddingTop: drawer ? 0 : 68, minHeight: drawer ? '100%' : '80vh' }}>
       <div className={drawer ? 'cart-drawer-inner' : ''} style={{ maxWidth: drawer ? 'none' : 900, margin:'0 auto', padding: drawer ? (isMobile ? '0 18px' : '0 26px') : (isMobile ? '40px 20px' : '60px 32px') }}>
-        <div style={{ position:'relative', display:'flex', alignItems:'baseline', gap:14, minHeight: drawer ? 76 : undefined, paddingTop: drawer ? 20 : 0, marginBottom: drawer ? 18 : 40 }}>
+        <div style={{ position:'relative', display:'flex', flexWrap:'wrap', alignItems:'baseline', gap:14, paddingRight:onClose ? 44 : 0, minHeight: drawer ? 76 : undefined, paddingTop: drawer ? 20 : 0, marginBottom: drawer ? 18 : 40 }}>
           <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 30 : 40, fontWeight:300 }}>購物車</h1>
           <span style={{ fontSize:14, color:'var(--dark)' }}>{cart.length} 件商品</span>
-          {drawer && <button type="button" onClick={onClose} aria-label="關閉購物車" style={{ position:'absolute', top:16, right: isMobile ? 0 : -13, width:36, height:36, border:'1px solid var(--light)', background:'none', color:'var(--dark)', fontSize:24, lineHeight:1, cursor:'pointer' }}>×</button>}
+          {onClose && <button type="button" onClick={onClose} aria-label="關閉購物車" style={{ position:'absolute', top:drawer ? 16 : 0, right:drawer && !isMobile ? -13 : 0, width:36, height:36, border:'1px solid var(--light)', background:'none', color:'var(--dark)', fontSize:24, lineHeight:1, cursor:'pointer' }}>×</button>}
         </div>
+
+        {!drawer && !user && <div style={{ padding:18, marginBottom:24, background:'var(--off-white)', fontSize:13, lineHeight:1.8 }}>
+          <p>登入後可還原會員購物車，接續您在其他裝置挑選的商品。</p>
+          <button type="button" onClick={handleRestoreMemberCart} style={{ marginTop:10, padding:'10px 18px', background:'var(--black)', color:'var(--white)', border:0, cursor:'pointer' }}>登入並還原購物車</button>
+        </div>}
 
         {!displayQuote && !quoteLoading && !quoteError && cart.length > 0 && promotions.some(p => isPromotionLive(p, user)) && discount === 0 && (
           <div style={{ background:'var(--accent-tint)', border:'1px solid var(--accent)', padding:'14px 18px', marginBottom:24, fontSize:13, color:'var(--dark)', lineHeight:1.65 }}>

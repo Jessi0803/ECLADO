@@ -733,7 +733,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
       case 'reward_reconciliation':
       case 'rewards': return <RewardManagementPage key={adminUserId} adminUserId={adminUserId} access={backofficeAccess} page={page} onChange={setPage} />;
       case 'audit': return <AuditLogsPage />;
-      case 'settings': return <MemberPricingPage onSaved={fetchAll} canManageMemberPricing={hasPermission(BACKOFFICE_PERMISSIONS.MEMBER_PRICING_MANAGE)} canManageInstructorStudents={canManageInstructorStudents} />;
+      case 'settings': return <MemberPricingPage onSaved={fetchAll} canManageMemberPricing={hasPermission(BACKOFFICE_PERMISSIONS.MEMBER_PRICING_MANAGE)} canManageInstructorStudents={canManageInstructorStudents} canManageNotifications={hasPermission(BACKOFFICE_PERMISSIONS.NOTIFICATIONS_SEND)} />;
       case 'catalog': return <Catalog products={products} memberPricing={memberPricing} onSaveProduct={saveProductWithVariants} onArchiveProduct={archiveProduct} onRestoreProduct={restoreProduct} canManageProcurementCost={canManageProcurementCost} />;
       case 'backorders': return <BackordersPage onInventoryChanged={fetchAll} />;
       case 'inventory_counts': return <InventoryCountsPage adminUserId={adminUserId} isSuperAdmin={backofficeAccess?.role === 'super_admin'} onInventoryChanged={fetchAll} />;

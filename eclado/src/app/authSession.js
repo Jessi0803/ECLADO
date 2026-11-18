@@ -14,7 +14,8 @@ export const LINE_LOGIN_PENDING_KEY = 'eclado_line_login_pending';
 export const PROFESSIONAL_LOGIN_NOTICE = '請先登入／註冊後再申請美容師會員。';
 
 export function consumeCheckoutLoginRedirectPage() {
-  const nextPage = sessionStorage.getItem(CHECKOUT_LOGIN_REDIRECT_KEY) === 'checkout' ? 'checkout' : 'home';
+  const requested = sessionStorage.getItem(CHECKOUT_LOGIN_REDIRECT_KEY);
+  const nextPage = ['checkout', 'cart'].includes(requested) ? requested : 'home';
   sessionStorage.removeItem(CHECKOUT_LOGIN_REDIRECT_KEY);
   return nextPage;
 }

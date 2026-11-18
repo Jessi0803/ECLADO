@@ -65,7 +65,7 @@ export function canAccessBackofficePage(access, page) {
   if (page === 'reward_reconciliation') return ['admin','super_admin'].includes(access?.role) && hasBackofficePermission(access,BACKOFFICE_PERMISSIONS.ORDERS_READ) && hasBackofficePermission(access,BACKOFFICE_PERMISSIONS.MEMBERS_READ);
   if (page === 'withdrawals') return ['admin','super_admin'].includes(access?.role) && hasBackofficePermission(access,BACKOFFICE_PERMISSIONS.REWARD_WITHDRAWALS_READ);
   if (page === 'rewards') return ['admin', 'super_admin'].includes(access?.role) && hasBackofficePermission(access, BACKOFFICE_PERMISSIONS.ORDERS_READ) && hasBackofficePermission(access, BACKOFFICE_PERMISSIONS.MEMBERS_READ);
-  if (page === 'settings' && hasBackofficePermission(access, BACKOFFICE_PERMISSIONS.INSTRUCTOR_STUDENTS_MANAGE)) return true;
+  if (page === 'settings' && (hasBackofficePermission(access, BACKOFFICE_PERMISSIONS.INSTRUCTOR_STUDENTS_MANAGE) || hasBackofficePermission(access, BACKOFFICE_PERMISSIONS.NOTIFICATIONS_SEND))) return true;
   const permission = PAGE_PERMISSIONS[page];
   return Boolean(permission) && hasBackofficePermission(access, permission);
 }
@@ -73,5 +73,6 @@ export function canAccessBackofficePage(access, page) {
 export function getDefaultBackofficePage(access) {
   if (canAccessBackofficePage(access, 'dashboard')) return 'dashboard';
   if (canAccessBackofficePage(access, 'catalog')) return 'catalog';
+  if (canAccessBackofficePage(access, 'settings')) return 'settings';
   return '';
 }
