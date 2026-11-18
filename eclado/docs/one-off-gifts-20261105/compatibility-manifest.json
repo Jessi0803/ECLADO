@@ -1,0 +1,15 @@
+{
+  "target_order": "ECL-20261103-155424-8308FA6E",
+  "operation_key": "one_off_1111_phase2_20261105_8308FA6E",
+  "production_modified": false,
+  "baseline": {
+    "release_inventory_for_order": "dab521fe42a499e86a37830a91192d06",
+    "allocate_inventory_for_paid_order": "04d910b8e4ea85eb4abfdedec5445b72"
+  },
+  "compatible": {
+    "release_inventory_for_order": "f29fbe0faea2e8b746eca6765306f853",
+    "allocate_inventory_for_paid_order": "5774550558ba91ac5035411099145937"
+  },
+  "scope": "Only appended positions 7..10 of the exact order; original allocations and all other orders retain captured legacy logic",
+  "reopen_policy": "Refuse full-order allocation after supplement; manual review required after cancellation/return"
+}

@@ -1,0 +1,57 @@
+{
+  "databaseChecks": [
+    "retry_deduplication",
+    "merge_max",
+    "quantity_validation",
+    "consume_once",
+    "member_isolation",
+    "anonymous_denied",
+    "direct_table_access_denied"
+  ],
+  "createdTestUsers": 2,
+  "browserChecks": [
+    "guest_merge_real_database",
+    "full_height_drawer_close_and_scroll_restore",
+    "fresh_mobile_context_restore",
+    "cross_device_quantity_sync",
+    "second_member_empty",
+    "checkout_form_survives_background_refresh",
+    "signout_does_not_expose_member_cart",
+    "account_switch_isolation",
+    "offline_queue_retries_on_reconnect",
+    "reload_persists_member_cart",
+    "removal_persists_on_server"
+  ],
+  "browserErrors": [],
+  "noOrdersOrPaymentsCreated": true,
+  "cleanup": {
+    "testUsersRemoved": 2
+  },
+  "releaseCommit": "64b0c087db8c1e6059e2447817709e12a92fdd7b",
+  "deploymentId": "dpl_6uQKj4E8R3kLWKygnUFDD4ya8cnp",
+  "enabledAt": "2026-11-18T05:30:19.647954Z",
+  "earliestReminderAt": "2026-11-19T05:30:19.647954Z",
+  "defaultContentMatches": true,
+  "databaseMigration": {
+    "sha256": "673ddfb9bfcb4d6673d84745d71293b39783586e58e80c83e54f9463dd847e6f",
+    "newFunctionsMatched": 6,
+    "rlsEnabled": true,
+    "otherFunctionsFingerprintUnchanged": "9117b7e255505e74881927a128f8234c"
+  },
+  "localReleaseValidation": {
+    "unitDatabaseTestsPassed": 36,
+    "browserTestsPassed": 39,
+    "browserTestsSkipped": 1,
+    "buildPassed": true
+  },
+  "unauthorizedWorkerStatus": 401,
+  "cronVerification": [
+    {
+      "timestamp": "2026-11-18T05:30:50.429000+00:00",
+      "status": 200,
+      "method": "GET",
+      "path": "/api/remind-abandoned-carts",
+      "message": "[cart reminders] {\"status\":\"complete\",\"checked\":0,\"accepted\":0,\"skipped\":0}"
+    }
+  ]
+}

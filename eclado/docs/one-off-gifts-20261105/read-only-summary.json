@@ -1,0 +1,132 @@
+{
+  "status": "committed_and_independently_verified",
+  "queried_at": "2026-11-05T01:36:58.437Z",
+  "project": "ilvdvlkdpntwmaijncaz.supabase.co",
+  "order_id": "ECL-20261103-155424-8308FA6E",
+  "order_status": "paid",
+  "order_type": "pro",
+  "totals": {
+    "subtotal": 29996,
+    "discount": 5136,
+    "total": 24860,
+    "payment_amount": 24860
+  },
+  "original_items": 7,
+  "original_gifts": [
+    {
+      "name": "圓角矽膠刷",
+      "quantity": 2,
+      "variant_id": 88
+    }
+  ],
+  "original_backorder_qty": 11,
+  "original_allocation_ids": [
+    418,
+    419,
+    420,
+    421,
+    422,
+    423,
+    424
+  ],
+  "promotions": [
+    {
+      "id": "44478b76-3cee-4157-918f-ecb4fc15f275",
+      "name": "11.11限定｜第二彈 - 22222$ 滿額贈",
+      "start_at": "2026-11-04T16:01:00+00:00",
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "audience_roles": [
+        "pro"
+      ],
+      "repeat_mode": "once",
+      "exclusive_group": null
+    },
+    {
+      "id": "6a03c582-3102-4b0a-a063-229ea1e28b21",
+      "name": "11.11限定｜第二彈 - 11111$ 滿額贈",
+      "start_at": "2026-11-04T16:01:00+00:00",
+      "end_at": "2026-11-11T15:59:00+00:00",
+      "audience_roles": [
+        "pro"
+      ],
+      "repeat_mode": "once",
+      "exclusive_group": null
+    }
+  ],
+  "gifts": [
+    {
+      "promotion_id": "6a03c582-3102-4b0a-a063-229ea1e28b21",
+      "variant_id": 38,
+      "product_id": 124,
+      "qty": 1,
+      "sort_order": 0,
+      "name": "溫和增效潔面乳",
+      "size": "200ml",
+      "sku": "E95A",
+      "threshold": 11111,
+      "gift_stock": 20,
+      "active_reserved_qty": 0
+    },
+    {
+      "promotion_id": "6a03c582-3102-4b0a-a063-229ea1e28b21",
+      "variant_id": 87,
+      "product_id": 121,
+      "qty": 1,
+      "sort_order": 1,
+      "name": "水嫩凍膜",
+      "size": "100g",
+      "sku": "Moisture Soothing Gel - E-92-1",
+      "threshold": 11111,
+      "gift_stock": 20,
+      "active_reserved_qty": 0
+    },
+    {
+      "promotion_id": "44478b76-3cee-4157-918f-ecb4fc15f275",
+      "variant_id": 104,
+      "product_id": 173,
+      "qty": 1,
+      "sort_order": 0,
+      "name": "24k 金箔片（6入體驗組）",
+      "size": "6入",
+      "sku": "gold-6",
+      "threshold": 22222,
+      "gift_stock": 20,
+      "active_reserved_qty": 0
+    },
+    {
+      "promotion_id": "44478b76-3cee-4157-918f-ecb4fc15f275",
+      "variant_id": 105,
+      "product_id": 174,
+      "qty": 1,
+      "sort_order": 1,
+      "name": "院線秘笈-金緞護理手冊",
+      "size": "1入",
+      "sku": "book-1",
+      "threshold": 22222,
+      "gift_stock": 20,
+      "active_reserved_qty": 0
+    }
+  ],
+  "production_inventory_functions": [
+    {
+      "name": "allocate_inventory_for_paid_order",
+      "md5": "04d910b8e4ea85eb4abfdedec5445b72"
+    },
+    {
+      "name": "release_inventory_for_order",
+      "md5": "dab521fe42a499e86a37830a91192d06"
+    }
+  ],
+  "accepted_prerequisite_functions": {
+    "release_inventory_for_order": "f29fbe0faea2e8b746eca6765306f853",
+    "allocate_inventory_for_paid_order": "5774550558ba91ac5035411099145937"
+  },
+  "findings": [
+    "Production allocator treats existing gift variant 88 as merchandise; existing reservation remains reserved. Preserve all existing rows.",
+    "Production release function restores stock only. Applying supplemental gift allocations before a separately reviewed lifecycle fix would restore to the wrong pool on cancellation.",
+    "No live write or production SQL dry run performed. REST GET reads are separate snapshots; execution must recheck under locks."
+  ],
+  "catalog_queried_at": "2026-11-05T01:37:29.392937+00:00",
+  "compatibility_plan": "compatibility-plan.md",
+  "production_result": "production-result.json"
+}

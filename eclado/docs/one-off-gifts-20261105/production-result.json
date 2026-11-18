@@ -1,0 +1,90 @@
+{
+  "status": "committed_and_independently_verified",
+  "project": "ilvdvlkdpntwmaijncaz",
+  "order_id": "ECL-20261103-155424-8308FA6E",
+  "operation_key": "one_off_1111_phase2_20261105_8308FA6E",
+  "granted_at": "2026-11-05T02:03:17.113828Z",
+  "verified_at": "2026-11-05T02:04:35.780564Z",
+  "execution_sha256": "7bcb37c791f142cea8dca07f70c3ab037b87cd3fc91c2fc4d7880a9467d98399",
+  "execution_change_from_review_bundle": "Added authorization comment; final ROLLBACK replaced with COMMIT. No executable body changes.",
+  "execution_query_url": "https://supabase.com/dashboard/project/ilvdvlkdpntwmaijncaz/sql/7c584428-e001-464f-a306-3dc64bc004c8",
+  "verification_query_url": "https://supabase.com/dashboard/project/ilvdvlkdpntwmaijncaz/sql/7301d65c-c36a-4d66-b8bd-6e163429d8b9",
+  "post_order": {
+    "status": "paid",
+    "subtotal": 29996,
+    "discount": 5136,
+    "total": 24860,
+    "payment_amount": 24860,
+    "item_count": 11,
+    "original_core_unchanged": true,
+    "original_allocations_unchanged": true,
+    "original_adjustments_unchanged": true,
+    "original_gift_reservation_unchanged": true,
+    "backorders": 11
+  },
+  "gifts": [
+    {
+      "variant_id": 38,
+      "quantity": 1,
+      "price": 0,
+      "gift_stock_before": 20,
+      "gift_stock_after": 19,
+      "merchandise_stock_before": 6,
+      "merchandise_stock_after": 6,
+      "allocation": "allocated",
+      "stock_deducted_qty": 1,
+      "reservation": "consumed"
+    },
+    {
+      "variant_id": 87,
+      "quantity": 1,
+      "price": 0,
+      "gift_stock_before": 20,
+      "gift_stock_after": 19,
+      "merchandise_stock_before": 1,
+      "merchandise_stock_after": 1,
+      "allocation": "allocated",
+      "stock_deducted_qty": 1,
+      "reservation": "consumed"
+    },
+    {
+      "variant_id": 104,
+      "quantity": 1,
+      "price": 0,
+      "gift_stock_before": 20,
+      "gift_stock_after": 19,
+      "merchandise_stock_before": 0,
+      "merchandise_stock_after": 0,
+      "allocation": "allocated",
+      "stock_deducted_qty": 1,
+      "reservation": "consumed"
+    },
+    {
+      "variant_id": 105,
+      "quantity": 1,
+      "price": 0,
+      "gift_stock_before": 20,
+      "gift_stock_after": 19,
+      "merchandise_stock_before": 0,
+      "merchandise_stock_after": 0,
+      "allocation": "allocated",
+      "stock_deducted_qty": 1,
+      "reservation": "consumed"
+    }
+  ],
+  "counts": {
+    "supplement_adjustments": 4,
+    "supplement_inventory_events": 4,
+    "supplement_audit_records": 1
+  },
+  "activities_unchanged": true,
+  "order_trigger_fingerprint_unchanged": "21c570d966753cd4c6d85b1884062f8b",
+  "compatible_function_fingerprints": {
+    "release_inventory_for_order": "f29fbe0faea2e8b746eca6765306f853",
+    "allocate_inventory_for_paid_order": "5774550558ba91ac5035411099145937"
+  },
+  "pricing_guard_unchanged": "bd661ccdd1f1a9f70cefa7e7344ef4a2",
+  "allocation_guard_unchanged": "373a9378af91fa608663f25fdcd08705",
+  "verification_method": "Separate BEGIN READ ONLY query after COMMIT; inspected all 17 result rows in SQL Editor; ROLLBACK ended verification transaction. No cancellation, refund, reallocation, or second grant was run in production.",
+  "future_constraint": "After this supplement, full-order allocation/reopening is refused for this order; keep compatible release installed."
+}

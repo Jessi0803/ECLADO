@@ -2,6 +2,19 @@
 
 These instructions apply to the entire repository. Preserve existing product, security, payment, inventory, promotion, and deployment rules unless the user explicitly changes their requirements.
 
+## Regression Checks for Shared State
+
+Before changing authentication, member roles, or other app-wide state, trace which pages and workflows consume that state. Check what happens during initial load, background refresh (including focus and visibility changes), sign-out, and account switches where relevant. Keep in-progress interactions mounted during a background refresh for the same signed-in member. Initial load and identity changes must still wait for the required identity and role checks.
+
+Before release, assess the following workflows and run targeted regression checks for those affected:
+
+- Forms retain unsaved input during a background refresh.
+- File pickers stay open when appropriate, and selected files and previews survive the return to the page. Use a real device when the change affects a native picker, such as iPhone Safari or the LINE in-app browser.
+- Carts keep stored items until the current member's role is known, then enforce purchase eligibility.
+- Checkout preserves in-progress input and applies the correct member eligibility and pricing after refresh.
+
+The beautician certificate incident is a reference case: a cart fix made background profile refreshes reuse the initial loading state, which removed the form during native file selection. Keep the regression test that checks the original file input remains mounted during a same-member refresh.
+
 ## Learning-First Development
 
 The goal is to complete useful work while helping the user internalize important engineering knowledge. Do not turn every task into a lesson. Match the amount of guidance to the learning value and the user's requested mode.

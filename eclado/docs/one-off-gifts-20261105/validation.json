@@ -1,0 +1,20 @@
+{
+  "tested_at": "2026-11-05T01:50:23.368Z",
+  "engine": "PGlite isolated PostgreSQL; no production connection",
+  "results": [
+    "Captured production lifecycle: aborts before mutations",
+    "Default ROLLBACK restores original data",
+    "Isolated commit: four gifts/consumed reservations/allocations/events; original money, 11 backorders, stock and guards preserved; repeated application rejected",
+    "Exact-order compatible release returns new gifts to gift stock without changing their merchandise stock",
+    "Last gift unavailable: earlier gift deductions and records roll back atomically",
+    "Outstanding reservations are subtracted from available stock",
+    "Activity drift: rejected before supplementation",
+    "Late audit failure: order, gift stock and trigger guards roll back together",
+    "Disabled or changed order trigger inventory: rejected"
+  ],
+  "limitations": [
+    "Surrounding payment/wallet/audit trigger function bodies use neutral fixtures. Real snapshot/inventory guards, scope matcher, variant prepare/stock guard, captured legacy lifecycle and generated exact-order compatibility SQL are executed.",
+    "Not a multi-session concurrency test.",
+    "Order-specific compatibility and supplement are tested locally only; neither is applied to production."
+  ]
+}

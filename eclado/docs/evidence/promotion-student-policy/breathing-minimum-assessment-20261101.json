@@ -1,0 +1,222 @@
+{
+  "date": "2026-11-01",
+  "mode": "read_only_assessment",
+  "activity": {
+    "id": "ced451c6-c8e7-4bdd-8835-35398e5e04a1",
+    "name": "11.11 限定｜呼吸系列 任5件贈送1件 （加贈拉伸化妝棉）",
+    "description": "活動期間內，任選呼吸系列商品滿 6 件，即享其中 1 件免費！\n呼吸爽膚水、呼吸精華液、呼吸安瓶及呼吸雪霜皆可自由搭配數量。\n請直接將 6 件商品加入購物車，符合活動優惠後，系統將於結帳時自動折抵其中最低價商品的金額。",
+    "product_ids": [
+      140,
+      139,
+      138,
+      141
+    ],
+    "discount_rate": 1,
+    "discount_amount": 0,
+    "start_at": "2026-10-31T16:00:00+00:00",
+    "end_at": "2026-11-11T15:59:00+00:00",
+    "active": true,
+    "created_at": "2026-10-22T03:14:39.665249+00:00",
+    "updated_at": "2026-10-31T21:37:54.403553+00:00",
+    "discount_order": "rate_then_amount",
+    "benefit_type": "buy_x_get_y",
+    "activation_type": "automatic",
+    "threshold_value": 6,
+    "threshold_basis": null,
+    "gift_variant_id": null,
+    "gift_quantity": 1,
+    "repeat_mode": "repeat",
+    "exclusive_group": null,
+    "priority": 100,
+    "archived_at": null,
+    "threshold_type": "quantity",
+    "audience_roles": [
+      "pro"
+    ],
+    "allow_guest": false,
+    "buy_quantity": 5,
+    "label_text": "任選5+1",
+    "label_color": "#bd1000",
+    "storefront_scope_type": "products",
+    "allow_student_price_stacking": false,
+    "instructor_reward_eligible": true
+  },
+  "scopes": [
+    {
+      "scope_role": "qualification",
+      "target_type": "product",
+      "mode": "include",
+      "product_id": 140,
+      "product_variant_id": null
+    },
+    {
+      "scope_role": "benefit",
+      "target_type": "product",
+      "mode": "include",
+      "product_id": 140,
+      "product_variant_id": null
+    },
+    {
+      "scope_role": "qualification",
+      "target_type": "product",
+      "mode": "include",
+      "product_id": 139,
+      "product_variant_id": null
+    },
+    {
+      "scope_role": "benefit",
+      "target_type": "product",
+      "mode": "include",
+      "product_id": 139,
+      "product_variant_id": null
+    },
+    {
+      "scope_role": "qualification",
+      "target_type": "product",
+      "mode": "include",
+      "product_id": 138,
+      "product_variant_id": null
+    },
+    {
+      "scope_role": "benefit",
+      "target_type": "product",
+      "mode": "include",
+      "product_id": 138,
+      "product_variant_id": null
+    },
+    {
+      "scope_role": "qualification",
+      "target_type": "product",
+      "mode": "include",
+      "product_id": 141,
+      "product_variant_id": null
+    },
+    {
+      "scope_role": "benefit",
+      "target_type": "product",
+      "mode": "include",
+      "product_id": 141,
+      "product_variant_id": null
+    }
+  ],
+  "student_pricing": [
+    {
+      "student_1": 0.9,
+      "student_2": 0.95
+    }
+  ],
+  "cases": [
+    {
+      "product": "呼吸安瓶",
+      "qty": 6,
+      "multiplier": 0.9,
+      "base": 930,
+      "student_unit": 837,
+      "student_subtotal": 5022,
+      "net_discount": 372,
+      "activity_merchandise_payable": 4650,
+      "minimum_met": false,
+      "gross_discount": 930,
+      "student_restoration": 558
+    },
+    {
+      "product": "呼吸安瓶",
+      "qty": 7,
+      "multiplier": 0.9,
+      "base": 930,
+      "student_unit": 837,
+      "student_subtotal": 5859,
+      "net_discount": 372,
+      "activity_merchandise_payable": 5487,
+      "minimum_met": true,
+      "gross_discount": 930,
+      "student_restoration": 558
+    },
+    {
+      "product": "呼吸精華液",
+      "qty": 6,
+      "multiplier": 0.9,
+      "base": 1320,
+      "student_unit": 1188,
+      "student_subtotal": 7128,
+      "net_discount": 528,
+      "activity_merchandise_payable": 6600,
+      "minimum_met": true,
+      "gross_discount": 1320,
+      "student_restoration": 792
+    },
+    {
+      "product": "呼吸精華液",
+      "qty": 7,
+      "multiplier": 0.9,
+      "base": 1320,
+      "student_unit": 1188,
+      "student_subtotal": 8316,
+      "net_discount": 528,
+      "activity_merchandise_payable": 7788,
+      "minimum_met": true,
+      "gross_discount": 1320,
+      "student_restoration": 792
+    },
+    {
+      "product": "呼吸安瓶",
+      "qty": 6,
+      "multiplier": 0.95,
+      "base": 930,
+      "student_unit": 884,
+      "student_subtotal": 5304,
+      "net_discount": 654,
+      "activity_merchandise_payable": 4650,
+      "minimum_met": false,
+      "gross_discount": 930,
+      "student_restoration": 276
+    },
+    {
+      "product": "呼吸安瓶",
+      "qty": 7,
+      "multiplier": 0.95,
+      "base": 930,
+      "student_unit": 884,
+      "student_subtotal": 6188,
+      "net_discount": 654,
+      "activity_merchandise_payable": 5534,
+      "minimum_met": true,
+      "gross_discount": 930,
+      "student_restoration": 276
+    },
+    {
+      "product": "呼吸精華液",
+      "qty": 6,
+      "multiplier": 0.95,
+      "base": 1320,
+      "student_unit": 1254,
+      "student_subtotal": 7524,
+      "net_discount": 924,
+      "activity_merchandise_payable": 6600,
+      "minimum_met": true,
+      "gross_discount": 1320,
+      "student_restoration": 396
+    },
+    {
+      "product": "呼吸精華液",
+      "qty": 7,
+      "multiplier": 0.95,
+      "base": 1320,
+      "student_unit": 1254,
+      "student_subtotal": 8778,
+      "net_discount": 924,
+      "activity_merchandise_payable": 7854,
+      "minimum_met": true,
+      "gross_discount": 1320,
+      "student_restoration": 396
+    }
+  ],
+  "verification": "Current production activity/catalog/settings read through REST; allocation reproduced using SQL pure functions in isolated PGlite. No production customer login, order creation, payment or configuration changes.",
+  "finding": "Six ampoules meet BOGO quantity but payable 4650 is below post-discount professional minimum 5000. Seven ampoules and six serum bottles pass. Failed authoritative quote causes student-baseline estimate fallback in cart.",
+  "code_references": [
+    "src/pages/CartPage.jsx:79",
+    "src/domain/promotions.js:66",
+    "supabase-automatic-price-allocation.sql:392"
+  ],
+  "recommended_followup": "Show promotion qualification separately from post-discount order minimum; changing minimum basis requires a separate business decision."
+}

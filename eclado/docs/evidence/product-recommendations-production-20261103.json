@@ -1,0 +1,49 @@
+{
+  "date": "2026-11-03",
+  "timezone": "Asia/Taipei",
+  "commit": "cd0300d796eba66403b04316d6dad3feb28cca40",
+  "branch": "main",
+  "previous_commit": "f451bd3fff3392b4d7ac0e21ecb8ff76059ac35b",
+  "deployment": {
+    "id": "dpl_29aDe8Z71qpYjExM2SPDQ8h7XFc9",
+    "state": "READY",
+    "target": "production",
+    "url": "https://eclado-6yi19qj6a-eclado-s-projects.vercel.app",
+    "alias": "https://ecladotaiwan.com",
+    "status_url": "https://vercel.com/eclado-s-projects/eclado/29aDe8Z71qpYjExM2SPDQ8h7XFc9"
+  },
+  "predeployment": {
+    "production_build": "passed; SEO prerender 62 products and 8 articles",
+    "recommendation_and_isolated_sql_cases_passed": 40,
+    "catalog_routing_variants_and_cart_restore_cases_passed": 8
+  },
+  "postdeployment": {
+    "deployed_desktop_mobile_ui_cases_passed": 10,
+    "ui_test_business_apis": "intercepted; no live orders or bank requests",
+    "http_200_paths": [
+      "/",
+      "/shop",
+      "/products/perfect-cleansing-smoothie-balm",
+      "/products/vono-prime-peel",
+      "/products/gold-patch",
+      "/products/rejuven-fiber-ampoule-system",
+      "/checkout"
+    ],
+    "bundle": "/assets/main-H7oBX45A.js",
+    "css": "/assets/main-CWzsgTwY.css",
+    "verified_features": [
+      "recommendation list",
+      "VONO recommendation configuration",
+      "294px scrolling area",
+      "28px square round button"
+    ]
+  },
+  "scope": {
+    "database_migrations": false,
+    "payment_api_release": false,
+    "production_test_orders": false,
+    "live_bank_requests": false,
+    "unrelated_local_files": "preserved and excluded from commit"
+  },
+  "rollback": "Revert cd0300d796eba66403b04316d6dad3feb28cca40 through normal main deployment; no database rollback needed. Not executed."
+}

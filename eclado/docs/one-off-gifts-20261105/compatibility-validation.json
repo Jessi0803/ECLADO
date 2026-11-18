@@ -1,0 +1,32 @@
+{
+  "tested_at": "2026-11-05T01:54:42.259Z",
+  "production_modified": false,
+  "engine": "Isolated PGlite PostgreSQL; captured legacy source patched only for the exact order",
+  "test_count": 17,
+  "results": [
+    "Compatibility alone defaults to ROLLBACK; functions and all row data unchanged",
+    "Combined review bundle defaults to ROLLBACK; both functions, triggers and data restored",
+    "Install preserves existing function OID, owner, custom ACL and security configuration",
+    "Unknown baseline definition is rejected; other function remains unchanged",
+    "Status -> cancelled restores exactly four gift units; second release is a no-op",
+    "Status -> returned restores exactly four gift units; second release is a no-op",
+    "Direct full-order allocation with stripped input cannot bypass persisted supplement marker",
+    "Paid -> preparing does not release or double-deduct supplemental gift inventory",
+    "Original seven allocations including legacy silicone brush follow the original cancellation path",
+    "Other order allocation/release outcomes are identical to captured legacy behavior",
+    "Invalid supplemental allocation/reservation/marker aborts complete cancellation: update order_inventory_allocations set product_variant_id=38",
+    "Invalid supplemental allocation/reservation/marker aborts complete cancellation: update promotion_gift_reservations set status='released',rel",
+    "Invalid supplemental allocation/reservation/marker aborts complete cancellation: alter table orders disable trigger trg_protect_order_pricing",
+    "Late supplement audit failure rolls back compatibility functions and entire supplement together",
+    "Compatibility can be restored before grant; rollback is refused after grant or even after cancellation",
+    "Changed original order causes complete review bundle to restore both legacy functions",
+    "Compatibility preserves cancellation and reopening behavior before this order receives the supplement"
+  ],
+  "limitations": [
+    "Not a multi-connection lock/deadlock stress test.",
+    "Payment, wallet, audit and shipping peripheral trigger bodies are neutral fixtures. Reservation status sync uses repository implementation; its production body was not captured.",
+    "Original merchandise stock fixture is synthetic; only four supplemental gift stocks were read from production. Differential tests compare original behavior rather than claim current original stock amounts.",
+    "No production function installation, production write, or gateway refund was executed.",
+    "Automatic inventory release does not execute a financial refund or confirm physical gift return."
+  ]
+}

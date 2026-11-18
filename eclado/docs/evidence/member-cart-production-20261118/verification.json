@@ -1,0 +1,71 @@
+{
+  "date": "2026-11-18",
+  "productionUrl": "https://ecladotaiwan.com",
+  "baselineCommit": "bd59dfb039c0b38384231aca21b0aad09f081419",
+  "releaseCommit": "953b5f875c6524306cc757d6ca77065a054b7373",
+  "deploymentId": "dpl_6hJZVWyfkrXuhxneFj23V1YcQLuB",
+  "deploymentUrl": "https://eclado-nrdxckz67-eclado-s-projects.vercel.app",
+  "deploymentState": "READY",
+  "target": "production",
+  "previousDeploymentId": "dpl_EQezQUP39bxUzedaQ1319JgGzSoC",
+  "previousDeploymentUrl": "https://eclado-bqpm3gf9u-eclado-s-projects.vercel.app",
+  "migrationSha256": "d3c86f9725b69f4a5993df4c76bf77646274bfda37c4b29bfe8a42502066bffb",
+  "functionBodyMd5": "4566ae1bcb27349500be7013a9aa23f8",
+  "otherPublicFunctionsFingerprintBeforeAndAfter": "395dfdfcf206cec6f45970e272c81763",
+  "schemaChecks": {
+    "carts_rls": true,
+    "operations_rls": true,
+    "source_matches": true,
+    "anon_rpc_denied": true,
+    "authenticated_rpc": true,
+    "direct_read_denied": true,
+    "direct_write_denied": true,
+    "operations_read_denied": true,
+    "other_functions_unchanged": true
+  },
+  "localChecks": {
+    "unitAndDatabasePassed": 11,
+    "browserPassed": 29,
+    "browserSkipped": 1
+  },
+  "httpPages200": [
+    "/",
+    "/shop",
+    "/cart",
+    "/checkout",
+    "/privacy",
+    "/payment-result",
+    "/admin",
+    "/courses"
+  ],
+  "databaseChecks": [
+    "retry_deduplication",
+    "merge_max",
+    "quantity_validation",
+    "consume_once",
+    "member_isolation",
+    "anonymous_denied",
+    "direct_table_access_denied"
+  ],
+  "createdTestUsers": 2,
+  "browserChecks": [
+    "guest_merge_real_database",
+    "fresh_mobile_context_restore",
+    "cross_device_quantity_sync",
+    "second_member_empty",
+    "checkout_form_survives_background_refresh",
+    "signout_does_not_expose_member_cart",
+    "account_switch_isolation",
+    "offline_queue_retries_on_reconnect",
+    "reload_persists_member_cart",
+    "removal_persists_on_server"
+  ],
+  "browserErrors": [],
+  "noOrdersOrPaymentsCreated": true,
+  "cleanup": {
+    "testUsersRemoved": 2
+  },
+  "limitations": [
+    "Desktop and mobile viewport browser contexts were used; no physical iPhone Safari or LINE native file picker was exercised."
+  ]
+}
