@@ -661,7 +661,7 @@ test('內部人員以專業價五折購買院線商品、最低五千且固定�
   await page.getByText('NK細胞活化安瓶').first().click();
   await expect(page.getByRole('button', { name: /加入購物車/ })).toBeVisible();
   await page.getByRole('button', { name: /加入購物車/ }).click();
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('eclado_cart_v1') || '[]').length)).toBeGreaterThan(0);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('eclado_member_cart_v1:user-e2e-member:cache') || '{"items":[]}').items.length)).toBeGreaterThan(0);
   await page.goto('/cart');
   await expect(page.getByText('免運', { exact: true })).toBeVisible();
   await expect(page.getByTestId('cart-shipping-progress')).toContainText('內部人員固定免運');

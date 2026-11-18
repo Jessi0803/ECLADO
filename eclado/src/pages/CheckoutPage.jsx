@@ -4,6 +4,7 @@ import CheckoutOrderSummary from '../components/checkout/CheckoutOrderSummary.js
 import ProductRecommendations from '../components/product/ProductRecommendations.jsx';
 import { addRecommendationToCart, isRecommendationProductAvailable } from '../domain/productRecommendations.js';
 import CheckoutSteps from '../components/checkout/CheckoutSteps.jsx';
+import { removePurchasedItems } from '../services/cartStorage.js';
 import PaymentMethodOptions from '../components/checkout/PaymentMethodOptions.jsx';
 import PaymentInfo from '../components/checkout/PaymentInfo.jsx';
 import useIsMobile from '../hooks/useIsMobile.js';
@@ -42,7 +43,7 @@ import {
 } from '../services/pendingPayment.js';
 
 // ─── CHECKOUT PAGE ────────────────────────────────────────────────────────────
-export default function CheckoutPage({ cart, setCart, setPage, user, promotions = [], products = [] }) {
+export default function CheckoutPage({ cart, cartReady = true, onCartPurchased, setCart, setPage, user, promotions = [], products = [] }) {
   const isLineEmail = user?.email?.startsWith('line.');
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
@@ -413,6 +414,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
 
   async function handleNext(e) {
     e.preventDefault();
+    if (!cartReady) return;
     if (getMemberRole(user) === 'staff' && additionalOrderProgress?.eligible === false) {
       setPaymentError('內部人員折扣後商品金額須滿 NT$ 5,000，購物金不影響此門檻。');
       return;
@@ -573,7 +575,10 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
         recoveryWarning: saved ? '' : '請先記下訂單編號，暫勿重新整理頁面或重複下單。如需協助，請聯繫客服。',
       });
       setPaymentState('pending');
-      if (saved) setCart([]);
+      if (saved) {
+        if (onCartPurchased) onCartPurchased(cart);
+        else setCart(previous => removePurchasedItems(previous, cart));
+      }
       window.scrollTo(0, 0);
       setStep(3);
       checkoutAttempt.record('checkout_ready');
@@ -1009,7 +1014,7 @@ export default function CheckoutPage({ cart, setCart, setPage, user, promotions 
                   <div style={{ background:'#fffbf0', border:'1px solid #e8d9b0', padding:'12px 14px', fontSize:11, color:'#5a4a1e', lineHeight:1.85, marginBottom:10 }}>
                     ⚠ <strong>退貨說明</strong>：本訂單商品為個人衛生用品，依《消費者保護法》第 19 條之 1，<strong>已拆封商品不適用七天猶豫期退貨</strong>。未拆封商品自收到次日起 7 日內可申請退貨（運費由消費者負擔）。如有品質瑕疵，不限拆封與否均可退換（運費由本公司負擔）。詳見<a href="/info" style={{ color:'#5a4a1e' }}>退換貨政策</a>。
                   </div>
-                  <button type="submit" disabled={submitting||(useRewardCredit&&rewardCredit.loading)||(useShoppingCredit&&shoppingCredit.loading)} style={{ background: submitting ? 'var(--dark)' : 'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: submitting ? 'wait' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8, opacity: submitting ? 0.7 : 1 }}>
+                  <button type="submit" disabled={!cartReady||submitting||(useRewardCredit&&rewardCredit.loading)||(useShoppingCredit&&shoppingCredit.loading)} style={{ background: submitting ? 'var(--dark)' : 'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: submitting ? 'wait' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8, opacity: submitting ? 0.7 : 1 }}>
                     {submitting ? '正在處理，請稍候…' : '確認訂單'}
                   </button>
                   {paymentError && <p style={{ fontSize:12, color:'#c0392b', textAlign:'center', lineHeight:1.6 }}>{paymentError}</p>}

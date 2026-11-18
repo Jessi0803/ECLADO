@@ -7,6 +7,25 @@ function normalizeQuantity(value) {
   return Math.min(quantity, MAX_CART_QUANTITY);
 }
 
+// Persist identifiers only. Prices and eligibility always come from the catalog.
+export function cartItems(cart) {
+  return (Array.isArray(cart) ? cart : []).map(item => ({
+    id: Number(item.id),
+    variantId: String(item.variantId || item.variantSize || ''),
+    qty: normalizeQuantity(item.qty),
+    ...(item.recommendationOnly === true ? { recommendationOnly: true } : {}),
+  })).filter(item => Number.isSafeInteger(item.id) && item.id > 0 && item.qty > 0);
+}
+
+export const cartItemKey = item => `${item.id}:${item.variantId || ''}`;
+
+export function removePurchasedItems(current, purchased) {
+  const quantities = new Map(cartItems(purchased).map(item => [cartItemKey(item), item.qty]));
+  return current.map(item => ({ ...item,
+    qty: item.qty - (quantities.get(cartItemKey({ ...item, variantId: String(item.variantId || item.variantSize || '') })) || 0),
+  })).filter(item => item.qty > 0);
+}
+
 export function loadStoredCart() {
   try {
     const parsed = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || '[]');

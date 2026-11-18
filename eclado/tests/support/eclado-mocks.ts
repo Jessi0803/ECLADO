@@ -233,6 +233,7 @@ export type MockEcladoApiOptions = {
   productResponseDelayMs?: number;
   authoritativePriceDelta?: number;
   authUser?: MockAuthUser | null;
+  memberCartItems?: Record<string, unknown>[];
   signInUser?: MockAuthUser;
   signInError?: string;
   adminAccess?: boolean;
@@ -324,6 +325,28 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
   const inventoryCountShortages: Record<string, unknown>[] = [];
   let inventoryCountConflictPending = options.inventoryCountConflictOnce === true;
   const authUser = options.authUser;
+  let memberCartItems = options.memberCartItems || [];
+  const cartOperations = new Set<string>();
+  await page.route('**/rest/v1/rpc/sync_my_cart', async route => {
+    const body = route.request().postDataJSON();
+    if (body.p_operation_id && !cartOperations.has(body.p_operation_id)) {
+      const items = new Map(memberCartItems.map(item => [`${item.id}:${item.variantId || ''}`, item]));
+      for (const item of body.p_items) {
+        const key = `${item.id}:${item.variantId || ''}`;
+        const old = items.get(key);
+        if (body.p_mode === 'consume') {
+          if (old && Number(old.qty) > item.qty) items.set(key, { ...old, qty: Number(old.qty) - item.qty });
+          else items.delete(key);
+        }
+        else if (item.qty === 0) items.delete(key);
+        else if (body.p_mode === 'merge' && old) items.set(key, { ...item, qty: Math.max(Number(old.qty), item.qty) });
+        else items.set(key, item);
+      }
+      memberCartItems = [...items.values()];
+      cartOperations.add(body.p_operation_id);
+    }
+    return json(route, { items: memberCartItems });
+  });
   const procurement = {
     product_variants: procurementProductVariants.map(item => ({ ...item })) as Record<string, unknown>[],
     addresses: procurementAddresses.map(address => ({ ...address })) as Record<string, unknown>[],

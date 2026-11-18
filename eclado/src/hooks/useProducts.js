@@ -16,13 +16,15 @@ import {
   subscribeToTables,
 } from '../services/realtime.js';
 
-export default function useProducts(user, setCart, authReady = true, includeEventCatalog = false) {
+export default function useProducts(user, setCart, authReady = true, includeEventCatalog = false, cart = []) {
   const [products, setProducts] = useState([]);
   const [eventProducts, setEventProducts] = useState([]);
   const [status, setStatus] = useState('loading');
   const [eventStatus, setEventStatus] = useState('loading');
   const [errorText, setErrorText] = useState('');
   const hasLoadedProducts = useRef(false);
+  const [catalogOwner, setCatalogOwner] = useState(null);
+  const owner = `${user?.uid || 'guest'}:${user?.role || ''}:${includeEventCatalog}`;
 
   useEffect(() => {
     let alive = true;
@@ -100,25 +102,7 @@ export default function useProducts(user, setCart, authReady = true, includeEven
       setProducts(loadedProducts);
       setStatus('ready');
       setErrorText('');
-      if (!authReady) return;
-      setCart(previous => previous.map(item => {
-        const product = [...loadedProducts, ...loadedEventProducts].find(current => (
-          Number(current.id) === Number(item.id)
-        ));
-        if (!product && eventError && item.publicationStatus === 'event_only') return item;
-        if (!product || (product.isProOnly && !canAccessProfessionalCatalog(user))) {
-          return null;
-        }
-        const variants = getProductVariants(product);
-        const variant = getVariantForCartItem(product, item);
-        if ((item.variantId || item.variantSize) && variants.length > 0 && !variant) {
-          return null;
-        }
-        const nextProduct = applyVariantToProduct(product, variant);
-        const qty = Math.min(Math.max(Math.floor(Number(item.qty) || 0), 1), 99);
-        return { ...nextProduct, cartKey: getCartKey(nextProduct), qty,
-          ...(item.recommendationOnly === true ? { recommendationOnly: true } : {}) };
-      }).filter(Boolean));
+      setCatalogOwner(owner);
     }
 
     loadProducts();
@@ -147,7 +131,37 @@ export default function useProducts(user, setCart, authReady = true, includeEven
     };
   }, [authReady, includeEventCatalog, user?.uid, user?.role, setCart]);
 
+  // Remote carts can arrive after the catalog. Rehydrate without refetching or
+  // unmounting checkout/forms, and wait for the current member's catalog.
+  useEffect(() => {
+    if (!authReady || status !== 'ready' || catalogOwner !== owner || (includeEventCatalog && eventStatus === 'loading')) return;
+    const next = cart.map(item => {
+        const product = [...products, ...eventProducts].find(current => (
+          Number(current.id) === Number(item.id)
+        ));
+        if (!product && eventStatus === 'error') return item;
+        if (!product || (product.isProOnly && !canAccessProfessionalCatalog(user))) {
+          return null;
+        }
+        const variants = getProductVariants(product);
+        const variant = getVariantForCartItem(product, item);
+        if ((item.variantId || item.variantSize) && variants.length > 0 && !variant) {
+          return null;
+        }
+        const nextProduct = applyVariantToProduct(product, variant);
+        const qty = Math.min(Math.max(Math.floor(Number(item.qty) || 0), 1), 99);
+        return { ...nextProduct, cartKey: getCartKey(nextProduct), qty,
+          ...(item.recommendationOnly === true ? { recommendationOnly: true } : {}) };
+    }).filter(Boolean);
+    if (JSON.stringify(next) !== JSON.stringify(cart)) {
+      // A newer cart may have arrived since this render; reconcile that render
+      // on the next effect instead of overwriting its edits with this snapshot.
+      setCart(previous => previous === cart ? next : previous);
+    }
+  }, [cart, products, eventProducts, authReady, status, eventStatus, catalogOwner, owner, includeEventCatalog, setCart]);
+
   return {
+    cartCatalogReady: authReady && status === 'ready' && catalogOwner === owner,
     products,
     eventProducts,
     status,

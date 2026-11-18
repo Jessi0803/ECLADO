@@ -49,11 +49,7 @@ import {
   hasAuthCallbackInUrl,
   isPasswordRecoveryUrl,
 } from '../services/auth.js';
-import {
-  CART_STORAGE_KEY,
-  loadStoredCart,
-  saveStoredCart,
-} from '../services/cartStorage.js';
+import useMemberCart from '../hooks/useMemberCart.js';
 import { goProfessionalApply } from '../services/membership.js';
 import useNoIndex from '../hooks/useNoIndex.js';
 
@@ -137,27 +133,24 @@ function StorefrontApp() {
     showProBanner,
     user,
   } = useAuth(setPageState);
-  const [cart, setCart] = useState(loadStoredCart);
+  const { cart, setCart, consumeCart, cartReady, cartSyncError } = useMemberCart(user, authReady);
   const [cartOpen, setCartOpen] = useState(false);
   const includeEventCatalog = page === 'event-products'
     || page === 'event-product'
-    || cart.some(item => item.publicationStatus === 'event_only');
+    || cart.length > 0;
   const {
+    cartCatalogReady,
     products,
     eventProducts,
     status: productsStatus,
     eventStatus,
     errorText: productsError,
     eventErrorText,
-  } = useProducts(user, setCart, authReady, includeEventCatalog);
+  } = useProducts(user, setCart, cartReady, includeEventCatalog, cart);
   const { promotions, status: promoFetchStatus, errorText: promoFetchError } = usePromotions();
   const salesStats = useSalesStats();
   const announcement = useSiteAnnouncement();
   const cartCount = cart.reduce((sum,i) => sum+i.qty, 0);
-
-  useEffect(() => {
-    saveStoredCart(cart);
-  }, [cart]);
 
   useEffect(() => {
     if (!cartOpen) return undefined;
@@ -174,14 +167,6 @@ function StorefrontApp() {
       window.removeEventListener('keydown', closeOnEscape);
     };
   }, [cartOpen]);
-
-  useEffect(() => {
-    function syncCartAcrossTabs(event) {
-      if (event.key === CART_STORAGE_KEY) setCart(loadStoredCart());
-    }
-    window.addEventListener('storage', syncCartAcrossTabs);
-    return () => window.removeEventListener('storage', syncCartAcrossTabs);
-  }, []);
 
   // 登入後導向美容師申請（從導覽「美容師申請」未登入時進入）
   useEffect(() => {
@@ -222,6 +207,9 @@ function StorefrontApp() {
   }, [promotions]);
 
   function renderPage() {
+    if ((page === 'cart' || page === 'checkout') && !cartReady) {
+      return <main style={{ padding:'120px 24px' }} role="status">正在載入購物車…</main>;
+    }
     switch (page) {
       case 'home':     return <HomePage announcementVisible={isAnnouncementVisible(announcement)} setPage={setPage} onSelectProduct={product => openProduct(product, 'home')} onOpenArticle={article => openJournalArticle(article, 'home')} user={user} cart={cart} setCart={setCart} promotions={promotions} products={products} salesStats={salesStats} />;
       case 'course-register': return <CourseRegistrationPage courseId={courseId} user={user} authReady={authReady} />;
@@ -232,7 +220,7 @@ function StorefrontApp() {
       case 'event-products': return <EventProductsPage user={user} setCart={setCart} onSelectProduct={openEventProduct} products={eventProducts} productsStatus={eventStatus} productsError={eventErrorText} promotions={promotions} />;
       case 'event-product': return <ProductPage onSelectProduct={openProduct} cart={cart} productSlug={eventProductSlugFromPath(productPath)} products={eventProducts} productsStatus={eventStatus} productsError={eventErrorText} user={user} setCart={setCart} promotions={promotions} onBack={closeEventProduct} onShop={closeEventProduct} routeBase="/events/limited" noIndex />;
       case 'cart':     return <CartPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} />;
-      case 'checkout': return <CheckoutPage cart={cart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} products={products} />;
+      case 'checkout': return <CheckoutPage key={user?.uid || 'guest'} cart={cart} cartReady={cartCatalogReady && cart.every(item => item.nameZh && Number.isFinite(Number(item.price)))} onCartPurchased={consumeCart} setCart={setCart} setPage={setPage} user={user} promotions={promotions} products={products} />;
       case 'login':    return <LoginPage setPage={setPage} />;
       case 'pro-login': return <LoginPage setPage={setPage} />;
       case 'reset-password': return <ResetPasswordPage setPage={setPage} />;
@@ -281,6 +269,7 @@ function StorefrontApp() {
         </div>
       )}
       {renderPage()}
+      {cartSyncError && <div role="status" style={{ position:'fixed', bottom:12, left:12, right:12, zIndex:300, padding:12, background:'var(--white)', border:'1px solid var(--border)', fontSize:13 }}>{cartSyncError}</div>}
       {cartOpen && !authPage && page !== 'cart' && (
         <>
           <button type="button" className="cart-drawer-backdrop" aria-label="關閉購物車" onClick={() => setCartOpen(false)} />
