@@ -1,4 +1,4 @@
-import { getMemberPrice, getMemberRole } from './catalog.jsx';
+import { getMemberPrice, getMemberRole, getProductVariants } from './catalog.jsx';
 
 export function normProductIds(p) {
   const raw = p?.product_ids;
@@ -62,8 +62,8 @@ export function calculateDiscount(cart, promotions, user) {
     return { subtotal, discount: 0, finalSubtotal: subtotal, promotion: null };
   }
   const candidates = promotions
-    // The order quote checks discount thresholds against the cart.
-    .filter(p => !requiresOrderQuote(p) && isPromotionLive(p, user))
+    // The order quote checks thresholds and variant scopes against the cart.
+    .filter(p => !requiresOrderQuote(p) && !p.storefront_variant_ids?.length && isPromotionLive(p, user))
     .map(p => {
       const ids = new Set(normProductIds(p));
       const promoItems = cart.filter(i => ids.has(Number(i.id)));
@@ -148,12 +148,20 @@ export function getPromotionLabelTextColor(color) {
   return luminance > 0.179 ? '#111111' : '#FFFFFF';
 }
 
+export function getPromotionDisplayVariants(product, promotion) {
+  const allVariants = normProductIds(promotion).includes(Number(product.id));
+  const ids = new Set(promotion.storefront_variant_ids?.map(String));
+  return getProductVariants(product).filter(variant => variant.active && (allVariants || ids.has(String(variant.id))));
+}
+
 export function getProductDisplayPromotions(product, user, promotions = []) {
   const now = Date.now();
   return promotions.filter(p => {
     const specifiedProducts = p.storefront_scope_type === 'products'
       || (p.storefront_scope_type == null && (!p.benefit_type || p.benefit_type === 'legacy_discount'));
-    if (!specifiedProducts || !normProductIds(p).includes(Number(product.id))) return false;
+    if (!specifiedProducts) return false;
+    if (!normProductIds(p).includes(Number(product.id))
+      && !getPromotionDisplayVariants(product, p).length) return false;
     // Legacy discount copy must pass the same validity checks as its display price.
     // Gift and threshold activities have their own benefits and remain independent.
     if ((!p.benefit_type || p.benefit_type === 'legacy_discount') && !isPromotionLive(p, user)) return false;

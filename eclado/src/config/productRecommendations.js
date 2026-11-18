@@ -9,6 +9,14 @@ export const CLEANSING_PRODUCTS = [
 
 const item = (slug, label) => ({ key: slug, label, products: [slug] });
 
+export const CLEANSING_RECOMMENDATION_TITLE = '清潔推薦搭配';
+
+export const PROFESSIONAL_RECOMMENDATION_TITLES = {
+  'vono-prime-peel': 'Vono 推薦搭配',
+  'gold-patch': '金緞推薦搭配',
+  'rejuven-fiber-ampoule-system': '棉花水光推薦搭配',
+};
+
 export const PROFESSIONAL_RECOMMENDATIONS = {
   // VONO manual p.8. The two VONO formulas are already in the main kit.
   'vono-prime-peel': [

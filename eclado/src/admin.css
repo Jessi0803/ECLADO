@@ -400,6 +400,10 @@ input, select, textarea { font-family: var(--font); }
 .procurement-form-grid input:focus, .procurement-form-grid select:focus, .procurement-address-grid input:focus, .procurement-address-grid textarea:focus, .procurement-notes textarea:focus { border-color: var(--mid); background: #fff; }
 .procurement-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
 .procurement-section-heading h2, .procurement-total-card h2 { margin: 0 0 4px; font-size: 14px; font-weight: 500; }
+.product-cost-report .procurement-receiving-progress { margin-block-start: 14px; }
+.procurement-receiving-progress > summary { cursor: pointer; font-size: 14px; font-weight: 500; }
+.procurement-receiving-progress > summary .procurement-status { margin-inline-start: 10px; }
+.procurement-receiving-progress[open] > summary { margin-bottom: 18px; }
 .procurement-section-heading p { color: var(--mid); font-size: 10px; line-height: 1.5; }
 .procurement-empty-selection { display: flex; flex-direction: column; gap: 7px; align-items: center; justify-content: center; min-height: 150px; border: 1px dashed var(--light); background: var(--off); }
 .procurement-empty-selection strong { font-size: 13px; font-weight: 500; }

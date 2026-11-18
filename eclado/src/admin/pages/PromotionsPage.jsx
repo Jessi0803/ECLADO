@@ -50,11 +50,11 @@ export default function Promotions({ products }) {
   function copyPromotion(promo) {
     const sourceScopes = scopes.filter(scope => scope.promotion_id === promo.id);
     const benefitScopes = sourceScopes.filter(scope => scope.scope_role === 'benefit');
-    const representable = benefitScopes.every(scope => scope.target_type === 'product') || benefitScopes.length === 1;
+    const representable = benefitScopes.every(scope => ['product','variant'].includes(scope.target_type)) || benefitScopes.length === 1;
     const supported = representable && sourceScopes.every(scope => scope.mode === 'include'
-      && ['product','all_regular','all_sellable'].includes(scope.target_type) && !scope.product_variant_id);
+      && ['product','variant','all_regular','all_sellable'].includes(scope.target_type));
     const scopeKeys = role => sourceScopes.filter(scope => scope.scope_role === role)
-      .map(scope => `${scope.target_type}:${scope.product_id ?? ''}`).sort().join('|');
+      .map(scope => `${scope.target_type}:${scope.product_id ?? scope.product_variant_id ?? ''}`).sort().join('|');
     if (!supported || !scopeKeys('benefit') || scopeKeys('benefit') !== scopeKeys('qualification')) {
       alert('此活動含目前表單不支援的商品範圍，無法直接複製。請新增活動並重新設定範圍。');
       return;
@@ -144,6 +144,11 @@ function PromotionList({ list, scopes, products, onEdit, onCopy, onReload }) {
       const allRegular = promoScopes.some(scope => scope.target_type === 'all_regular');
       const allSellable = promoScopes.some(scope => scope.target_type === 'all_sellable');
       const names = promoScopes.filter(scope => scope.target_type === 'product').map(scope => products.find(product => product.id === scope.product_id)?.nameZh).filter(Boolean);
+      for (const scope of promoScopes.filter(scope => scope.target_type === 'variant')) {
+        const product = products.find(item => item.variants?.some(variant => String(variant.id) === String(scope.product_variant_id)));
+        const variant = product?.variants.find(item => String(item.id) === String(scope.product_variant_id));
+        names.push(variant ? `${product.nameZh}（${variant.size || variant.sku}）` : `規格 #${scope.product_variant_id}`);
+      }
       const legacy = !promo.benefit_type || promo.benefit_type === 'legacy_discount';
       return <Card key={promo.id} label={promo.name}>
         <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}><div><h3 style={{ fontSize:15, fontWeight:500, marginBottom:6 }}>{promo.name}</h3></div><span style={{ fontSize:10, color:'var(--mid)' }}>{promo.activation_type === 'coupon_only' ? '優惠券專用' : '自動活動'}</span></div>
@@ -182,6 +187,9 @@ function DiscountPromotionForm({ promo, products, scopes, onClose, policyInstall
   const initialAllRegular = benefitScopes.some(scope => scope.target_type === 'all_regular') || !promo;
   const initialAllSellable = benefitScopes.some(scope => scope.target_type === 'all_sellable');
   const [form, setForm] = useState({ allow_student_price_stacking:promo?.allow_student_price_stacking ?? true, instructor_reward_eligible:promo?.instructor_reward_eligible ?? true, name:promo?.name || '', label_text:promo?.label_text || '', label_color:getPromotionLabelColor(promo?.label_color), description:promo?.description || '', benefit_type:promo?.benefit_type || 'percentage_discount', activation_type:promo?.activation_type || 'automatic', percent:promo ? Number(((1 - Number(promo.discount_rate)) * 100).toFixed(10)) : 10, amount:promo?.discount_amount || 100, threshold_value:promo?.threshold_value || '', threshold_type:promo?.threshold_type || (promo?.benefit_type === 'quantity_gift' ? 'quantity' : 'amount'), threshold_basis:promo?.threshold_basis || 'before_bundle_discount', gift_rewards:getGiftRewards(promo), gift_quantity:promo?.gift_quantity || 1, buy_quantity:promo?.buy_quantity || 3, repeat_mode:promo?.repeat_mode || 'once', scope_type:initialAllSellable ? 'all_sellable' : initialAllRegular ? 'all_regular' : 'products', product_ids:new Set(benefitScopes.filter(scope => scope.target_type === 'product').map(scope => scope.product_id)), start_at:toLocalInput(promo?.start_at), end_at:toLocalInput(promo?.end_at), active:promo?.active ?? true, audience_roles:new Set(promo?.audience_roles ?? ROLES.map(([role]) => role)), allow_guest:promo?.allow_guest ?? true });
+  const [variantIds, setVariantIds] = useState(() => new Set(
+    benefitScopes.filter(scope => scope.target_type === 'variant').map(scope => String(scope.product_variant_id)),
+  ));
   const [saving,setSaving] = useState(false); const [error,setError] = useState('');
   const selectableProducts = useMemo(() => products.filter(product => product.publicationStatus !== 'archived' && product.publicationStatus !== 'gift_only'), [products]);
   const giftVariants = useMemo(() => products
@@ -196,7 +204,25 @@ function DiscountPromotionForm({ promo, products, scopes, onClose, policyInstall
   const isGift = ['amount_gift', 'quantity_gift'].includes(form.benefit_type);
   const isBuyXGetY = form.benefit_type === 'buy_x_get_y';
   const set = (key,value) => setForm(current => ({ ...current, [key]:value }));
-  function toggle(id) { const next = new Set(form.product_ids); next.has(id) ? next.delete(id) : next.add(id); set('product_ids', next); }
+  function toggleProduct(product) {
+    const next = new Set(form.product_ids);
+    if (next.has(product.id)) {
+      next.delete(product.id);
+    } else {
+      next.add(product.id);
+      const covered = new Set(product.variants?.map(variant => String(variant.id)));
+      setVariantIds(current => new Set([...current].filter(id => !covered.has(id))));
+    }
+    set('product_ids', next);
+  }
+  function toggleVariant(id) {
+    setVariantIds(current => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
   async function save(event) {
     event.preventDefault(); setError('');
     if (legacy) {
@@ -212,7 +238,7 @@ function DiscountPromotionForm({ promo, products, scopes, onClose, policyInstall
     }
     if (!form.name.trim()) return setError('請輸入活動名稱');
     if (form.activation_type === 'automatic' && !form.audience_roles.size && !form.allow_guest) return setError('請至少選擇一種會員身分或允許訪客');
-    if (form.scope_type === 'products' && !form.product_ids.size) return setError('請至少選擇一件商品');
+    if (form.scope_type === 'products' && !form.product_ids.size && !variantIds.size) return setError('請至少選擇一件商品或規格');
     if (isGift && (!(Number(form.threshold_value) > 0) || !form.gift_rewards.length || form.gift_rewards.some(gift => !gift.variant_id || !Number.isInteger(Number(gift.quantity)) || Number(gift.quantity) < 1 || Number(gift.quantity) > 2147483647))) return setError('請設定門檻與至少一項贈品，各項數量須為正整數');
     if (isGift && new Set(form.gift_rewards.map(gift => String(gift.variant_id))).size !== form.gift_rewards.length) return setError('同一贈品規格請合併為一列');
     if (isBuyXGetY && (!Number.isInteger(Number(form.buy_quantity)) || Number(form.buy_quantity) < 1 || !Number.isInteger(Number(form.gift_quantity)) || Number(form.gift_quantity) < 1 || Number(form.buy_quantity) + Number(form.gift_quantity) > 2147483647)) return setError('買入與免費件數必須為正整數，且合計不可超出整數範圍');
@@ -220,6 +246,10 @@ function DiscountPromotionForm({ promo, products, scopes, onClose, policyInstall
     setSaving(true);
     const thresholdType = (form.benefit_type === 'quantity_gift' || isBuyXGetY) ? 'quantity' : form.benefit_type === 'amount_gift' ? 'amount' : form.threshold_type;
     const payload = { id:promo?.id || null, priority:promo?.priority ?? 100, name:form.name.trim(), label_text:form.label_text.trim(), label_color:form.label_color, description:form.description.trim(), benefit_type:form.benefit_type, activation_type:form.activation_type, discount_rate:form.benefit_type === 'percentage_discount' ? 1 - Number(form.percent) / 100 : 1, discount_amount:form.benefit_type === 'fixed_discount' ? Number(form.amount) : 0, threshold_value:isBuyXGetY ? Number(form.buy_quantity) + Number(form.gift_quantity) : form.threshold_value === '' ? null : Number(form.threshold_value), threshold_type:thresholdType, threshold_basis:!isGift && !isBuyXGetY && thresholdType === 'amount' && form.threshold_value !== '' ? form.threshold_basis : null, gift_rewards:isGift ? form.gift_rewards.map(gift => ({ variant_id:Number(gift.variant_id), quantity:Number(gift.quantity) })) : [], gift_variant_id:isGift ? Number(form.gift_rewards[0].variant_id) : null, gift_quantity:isGift ? Number(form.gift_rewards[0].quantity) : isBuyXGetY ? Number(form.gift_quantity) : null, buy_quantity:isBuyXGetY ? Number(form.buy_quantity) : null, repeat_mode:(isGift || isBuyXGetY) ? form.repeat_mode : 'once', scope_type:form.scope_type, product_ids:[...form.product_ids], start_at:form.start_at ? new Date(form.start_at).toISOString() : null, end_at:form.end_at ? new Date(form.end_at).toISOString() : null, active:form.active };
+    if (variantIds.size || benefitScopes.some(scope => scope.target_type === 'variant')) {
+      payload.variant_ids = form.scope_type === 'products' ? [...variantIds] : [];
+      if (payload.variant_ids.length) payload.scope_type = 'products_and_variants';
+    }
     if (policyInstalled) {
       payload.allow_student_price_stacking = supportsStudentPolicy(form) ? form.allow_student_price_stacking : true;
       payload.instructor_reward_eligible = supportsStudentPolicy(form) ? form.instructor_reward_eligible : true;
@@ -267,9 +297,17 @@ function DiscountPromotionForm({ promo, products, scopes, onClose, policyInstall
     {form.scope_type === 'products' && <ProductPicker
       products={selectableProducts}
       selected={form.product_ids}
-      onToggle={toggle}
-      onSelectAll={() => set('product_ids', new Set(selectableProducts.map(product => product.id)))}
-      onClear={() => set('product_ids', new Set())}
+      selectedVariants={variantIds}
+      onToggle={toggleProduct}
+      onToggleVariant={toggleVariant}
+      onSelectAll={() => {
+        set('product_ids', new Set(selectableProducts.map(product => product.id)));
+        setVariantIds(new Set());
+      }}
+      onClear={() => {
+        set('product_ids', new Set());
+        setVariantIds(new Set());
+      }}
     />}
     </>}
     <StudentPolicyFields form={legacy ? { ...form, benefit_type:promo.benefit_type || 'legacy_discount' } : form} set={set} installed={policyInstalled} />
@@ -405,25 +443,45 @@ function MemberPicker({ query, setQuery, loading, results, selected, selectedIds
   </div>;
 }
 
-function ProductPicker({ products, selected, onToggle, onSelectAll, onClear }) {
+function ProductPicker({ products, selected, selectedVariants, onToggle, onToggleVariant, onSelectAll, onClear }) {
   const [query, setQuery] = useState('');
   const keyword = query.trim().toLocaleLowerCase();
   const filteredProducts = products.filter(product => [product.nameZh, product.name].some(name => String(name || '').toLocaleLowerCase().includes(keyword)));
   const allSelected = products.length > 0 && products.every(product => selected.has(product.id));
   return <div role="group" aria-label="指定商品">
     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:8, flexWrap:'wrap' }}>
-      <span style={{ ...labelStyle, marginBottom:0 }}>指定商品（已選 {selected.size}）</span>
+      <span style={{ ...labelStyle, marginBottom:0, letterSpacing:'normal' }}>
+        已選 {selected.size} 個整品項 · {selectedVariants.size} 個規格
+      </span>
       <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap', flex:'1 1 300px' }}>
         <div style={{ position:'relative', flex:'1 1 140px', minWidth:120 }}>
           <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'var(--mid)', pointerEvents:'none' }}><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
           <input type="search" aria-label="搜尋指定商品" value={query} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') event.preventDefault(); }} style={{ ...inputStyle, width:'100%', minWidth:0, padding:'6px 10px 6px 32px' }} />
         </div>
         <button type="button" onClick={onSelectAll} disabled={allSelected || !products.length} style={{ ...secondaryButton, flex:'none', padding:'6px 12px', opacity:allSelected || !products.length ? 0.45 : 1 }}>全選</button>
-        <button type="button" onClick={onClear} disabled={!selected.size} style={{ ...secondaryButton, flex:'none', padding:'6px 12px', opacity:selected.size ? 1 : 0.45 }}>全取消</button>
+        <button type="button" onClick={onClear} disabled={!selected.size && !selectedVariants.size} style={{ ...secondaryButton, flex:'none', padding:'6px 12px', opacity:selected.size || selectedVariants.size ? 1 : 0.45 }}>全取消</button>
       </div>
     </div>
     {keyword && <p role="status" style={{ fontSize:11, color:'var(--mid)', margin:'0 0 8px' }}>找到 {filteredProducts.length} 件商品；搜尋不影響已選項目。全選／全取消仍適用全部商品。</p>}
-    <div style={{ maxHeight:360, overflow:'auto', display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(230px,1fr))', gap:7, border:'1px solid var(--border)', padding:10 }}>{filteredProducts.map(product => <label key={product.id} style={{ padding:'8px 9px', fontSize:12, border:`1px solid ${selected.has(product.id) ? 'var(--gold)' : 'transparent'}`, background:selected.has(product.id) ? '#fff' : 'var(--off)' }}><input type="checkbox" checked={selected.has(product.id)} onChange={() => onToggle(product.id)} /> {product.nameZh}<small style={{ display:'block', color:'var(--mid)', marginLeft:18 }}>{product.publicationStatus === 'event_only' ? '活動限定' : '一般商品'}</small></label>)}</div>
+    <div style={{ maxHeight:360, overflow:'auto', display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(230px,1fr))', gap:7, border:'1px solid var(--border)', padding:10 }}>{filteredProducts.map(product => {
+      const whole = selected.has(product.id);
+      const variants = (product.variants || []).filter(variant => variant.id
+        && (variant.active !== false || selectedVariants.has(String(variant.id))));
+      const count = variants.filter(variant => selectedVariants.has(String(variant.id))).length;
+      return <div key={product.id} style={{ padding:'8px 9px', fontSize:12, border:`1px solid ${whole || count ? 'var(--gold)' : 'transparent'}`, background:whole || count ? '#fff' : 'var(--off)' }}>
+        <label><input type="checkbox" checked={whole} onChange={() => onToggle(product)} /> {product.nameZh}<small>（整個品項）</small></label>
+        <small style={{ display:'block', color:'var(--mid)', marginLeft:18 }}>{product.publicationStatus === 'event_only' ? '活動限定' : '一般商品'}</small>
+        {variants.length > 0 && <details style={{ marginLeft:18, marginTop:4 }}>
+          <summary>個別規格{count > 0 ? `（已選 ${count}）` : ''}</summary>
+          {variants.map(variant => {
+            const id = String(variant.id);
+            return <label key={id} style={{ display:'block', marginTop:5 }}>
+              <input type="checkbox" checked={whole || selectedVariants.has(id)} disabled={whole} onChange={() => onToggleVariant(id)} /> {variant.size || variant.sku}{variant.active === false ? '（已停用）' : ''}
+            </label>;
+          })}
+        </details>}
+      </div>;
+    })}</div>
     {!filteredProducts.length && <p style={{ fontSize:12, color:'var(--mid)', padding:12 }}>找不到符合的商品</p>}
   </div>;
 }

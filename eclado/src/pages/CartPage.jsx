@@ -222,7 +222,7 @@ export default function CartPage({ cart, setCart, setPage, user, promotions = []
                   暫時無法確認是否可合併出貨，請稍後再試。
                 </div>
               )}
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13 }}><span>{memberDiscount > 0 ? '專業價小計' : '小計'}</span><span style={{ fontFamily:'var(--font-display)' }}>NT$ {displayedSubtotal.toLocaleString()}</span></div>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13 }}><span>小計</span><span style={{ fontFamily:'var(--font-display)' }}>NT$ {displayedSubtotal.toLocaleString()}</span></div>
               {memberDiscount > 0 && (
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:drawer ? 5 : 10, fontSize:13, color:'var(--accent)' }}>
                   <span>{memberTier.label}資格折扣</span>

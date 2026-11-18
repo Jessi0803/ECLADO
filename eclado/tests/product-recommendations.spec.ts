@@ -185,7 +185,7 @@ test('結帳推薦為緊湊列表，最多顯示三條半並可向下捲動，�
   const list = section.getByRole('region', {name:'推薦商品列表'});
   await expect(list.getByRole('article')).toHaveCount(8);
   const geometry = await list.evaluate(element => ({height:element.clientHeight, scrollHeight:element.scrollHeight, rowHeight:element.querySelector('article')!.getBoundingClientRect().height}));
-  expect(geometry.height / geometry.rowHeight).toBeCloseTo(3.5, 1);
+  expect((geometry.height - 28) / geometry.rowHeight).toBeCloseTo(3.5, 1);
   expect(geometry.scrollHeight).toBeGreaterThan(geometry.height);
   const button = list.getByRole('button', {name:'加購胜肽再生安瓶'});
   await expect(button).toHaveText('＋');
@@ -194,13 +194,24 @@ test('結帳推薦為緊湊列表，最多顯示三條半並可向下捲動，�
   await expect(button.locator('svg')).toBeVisible();
   await button.click();
   await expect(list.getByRole('article')).toHaveCount(8);
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('eclado_cart_v1') || '[]').find((item: any) => item.id === 208)?.qty)).toBe(2);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('eclado_member_cart_v1:recommendation-member:cache') || '{"items":[]}').items.find((item: any) => item.id === 208)?.qty)).toBe(2);
   await expect(button).toHaveText('＋');
   await section.scrollIntoViewIfNeeded();
   await page.screenshot({path:`/tmp/eclado-recommendations-scroll-${testInfo.project.name}.png`});
   await list.getByRole('button', {name:'加購精萃防曬乳'}).scrollIntoViewIfNeeded();
   expect(await list.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test('結帳混合搭配共用固定高度的捲動區，清潔與院線各有標題', async ({ page }) => {
+  await setup(page, true, [{id:201, qty:1}, {id:206, qty:1}, {id:207, qty:1}, {id:205, qty:1}]);
+  await page.goto('/checkout');
+  const list = page.getByRole('region', {name:'推薦商品列表'});
+  await expect(list.getByRole('heading')).toHaveText(['清潔推薦搭配', '金緞推薦搭配', '棉花水光推薦搭配', 'Vono 推薦搭配']);
+  await expect(list.getByText('清潔推薦搭配', {exact:true})).toHaveCount(1);
+  await list.getByRole('heading', {name:'Vono 推薦搭配'}).scrollIntoViewIfNeeded();
+  expect(await list.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+  expect(await list.evaluate(element => element.clientHeight)).toBe(322);
 });
 
 test('確認付款頁驗證優惠碼期間暫停加購，加購後清除舊優惠碼報價', async ({ page }) => {

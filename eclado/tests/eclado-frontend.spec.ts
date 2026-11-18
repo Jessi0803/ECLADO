@@ -2908,6 +2908,28 @@ test('指定商品活動標籤與完整說明依範圍及狀態顯示', async ({
   await expect(page.getByText(/不顯示/)).toHaveCount(0);
 });
 
+test('指定規格活動顯示在品項小卡與詳情，切換容量後仍列出適用規格', async ({ page }) => {
+  await mockEcladoApis(page, {
+    productVariants: [
+      { id:201, product_id:2, size:'30ml', price:3980, stock:2, is_default:true, active:true },
+      { id:202, product_id:2, size:'60ml', price:6880, stock:4, active:true },
+    ],
+    promotions:[{ ...activePromotion, benefit_type:'percentage_discount', storefront_scope_type:'products',
+      product_ids:[], storefront_variant_ids:['202'], label_text:'大容量九折', description:'60ml 限時優惠' }],
+  });
+  await page.goto('/shop');
+  const card = page.locator('article').filter({ has:page.getByText('胜肽修護精華液 · 30ml', { exact:true }) });
+  await expect(card.getByTestId('promotion-label')).toHaveText('大容量九折');
+  await card.getByRole('link').last().click();
+  const details = page.getByRole('region', { name:'活動說明' });
+  for (const size of ['30ml', '60ml', '30ml']) {
+    await page.getByRole('button', { name:size, exact:true }).click();
+    await expect(details.getByTestId('promotion-label')).toHaveText('大容量九折');
+    await expect(details.getByText('60ml 限時優惠')).toBeVisible();
+    await expect(details.getByText('適用規格：60ml', { exact:true })).toBeVisible();
+  }
+});
+
 test('全站公告緊接導覽列並在首頁隨主列換色，各頁保留內容間距', async ({page},testInfo)=>{
   await mockEcladoApis(page,{siteAnnouncement:{content:'任選2件即免運',enabled:true}});
   await page.goto('/');

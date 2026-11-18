@@ -244,3 +244,42 @@ test('student policy migration preserves installed double-wallet checkout and ba
   assert.equal(Number(result.payment_amount),q.payment_amount);
   await consistent();
 }));
+
+test('variant activity save and checkout use the same qualification and benefit scope', {
+  skip: !process.env.PGLITE_MODULE && !process.env.EMBEDDED_POSTGRES_MODULE, timeout: 180000,
+}, () => runStudentPricingDatabaseScenario(async ({ db, read, fn, one, actor, ordinaryQuote }) => {
+  await actor('11111111-1111-4111-8111-111111111111');
+  await db.exec('alter table public.promotions add column description text, add column updated_at timestamptz default now(); update public.promotions set active=false');
+  await db.exec(fn('supabase-promotion-gifts-engine.sql', 'save_discount_promotion'));
+  for (const migration of ['automatic-promotion-audience','buy-x-get-y','automatic-price-allocation','promotion-storefront-display']) {
+    await db.exec(read(`supabase-${migration}.sql`));
+  }
+  await db.exec('update public.automatic_price_allocation_settings set enabled=true');
+  const save = async fields => (await one('select public.save_discount_promotion($1::jsonb) id', [JSON.stringify({
+    name:'指定容量九折', benefit_type:'percentage_discount', activation_type:'automatic',
+    scope_type:'products', product_ids:[1], discount_rate:0.9, threshold_type:'quantity',
+    threshold_value:2, ...fields,
+  })])).id;
+  const whole = await save({});
+  const migration = read('supabase-promotion-variant-scopes.sql');
+  await db.exec(migration);
+  await db.exec(migration);
+  const mixed = [{ product_id:1, variant_id:1, qty:1 }, { product_id:1, variant_id:2, qty:1 }];
+  assert.equal((await ordinaryQuote(mixed)).discount, 300, 'existing whole item counts both sizes');
+  await db.query('update public.promotions set active=false where id=$1', [whole]);
+
+  const fields = { scope_type:'products_and_variants', product_ids:[], variant_ids:['2'], label_text:'大容量九折' };
+  const id = await save(fields);
+  assert.deepEqual(await one('select storefront_scope_type,storefront_variant_ids,label_text from public.promotions where id=$1',[id]), {
+    storefront_scope_type:'products', storefront_variant_ids:['2'], label_text:'大容量九折',
+  });
+  assert.equal((await ordinaryQuote(mixed)).discount, 0, 'other size does not count toward the two-unit threshold');
+  assert.equal((await ordinaryQuote([mixed[0], {...mixed[1],qty:2}])).discount, 400, 'only the selected size is discounted');
+  await assert.rejects(save({ id }), /Reload the activity editor/);
+  await assert.rejects(save({ ...fields, id, variant_ids:['999'] }), /variant not found/);
+  assert.equal((await ordinaryQuote(mixed)).discount, 0, 'failed writes preserve the stored scope');
+
+  await save({ id, variant_ids:[] });
+  assert.equal((await ordinaryQuote(mixed)).discount, 300, 'switching back to whole item clears variant scopes');
+  assert.deepEqual((await one('select storefront_variant_ids from public.promotions where id=$1',[id])).storefront_variant_ids, []);
+}));

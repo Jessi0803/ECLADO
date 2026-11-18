@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { applyVariantToProduct, getCartKey, getFulfillmentInfo, getMemberPrice, getProductImage, getProductVariants } from '../../domain/catalog.jsx';
 import { getProductRecommendations } from '../../domain/productRecommendations.js';
+import { CLEANSING_RECOMMENDATION_TITLE } from '../../config/productRecommendations.js';
 import ProductCard from './ProductCard.jsx';
 import ProductImage from './ProductImage.jsx';
 import './ProductRecommendations.css';
@@ -21,7 +22,7 @@ function CheckoutRecommendation({ product, label, cart, user, onAdd, disabled })
         <ProductImage src={getProductImage(product, 150)} alt={product.nameZh} fallbackText="暫無圖片" fallbackStyle={{ padding:2, fontSize:9 }} style={{ width:'100%', height:'100%', objectFit:'contain' }} />
       </div>
       <div className="recommendation-row-info">
-        <p className="recommendation-label">{label}</p>
+        {label && <p className="recommendation-label">{label}</p>}
         <p className="recommendation-row-name" title={product.nameZh}>{product.nameZh}</p>
         <div className="recommendation-row-details">
           {variants.length > 1 ? (
@@ -53,12 +54,26 @@ export default function ProductRecommendations({ sources, products, cart = [], u
   const groups = getProductRecommendations({ sources, products, user });
   const recommendations = groups.flatMap(group => group.options.map(product => ({ product, label:group.label })));
   if (!recommendations.length) return null;
+  const sections = new Map([[CLEANSING_RECOMMENDATION_TITLE, []]]);
+  if (compact) {
+    for (const { title, label, options } of groups) {
+      if (!sections.has(title)) sections.set(title, []);
+      sections.get(title).push(...options.map(product => ({ product, label: title === CLEANSING_RECOMMENDATION_TITLE ? null : label })));
+    }
+  }
   return (
     <section aria-label="搭配選購" className={`product-recommendations${compact ? ' product-recommendations--compact' : ''}`}>
-      <h2>搭配選購</h2>
+      {!compact && <h2>搭配選購</h2>}
       {compact ? (
         <div className="recommendation-list" tabIndex={0} role="region" aria-label="推薦商品列表">
-          {recommendations.map(({ product, label }) => <CheckoutRecommendation key={product.id} product={product} label={label} cart={cart} user={user} onAdd={onAdd} disabled={disabled} />)}
+          {Array.from(sections, ([title, items]) => items.length > 0 && (
+            <div className="recommendation-group" key={title}>
+              <h2>{title}</h2>
+              {items.map(({ product, label }) => (
+                <CheckoutRecommendation key={product.id} product={product} label={label} cart={cart} user={user} onAdd={onAdd} disabled={disabled} />
+              ))}
+            </div>
+          ))}
         </div>
       ) : (
         <div className="recommendation-grid">

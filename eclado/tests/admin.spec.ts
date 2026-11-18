@@ -2273,20 +2273,42 @@ test('活動指定商品可全選及全取消', async ({ page }) => {
 
   const picker = page.getByRole('group', { name: '指定商品', exact: true });
   await picker.getByRole('button', { name:'全選', exact:true }).click();
-  await expect(page.getByText(`指定商品（已選 ${adminProductRows.length}）`)).toBeVisible();
+  await expect(picker.getByText(`已選 ${adminProductRows.length} 個整品項 · 0 個規格`)).toBeVisible();
   await expect(picker.getByRole('checkbox', { checked: true })).toHaveCount(adminProductRows.length);
 
   await page.getByRole('searchbox', { name:'搜尋指定商品' }).fill('不存在的商品xyz');
   await expect(page.getByText('找不到符合的商品')).toBeVisible();
-  await expect(page.getByText(`指定商品（已選 ${adminProductRows.length}）`)).toBeVisible();
+  await expect(picker.getByText(`已選 ${adminProductRows.length} 個整品項 · 0 個規格`)).toBeVisible();
   await page.getByRole('searchbox', { name:'搜尋指定商品' }).fill(adminProductRows[0].name_zh);
   await expect(page.getByText('找不到符合的商品')).toHaveCount(0);
   await page.getByRole('searchbox', { name:'搜尋指定商品' }).fill('');
   await expect(picker.getByRole('checkbox', { checked: true })).toHaveCount(adminProductRows.length);
 
   await picker.getByRole('button', { name:'全取消', exact:true }).click();
-  await expect(page.getByText('指定商品（已選 0）')).toBeVisible();
+  await expect(picker.getByText('已選 0 個整品項 · 0 個規格')).toBeVisible();
   await expect(picker.getByRole('checkbox', { checked: true })).toHaveCount(0);
+});
+
+test('活動可混合勾選整個品項及個別規格', async ({ page }) => {
+  const saves: Record<string, unknown>[] = [];
+  await mockAdminApis(page, {
+    productVariants:[...adminProductVariants, { ...adminProductVariants[1], id:202, size:'60ml', is_default:false }],
+    onDiscountPromotionSave:payload => saves.push(payload),
+  });
+  await page.goto('/admin');
+  await openAdminSection(page, /活動管理/);
+  await page.getByRole('button', { name:'+ 新增優惠活動' }).click();
+  await page.getByPlaceholder('例：秋季保養 9 折').fill('指定規格九折');
+  await page.getByLabel('指定商品', { exact:true }).check();
+  const picker = page.getByRole('group', { name:'指定商品', exact:true });
+  await picker.getByRole('checkbox', { name:/深層清潔泡沫洗面乳/ }).check();
+  await picker.locator('details').filter({ hasText:'60ml' }).locator('summary').click();
+  await picker.getByLabel('60ml', { exact:true }).check();
+  await expect(picker.getByText('已選 1 個整品項 · 1 個規格')).toBeVisible();
+  await expect(picker.getByLabel('30ml', { exact:true })).not.toBeChecked();
+  await page.getByRole('button', { name:'建立活動' }).click();
+  await expect.poll(() => saves.length).toBe(1);
+  expect(saves[0]).toMatchObject({ scope_type:'products_and_variants', product_ids:[1], variant_ids:['202'] });
 });
 
 test('優惠券方案可打包多個優惠券專用活動', async ({ page }) => {

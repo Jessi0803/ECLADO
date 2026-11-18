@@ -1,4 +1,4 @@
-import { CLEANSING_PRODUCTS, PROFESSIONAL_RECOMMENDATIONS } from '../config/productRecommendations.js';
+import { CLEANSING_PRODUCTS, CLEANSING_RECOMMENDATION_TITLE, PROFESSIONAL_RECOMMENDATIONS, PROFESSIONAL_RECOMMENDATION_TITLES } from '../config/productRecommendations.js';
 import { getProductSlug } from '../app/routes.js';
 import { canAccessProfessionalCatalog, getCartKey, getProductVariants } from './catalog.jsx';
 
@@ -18,9 +18,11 @@ export function getProductRecommendations({ sources, products, user }) {
     const slug = getProductSlug(source);
     if (CLEANSING_PRODUCTS.includes(slug)) {
       return CLEANSING_PRODUCTS.filter(target => target !== slug)
-        .map(slug => ({ key: slug, label: '清潔搭配', products: [slug] }));
+        .map(slug => ({ key: slug, label: '清潔搭配', title: CLEANSING_RECOMMENDATION_TITLE, products: [slug] }));
     }
-    return PROFESSIONAL_RECOMMENDATIONS[slug] || [];
+    return (PROFESSIONAL_RECOMMENDATIONS[slug] || []).map(group => ({
+      ...group, title: PROFESSIONAL_RECOMMENDATION_TITLES[slug],
+    }));
   });
   const seen = new Set();
   return groups.flatMap(group => {

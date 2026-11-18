@@ -19,6 +19,7 @@ import {
 import {
   getPromoDisplayPrice,
   getProductDisplayPromotions,
+  getPromotionDisplayVariants,
 } from '../../domain/promotions.js';
 
 export default function ProductDetail({ product, user, onAdd, onBack, promotions = [], products = [], cart = [], onAddRecommendation, onSelectRecommendation }) {
@@ -120,11 +121,16 @@ export default function ProductDetail({ product, user, onAdd, onBack, promotions
                     {displayPromotions.filter(promo => promo.label_text?.trim()).map(promo => <PromotionLabel key={promo.id} text={promo.label_text} color={promo.label_color} />)}
                   </div>
                 </div>
-                {displayPromotions.map((promo, index) => <div key={promo.id} style={{ marginTop:index ? 16 : 0, paddingTop:index ? 16 : 0, borderTop:index ? '1px solid var(--light)' : undefined }}>
-                  <p style={{ fontSize:10, color:'var(--accent)', marginBottom:6 }}>限時優惠</p>
-                  <h3 style={{ fontSize:14, color:'var(--black)', fontWeight:500, marginBottom:promo.description ? 8 : 0, overflowWrap:'anywhere' }}>{promo.name}</h3>
-                  {promo.description && <p style={{ fontSize:13, color:'var(--dark)', lineHeight:1.85, whiteSpace:'pre-wrap', overflowWrap:'anywhere' }}>{promo.description}</p>}
-                </div>)}
+                {displayPromotions.map((promo, index) => {
+                  const applicableVariants = getPromotionDisplayVariants(product, promo)
+                    .map(variant => variant.size || variant.sku).filter(Boolean);
+                  return <div key={promo.id} style={{ marginTop:index ? 16 : 0, paddingTop:index ? 16 : 0, borderTop:index ? '1px solid var(--light)' : undefined }}>
+                    <p style={{ fontSize:10, color:'var(--accent)', marginBottom:6 }}>限時優惠</p>
+                    <h3 style={{ fontSize:14, color:'var(--black)', fontWeight:500, marginBottom:promo.description ? 8 : 0, overflowWrap:'anywhere' }}>{promo.name}</h3>
+                    {promo.description && <p style={{ fontSize:13, color:'var(--dark)', lineHeight:1.85, whiteSpace:'pre-wrap', overflowWrap:'anywhere' }}>{promo.description}</p>}
+                    {applicableVariants.length > 0 && <p style={{ fontSize:12, color:'var(--dark)', marginTop:6 }}>適用規格：{applicableVariants.join('、')}</p>}
+                  </div>;
+                })}
               </section>
             )}
 
