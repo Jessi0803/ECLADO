@@ -38,3 +38,14 @@ export const COURSE_REGISTRATION_LABELS = {
 export const COURSE_PAYMENT_LABELS = {
   free: '免費報名', pending: '待付款', paid: '已付款', expired: '付款已逾期', failed: '未建立付款單', review: '收款待人工確認',
 };
+
+
+export function isCourseRegistrationOpen(course, now = Date.now()) {
+  return Boolean(course && Date.parse(course.starts_at) > now
+    && (!course.registration_opens_at || Date.parse(course.registration_opens_at) <= now));
+}
+
+export function courseRegistrationNotice(course, now = Date.now()) {
+  if (!course?.registration_opens_at || Date.parse(course.registration_opens_at) <= now) return '';
+  return `預計於 ${taipeiInput.format(new Date(course.registration_opens_at)).replaceAll('-', '/')} 開放報名（台北時間）`;
+}

@@ -328,3 +328,6 @@
     padding: 32px 24px;
   }
 }
+
+.course-registration-notice { color: var(--dark); font-size: 14px; line-height: 1.7; }
+.course-registration-notice > p { margin-top: 12px; }

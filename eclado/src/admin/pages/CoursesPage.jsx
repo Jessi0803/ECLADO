@@ -71,6 +71,7 @@ function CourseEditor({ course, onSaved, onClose }) {
       ? course?.instructor_name || '' : 'custom',
     customInstructor: course?.instructor_name || '',
     start: toTaipeiInput(course?.starts_at), end: toTaipeiInput(course?.ends_at),
+    publishAt: toTaipeiInput(course?.publish_at), registrationOpensAt: toTaipeiInput(course?.registration_opens_at),
     price: course?.price_twd ?? '', zoom: course?.zoom_url || '', published: course?.published || false,
   }));
   const [imagePath, setImagePath] = useState(course?.image_path ?? null);
@@ -95,7 +96,12 @@ function CourseEditor({ course, onSaved, onClose }) {
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  const update = (field, value) => setForm(previous => ({ ...previous, [field]: value }));
+  const update = (field, value) => setForm(previous => ({
+    ...previous,
+    [field]: value,
+    ...(field === 'publishAt' && (!previous.registrationOpensAt || previous.registrationOpensAt === previous.publishAt)
+      ? { registrationOpensAt: value } : {}),
+  }));
 
   async function submit(event) {
     event.preventDefault();
@@ -111,6 +117,15 @@ function CourseEditor({ course, onSaved, onClose }) {
     }
     if (Array.from(form.description).length > 12000) {
       setError('課程介紹過長，請縮短內容或減少格式。');
+      return;
+    }
+    if (form.publishAt && form.publishAt >= form.start) {
+      setError('上架時間必須早於上課開始時間。');
+      return;
+    }
+    if (form.registrationOpensAt && (form.registrationOpensAt >= form.start
+      || (form.publishAt && form.registrationOpensAt < form.publishAt))) {
+      setError('開放報名時間須在上架時間之後，且早於上課開始時間。');
       return;
     }
     if (form.end <= form.start) {
@@ -137,6 +152,8 @@ function CourseEditor({ course, onSaved, onClose }) {
         p_instructor_name: form.instructorChoice === 'custom' ? form.customInstructor : form.instructorChoice,
         p_starts_at: new Date(`${form.start}+08:00`).toISOString(),
         p_ends_at: new Date(`${form.end}+08:00`).toISOString(),
+        p_registration_opens_at: form.registrationOpensAt ? new Date(`${form.registrationOpensAt}+08:00`).toISOString() : null,
+        p_publish_at: form.publishAt ? new Date(`${form.publishAt}+08:00`).toISOString() : null,
         p_price_twd: Number(form.price), p_published: form.published, p_zoom_url: form.zoom,
       });
       if (active.current) onSaved(saved);
@@ -167,8 +184,12 @@ function CourseEditor({ course, onSaved, onClose }) {
         <CourseDescriptionEditor value={form.description} onChange={value => update('description', value)}
           onUploading={setUploadingDescriptionImage} disabled={busy} />
         <div className="admin-course-time">
-          <label>開始時間（台北時間）<input required type="datetime-local" value={form.start} onChange={e => update('start', e.target.value)} /></label>
-          <label>結束時間（台北時間）<input required type="datetime-local" value={form.end} onChange={e => update('end', e.target.value)} /></label>
+          <label>上架時間（台北時間）<input aria-label="上架時間（台北時間）" type="datetime-local" max={form.start || undefined} value={form.publishAt} onChange={e => update('publishAt', e.target.value)} /><small>留空為立即上架。需勾選下方「上架課程」。</small></label>
+          <label>開放報名時間（台北時間）<input aria-label="開放報名時間（台北時間）" type="datetime-local" min={form.publishAt || undefined} max={form.start || undefined} value={form.registrationOpensAt} onChange={e => update('registrationOpensAt', e.target.value)} /><small>預設與上架時間相同，可延後開放報名。留空則於上架時開放。</small></label>
+        </div>
+        <div className="admin-course-time">
+          <label>上課開始時間（台北時間）<input required type="datetime-local" min={form.registrationOpensAt || form.publishAt || undefined} value={form.start} onChange={e => update('start', e.target.value)} /></label>
+          <label>上課結束時間（台北時間）<input required type="datetime-local" min={form.start || form.publishAt || undefined} value={form.end} onChange={e => update('end', e.target.value)} /></label>
         </div>
         <label>課程費用（NT$）<input required type="number" min="0" max="9999999" step="1" value={form.price} onChange={e => update('price', e.target.value)} /></label>
         <label>Zoom 會議連結<input type="url" maxLength={2048} value={form.zoom} onChange={e => update('zoom', e.target.value)} /></label>
@@ -263,7 +284,7 @@ export default function AdminCoursesPage({ canNotify }) {
                       <tr key={course.id}>
                         <td data-label="課程名稱"><strong>{course.name}</strong></td><td data-label="上課時間（台北時間）">{formatCourseTime(course)}</td>
                         <td data-label="費用">{formatCoursePrice(course.price_twd)}</td>
-                        <td data-label="狀態"><span className={`procurement-status${course.published ? ' status-received' : ''}`}>{course.published ? '已上架' : '已下架'}</span></td>
+                        <td data-label="狀態"><span className={`procurement-status${course.published ? ' status-received' : ''}`}>{course.published ? (Date.parse(course.publish_at) > Date.now() ? '排程上架' : Date.parse(course.registration_opens_at) > Date.now() ? '尚未開放報名' : '已上架') : '已下架'}</span></td>
                         <td data-label="待人工處理">
                           {course.open_case_count > 0 ? (
                             <button className="admin-course-count-link" type="button"

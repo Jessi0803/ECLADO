@@ -45,8 +45,8 @@ test('course registration, payment confirmation and single-seat cancellation use
     await db.exec('alter table public.profiles add column email text, add column line_user_id text');
     await query("update public.profiles set email = 'teacher@example.test', line_user_id = 'teacher-line' where id=$1", [teacher]);
     await query("update public.profiles set email = 'student@example.test' where id=$1", [student]);
-    for (const file of ['supabase-courses-foundation.sql', 'supabase-course-registration.sql', 'supabase-course-payments.sql',
-      'supabase-course-notifications.sql', 'supabase-course-income.sql']) {
+    for (const file of ['supabase-courses-foundation.sql', 'supabase-course-listing-details.sql', 'supabase-course-description-images.sql', 'supabase-course-registration.sql', 'supabase-course-payments.sql',
+      'supabase-course-notifications.sql', 'supabase-course-income.sql', 'supabase-course-publication-schedule.sql', 'supabase-course-image-jpeg-fallback.sql']) {
       await db.exec(readFileSync(resolve(__dirname, '../..', file), 'utf8'));
     }
     await query(`insert into public.courses (id,name,description,image_path,starts_at,ends_at,price_twd,published)
@@ -235,6 +235,61 @@ test('course registration, payment confirmation and single-seat cancellation use
     list = await roster();
     assert.equal(list.registrations.find(r => r.id === other.id).status, 'active');
     assert.equal(list.cases.find(item => item.registration_id === other.id).kind, 'after_course');
+
+    await db.exec('reset role');
+    await db.exec(readFileSync(resolve(__dirname, '../../supabase-course-publication-schedule.sql'),'utf8'));
+    // Scheduled visibility, image privacy and registration share server time.
+    await db.exec('reset role');
+    const scheduledImage = '32345678-1111-4444-8888-123456789abc.webp';
+    await query('insert into storage.objects (bucket_id,name) values ($1,$2)', ['course-images',scheduledImage]);
+    const times = (await query("select now()+interval '2 days' publish, now()+interval '3 days' opens, now()+interval '4 days' starts, now()+interval '4 days 2 hours' ends"))[0];
+    const values = [null,null,'排程課程','介紹',scheduledImage,times.starts,times.ends,1200,true,
+      'https://zoom.us/j/123','April','概述',times.publish,times.opens];
+    const saveSchedule = args => scalar('select public.save_scheduled_course($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) value',args);
+    await member(consumer);
+    await assert.rejects(saveSchedule(values), {code:'42501'});
+    await member(admin);
+    const scheduled = await saveSchedule(values);
+    assert.equal(new Date(scheduled.publish_at).getTime(), times.publish.getTime());
+    const edits = [scheduled.id,scheduled.version,...values.slice(2)];
+    await assert.rejects(saveSchedule([...edits.slice(0,12),times.starts,times.opens]),{code:'22023'});
+    await assert.rejects(saveSchedule([...edits.slice(0,13),new Date(times.publish.getTime()-1000)]),{code:'22023'});
+    await assert.rejects(saveSchedule([...edits.slice(0,13),times.starts]),{code:'22023'});
+    await assert.rejects(saveSchedule([scheduled.id,0,...values.slice(2)]),{code:'40001'});
+    await db.exec('reset role');
+    assert.equal((await query('select publish_at from public.courses where id=$1',[scheduled.id]))[0].publish_at.getTime(), times.publish.getTime());
+    await db.exec('set role anon');
+    assert.deepEqual(await query('select * from public.get_published_courses($1)',[scheduled.id]),[]);
+    assert.equal(await scalar('select public.is_published_course_image($1) value',[scheduledImage]),false);
+    await member(teacher);
+    await assert.rejects(enroll(true,[],randomUUID(),1200,scheduled.id),{code:'22023'});
+    await db.exec('reset role');
+    await query("update public.courses set publish_at=now()-interval '1 hour' where id=$1",[scheduled.id]);
+    await db.exec('set role anon');
+    assert.equal((await query('select * from public.get_published_courses($1)',[scheduled.id])).length,1);
+    assert.equal(await scalar('select public.is_published_course_image($1) value',[scheduledImage]),true);
+    await member(teacher);
+    await assert.rejects(enroll(true,[],randomUUID(),1200,scheduled.id),{code:'22023'});
+    await db.exec('reset role');
+    await query("update public.courses set registration_opens_at=now()-interval '1 minute' where id=$1",[scheduled.id]);
+    await member(teacher);
+    assert.equal((await enroll(true,[],randomUUID(),1200,scheduled.id)).status,'free');
+    await member(pro);
+    const scheduledPaid=await enroll(true,[],randomUUID(),1200,scheduled.id);
+    await service();
+    const scheduledClaim=await claim(scheduledPaid.id,pro);
+    assert.ok(scheduledClaim.provider_order_no);
+    await db.exec('reset role');
+    await query("update public.courses set publish_at=now()+interval '1 day',registration_opens_at=now()+interval '1 day' where id=$1",[scheduled.id]);
+    await service();
+    assert.equal((await confirm(scheduledClaim.provider_order_no,120000,'scheduled-late')).status,'review');
+    await db.exec('reset role');
+    await assert.rejects(query("update public.courses set publish_at=ends_at where id=$1",[scheduled.id]),{code:'23514'});
+    await member(admin);
+    const immediateSchedule = await saveSchedule([scheduled.id,scheduled.version,...values.slice(2,12),null,null]);
+    assert.equal(immediateSchedule.publish_at,null);
+    assert.equal(immediateSchedule.registration_opens_at,null);
+
   } finally {
     await db.close();
   }

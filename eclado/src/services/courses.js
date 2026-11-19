@@ -11,7 +11,7 @@ async function courseRpc(name, args) {
 
 export const getPublishedCourses = (id = null) => courseRpc('get_published_courses', { p_id: id });
 export const getAdminCourses = () => courseRpc('get_admin_courses');
-export const saveCourse = args => courseRpc('save_course', args);
+export const saveCourse = args => courseRpc('save_scheduled_course', args);
 
 export async function downloadCourseImage(path) {
   const { data, error } = await images.download(path, {}, { cache: 'no-store' });

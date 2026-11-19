@@ -3,8 +3,9 @@ import React, { useEffect, useState } from 'react';
 import CourseDescription from '../components/courses/CourseDescription.jsx';
 import { richTextSummary } from '../domain/richText.js';
 import CourseImage from '../components/courses/CourseImage.jsx';
-import { formatCourseDuration, formatCoursePrice, formatCourseTime } from '../domain/courses.js';
+import { formatCourseDuration, formatCoursePrice, formatCourseTime, isCourseRegistrationOpen, courseRegistrationNotice } from '../domain/courses.js';
 import { faculty } from '../domain/courseFaculty.js';
+import useCourseClock from '../hooks/useCourseClock.js';
 import useCourseHistory from '../hooks/useCourseHistory.js';
 import useDocumentMeta from '../hooks/useDocumentMeta.js';
 import { getPublishedCourses } from '../services/courses.js';
@@ -49,14 +50,15 @@ function follow(event, callback) {
 export default function CoursesPage({ courseId = null, canRegister, memberId, onOpenCourse }) {
   const [request, setRequest] = useState(0);
   const [result, setResult] = useState(null);
-  const current = result?.id === courseId && result.request === request ? result : null;
+  const current = result?.id === courseId ? result : null;
   const course = courseId ? current?.courses?.[0] : null;
-  const now = Date.now();
+  const now = useCourseClock();
   const ended = Boolean(course && Date.parse(course.ends_at) <= now);
   const { courses: history, hasRegistrations } = useCourseHistory(!courseId || ended ? memberId : null);
   const hasCourseRecord = history?.some(item => item.id === courseId);
-  const registrationOpen = Date.parse(course?.starts_at) > now;
-  const showRegistrationLink = ended ? hasCourseRecord : canRegister || registrationOpen;
+  const registrationOpen = isCourseRegistrationOpen(course, now);
+  const registrationNotice = courseRegistrationNotice(course, now);
+  const showRegistrationLink = ended ? hasCourseRecord : !registrationNotice && (canRegister || registrationOpen);
   useDocumentMeta({
     title: `${course?.name || (courseId ? '專業課程' : '專業教育')} | ECLADO`,
     description: richTextSummary(course?.description).slice(0, 160) || '探索 ECLADO 專業課程、上課時間與費用。',
@@ -80,9 +82,16 @@ export default function CoursesPage({ courseId = null, canRegister, memberId, on
     return () => { active = false; };
   }, [courseId, request]);
 
+  useEffect(() => {
+    const timer = setInterval(() => setRequest(value => value + 1), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
   const listed = courseId ? [] : (current?.courses || []);
-  const upcoming = listed.filter(item => Date.parse(item.starts_at) > now)
+  const upcoming = listed.filter(item => isCourseRegistrationOpen(item, now))
     .sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at));
+  const announced = listed.filter(item => Date.parse(item.starts_at) > now && !isCourseRegistrationOpen(item, now))
+    .sort((a, b) => Date.parse(a.registration_opens_at) - Date.parse(b.registration_opens_at));
   const inProgress = listed.filter(item => Date.parse(item.starts_at) <= now && Date.parse(item.ends_at) > now);
   const past = listed.filter(item => Date.parse(item.ends_at) <= now)
     .sort((a, b) => Date.parse(b.starts_at) - Date.parse(a.starts_at));
@@ -119,7 +128,7 @@ export default function CoursesPage({ courseId = null, canRegister, memberId, on
         {!current && <p role="status">載入課程中…</p>}
         {current?.failed && <p role="alert">目前無法載入課程。 <button type="button" onClick={() => setRequest(n => n + 1)}>重新載入</button></p>}
         {courseId && current?.courses?.length === 0 && <p>找不到此課程，或課程已下架。</p>}
-        {!courseId && current?.courses && upcoming.length === 0 && (
+        {!courseId && current?.courses && upcoming.length === 0 && announced.length === 0 && (
           <p className="course-store-no-upcoming">新課程正在規劃中，敬請期待。</p>
         )}
         {course && (
@@ -136,6 +145,7 @@ export default function CoursesPage({ courseId = null, canRegister, memberId, on
               )}
               <div className="course-detail-description"><h2>課程介紹</h2><CourseDescription value={course.description} /></div>
               {ended && <div className="course-ended-status">課程已結束</div>}
+              {registrationNotice && <div className="course-registration-notice"><div className="course-ended-status">尚未開放報名</div><p>{registrationNotice}</p></div>}
               {showRegistrationLink && (
                 <a className="course-action-primary" href={`/courses/${course.id}/register`}>
                   {registrationOpen ? '立即報名' : '查看報名紀錄'}
@@ -146,6 +156,7 @@ export default function CoursesPage({ courseId = null, canRegister, memberId, on
         )}
         {[
           ['upcoming', '可報名課程', upcoming],
+          ['announced', '即將開放報名', announced],
           ['ongoing', '進行中課程', inProgress],
           ['past', '歷年課程', past],
         ].map(([kind, label, items]) => items.length > 0 && (
@@ -157,6 +168,7 @@ export default function CoursesPage({ courseId = null, canRegister, memberId, on
                   <CourseImage path={item.image_path} alt="" className="course-store-image" />
                   <div className="course-store-card-content">
                     <CourseSchedule course={item} />
+                    {courseRegistrationNotice(item, now) && <p className="course-registration-notice">{courseRegistrationNotice(item, now)}</p>}
                     <h3>{item.name}</h3>
                     <CourseInstructor name={item.instructor_name} />
                     {item.overview && <p className="course-store-card-description">{item.overview}</p>}

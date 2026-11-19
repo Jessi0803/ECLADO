@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { getPublishedCourses, getMyCourseOrders, createCourseRegistration } from '../services/courses.js';
 import { fetchMyInstructorStudents } from '../services/instructorStudents.js';
 import { coursePayment } from '../services/coursePaymentApi.js';
-import { formatCoursePrice, COURSE_PAYMENT_LABELS, COURSE_REGISTRATION_LABELS } from '../domain/courses.js';
+import { isCourseRegistrationOpen, courseRegistrationNotice, formatCoursePrice, COURSE_PAYMENT_LABELS, COURSE_REGISTRATION_LABELS } from '../domain/courses.js';
 import { PAYMENT_METHODS } from '../domain/payments.js';
+import useCourseClock from '../hooks/useCourseClock.js';
 import useDocumentMeta from '../hooks/useDocumentMeta.js';
 import PaymentMethodOptions from '../components/checkout/PaymentMethodOptions.jsx';
 import CourseMeetingActions from '../components/courses/CourseMeetingActions.jsx';
@@ -40,6 +41,7 @@ function MemberRegistration({ courseId, role }) {
   const lastRequest = useRef(null);
   const mounted = useRef(false);
   const instructor = role === 'instructor';
+  const now = useCourseClock();
 
   useEffect(() => {
     mounted.current = true;
@@ -91,7 +93,7 @@ function MemberRegistration({ courseId, role }) {
   const hasSelf = account?.orders.some(order => order.registrations.some(reg =>
     reg.kind !== 'delegated' && ['active', 'pending'].includes(reg.status)));
   const ended = Date.parse(account?.ends_at || course?.ends_at) <= Date.now();
-  const mayRegister = course && Date.parse(course.starts_at) > Date.now()
+  const mayRegister = course && isCourseRegistrationOpen(course, now)
     && (instructor || (role === 'pro' && !hasSelf));
   const total = (instructor ? rows.length : 1) * (course?.price_twd || 0);
   const selectedMethod = paymentChoice === 'atm' && total > 30000 ? 'card' : paymentChoice;
@@ -230,7 +232,7 @@ function MemberRegistration({ courseId, role }) {
         </form>
       )}
       {ended && <div className="course-ended-status">課程已結束</div>}
-      {course !== undefined && !ended && !mayRegister && !hasSelf && <p>{['pro', 'instructor'].includes(role) ? '此課程目前未開放報名。' : '此會員身分無法報名。'}</p>}
+      {course !== undefined && !ended && !mayRegister && !hasSelf && <p>{['pro', 'instructor'].includes(role) ? (courseRegistrationNotice(course, now) || '此課程目前未開放報名。') : '此會員身分無法報名。'}</p>}
       {account?.orders.length > 0 && <section className="course-registration-orders" aria-label="我的課程報名">
         <h2>我的課程報名</h2>
         {account.zoom_url && Date.parse(account.ends_at || course?.ends_at) > Date.now() && (

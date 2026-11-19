@@ -26,10 +26,11 @@ test(`管理員可以新增、編輯、上下架課程，公開頁面可直接�
   const image = await sharp({ create: { width: 32, height: 24, channels: 3, background: '#9e847a' } }).png().toBuffer();
   let uploadedPath = '';
   const uploadedPaths: string[] = [];
+  let expectedSchedule: { publishAt: string | null; opensAt: string | null } = { publishAt:null, opensAt:null };
   let saved: {
     id: string; version: number; name: string; description: string; image_path: string;
     starts_at: string; ends_at: string; price_twd: number; published: boolean; zoom_url: string;
-    instructor_name: string; overview: string;
+    instructor_name: string; overview: string; publish_at: string | null; registration_opens_at: string | null;
   } | undefined;
   await page.route('**/storage/v1/object/course-images/*', route => {
     if (route.request().method() === 'GET') return route.fulfill({ body: image, contentType: 'image/png' });
@@ -41,18 +42,19 @@ test(`管理員可以新增、編輯、上下架課程，公開頁面可直接�
     return route.fulfill({ json: { Key: 'course-images/' + uploadedPath } });
   });
   await page.route('**/rest/v1/rpc/get_admin_courses', route => route.fulfill({ json: saved ? [saved] : [] }));
-  await page.route('**/rest/v1/rpc/save_course', route => {
+  await page.route('**/rest/v1/rpc/save_scheduled_course', route => {
     const body = route.request().postDataJSON();
     expect(body).toMatchObject({
       p_id: saved?.id ?? null, p_version: saved?.version ?? null, p_image_path: uploadedPath,
       p_starts_at: '2030-11-11T02:00:00.000Z', p_ends_at: '2030-11-11T04:00:00.000Z',
-      p_price_twd: 1200, p_zoom_url: secret,
+      p_price_twd: 1200, p_zoom_url: secret, p_publish_at: expectedSchedule.publishAt, p_registration_opens_at: expectedSchedule.opensAt,
     });
     saved = {
       id, version: (saved?.version ?? 0) + 1, name: body.p_name, description: body.p_description,
       image_path: body.p_image_path, starts_at: body.p_starts_at, ends_at: body.p_ends_at,
       price_twd: body.p_price_twd, published: body.p_published, zoom_url: body.p_zoom_url,
       instructor_name: body.p_instructor_name, overview: body.p_overview,
+      publish_at:body.p_publish_at, registration_opens_at:body.p_registration_opens_at,
     };
     return route.fulfill({ json: saved });
   });
@@ -95,8 +97,16 @@ test(`管理員可以新增、編輯、上下架課程，公開頁面可直接�
   await page.getByLabel('授課講師').selectOption('April');
   await page.getByLabel('課程概述').fill('練習護膚手技');
   await page.getByRole('textbox', { name: '課程介紹', exact: true }).fill('實作演練與課後問答。');
-  await page.getByLabel('開始時間（台北時間）').fill('2030-11-11T10:00');
-  await page.getByLabel('結束時間（台北時間）').fill('2030-11-11T12:00');
+  await page.getByLabel('上課開始時間（台北時間）').fill('2030-11-11T10:00');
+  await page.getByLabel('上課結束時間（台北時間）').fill('2030-11-11T12:00');
+  await page.getByLabel('上架時間（台北時間）').fill('2030-11-01T10:00');
+  await expect(page.getByLabel('開放報名時間（台北時間）')).toHaveValue('2030-11-01T10:00');
+  await page.getByLabel('開放報名時間（台北時間）').fill('2030-11-02T10:00');
+  await page.getByLabel('上架時間（台北時間）').fill('2030-11-01T12:00');
+  await expect(page.getByLabel('開放報名時間（台北時間）')).toHaveValue('2030-11-02T10:00');
+  await expect(page.getByLabel('上課開始時間（台北時間）')).toHaveAttribute('min','2030-11-02T10:00');
+  await page.getByLabel('上架時間（台北時間）').fill('');
+  await page.getByLabel('開放報名時間（台北時間）').fill('');
   await page.getByLabel('課程費用（NT$）').fill('1200');
   await page.getByLabel('Zoom 會議連結').fill(secret);
   page.once('dialog', dialog => dialog.accept('課程介紹插圖'));
@@ -115,7 +125,7 @@ test(`管理員可以新增、編輯、上下架課程，公開頁面可直接�
   // Keep this storefront tab isolated from external services.
   await storefront.route('https://**/*', route => route.abort());
   await storefront.route('**/rest/v1/rpc/get_published_courses', route => {
-    if (!saved?.published) return route.fulfill({ json: [] });
+    if (!saved?.published || (saved.publish_at && Date.parse(saved.publish_at) > Date.now())) return route.fulfill({ json: [] });
     const { id, name, description, image_path, starts_at, ends_at, price_twd, instructor_name, overview } = saved;
     return route.fulfill({ json: [{ id, name, description, image_path, starts_at, ends_at, price_twd, instructor_name, overview }] });
   });
@@ -173,5 +183,42 @@ test(`管理員可以新增、編輯、上下架課程，公開頁面可直接�
   await storefront.reload();
   await expect(storefront.getByText('找不到此課程，或課程已下架。')).toBeVisible();
 
+  await page.getByRole('button', { name: '編輯 專業護膚課程' }).click();
+  await page.getByLabel('上架時間（台北時間）').fill('2030-11-01T10:00');
+  await page.getByLabel('開放報名時間（台北時間）').fill('2030-11-02T10:00');
+  expectedSchedule = {publishAt:'2030-11-01T02:00:00.000Z',opensAt:'2030-11-02T02:00:00.000Z'};
+  await page.getByRole('checkbox',{name:'上架課程',exact:true}).check();
+  await page.getByRole('button',{name:'儲存課程'}).click();
+  await expect(page.getByText('排程上架',{exact:true})).toBeVisible();
+  await page.getByRole('button', { name: '編輯 專業護膚課程' }).click();
+  await expect(page.getByLabel('上架時間（台北時間）')).toHaveValue('2030-11-01T10:00');
+  await expect(page.getByLabel('開放報名時間（台北時間）')).toHaveValue('2030-11-02T10:00');
+  await storefront.reload();
+  await expect(storefront.getByText('找不到此課程，或課程已下架。')).toBeVisible();
+
 });
 }
+
+test('已上架課程在報名時間前展示預告，到時自動顯示報名入口', async ({ page }) => {
+  await page.clock.install({time:new Date('2030-11-01T00:00:00Z')});
+  await page.route('https://**/*', route => route.abort());
+  await mockEcladoApis(page);
+  const course = {
+    id:'c0ea0000-0000-4000-8000-000000000002', name:'預告課程', description:'課程介紹',
+    image_path:null, instructor_name:'April', overview:'先公開課程，稍後開放報名',
+    price_twd:1200, starts_at:'2030-11-11T02:00:00Z', ends_at:'2030-11-11T04:00:00Z',
+    publish_at:'2030-10-31T00:00:00Z', registration_opens_at:'2030-11-01T01:00:00Z',
+  };
+  await page.route('**/rest/v1/rpc/get_published_courses', route => route.fulfill({json:[course]}));
+  await page.goto('/courses');
+  await expect(page.getByRole('heading',{name:'即將開放報名',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'可報名課程',exact:true})).toHaveCount(0);
+  await page.getByRole('link',{name:/預告課程/}).click();
+  await expect(page.getByText('尚未開放報名',{exact:true})).toBeVisible();
+  await expect(page.getByText('預計於 2030/11/01 09:00 開放報名（台北時間）',{exact:true})).toBeVisible();
+  await expect(page.getByRole('link',{name:'立即報名'})).toHaveCount(0);
+  await page.clock.fastForward(3601000);
+  await expect(page.getByRole('link',{name:'立即報名'})).toBeVisible();
+  await expect(page.getByText('尚未開放報名',{exact:true})).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getPublishedCourses } from '../../services/courses.js';
+import { isCourseRegistrationOpen } from '../../domain/courses.js';
 import './EducationPreview.css';
 
 const courseDate = new Intl.DateTimeFormat('zh-TW', {
@@ -11,17 +12,19 @@ export default function EducationPreview() {
 
   useEffect(() => {
     let active = true;
-    getPublishedCourses().then(courses => {
+    const load = () => getPublishedCourses().then(courses => {
       if (!active) return;
       const now = Date.now();
       const next = courses
-        .filter(course => Date.parse(course.starts_at) > now)
+        .filter(course => isCourseRegistrationOpen(course, now))
         .sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at))[0];
       setUpcoming(next ?? null);
     }).catch(() => {
       // The education link remains available if course data cannot load.
     });
-    return () => { active = false; };
+    load();
+    const timer = setInterval(load, 60000);
+    return () => { active = false; clearInterval(timer); };
   }, []);
 
   return (
