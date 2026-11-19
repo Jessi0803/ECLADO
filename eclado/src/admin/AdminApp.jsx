@@ -531,12 +531,13 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
         }
         return `圖片 ${index + 1} 轉換失敗：${optimizationError.message || '請稍後再試'}`;
       }
-      const storagePath = `products/${product.assetKey}/${crypto.randomUUID()}.webp`;
+      const extension = optimizedImage.file.type === 'image/jpeg' ? 'jpg' : 'webp';
+      const storagePath = `products/${product.assetKey}/${crypto.randomUUID()}.${extension}`;
       const { error: uploadError } = await supabase.storage
         .from('product-images')
         .upload(storagePath, optimizedImage.file, {
           cacheControl: '31536000',
-          contentType: 'image/webp',
+          contentType: optimizedImage.file.type,
           upsert: false,
         });
       if (uploadError) {
@@ -550,7 +551,7 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
         ...image,
         storagePath,
         originalName: image.pendingFile.name,
-        mimeType: 'image/webp',
+        mimeType: optimizedImage.file.type,
         fileSize: optimizedImage.file.size,
         width: optimizedImage.width,
         height: optimizedImage.height,

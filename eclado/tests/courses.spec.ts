@@ -2,7 +2,15 @@ import { expect, test } from '@playwright/test';
 import sharp from 'sharp';
 import { mockEcladoApis } from './support/eclado-mocks';
 
-test('管理員可以新增、編輯、上下架課程，公開頁面可直接開啟詳情', async ({ page }) => {
+for (const jpegFallback of [false, true]) {
+test(`管理員可以新增、編輯、上下架課程，公開頁面可直接開啟詳情（${jpegFallback ? 'JPG 備援' : 'WebP'}）`, async ({ page }) => {
+  if (jpegFallback) await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.toBlob;
+    HTMLCanvasElement.prototype.toBlob = function(callback, type, quality) {
+      if (type === 'image/webp') return callback(null);
+      return original.call(this, callback, type, quality);
+    };
+  });
   await page.route('https://**/*', route => route.abort());
   await mockEcladoApis(page, {
     adminAccess: true,
@@ -17,6 +25,7 @@ test('管理員可以新增、編輯、上下架課程，公開頁面可直接�
   const secret = 'https://eclado.zoom.us/j/123456789?pwd=private';
   const image = await sharp({ create: { width: 32, height: 24, channels: 3, background: '#9e847a' } }).png().toBuffer();
   let uploadedPath = '';
+  const uploadedPaths: string[] = [];
   let saved: {
     id: string; version: number; name: string; description: string; image_path: string;
     starts_at: string; ends_at: string; price_twd: number; published: boolean; zoom_url: string;
@@ -25,7 +34,9 @@ test('管理員可以新增、編輯、上下架課程，公開頁面可直接�
   await page.route('**/storage/v1/object/course-images/*', route => {
     if (route.request().method() === 'GET') return route.fulfill({ body: image, contentType: 'image/png' });
     uploadedPath = route.request().url().split('/').pop() || '';
-    expect(uploadedPath).toMatch(/\.webp$/);
+    expect(uploadedPath).toMatch(jpegFallback ? /\.jpg$/ : /\.webp$/);
+    expect(route.request().postDataBuffer()?.toString('latin1')).toContain(`Content-Type: ${jpegFallback ? 'image/jpeg' : 'image/webp'}`);
+    uploadedPaths.push(uploadedPath);
     expect(route.request().method()).toBe('POST');
     return route.fulfill({ json: { Key: 'course-images/' + uploadedPath } });
   });
@@ -88,10 +99,17 @@ test('管理員可以新增、編輯、上下架課程，公開頁面可直接�
   await page.getByLabel('結束時間（台北時間）').fill('2030-11-11T12:00');
   await page.getByLabel('課程費用（NT$）').fill('1200');
   await page.getByLabel('Zoom 會議連結').fill(secret);
+  page.once('dialog', dialog => dialog.accept('課程介紹插圖'));
+  await page.locator('.admin-course-rich input[type="file"]').setInputFiles({ name:'inline.png', mimeType:'image/png', buffer:image });
+  await expect.poll(() => uploadedPaths.length).toBe(1);
+  await expect(page.getByRole('textbox', { name:'課程介紹', exact:true }).locator('img')).toHaveAttribute('data-course-image', uploadedPaths[0]);
   await page.getByLabel('課程圖片').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: image });
   await expect(page.getByRole('img', { name: '課程圖片預覽' })).toBeVisible();
   await page.getByRole('button', { name: '儲存課程' }).click();
   await expect(page.getByText('已下架', { exact: true })).toBeVisible();
+  expect(uploadedPaths).toHaveLength(2);
+  expect(saved?.description).toContain(uploadedPaths[0]);
+  expect(saved?.image_path).toBe(uploadedPaths[1]);
 
   const storefront = await page.context().newPage();
   // Keep this storefront tab isolated from external services.
@@ -115,9 +133,13 @@ test('管理員可以新增、編輯、上下架課程，公開頁面可直接�
   await expect(page.getByLabel('Zoom 會議連結')).toHaveValue(secret);
   await expect(page.getByLabel('授課講師')).toHaveValue('April');
   await expect(page.getByLabel('課程概述')).toHaveValue('練習護膚手技');
+  await expect(page.getByRole('textbox', { name:'課程介紹', exact:true }).locator('img')).toHaveAttribute('data-course-image', uploadedPaths[0]);
   await page.getByLabel('授課講師').selectOption('custom');
   await page.getByLabel('講師姓名').fill('客座講師');
-  await page.getByRole('textbox', { name: '課程介紹', exact: true }).fill('實作演練與課後問答。\n請備妥護膚用品。');
+  const descriptionEditor = page.getByRole('textbox', { name:'課程介紹', exact:true });
+  await descriptionEditor.press('ControlOrMeta+End');
+  await descriptionEditor.press('Enter');
+  await descriptionEditor.pressSequentially('請備妥護膚用品。');
   await page.getByLabel('上架課程').check();
   await page.getByRole('button', { name: '儲存課程' }).click();
   await expect(page.getByText('已上架', { exact: true })).toBeVisible();
@@ -134,6 +156,7 @@ test('管理員可以新增、編輯、上下架課程，公開頁面可直接�
   await expect(storefront).toHaveURL(/\/courses$/);
   await storefront.goto('/courses/' + id);
   await expect(storefront.getByText(/請備妥護膚用品/)).toBeVisible();
+  await expect(storefront.getByRole('img', { name:'課程介紹插圖', exact:true })).toBeVisible();
   const cover = storefront.getByRole('img', { name: '專業護膚課程' });
   await expect(cover).toBeVisible();
   await expect.poll(() => cover.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(32);
@@ -149,4 +172,6 @@ test('管理員可以新增、編輯、上下架課程，公開頁面可直接�
   await expect(page.getByText('已下架', { exact: true })).toBeVisible();
   await storefront.reload();
   await expect(storefront.getByText('找不到此課程，或課程已下架。')).toBeVisible();
+
 });
+}

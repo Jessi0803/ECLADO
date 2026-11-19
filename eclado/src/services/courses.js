@@ -23,8 +23,9 @@ export async function uploadCourseImage(file) {
   if (file.size > 20 * 1024 * 1024) throw new Error('請選擇 20 MB 以下的圖片');
   const { file: optimized } = await optimizeProductImageFile(file);
   if (optimized.size > 2 * 1024 * 1024) throw new Error('圖片壓縮後仍超過 2 MB，請改用較小的圖片');
-  const path = `${crypto.randomUUID()}.webp`;
-  const { error } = await images.upload(path, optimized, { contentType: 'image/webp', upsert: false });
+  const extension = optimized.type === 'image/jpeg' ? 'jpg' : 'webp';
+  const path = `${crypto.randomUUID()}.${extension}`;
+  const { error } = await images.upload(path, optimized, { contentType: optimized.type, upsert: false });
   if (error) throw error;
   return path;
 }

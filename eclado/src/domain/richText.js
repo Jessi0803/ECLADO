@@ -31,7 +31,7 @@ export function parseRichTextNodes(html) {
       if (!tags.has(tag)) return ['script', 'style', 'template'].includes(tag) ? [] : read(node);
       if (tag === 'img') {
         const path = node.getAttribute('data-course-image');
-        return /^[a-f0-9-]{36}\.webp$/.test(path || '') ? [{ tag, path, alt: node.getAttribute('alt') || '' }] : [];
+        return /^[a-f0-9-]{36}\.(webp|jpg)$/.test(path || '') ? [{ tag, path, alt: node.getAttribute('alt') || '' }] : [];
       }
       const children = read(node);
       const href = tag === 'a' ? validateRichTextLink(node.getAttribute('href')) : null;

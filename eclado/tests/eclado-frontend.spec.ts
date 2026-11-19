@@ -531,7 +531,15 @@ test('後台新商品預設為草稿並提供五種發布狀態', async ({ page 
   await expect(page.getByRole('button', { name: '建立草稿' })).toBeVisible();
 });
 
-test('後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序', async ({ page }) => {
+for (const jpegFallback of [false, true]) {
+test(`後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序（${jpegFallback ? 'JPG 備援' : 'WebP'}）`, async ({ page }) => {
+  if (jpegFallback) await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.toBlob;
+    HTMLCanvasElement.prototype.toBlob = function(callback, type, quality) {
+      if (type === 'image/webp') return callback(null);
+      return original.call(this, callback, type, quality);
+    };
+  });
   let savedImagesRequest: Record<string, any> | null = null;
   let uploadedPath = '';
   const assetKey = '11111111-2222-4333-8444-555555555555';
@@ -554,6 +562,12 @@ test('後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序', async 
     onProductImageUpload: path => { uploadedPath = path; },
   });
 
+  await page.route('**/storage/v1/object/product-images/**', async route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    uploadedPath = route.request().url().split('/product-images/')[1];
+    expect(route.request().postDataBuffer()?.toString('latin1')).toContain(`Content-Type: ${jpegFallback ? 'image/jpeg' : 'image/webp'}`);
+    return route.fulfill({ json: { Key: `product-images/${uploadedPath}` } });
+  });
   await openAdminCatalog(page);
   const productRow = page.getByRole('row').filter({ hasText: '胜肽修護精華液' });
   await productRow.getByRole('button', { name: '編輯' }).click();
@@ -571,16 +585,19 @@ test('後台可上傳多圖、指定首圖並以 RPC 儲存圖片順序', async 
 
   await expect.poll(() => uploadedPath).toContain(`products/${assetKey}/`);
   await expect.poll(() => savedImagesRequest).not.toBeNull();
+  expect(uploadedPath).toMatch(jpegFallback ? /\.jpg$/ : /\.webp$/);
   expect(savedImagesRequest?.p_product_id).toBe(2);
   expect(savedImagesRequest?.p_images).toHaveLength(3);
   expect(savedImagesRequest?.p_images.filter((image: any) => image.is_primary)).toHaveLength(1);
   expect(savedImagesRequest?.p_images[2]).toMatchObject({
     original_name: 'new-detail.webp',
-    mime_type: 'image/webp',
+    mime_type: jpegFallback ? 'image/jpeg' : 'image/webp',
     is_primary: true,
     active: true,
   });
 });
+
+}
 
 for (const scenario of [
   { role: 'pro', noticeLabel: '美容師', label: '專業價', priceLabel: 'NT$ 2,980', proOnlyButton: true },

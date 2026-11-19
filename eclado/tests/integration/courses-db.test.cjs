@@ -103,6 +103,39 @@ test('course permissions, publication, image visibility and version conflicts', 
     await db.exec('set role anon');
     assert.deepEqual(await query('select * from public.get_published_courses($1)', [draft.id]), []);
     assert.deepEqual(await query('select * from storage.objects'), []);
+    // Upgrade an existing installation, retaining its publication scheduling rule.
+    await db.exec('reset role');
+    await db.exec('alter table public.courses add column publish_at timestamptz');
+    const inlineMigration = readFileSync(resolve(__dirname, '../../supabase-course-description-images.sql'), 'utf8');
+    await db.exec(inlineMigration.replace('c.published and', 'c.published and (c.publish_at is null or c.publish_at <= now()) and'));
+    const jpegMigration = readFileSync(resolve(__dirname, '../../supabase-course-image-jpeg-fallback.sql'), 'utf8');
+    await db.exec(jpegMigration);
+    await db.exec(jpegMigration);
+    assert.deepEqual((await query("select allowed_mime_types from storage.buckets where id='course-images'"))[0].allowed_mime_types, ['image/webp', 'image/jpeg']);
+    const jpgCover = '20000000-0000-4000-8000-000000000001.jpg';
+    const jpgInline = '20000000-0000-4000-8000-000000000002.jpg';
+    await db.exec("set role authenticated; set test.member_role = 'catalog_editor'");
+    await assert.rejects(query('insert into storage.objects values ($1,$2)', ['course-images', jpgCover]), { code:'42501' });
+    await db.exec("set test.member_role = 'admin'");
+    for (const name of [jpgCover, jpgInline]) await query('insert into storage.objects values ($1,$2)', ['course-images', name]);
+    for (const name of [jpgCover.replace('.jpg', '.png'), '../' + jpgCover]) {
+      await assert.rejects(query('insert into storage.objects values ($1,$2)', ['course-images', name]), { code:'42501' });
+    }
+    const jpgArgs = [...args];
+    jpgArgs[3] = `ECLADO-RICH/1\n插圖\n<p><img data-course-image="${jpgInline}" alt="插圖"></p>`;
+    jpgArgs[4] = jpgCover;
+    const jpgDraft = await save(jpgArgs);
+    assert.equal(jpgDraft.image_path, jpgCover);
+    await db.exec('set role anon');
+    assert.deepEqual(await query('select name from storage.objects'), []);
+    await db.exec('reset role');
+    await query("update public.courses set published=true, publish_at=now()+interval '1 day' where id=$1", [jpgDraft.id]);
+    await db.exec('set role anon');
+    assert.deepEqual(await query('select name from storage.objects'), []);
+    await db.exec('reset role');
+    await query("update public.courses set publish_at=now()-interval '1 day' where id=$1", [jpgDraft.id]);
+    await db.exec('set role anon');
+    assert.deepEqual((await query('select name from storage.objects order by name')).map(row => row.name), [jpgCover, jpgInline]);
   } finally {
     await db.close();
   }

@@ -44,10 +44,11 @@ test('小證照不放大，損壞圖片不誤判為 WebP 不支援', async ({ pa
   expect(result.error).toContain('不是只修改副檔名');
 });
 
+for (const kind of ['document', 'product']) {
 for (const failure of ['png', 'null', 'throw']) {
-  test(`證照 WebP 輸出 ${failure} 時改用 JPEG，保留尺寸與白底`, async ({ page }) => {
+  test(`${kind} WebP 輸出 ${failure} 時改用 JPEG，保留尺寸與白底`, async ({ page }) => {
     await page.goto('/');
-    const result = await page.evaluate(async failure => {
+    const result = await page.evaluate(async ({ failure, kind }) => {
       const canvas = document.createElement('canvas');
       canvas.width = 2000; canvas.height = 3200;
       const context = canvas.getContext('2d')!;
@@ -67,8 +68,9 @@ for (const failure of ['png', 'null', 'throw']) {
         return original.call(this, callback, type, quality);
       };
       try {
-        const { optimizeDocumentImageFile } = await import('/src/utils/imageOptimization.js');
-        const optimized = await optimizeDocumentImageFile(new File([source], 'certificate.png', { type:'image/png' }));
+        const { optimizeDocumentImageFile, optimizeProductImageFile } = await import('/src/utils/imageOptimization.js');
+        const optimize = kind === 'product' ? optimizeProductImageFile : optimizeDocumentImageFile;
+        const optimized = await optimize(new File([source], 'certificate.png', { type:'image/png' }));
         const bitmap = await createImageBitmap(optimized.file);
         const output = document.createElement('canvas');
         output.width = bitmap.width; output.height = bitmap.height;
@@ -78,18 +80,20 @@ for (const failure of ['png', 'null', 'throw']) {
         bitmap.close();
         return { name:optimized.file.name, type:optimized.file.type, width:optimized.width, height:optimized.height, white, qualities };
       } finally { HTMLCanvasElement.prototype.toBlob = original; }
-    }, failure);
+    }, { failure, kind });
     expect(result.name).toBe('certificate.jpg');
     expect(result.type).toBe('image/jpeg');
-    expect(result.width).toBe(1500);
-    expect(result.height).toBe(2400);
+    expect(result.width).toBe(kind === 'product' ? 1000 : 1500);
+    expect(result.height).toBe(kind === 'product' ? 1600 : 2400);
     expect(result.white.slice(0, 3).every(channel => channel >= 250)).toBe(true);
-    expect(result.qualities[0]).toBe(0.9);
-    expect(result.qualities.every(quality => quality >= 0.84)).toBe(true);
+    expect(result.qualities[0]).toBe(kind === 'product' ? 0.82 : 0.9);
+    expect(result.qualities.every(quality => quality >= (kind === 'product' ? 0.64 : 0.84))).toBe(true);
   });
 }
 
-test('JPEG 也失敗時清楚報錯，商品圖不啟用 JPEG 備援', async ({ page }) => {
+}
+
+test('證照與商品 JPEG 也失敗時清楚報錯', async ({ page }) => {
   await page.goto('/');
   const errors = await page.evaluate(async () => {
     const canvas = document.createElement('canvas');

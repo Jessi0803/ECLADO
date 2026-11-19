@@ -104,6 +104,7 @@ export function optimizeProductImageFile(file) {
     maxDimension: 1600,
     targetBytes: 450 * 1024,
     qualities: PRODUCT_WEBP_QUALITIES,
+    jpegFallback: true,
   });
 }
 
