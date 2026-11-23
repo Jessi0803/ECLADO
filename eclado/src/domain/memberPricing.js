@@ -2,6 +2,29 @@ export const PRICING_ROLES = ['instructor', 'distributor', 'staff'];
 export const PRICING_LABELS = { instructor:'師資', distributor:'經銷商', staff:'內部人員' };
 export const LEGACY_PRICING_DEFAULTS = { instructor:0.7, distributor:0.65, staff:0.5 };
 
+// Match PostgreSQL round(numeric): multiply decimal inputs exactly, then
+// round once to whole dollars. Binary multiplication makes 655 * 0.7 fall
+// just below 458.5, so Math.round on that product incorrectly returns 458.
+export function roundMemberPrice(price, multiplier) {
+  if (!Number.isFinite(price) || !Number.isFinite(multiplier)) return Math.round(price * multiplier);
+  const decimal = value => {
+    const [mantissa, exponent = '0'] = String(value).split('e');
+    return {
+      coefficient: BigInt(mantissa.replace('.', '')),
+      scale: (mantissa.split('.')[1]?.length || 0) - Number(exponent),
+    };
+  };
+  const left = decimal(price);
+  const right = decimal(multiplier);
+  const product = left.coefficient * right.coefficient;
+  const scale = left.scale + right.scale;
+  if (scale <= 0) return Number(product * 10n ** BigInt(-scale));
+  const divisor = 10n ** BigInt(scale);
+  const magnitude = product < 0n ? -product : product;
+  const rounded = (magnitude + divisor / 2n) / divisor;
+  return Number(product < 0n ? -rounded : rounded);
+}
+
 export function parseFold(value, optional = false) {
   if (String(value ?? '').trim() === '') {
     if (optional) return null;

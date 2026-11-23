@@ -1,4 +1,4 @@
-import { getProductMultiplier, formatFold, pricingFieldsFromRow, usesFixedProfessionalPrice } from './memberPricing.js';
+import { getProductMultiplier, formatFold, pricingFieldsFromRow, usesFixedProfessionalPrice, roundMemberPrice } from './memberPricing.js';
 
 export const MEMBER_TIERS = {
   consumer:    { label:'一般會員', badge:'MEMBER', priceLabel:'一般價', multiplier:null },
@@ -36,7 +36,7 @@ export function getMemberPrice(product, user) {
   const multiplier = getProductMultiplier(product, getMemberRole(user));
   const base = usesFixedProfessionalPrice(product, getMemberRole(user))
     ? Number(product.proPrice) : (Number(product.proPrice) || Number(product.price) || 0);
-  return Math.round(base * multiplier);
+  return roundMemberPrice(base, multiplier);
 }
 
 export function getProductPriceLabel(product, user) {
