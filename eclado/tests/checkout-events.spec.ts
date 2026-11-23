@@ -33,9 +33,9 @@ async function flush(page: Page) {
   });
 }
 
-test('付款連線失敗與重試以同流程、不同嘗試追蹤，保留現有提示與按鈕行為', async ({ page }) => {
+test('付款連線失敗可追蹤並查詢恢復原訂單，不重複建單', async ({ page }) => {
   const orders: any[] = [], payments: any[] = [], events: any[] = [], headers: string[] = [];
-  await mockEcladoApis(page, { promotions: [], onOrderInsert: row => orders.push(row) });
+  await mockEcladoApis(page, { promotions: [], paymentQueryStatus: 'pending', onOrderInsert: row => orders.push(row) });
   await page.route('**/api/checkout-events', route => {
     events.push(...route.request().postDataJSON().events);
     return route.fulfill({ json: { ok: true } });
@@ -50,23 +50,25 @@ test('付款連線失敗與重試以同流程、不同嘗試追蹤，保留現�
   await checkout(page);
   expect(orders).toHaveLength(0);
   const button = page.getByRole('button', { name: /^確認訂單$/ });
-  for (let i = 0; i < 2; i++) {
-    await button.click();
-    await expect(page.getByText('目前無法繼續付款，請稍後再試，或聯繫客服協助。')).toBeVisible();
-    await expect(button).toBeEnabled();
-    await flush(page);
-  }
-  await expect.poll(() => events.filter(e => e.event_name === 'error_shown').length).toBe(2);
-  expect(orders).toHaveLength(2);
-  expect(orders[0].id).not.toBe(orders[1].id);
-  expect(payments[0].checkoutTrace.flowId).toBe(payments[1].checkoutTrace.flowId);
-  expect(payments[0].checkoutTrace.attemptId).not.toBe(payments[1].checkoutTrace.attemptId);
+  await button.click();
+  await expect(page.getByText('目前無法繼續付款，請稍後再試，或聯繫客服協助。')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '付款狀態待確認' })).toBeVisible();
+  await expect(button).toHaveCount(0);
+  await flush(page);
+  await expect.poll(() => events.filter(e => e.event_name === 'error_shown').length).toBe(1);
+  expect(orders).toHaveLength(1);
+  expect(payments).toHaveLength(1);
   expect(headers[0]).toBe(`eclado-checkout/v1;flow=${payments[0].checkoutTrace.flowId};attempt=${payments[0].checkoutTrace.attemptId}`);
   const starts = events.filter(e => e.event_name === 'submit_started');
-  expect(starts[1].previous_attempt_id).toBe(starts[0].attempt_id);
+  expect(starts).toHaveLength(1);
   expect(events.some(e => e.event_name === 'payment_received')).toBe(false);
   expect(events.filter(e => e.event_name === 'checkout_error').every(e => e.error_kind === 'network')).toBe(true);
   expect(JSON.stringify(events)).not.toMatch(/私密|0912345678|private@example|payment-token|Failed to fetch/);
+  await page.getByRole('button', { name: '重新查詢付款狀態' }).click();
+  await expect(page.getByRole('heading', { name: '請完成付款' })).toBeVisible();
+  await expect(page.getByText(orders[0].id, { exact: true }).first()).toBeVisible();
+  expect(orders).toHaveLength(1);
+  expect(payments).toHaveLength(1);
 });
 
 test('追蹤 API 故障與 sessionStorage 被封鎖都不阻擋付款建立', async ({ page }) => {

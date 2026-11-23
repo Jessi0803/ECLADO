@@ -28,14 +28,16 @@ test('wallet repricing requires confirmation; refusal creates no order',async({p
  await checkout(page);let writes=0;await page.getByRole('switch',{name:'使用返饋金',exact:true}).click();await page.getByLabel('返饋金使用金額').fill('300');
  await page.route('**/rest/v1/rpc/quote_order_with_wallets',r=>r.fulfill({json:{...walletQuote(r.request().postDataJSON()),total:21100,shipping:100,payment_amount:20800}}));
  await page.route('**/rest/v1/rpc/create_order_with_wallets',r=>{writes++;return r.fulfill({json:{}});});
- const dialog=new Promise<void>(resolve=>page.once('dialog',async d=>{await d.dismiss();resolve();}));
- await page.getByRole('button',{name:/確認訂單/}).click();await dialog;expect(writes).toBe(0);
+ await page.getByRole('button',{name:/確認訂單/}).click();
+ const dialog=page.getByRole('alert',{name:/訂單(金額|優惠內容)已更新/});
+ await expect(dialog.getByText('NT$ 20,800',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'確認更新金額並付款'})).toBeEnabled();expect(writes).toBe(0);
 });
 test('insufficient server balance prevents creation and shows clear failure',async({page})=>{
  await checkout(page);let writes=0;await page.getByRole('switch',{name:'使用返饋金',exact:true}).click();
  await page.route('**/rest/v1/rpc/quote_order_with_wallets',r=>r.fulfill({status:400,json:{code:'22003',message:'可用返饋金不足'}}));
  await page.route('**/rest/v1/rpc/create_order_with_wallets',r=>{writes++;return r.fulfill({json:{}});});
- await page.getByRole('button',{name:/確認訂單/}).click();await expect(page.getByText('目前無法繼續付款，請稍後再試，或聯繫客服協助。',{exact:true})).toBeVisible();expect(writes).toBe(0);
+ await page.getByRole('button',{name:/確認訂單/}).click();await expect(page.getByRole('alert').filter({hasText:'可用返饋金不足'})).toBeVisible();expect(writes).toBe(0);
 });
 for(const balance of [0,-100])test(`nonpositive balance ${balance} disables reward spending`,async({page})=>{await checkout(page,'instructor',balance);await expect(page.getByRole('switch',{name:'使用返饋金'})).toBeDisabled();});
 test('pro has no reward credit spending entrance',async({page})=>{await checkout(page,'pro');await expect(page.getByRole('switch',{name:'使用返饋金'})).toHaveCount(0);});

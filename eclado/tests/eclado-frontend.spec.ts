@@ -1663,15 +1663,13 @@ test('後端成交價與預覽不同時須重新確認才建立付款單', async
   await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('價差路 1 號');
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
 
-  const dismissed=new Promise<void>(resolve=>page.once('dialog',async dialog=>{
-    expect(dialog.message()).toContain('訂單金額已更新，請確認後繼續：應付金額 NT$');await dialog.dismiss();resolve();
-  }));
   await page.getByRole('button', { name: /^確認訂單$/ }).click();
-  await dismissed;
-  await expect(page.getByRole('button', { name: /^確認訂單$/ })).toBeEnabled();
+  const confirmation = page.getByRole('alert', { name: /訂單(金額|優惠內容)已更新/ });
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation.getByText('NT$ 3,792', { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: '確認更新金額並付款' })).toBeEnabled();
   expect(paymentRequests).toHaveLength(0);
-  page.once('dialog',dialog=>dialog.accept());
-  await page.getByRole('button', { name: /^確認訂單$/ }).click();
+  await page.getByRole('button', { name: '確認更新金額並付款', exact: true }).click();
   await expect(page.getByText('請完成付款')).toBeVisible();
   await expect(page.getByText('成交金額已由後端更新')).toHaveCount(0);
   expect(paymentRequests).toHaveLength(1);

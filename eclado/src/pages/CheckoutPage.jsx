@@ -4,6 +4,7 @@ import CheckoutOrderSummary from '../components/checkout/CheckoutOrderSummary.js
 import ProductRecommendations from '../components/product/ProductRecommendations.jsx';
 import { addRecommendationToCart, isRecommendationProductAvailable } from '../domain/productRecommendations.js';
 import CheckoutSteps from '../components/checkout/CheckoutSteps.jsx';
+import PriceUpdateNotice from '../components/checkout/PriceUpdateNotice.jsx';
 import { removePurchasedItems } from '../services/cartStorage.js';
 import PaymentMethodOptions from '../components/checkout/PaymentMethodOptions.jsx';
 import PaymentInfo from '../components/checkout/PaymentInfo.jsx';
@@ -89,6 +90,8 @@ export default function CheckoutPage({ cart, cartReady = true, onCartPurchased, 
   const [shippingGroup, setShippingGroup] = useState(null);
   const [shippingGroupError, setShippingGroupError] = useState('');
   const submittingRef = useRef(false);
+  const [priceReview, setPriceReview] = useState(null);
+  const priceNoticeRef = useRef(null);
   const errorAttemptRef = useRef(null);
   const invoiceDefaultsLoadedRef = useRef(false);
   const [copiedAtmNo, setCopiedAtmNo] = useState(false);
@@ -166,6 +169,23 @@ export default function CheckoutPage({ cart, cartReady = true, onCartPurchased, 
     rewardCreditAmount:appliedRewardCredit,
     paymentTotal: Number(baseCheckoutSummary.total || 0) - appliedShoppingCredit - appliedRewardCredit,
   };
+  const checkoutContextKey = JSON.stringify([user?.uid, user?.role, fulfillmentMethod,
+    cart.map(item => [item.id, item.variantId || item.variant_id || item.variantSize, item.qty, getMemberPrice(item, user)]),
+    paymentMethod, appliedCouponCode, form, invoiceType, invoiceCompanyName, invoiceTaxId,
+    appliedShoppingCredit, appliedRewardCredit, rewardCredit.ready]);
+  const checkoutContextRef = useRef(checkoutContextKey);
+  checkoutContextRef.current = checkoutContextKey;
+
+  useEffect(() => {
+    setPriceReview(current => current && current.context !== checkoutContextKey ? null : current);
+  }, [checkoutContextKey]);
+  useLayoutEffect(() => {
+    if (!priceReview || !priceNoticeRef.current) return;
+    // Stop on this screen and bring the notice next to the submit button into
+    // view, including when a mobile user starts at the bottom of checkout.
+    priceNoticeRef.current.focus({ preventScroll: true });
+    priceNoticeRef.current.scrollIntoView({ block: 'center', behavior: 'instant' });
+  }, [priceReview]);
   const activeShippingGroup = baseCheckoutSummary.shippingGroup || (
     fulfillmentMethod === FULFILLMENT_DELIVERY ? shippingGroup : null
   );
@@ -450,6 +470,7 @@ export default function CheckoutPage({ cart, cartReady = true, onCartPurchased, 
     setPaymentError('');
     setSubmitting(true);
     const checkoutAttempt = beginCheckoutAttempt();
+    const submitContext = checkoutContextKey;
     let createdOrderNo = '';
     let createdPayment = null;
     try {
@@ -472,10 +493,29 @@ export default function CheckoutPage({ cart, cartReady = true, onCartPurchased, 
           && (!item.variantId || String(line.variant_id) === String(item.variantId)) && line.line_type !== 'gift');
         return !line || Number(line.unit_price) !== getMemberPrice(item,user);
       });
-      if (amountChanged || allocationChanged || itemChanged || walletChanged || (useRewardCredit&&Number(rewardCreditAmount)!==appliedRewardCredit)) {
-        setCouponQuote(latestSummary);
-        if (!window.confirm(`訂單金額已更新，請確認後繼續：應付金額 NT$${Number(latestQuote.payment_amount??(latestQuote.total-appliedShoppingCredit)).toLocaleString()}、使用購物金 NT$${Number(latestQuote.shopping_credit_amount??appliedShoppingCredit).toLocaleString()}、使用返饋金 NT$${Number(latestQuote.reward_credit_amount||0).toLocaleString()}。`)) return;
+      if (checkoutContextRef.current !== submitContext) throw new Error('購物車或結帳資料已更新，請重新確認訂單。');
+      const reviewSummary = {
+        ...latestSummary,
+        shoppingCreditAmount: Number(latestQuote.shopping_credit_amount ?? appliedShoppingCredit),
+        rewardCreditAmount: Number(latestQuote.reward_credit_amount ?? appliedRewardCredit),
+        paymentTotal: Number(latestQuote.payment_amount ?? (latestQuote.total - appliedShoppingCredit - appliedRewardCredit)),
+      };
+      // A second explicit submit accepts only the exact quote shown on screen.
+      // Re-fetch on every click; another price change must stop checkout again.
+      const reviewKey = JSON.stringify([reviewSummary.subtotal, reviewSummary.discount,
+        reviewSummary.shipping, reviewSummary.total, reviewSummary.paymentTotal,
+        reviewSummary.shoppingCreditAmount, reviewSummary.rewardCreditAmount,
+        reviewSummary.automaticAllocationVersion, reviewSummary.automaticAllocations,
+        latestQuote.items.map(line => [line.product_id || line.id, line.variant_id,
+          line.qty, line.unit_price, line.line_type, line.line_total])]);
+      const reviewed = priceReview?.key === reviewKey && priceReview.context === submitContext;
+      setCouponQuote(latestSummary);
+      if (!reviewed && (amountChanged || allocationChanged || itemChanged || walletChanged
+        || (useRewardCredit && Number(rewardCreditAmount) !== appliedRewardCredit))) {
+        setPriceReview({ key: reviewKey, context: submitContext, previous: checkoutSummary, updated: reviewSummary });
+        return;
       }
+      setPriceReview(null);
       checkoutAttempt.record('order_requested');
       const authoritativeOrder = await createAuthoritativeOrder({
           items: cart.map(item => {
@@ -1014,10 +1054,11 @@ export default function CheckoutPage({ cart, cartReady = true, onCartPurchased, 
                   <div style={{ background:'#fffbf0', border:'1px solid #e8d9b0', padding:'12px 14px', fontSize:11, color:'#5a4a1e', lineHeight:1.85, marginBottom:10 }}>
                     ⚠ <strong>退貨說明</strong>：本訂單商品為個人衛生用品，依《消費者保護法》第 19 條之 1，<strong>已拆封商品不適用七天猶豫期退貨</strong>。未拆封商品自收到次日起 7 日內可申請退貨（運費由消費者負擔）。如有品質瑕疵，不限拆封與否均可退換（運費由本公司負擔）。詳見<a href="/info" style={{ color:'#5a4a1e' }}>退換貨政策</a>。
                   </div>
-                  <button type="submit" disabled={!cartReady||submitting||(useRewardCredit&&rewardCredit.loading)||(useShoppingCredit&&shoppingCredit.loading)} style={{ background: submitting ? 'var(--dark)' : 'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: submitting ? 'wait' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8, opacity: submitting ? 0.7 : 1 }}>
-                    {submitting ? '正在處理，請稍候…' : '確認訂單'}
+                  {priceReview && <PriceUpdateNotice ref={priceNoticeRef} previous={priceReview.previous} updated={priceReview.updated} />}
+                  <button type="submit" onClick={event => { if (priceReview && event.detail > 1) event.preventDefault(); }} disabled={!cartReady||submitting||(useRewardCredit&&rewardCredit.loading)||(useShoppingCredit&&shoppingCredit.loading)} style={{ background: submitting ? 'var(--dark)' : 'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: submitting ? 'wait' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8, opacity: submitting ? 0.7 : 1 }}>
+                    {submitting ? '正在處理，請稍候…' : priceReview ? '確認更新金額並付款' : '確認訂單'}
                   </button>
-                  {paymentError && <p style={{ fontSize:12, color:'#c0392b', textAlign:'center', lineHeight:1.6 }}>{paymentError}</p>}
+                  {paymentError && <p role="alert" style={{ fontSize:12, color:'#c0392b', textAlign:'center', lineHeight:1.6 }}>{paymentError}</p>}
                   <p style={{ fontSize:11, color:'var(--dark)', textAlign:'center', lineHeight:1.6 }}>
                     送出即表示您同意本公司<a href="/info" style={{ color:'var(--dark)', textDecoration:'underline', textUnderlineOffset:2 }}>退換貨政策</a>及<a href="/privacy" style={{ color:'var(--dark)', textDecoration:'underline', textUnderlineOffset:2 }}>隱私權政策</a>
                   </p>
