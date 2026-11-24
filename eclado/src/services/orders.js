@@ -80,6 +80,7 @@ export async function createAuthoritativeOrder({
   walletPricing = false,
   expectedQuote = null,
   checkoutTrace = null,
+  checkoutRequest = null,
 }) {
   const args = {
     p_items: toPricingItems(items),
@@ -97,6 +98,11 @@ export async function createAuthoritativeOrder({
     p_shopping_credit_amount: shoppingCreditAmount,
     ...(walletPricing ? {p_reward_credit_amount:rewardCreditAmount} : {}),
     ...(expectedQuote ? {p_expected_quote:expectedQuote} : {}),
+    ...(checkoutRequest ? {
+      p_request_key: checkoutRequest.key,
+      p_request_secret: checkoutRequest.secret,
+      p_expected_user_id: checkoutRequest.owner === 'guest' ? null : checkoutRequest.owner,
+    } : {}),
   };
   function createOrderRpc(rpcArgs) {
     const request = supabase.rpc(walletPricing ? 'create_order_with_wallets' : 'create_order_with_pricing', rpcArgs);
@@ -108,13 +114,17 @@ export async function createAuthoritativeOrder({
   }
   let { data, error } = await createOrderRpc(args);
   // Pre-1C DB has no matching overload and no student-price activation.
-  if (!walletPricing && expectedQuote && ['PGRST202','42883'].includes(error?.code)) {
+  if (!checkoutRequest && !walletPricing && expectedQuote && ['PGRST202','42883'].includes(error?.code)) {
     const readiness = await supabase.rpc('get_my_student_product_prices');
     if (!['PGRST202','42883'].includes(readiness.error?.code)) throw error;
     const { p_expected_quote, ...legacyArgs } = args;
     ({ data, error } = await createOrderRpc(legacyArgs));
   }
   if (error) throw error;
+  return normalizeCreatedOrder(data);
+}
+
+function normalizeCreatedOrder(data) {
   if (!data?.order_id) {
     throw new Error('後端訂單報價格式不完整');
   }
@@ -125,4 +135,13 @@ export async function createAuthoritativeOrder({
     payment_amount: Number(data.payment_amount ?? data.total) || 0,
     paymentToken: data.payment_token || '',
   };
+}
+
+export async function recoverAuthoritativeOrder(request) {
+  const { data, error } = await supabase.rpc('recover_checkout_order', {
+    p_request_key: request.key,
+    p_request_secret: request.secret,
+  });
+  if (error) throw error;
+  return data ? normalizeCreatedOrder(data) : null;
 }

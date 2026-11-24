@@ -532,6 +532,9 @@ export async function mockEcladoApis(page: Page, options: MockEcladoApiOptions =
     });
   });
 
+  // Analytics also mounts the cost summary; keep ordinary UI tests local.
+  await page.route('**/rest/v1/rpc/get_product_cost_summary', route => json(route, { started_at: null }));
+
   await page.route('**/rest/v1/rpc/get_admin_analytics', async route => {
     const { p_start_date: startDate, p_end_date: endDate } = route.request().postDataJSON();
     const daily = new Map<string, any>();

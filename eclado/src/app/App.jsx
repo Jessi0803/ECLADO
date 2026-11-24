@@ -265,7 +265,7 @@ function StorefrontApp() {
       {showPromoBar && (
         <PromoDiagnosticBar status={promoFetchStatus} errorText={promoFetchError} />
       )}
-      {showProBanner && !authPage && !cartOpen && (
+      {showProBanner && !authPage && !cartOpen && page !== 'checkout' && (
         <div style={{ position:'fixed', bottom:24, left:'50%', transform:'translateX(-50%)', zIndex:200, background:'var(--black)', color:'var(--white)', padding:'16px 20px', display:'flex', alignItems:'center', gap:16, boxShadow:'0 4px 24px rgba(0,0,0,0.25)', maxWidth:'calc(100vw - 32px)', width:440 }}>
           <div style={{ flex:1 }}>
             <div style={{ fontSize:11, letterSpacing:'0.14em', color:'var(--accent-on-dark-text)', textTransform:'uppercase', marginBottom:4 }}>美容師專業會員</div>

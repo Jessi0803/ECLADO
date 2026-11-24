@@ -28,9 +28,10 @@ import {
   getSinopacPaymentError,
   safeTrim,
 } from '../domain/payments.js';
-import { createAuthoritativeOrder, quoteAuthoritativeOrder } from '../services/orders.js';
+import { createAuthoritativeOrder, quoteAuthoritativeOrder, recoverAuthoritativeOrder } from '../services/orders.js';
 import { createSinopacPayment, querySinopacPayment, retrySinopacPayment } from '../services/paymentApi.js';
 import { beginCheckoutAttempt, checkoutErrorDetails } from '../services/checkoutEvents.js';
+import { getCheckoutRequest, prepareCheckoutRequest, clearCheckoutRequest, isDefiniteOrderRejection } from '../services/checkoutRequest.js';
 import '../components/account/InstructorRewards.css';
 import {getMyRewardCredit} from '../services/instructorRewards.js';
 import { PAYMENT_ENABLED } from '../config/runtime.js';
@@ -74,6 +75,11 @@ export default function CheckoutPage({ cart, cartReady = true, onCartPurchased, 
   const [paymentState, setPaymentState] = useState('pending');
   const [storedPayment] = useState(() => getPendingPayment());
   const [restoringPayment, setRestoringPayment] = useState(!!storedPayment);
+  const [initialOrderRequest] = useState(() => getCheckoutRequest(user?.uid));
+  const [recoveringOrder, setRecoveringOrder] = useState(!!initialOrderRequest && !storedPayment);
+  const [orderRecoveryError, setOrderRecoveryError] = useState('');
+  const recoveryMounted = useRef(true);
+  const orderRecoveryRef = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [couponInput, setCouponInput] = useState('');
   const [appliedCouponCode, setAppliedCouponCode] = useState('');
@@ -432,118 +438,12 @@ export default function CheckoutPage({ cart, cartReady = true, onCartPurchased, 
     }
   }
 
-  async function handleNext(e) {
-    e.preventDefault();
-    if (!cartReady) return;
-    if (getMemberRole(user) === 'staff' && additionalOrderProgress?.eligible === false) {
-      setPaymentError('內部人員折扣後商品金額須滿 NT$ 5,000，購物金不影響此門檻。');
-      return;
-    }
-    if (step === 1) {
-      if (invoiceType === 'company') {
-        if (!invoiceCompanyName.trim()) {
-          setInvoiceError('請輸入公司抬頭');
-          return;
-        }
-        if (!/^\d{8}$/.test(invoiceTaxId.trim())) {
-          setInvoiceError('統一編號請輸入 8 位數字');
-          return;
-        }
-      }
-      setInvoiceError('');
-      setStep(2);
-      return;
-    }
-    if (step !== 2) return;
-    if (!PAYMENT_ENABLED) {
-      setPaymentError('測試環境尚未啟用隔離付款服務，不會建立訂單或連線正式金流。');
-      return;
-    }
-    if ((useRewardCredit && (rewardCredit.loading||!rewardCredit.ready)) || (useShoppingCredit&&shoppingCredit.loading)){setPaymentError('請先重新確認可用錢包餘額。');return;}
-    // React state is updated asynchronously, so multiple clicks in the same
-    // event loop can enter this handler before `submitting` disables the
-    // button. A synchronous ref closes that gap and prevents duplicate orders.
-    if (submittingRef.current) return;
-    submittingRef.current = true;
-
+  async function initializeOrderPayment(authoritativeOrder, checkoutAttempt, purchasedItems) {
+    const paymentMethod = authoritativeOrder.payment_method || 'atm';
     const method = PAYMENT_METHODS[paymentMethod] || PAYMENT_METHODS.atm;
-    setPaymentError('');
-    setSubmitting(true);
-    const checkoutAttempt = beginCheckoutAttempt();
-    const submitContext = checkoutContextKey;
-    let createdOrderNo = '';
     let createdPayment = null;
     try {
-      if (method.payType === 'A' && checkoutSummary.paymentTotal > 30000) throw new Error('ATM 轉帳單筆上限為 NT$ 30,000，請選擇其他付款方式。');
-      checkoutAttempt.record('quote_requested');
-      const latestQuote = await quoteAuthoritativeOrder({
-        items:cart, fulfillmentMethod, couponCode:appliedCouponCode, email:form.email,
-        walletPricing:rewardCredit.ready,shoppingCreditAmount:appliedShoppingCredit,rewardCreditAmount:appliedRewardCredit,
-      });
-      checkoutAttempt.record('quote_received');
-      const latestSummary = toPaymentSummary(latestQuote);
-      const visible = baseCheckoutSummary;
-      const walletChanged=rewardCredit.ready && Number(latestQuote.payment_amount)!==Number(checkoutSummary.paymentTotal);
-      const amountChanged = ['subtotal','discount','shipping','total'].some(key => Number(latestSummary[key]) !== Number(visible[key]));
-      const allocationChanged = (latestSummary.automaticAllocationVersion === 1 || visible.automaticAllocationVersion === 1)
-        && (latestSummary.automaticAllocationVersion !== visible.automaticAllocationVersion
-          || JSON.stringify(latestSummary.automaticAllocations) !== JSON.stringify(visible.automaticAllocations));
-      const itemChanged = cart.some(item => {
-        const line = latestQuote.items.find(line => Number(line.product_id || line.id) === Number(item.id)
-          && (!item.variantId || String(line.variant_id) === String(item.variantId)) && line.line_type !== 'gift');
-        return !line || Number(line.unit_price) !== getMemberPrice(item,user);
-      });
-      if (checkoutContextRef.current !== submitContext) throw new Error('購物車或結帳資料已更新，請重新確認訂單。');
-      const reviewSummary = {
-        ...latestSummary,
-        shoppingCreditAmount: Number(latestQuote.shopping_credit_amount ?? appliedShoppingCredit),
-        rewardCreditAmount: Number(latestQuote.reward_credit_amount ?? appliedRewardCredit),
-        paymentTotal: Number(latestQuote.payment_amount ?? (latestQuote.total - appliedShoppingCredit - appliedRewardCredit)),
-      };
-      // A second explicit submit accepts only the exact quote shown on screen.
-      // Re-fetch on every click; another price change must stop checkout again.
-      const reviewKey = JSON.stringify([reviewSummary.subtotal, reviewSummary.discount,
-        reviewSummary.shipping, reviewSummary.total, reviewSummary.paymentTotal,
-        reviewSummary.shoppingCreditAmount, reviewSummary.rewardCreditAmount,
-        reviewSummary.automaticAllocationVersion, reviewSummary.automaticAllocations,
-        latestQuote.items.map(line => [line.product_id || line.id, line.variant_id,
-          line.qty, line.unit_price, line.line_type, line.line_total])]);
-      const reviewed = priceReview?.key === reviewKey && priceReview.context === submitContext;
-      setCouponQuote(latestSummary);
-      if (!reviewed && (amountChanged || allocationChanged || itemChanged || walletChanged
-        || (useRewardCredit && Number(rewardCreditAmount) !== appliedRewardCredit))) {
-        setPriceReview({ key: reviewKey, context: submitContext, previous: checkoutSummary, updated: reviewSummary });
-        return;
-      }
-      setPriceReview(null);
-      checkoutAttempt.record('order_requested');
-      const authoritativeOrder = await createAuthoritativeOrder({
-          items: cart.map(item => {
-            const line = latestQuote.items.find(line => Number(line.product_id || line.id) === Number(item.id)
-              && (!item.variantId || String(line.variant_id) === String(item.variantId)) && line.line_type !== 'gift');
-            if (!line) throw new Error('商品報價不完整，請重新整理。');
-            return { ...item, expectedUnitPrice:Number(line.unit_price) };
-          }),
-          member: form.name || user?.name || '訪客',
-          address: fulfillmentMethod === FULFILLMENT_DELIVERY
-            ? `${form.city}${form.district}${form.address}`
-            : '',
-          phone: form.phone,
-          email: form.email,
-          note: safeTrim(form.note),
-          paymentMethod,
-          fulfillmentMethod,
-          couponCode: appliedCouponCode,
-          invoiceType,
-          invoiceCompanyName: invoiceCompanyName.trim(),
-          invoiceTaxId: invoiceTaxId.trim(),
-          shoppingCreditAmount: appliedShoppingCredit,
-          rewardCreditAmount:appliedRewardCredit,walletPricing:rewardCredit.ready,
-          expectedQuote:latestQuote,
-          checkoutTrace: checkoutAttempt.trace,
-        });
       const authoritativeOrderNo = authoritativeOrder.order_id;
-      createdOrderNo = authoritativeOrderNo;
       checkoutAttempt.setOrder(authoritativeOrderNo);
       checkoutAttempt.record('order_received');
       setOrderNo(authoritativeOrderNo);
@@ -558,7 +458,22 @@ export default function CheckoutPage({ cart, cartReady = true, onCartPurchased, 
         paymentDueAt: authoritativeOrder.payment_due_at,
         summary: authoritativeSummary,
       };
-      savePendingPayment(createdPayment);
+      if (savePendingPayment(createdPayment)) clearCheckoutRequest(user?.uid);
+
+
+      const recoveredStatus = authoritativeOrder.recovered_order_state;
+      const terminal = ['paid','preparing','ready_for_pickup','picked_up','shipped','delivered'].includes(recoveredStatus) ? 'paid'
+        : ['cancelled','returned'].includes(recoveredStatus) ? 'cancelled'
+        : Date.parse(authoritativeOrder.payment_due_at) <= Date.now() ? 'expired' : null;
+      if (terminal) { hydrateStoredPayment(createdPayment, terminal); return; }
+      if (authoritativeOrder.gateway_created) {
+        const query = await querySinopacPayment(createdPayment);
+        const payment = { ...createdPayment, response: query.response, paymentLink: extractPaymentLink(query.response),
+          paymentDueAt: query.order?.payment_due_at || createdPayment.paymentDueAt };
+        savePendingPayment(payment);
+        hydrateStoredPayment(payment, query.paymentState || getPaymentResultStatus(query.response), query.response);
+        return;
+      }
 
       const payload = {
         orderNo: authoritativeOrderNo,
@@ -609,19 +524,172 @@ export default function CheckoutPage({ cart, cartReady = true, onCartPurchased, 
         response: apiResponse,
         summary: authoritativeSummary,
       });
-      if (saved) checkoutAttempt.record('recovery_saved');
+      if (saved) { clearCheckoutRequest(user?.uid); checkoutAttempt.record('recovery_saved'); }
       setPaymentResult({
         ...nextPaymentResult,
         recoveryWarning: saved ? '' : '請先記下訂單編號，暫勿重新整理頁面或重複下單。如需協助，請聯繫客服。',
       });
       setPaymentState('pending');
       if (saved) {
-        if (onCartPurchased) onCartPurchased(cart);
-        else setCart(previous => removePurchasedItems(previous, cart));
+        if (onCartPurchased) onCartPurchased(purchasedItems);
+        else setCart(previous => removePurchasedItems(previous, purchasedItems));
       }
       window.scrollTo(0, 0);
       setStep(3);
       checkoutAttempt.record('checkout_ready');
+    } catch (error) {
+      if (createdPayment) hydrateStoredPayment(createdPayment, 'error');
+      throw error;
+    }
+  }
+
+  async function recoverPendingOrder() {
+    const request = getCheckoutRequest(user?.uid);
+    if (!request || orderRecoveryRef.current) return;
+    orderRecoveryRef.current = true;
+    setRecoveringOrder(true);
+    setOrderRecoveryError('');
+    setPaymentError('');
+    let found = null;
+    const attempt = beginCheckoutAttempt();
+    try {
+      found = await recoverAuthoritativeOrder(request);
+      if (!recoveryMounted.current || !found) return;
+      const purchased = found.items.filter(item => item.line_type !== 'gift' && !item.is_gift)
+        .map(item => ({ id: item.product_id || item.id, variantId: String(item.variant_id || ''), qty: Number(item.qty) }));
+      await initializeOrderPayment(found, attempt, purchased);
+    } catch (error) {
+      if (!recoveryMounted.current) return;
+      if (found) setPaymentError('付款狀態待確認，請重新查詢原訂單，暫勿重複付款。');
+      else setOrderRecoveryError('訂單狀態尚未確認，請先重新確認原訂單，暫勿重新下單。');
+    } finally {
+      attempt.finish();
+      orderRecoveryRef.current = false;
+      if (recoveryMounted.current) setRecoveringOrder(false);
+    }
+  }
+
+  useEffect(() => {
+    recoveryMounted.current = true;
+    if (initialOrderRequest && !storedPayment) void recoverPendingOrder();
+    return () => { recoveryMounted.current = false; };
+    // Recovery is scoped to this mounted identity, not profile focus refreshes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleNext(e) {
+    e.preventDefault();
+    if (!cartReady || recoveringOrder || orderRecoveryError) return;
+    if (getMemberRole(user) === 'staff' && additionalOrderProgress?.eligible === false) {
+      setPaymentError('內部人員折扣後商品金額須滿 NT$ 5,000，購物金不影響此門檻。');
+      return;
+    }
+    if (step === 1) {
+      if (invoiceType === 'company') {
+        if (!invoiceCompanyName.trim()) {
+          setInvoiceError('請輸入公司抬頭');
+          return;
+        }
+        if (!/^\d{8}$/.test(invoiceTaxId.trim())) {
+          setInvoiceError('統一編號請輸入 8 位數字');
+          return;
+        }
+      }
+      setInvoiceError('');
+      setStep(2);
+      return;
+    }
+    if (step !== 2) return;
+    if (!PAYMENT_ENABLED) {
+      setPaymentError('測試環境尚未啟用隔離付款服務，不會建立訂單或連線正式金流。');
+      return;
+    }
+    if ((useRewardCredit && (rewardCredit.loading||!rewardCredit.ready)) || (useShoppingCredit&&shoppingCredit.loading)){setPaymentError('請先重新確認可用錢包餘額。');return;}
+    // React state is updated asynchronously, so multiple clicks in the same
+    // event loop can enter this handler before `submitting` disables the
+    // button. A synchronous ref closes that gap and prevents duplicate orders.
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
+    const method = PAYMENT_METHODS[paymentMethod] || PAYMENT_METHODS.atm;
+    setPaymentError('');
+    setSubmitting(true);
+    const checkoutAttempt = beginCheckoutAttempt();
+    const submitContext = checkoutContextKey;
+    let createdOrderNo = '';
+    try {
+      if (method.payType === 'A' && checkoutSummary.paymentTotal > 30000) throw new Error('ATM 轉帳單筆上限為 NT$ 30,000，請選擇其他付款方式。');
+      checkoutAttempt.record('quote_requested');
+      const latestQuote = await quoteAuthoritativeOrder({
+        items:cart, fulfillmentMethod, couponCode:appliedCouponCode, email:form.email,
+        walletPricing:rewardCredit.ready,shoppingCreditAmount:appliedShoppingCredit,rewardCreditAmount:appliedRewardCredit,
+      });
+      checkoutAttempt.record('quote_received');
+      const latestSummary = toPaymentSummary(latestQuote);
+      const visible = baseCheckoutSummary;
+      const walletChanged=rewardCredit.ready && Number(latestQuote.payment_amount)!==Number(checkoutSummary.paymentTotal);
+      const amountChanged = ['subtotal','discount','shipping','total'].some(key => Number(latestSummary[key]) !== Number(visible[key]));
+      const allocationChanged = (latestSummary.automaticAllocationVersion === 1 || visible.automaticAllocationVersion === 1)
+        && (latestSummary.automaticAllocationVersion !== visible.automaticAllocationVersion
+          || JSON.stringify(latestSummary.automaticAllocations) !== JSON.stringify(visible.automaticAllocations));
+      const itemChanged = cart.some(item => {
+        const line = latestQuote.items.find(line => Number(line.product_id || line.id) === Number(item.id)
+          && (!item.variantId || String(line.variant_id) === String(item.variantId)) && line.line_type !== 'gift');
+        return !line || Number(line.unit_price) !== getMemberPrice(item,user);
+      });
+      if (checkoutContextRef.current !== submitContext) throw new Error('購物車或結帳資料已更新，請重新確認訂單。');
+      const reviewSummary = {
+        ...latestSummary,
+        shoppingCreditAmount: Number(latestQuote.shopping_credit_amount ?? appliedShoppingCredit),
+        rewardCreditAmount: Number(latestQuote.reward_credit_amount ?? appliedRewardCredit),
+        paymentTotal: Number(latestQuote.payment_amount ?? (latestQuote.total - appliedShoppingCredit - appliedRewardCredit)),
+      };
+      // A second explicit submit accepts only the exact quote shown on screen.
+      // Re-fetch on every click; another price change must stop checkout again.
+      const reviewKey = JSON.stringify([reviewSummary.subtotal, reviewSummary.discount,
+        reviewSummary.shipping, reviewSummary.total, reviewSummary.paymentTotal,
+        reviewSummary.shoppingCreditAmount, reviewSummary.rewardCreditAmount,
+        reviewSummary.automaticAllocationVersion, reviewSummary.automaticAllocations,
+        latestQuote.items.map(line => [line.product_id || line.id, line.variant_id,
+          line.qty, line.unit_price, line.line_type, line.line_total])]);
+      const reviewed = priceReview?.key === reviewKey && priceReview.context === submitContext;
+      setCouponQuote(latestSummary);
+      if (!reviewed && (amountChanged || allocationChanged || itemChanged || walletChanged
+        || (useRewardCredit && Number(rewardCreditAmount) !== appliedRewardCredit))) {
+        setPriceReview({ key: reviewKey, context: submitContext, previous: checkoutSummary, updated: reviewSummary });
+        return;
+      }
+      setPriceReview(null);
+      const checkoutRequest = prepareCheckoutRequest(user?.uid);
+      checkoutAttempt.record('order_requested');
+      const authoritativeOrder = await createAuthoritativeOrder({
+          items: cart.map(item => {
+            const line = latestQuote.items.find(line => Number(line.product_id || line.id) === Number(item.id)
+              && (!item.variantId || String(line.variant_id) === String(item.variantId)) && line.line_type !== 'gift');
+            if (!line) throw new Error('商品報價不完整，請重新整理。');
+            return { ...item, expectedUnitPrice:Number(line.unit_price) };
+          }),
+          member: form.name || user?.name || '訪客',
+          address: fulfillmentMethod === FULFILLMENT_DELIVERY
+            ? `${form.city}${form.district}${form.address}`
+            : '',
+          phone: form.phone,
+          email: form.email,
+          note: safeTrim(form.note),
+          paymentMethod,
+          fulfillmentMethod,
+          couponCode: appliedCouponCode,
+          invoiceType,
+          invoiceCompanyName: invoiceCompanyName.trim(),
+          invoiceTaxId: invoiceTaxId.trim(),
+          shoppingCreditAmount: appliedShoppingCredit,
+          rewardCreditAmount:appliedRewardCredit,walletPricing:rewardCredit.ready,
+          expectedQuote:latestQuote,
+          checkoutTrace: checkoutAttempt.trace,
+          checkoutRequest,
+        });
+      createdOrderNo = authoritativeOrder.order_id;
+      await initializeOrderPayment({ ...authoritativeOrder, payment_method: paymentMethod }, checkoutAttempt, cart);
     } catch (err) {
       checkoutAttempt.record('checkout_error', checkoutErrorDetails(err));
       console.error(err);
@@ -631,10 +699,8 @@ export default function CheckoutPage({ cart, cartReady = true, onCartPurchased, 
       setWalletRevision(r=>r+1);
       errorAttemptRef.current = { attempt: checkoutAttempt, details: checkoutErrorDetails(err) };
       setPaymentError(message);
-      const savedPayment = getPendingPayment() || createdPayment;
-      if (createdOrderNo && savedPayment?.orderNo === createdOrderNo) {
-        hydrateStoredPayment(savedPayment, 'error');
-        setStep(3);
+      if (!createdOrderNo && getCheckoutRequest(user?.uid) && !isDefiniteOrderRejection(err)) {
+        setOrderRecoveryError('訂單狀態尚未確認，請先重新確認原訂單，暫勿重新下單。');
       }
     } finally {
       checkoutAttempt.finish();
@@ -792,6 +858,10 @@ export default function CheckoutPage({ cart, cartReady = true, onCartPurchased, 
         <h1 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 28 : 36, fontWeight:300, marginBottom:36 }}>結帳</h1>
         <CheckoutSteps steps={STEPS} currentStep={step} />
 
+        {(recoveringOrder || orderRecoveryError) && <section role="status" style={{ marginBottom:24 }}>
+          <p>{recoveringOrder ? '正在確認上一筆訂單，請稍候…' : orderRecoveryError}</p>
+          {!recoveringOrder && <button type="button" onClick={recoverPendingOrder} style={{ border:'1px solid var(--black)', background:'var(--white)', color:'var(--black)', padding:'12px 16px', cursor:'pointer', fontFamily:'var(--font-body)' }}>重新確認訂單狀態</button>}
+        </section>}
         <form onSubmit={handleNext}>
           <div className="gcheckout gcheckout-flow">
             <div className="checkout-summary-column">
@@ -897,7 +967,7 @@ export default function CheckoutPage({ cart, cartReady = true, onCartPurchased, 
                     />
                   </div>
 
-                  <button type="submit" style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'15px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8 }}>
+                  <button type="submit" disabled={recoveringOrder || !!orderRecoveryError} style={{ background:'var(--black)', color:'var(--white)', border:'none', padding:'15px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor:'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8 }}>
                     繼續確認付款
                   </button>
                 </div>
@@ -1055,7 +1125,7 @@ export default function CheckoutPage({ cart, cartReady = true, onCartPurchased, 
                     ⚠ <strong>退貨說明</strong>：本訂單商品為個人衛生用品，依《消費者保護法》第 19 條之 1，<strong>已拆封商品不適用七天猶豫期退貨</strong>。未拆封商品自收到次日起 7 日內可申請退貨（運費由消費者負擔）。如有品質瑕疵，不限拆封與否均可退換（運費由本公司負擔）。詳見<a href="/info" style={{ color:'#5a4a1e' }}>退換貨政策</a>。
                   </div>
                   {priceReview && <PriceUpdateNotice ref={priceNoticeRef} previous={priceReview.previous} updated={priceReview.updated} />}
-                  <button type="submit" onClick={event => { if (priceReview && event.detail > 1) event.preventDefault(); }} disabled={!cartReady||submitting||(useRewardCredit&&rewardCredit.loading)||(useShoppingCredit&&shoppingCredit.loading)} style={{ background: submitting ? 'var(--dark)' : 'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: submitting ? 'wait' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8, opacity: submitting ? 0.7 : 1 }}>
+                  <button type="submit" onClick={event => { if (priceReview && event.detail > 1) event.preventDefault(); }} disabled={!cartReady||submitting||recoveringOrder||!!orderRecoveryError||(useRewardCredit&&rewardCredit.loading)||(useShoppingCredit&&shoppingCredit.loading)} style={{ background: submitting ? 'var(--dark)' : 'var(--black)', color:'var(--white)', border:'none', padding:'16px 0', fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', cursor: submitting ? 'wait' : 'pointer', fontFamily:'var(--font-body)', fontWeight:500, width:'100%', marginTop:8, opacity: submitting ? 0.7 : 1 }}>
                     {submitting ? '正在處理，請稍候…' : priceReview ? '確認更新金額並付款' : '確認訂單'}
                   </button>
                   {paymentError && <p role="alert" style={{ fontSize:12, color:'#c0392b', textAlign:'center', lineHeight:1.6 }}>{paymentError}</p>}

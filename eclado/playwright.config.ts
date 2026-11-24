@@ -5,6 +5,8 @@ const baseURL = process.env.BASE_URL || `http://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: './tests',
+  // Node's .test.cjs/.test.mjs files have a separate runner.
+  testMatch: '**/*.spec.ts',
   timeout: 45_000,
   expect: { timeout: 8_000 },
   outputDir: '.playwright/test-results',
