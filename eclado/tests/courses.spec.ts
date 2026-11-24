@@ -222,3 +222,71 @@ test('已上架課程在報名時間前展示預告，到時自動顯示報名�
   await expect(page.getByText('尚未開放報名',{exact:true})).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+
+test('後台僅在課程上架後顯示複製連結，排程到時自動出現並保留編輯內容', async ({ page }) => {
+  await page.clock.install({time:new Date('2030-11-01T00:00:00Z')});
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', { configurable:true, value:{
+      writeText:async (text: string) => { (window as any).__copiedCourseLink = text; },
+    }});
+  });
+  await page.route('https://**/*', route => route.abort());
+  await mockEcladoApis(page, {
+    adminAccess:true,
+    backofficeAccess:{role:'admin',permissions:['courses.manage']},
+    signInUser:{
+      id:'copy-course-admin',email:'copy-course-admin@example.test',user_metadata:{name:'管理員'},
+      app_metadata:{provider:'email'},aud:'authenticated',role:'authenticated',created_at:'2026-05-01T00:00:00Z',
+    },
+  });
+  const base = {
+    version:1,description:'課程介紹',overview:'課程概述',image_path:null,instructor_name:'April',
+    starts_at:'2030-11-11T02:00:00Z',ends_at:'2030-11-11T04:00:00Z',price_twd:1200,
+    zoom_url:'https://zoom.us/j/123',open_case_count:0,notification_exception_count:0,
+  };
+  const courses = [
+    {...base,id:'c0ea0000-0000-4000-8000-000000000011',name:'已下架課程',published:false,publish_at:null},
+    {...base,id:'c0ea0000-0000-4000-8000-000000000012',name:'排程分享課程',published:true,
+      publish_at:'2030-11-01T00:01:00Z',registration_opens_at:'2030-11-01T01:00:00Z'},
+    {...base,id:'c0ea0000-0000-4000-8000-000000000013',name:'公開預告課程',published:true,
+      publish_at:'2030-10-31T00:00:00Z',registration_opens_at:'2030-11-01T01:00:00Z'},
+    {...base,id:'c0ea0000-0000-4000-8000-000000000014',name:'未設定排程課程',published:true,publish_at:null},
+  ];
+  await page.route('**/rest/v1/rpc/get_admin_courses', route => route.fulfill({json:courses}));
+  await page.goto('/admin');
+  await page.locator('input[type="email"]').fill('copy-course-admin@example.test');
+  await page.locator('input[type="password"]').fill('local-test-password');
+  await page.getByRole('button',{name:'進入後台'}).click();
+  if ((page.viewportSize()?.width || 0) <= 900) await page.getByRole('button',{name:'開啟選單'}).click();
+  await page.locator('.app-sidebar button:not(.sidebar-star)').filter({hasText:/^課程管理$/}).click();
+  await expect(page.getByRole('button',{name:'複製 已下架課程 的課程連結'})).toHaveCount(0);
+  const scheduled = page.getByRole('button',{name:'複製 排程分享課程 的課程連結'});
+  await expect(scheduled).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'複製 未設定排程課程 的課程連結'})).toBeVisible();
+  await page.getByRole('button',{name:'複製 公開預告課程 的課程連結'}).click();
+  await expect(page.getByRole('status').filter({hasText:'課程連結已複製。'})).toBeVisible();
+  const expected = new URL('/courses/'+courses[2].id,page.url()).href;
+  expect(await page.evaluate(() => (window as any).__copiedCourseLink)).toBe(expected);
+
+  await page.getByRole('button',{name:'編輯 排程分享課程'}).click();
+  const name = page.getByLabel('課程名稱');
+  await name.fill('保留尚未儲存內容');
+  const originalInput = await name.elementHandle();
+  await page.clock.fastForward(61000);
+  await expect(name).toHaveValue('保留尚未儲存內容');
+  expect(await originalInput!.evaluate(element => element.isConnected)).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(scheduled).toBeVisible();
+  await expect(page.getByText('排程上架',{exact:true})).toHaveCount(0);
+  await scheduled.click();
+  expect(await page.evaluate(() => (window as any).__copiedCourseLink)).toBe(new URL('/courses/'+courses[1].id,page.url()).href);
+
+  await page.evaluate(() => {
+    navigator.clipboard.writeText = async () => { throw new Error('Clipboard denied'); };
+  });
+  await scheduled.click();
+  await expect(page.getByRole('alert')).toContainText('無法自動複製，課程連結為');
+  await expect(page.getByRole('alert')).toContainText('/courses/'+courses[1].id);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});

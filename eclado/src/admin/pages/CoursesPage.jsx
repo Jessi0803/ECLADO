@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import usePanelHistory from '../hooks/usePanelHistory.js';
+import useCourseClock from '../../hooks/useCourseClock.js';
 import CourseDescriptionEditor from '../components/CourseDescriptionEditor.jsx';
 import CourseRoster from './CourseRoster.jsx';
 import CourseImage from '../../components/courses/CourseImage.jsx';
@@ -208,6 +209,7 @@ function CourseEditor({ course, onSaved, onClose }) {
 }
 
 export default function AdminCoursesPage({ canNotify }) {
+  const now = useCourseClock();
   const [courses, setCourses] = useState(null);
   const [editor, setEditor] = useState(null);
   const [roster, setRoster] = useState(null);
@@ -253,6 +255,19 @@ export default function AdminCoursesPage({ canNotify }) {
     setRequest(n => n + 1);
   }
 
+  async function copyCourseLink(course) {
+    if (!course.published || (course.publish_at && Date.parse(course.publish_at) > Date.now())) return;
+    const url = new URL(`/courses/${course.id}`, window.location.origin).href;
+    setError('');
+    setNotice('');
+    try {
+      await navigator.clipboard.writeText(url);
+      setNotice('課程連結已複製。');
+    } catch {
+      setError(`無法自動複製，課程連結為 ${url}`);
+    }
+  }
+
   function saved(course) {
     setNotice(course.published ? '課程已儲存並上架。' : '課程已儲存，目前為下架狀態。');
     setEditor(null);
@@ -284,7 +299,7 @@ export default function AdminCoursesPage({ canNotify }) {
                       <tr key={course.id}>
                         <td data-label="課程名稱"><strong>{course.name}</strong></td><td data-label="上課時間（台北時間）">{formatCourseTime(course)}</td>
                         <td data-label="費用">{formatCoursePrice(course.price_twd)}</td>
-                        <td data-label="狀態"><span className={`procurement-status${course.published ? ' status-received' : ''}`}>{course.published ? (Date.parse(course.publish_at) > Date.now() ? '排程上架' : Date.parse(course.registration_opens_at) > Date.now() ? '尚未開放報名' : '已上架') : '已下架'}</span></td>
+                        <td data-label="狀態"><span className={`procurement-status${course.published ? ' status-received' : ''}`}>{course.published ? (Date.parse(course.publish_at) > now ? '排程上架' : Date.parse(course.registration_opens_at) > now ? '尚未開放報名' : '已上架') : '已下架'}</span></td>
                         <td data-label="待人工處理">
                           {course.open_case_count > 0 ? (
                             <button className="admin-course-count-link" type="button"
@@ -305,7 +320,10 @@ export default function AdminCoursesPage({ canNotify }) {
                         </td>
                         <td data-label="操作">
                           <div className="admin-course-row-actions"><button className="admin-secondary-btn" type="button" aria-label={`編輯 ${course.name}`} onClick={event => openEditor(event, course)}>編輯</button>{' '}
-                          <button className="admin-secondary-btn" type="button" aria-label={`查看 ${course.name} 報名名單`} onClick={() => setRoster({ course })}>報名名單</button></div>
+                          <button className="admin-secondary-btn" type="button" aria-label={`查看 ${course.name} 報名名單`} onClick={() => setRoster({ course })}>報名名單</button>
+                          {course.published && (!course.publish_at || Date.parse(course.publish_at) <= now) && (
+                            <button className="admin-secondary-btn" type="button" aria-label={`複製 ${course.name} 的課程連結`} onClick={() => copyCourseLink(course)}>複製課程連結</button>
+                          )}</div>
                         </td>
                       </tr>
                     ))}
