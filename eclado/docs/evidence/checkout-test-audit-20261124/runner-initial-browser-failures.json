@@ -1,0 +1,102 @@
+[
+  {
+    "name": "eclado-frontend.spec.ts >> 恢復 failed 付款時顯示對應標題並維持原付款限制",
+    "project": "chromium",
+    "error": "# Error details\n\n```\nError: expect(locator).toBeVisible() failed\n\nLocator: getByText('付款尚未完成，請至「訪客訂單查詢」，輸入查詢碼與結帳手機號碼後重新付款。')\nExpected: visible\nTimeout: 8000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 8000ms\n  - waiting for getByText('付款尚未完成，請至「訪客訂單查詢」，輸入查詢碼與結帳手機號碼後重新付款。')\n\n```\n\n"
+  },
+  {
+    "name": "product-recommendations.spec.ts >> 結帳推薦為緊湊列表，最多顯示三條半並可向下捲動，重複加購累加數量",
+    "project": "mobile-chrome",
+    "error": "# Error details\n\n```\nError: expect(received).toBe(expected) // Object.is equality\n\nExpected: 2\nReceived: undefined\n\nCall Log:\n- Timeout 8000ms exceeded while waiting on the predicate\n```\n\n"
+  },
+  {
+    "name": "course-registration.spec.ts >> 課程後台可選取有效報名發送通知、查看結果及收入摘要",
+    "project": "mobile-chrome",
+    "error": "# Error details\n\n```\nError: expect(locator).toHaveText(expected) failed\n\nLocator:  getByRole('button', { name: '查看 專業護膚課程 待人工處理' })\nExpected: \"1\"\nReceived: \"1 筆 ›\"\nTimeout:  8000ms\n\nCall log:\n  - Expect \"toHaveText\" with timeout 8000ms\n  - waiting for getByRole('button', { name: '查看 專業護膚課程 待人工處理' })\n    18 × locator resolved to <button type=\"button\" class=\"admin-course-count-link\" aria-label=\"查看 專業護膚課程 待人工處理 1 筆\">…</button>\n       - unexpected value \"1 筆 ›\"\n\n```\n\n"
+  },
+  {
+    "name": "admin.spec.ts >> 營業分析自訂日期、跨月趨勢及商品規格排行共用期間且不載入原始訂單",
+    "project": "chromium",
+    "error": "# Error details\n\n```\nError: expect(locator).toContainText(expected) failed\n\nLocator: getByRole('alert')\nExpected substring: \"開始日期不可晚於結束日期\"\nError: strict mode violation: getByRole('alert') resolved to 2 elements:\n    1) <p role=\"alert\">請輸入有效日期，且開始日期不可晚於結束日期。</p> aka getByText('請輸入有效日期，且開始日期不可晚於結束日期。')\n    2) <div role=\"alert\" class=\"procurement-error\">Expected 3 parts in JWT; got 1</div> aka getByText('Expected 3 parts in JWT; got')\n\nCall log:\n  - Expect \"toContainText\" with timeout 8000ms\n  - waiting for getByRole('alert')\n\n```\n\n"
+  },
+  {
+    "name": "eclado-frontend.spec.ts >> 權威訂單建立失敗時不建立付款單",
+    "project": "mobile-chrome",
+    "error": "# Error details\n\n```\nError: expect(locator).toBeVisible() failed\n\nLocator: getByText('目前無法繼續付款，請稍後再試，或聯繫客服協助。')\nExpected: visible\nTimeout: 8000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 8000ms\n  - waiting for getByText('目前無法繼續付款，請稍後再試，或聯繫客服協助。')\n\n```\n\n"
+  },
+  {
+    "name": "eclado-frontend.spec.ts >> 權威訂單建立失敗時不建立付款單",
+    "project": "chromium",
+    "error": "# Error details\n\n```\nError: expect(locator).toBeVisible() failed\n\nLocator: getByText('目前無法繼續付款，請稍後再試，或聯繫客服協助。')\nExpected: visible\nTimeout: 8000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 8000ms\n  - waiting for getByText('目前無法繼續付款，請稍後再試，或聯繫客服協助。')\n\n```\n\n"
+  },
+  {
+    "name": "eclado-frontend.spec.ts >> 登入會員可選擇購物金支付商品金額並保留至少一元外部付款",
+    "project": "mobile-chrome",
+    "error": "# Error details\n\n```\nTest timeout of 45000ms exceeded.\n```\n\n```\nError: locator.click: Test timeout of 45000ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: /^確認訂單$/ })\n    - locator resolved to <button type=\"submit\">確認訂單</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div>美容師專業會員</div> from <div>…</div> subtree intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    - waiting for element to be visible, enabled and stable\n    - element is not stable\n  - retrying click action\n    - waiting 100ms\n    - waiting for element to be visible, enabled and stable\n    - element is visible, enabled and stable\n    - scrolling into view if needed\n    - done scrolling\n    - <div>…</div> intercepts pointer events\n  - retrying click action\n    - waiting 100ms\n    - waiting for element to be visible, enabled and stable\n    - element is not stable\n  19 × retrying click action\n       - waiting 500ms\n       - waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <div>美容師專業會員</div> from <div>…</div> subtree intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n       - waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <div>…</div> intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n       - waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <div>美容師專業會員</div> from <div>…</div> subtree intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n       - waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <div>美容師專業會員</div> from <div>…</div> subtree intercepts pointer events\n  - retrying click action\n    - waiting 500ms\n    - waiting for element to be visible, enabled and stable\n    - element is visible, enabled and stable\n    - scro"
+  },
+  {
+    "name": "eclado-frontend.spec.ts >> DB 新增的商品會顯示在商城",
+    "project": "chromium",
+    "error": "# Error details\n\n```\nError: locator.click: Error: strict mode violation: getByText('新款保濕乳霜') resolved to 2 elements:\n    1) <div role=\"img\" aria-label=\"新款保濕乳霜\">新款保濕乳霜</div> aka getByRole('link', { name: '查看新款保濕乳霜' })\n    2) <a href=\"/products/new-hydration-cream\">新款保濕乳霜 · 50ml</a> aka getByRole('link', { name: '新款保濕乳霜 · 50ml' })\n\nCall log:\n  - waiting for getByText('新款保濕乳霜')\n\n```\n\n"
+  },
+  {
+    "name": "eclado-frontend.spec.ts >> 恢復 failed 付款時顯示對應標題並維持原付款限制",
+    "project": "mobile-chrome",
+    "error": "# Error details\n\n```\nError: expect(locator).toBeVisible() failed\n\nLocator: getByText('付款尚未完成，請至「訪客訂單查詢」，輸入查詢碼與結帳手機號碼後重新付款。')\nExpected: visible\nTimeout: 8000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 8000ms\n  - waiting for getByText('付款尚未完成，請至「訪客訂單查詢」，輸入查詢碼與結帳手機號碼後重新付款。')\n\n```\n\n"
+  },
+  {
+    "name": "eclado-frontend.spec.ts >> 金流建單失敗時顯示錯誤且不進入付款完成畫面",
+    "project": "chromium",
+    "error": "# Error details\n\n```\nError: expect(locator).toBeVisible() failed\n\nLocator: getByText('目前無法繼續付款，請稍後再試，或聯繫客服協助。')\nExpected: visible\nTimeout: 8000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 8000ms\n  - waiting for getByText('目前無法繼續付款，請稍後再試，或聯繫客服協助。')\n\n```\n\n"
+  },
+  {
+    "name": "admin.spec.ts >> 營業分析自訂日期、跨月趨勢及商品規格排行共用期間且不載入原始訂單",
+    "project": "mobile-chrome",
+    "error": "# Error details\n\n```\nError: expect(locator).toContainText(expected) failed\n\nLocator: getByRole('alert')\nExpected substring: \"開始日期不可晚於結束日期\"\nError: strict mode violation: getByRole('alert') resolved to 2 elements:\n    1) <p role=\"alert\">請輸入有效日期，且開始日期不可晚於結束日期。</p> aka getByText('請輸入有效日期，且開始日期不可晚於結束日期。')\n    2) <div role=\"alert\" class=\"procurement-error\">Expected 3 parts in JWT; got 1</div> aka getByText('Expected 3 parts in JWT; got')\n\nCall log:\n  - Expect \"toContainText\" with timeout 8000ms\n  - waiting for getByRole('alert')\n\n```\n\n"
+  },
+  {
+    "name": "eclado-frontend.spec.ts >> 一般會員公司發票不帶入會員預設值但可填寫本次訂單資料",
+    "project": "mobile-chrome",
+    "error": "# Error details\n\n```\nTest timeout of 45000ms exceeded.\n```\n\n```\nError: locator.click: Test timeout of 45000ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: /確認訂單/ })\n    - locator resolved to <button type=\"submit\">確認訂單</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div>美容師專業會員</div> from <div>…</div> subtree intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    - waiting for element to be visible, enabled and stable\n    - element is not stable\n  - retrying click action\n    - waiting 100ms\n    - waiting for element to be visible, enabled and stable\n    - element is visible, enabled and stable\n    - scrolling into view if needed\n    - done scrolling\n    - <div>…</div> intercepts pointer events\n  - retrying click action\n    - waiting 100ms\n    - waiting for element to be visible, enabled and stable\n    - element is not stable\n  4 × retrying click action\n      - waiting 500ms\n      - waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div>美容師專業會員</div> from <div>…</div> subtree intercepts pointer events\n    - retrying click action\n      - waiting 500ms\n      - waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div>…</div> intercepts pointer events\n    - retrying click action\n      - waiting 500ms\n      - waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div>美容師專業會員</div> from <div>…</div> subtree intercepts pointer events\n    - retrying click action\n      - waiting 500ms\n      - waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div>美容師專業會員</div> from <div>…</div> subtree intercepts pointer events\n  - retrying click action\n    - waiting 500ms\n    - waiting for element to be visible, enabled and stable\n    - element is visible, enabled and stable\n    - scrolling into view if needed\n    "
+  },
+  {
+    "name": "automatic-price-allocation.spec.ts >> 合計同額但活動分配改變，付款前仍需再次確認",
+    "project": "chromium",
+    "error": "# Error details\n\n```\nError: expect(received).toBe(expected) // Object.is equality\n\nExpected: true\nReceived: false\n\nCall Log:\n- Timeout 8000ms exceeded while waiting on the predicate\n```\n\n"
+  },
+  {
+    "name": "eclado-frontend.spec.ts >> 活動限定商品只出現在未列出的活動路徑並標示 noindex",
+    "project": "mobile-chrome",
+    "error": "# Error details\n\n```\nError: locator.click: Error: strict mode violation: getByText('活動限定潔顏品') resolved to 2 elements:\n    1) <div role=\"img\" aria-label=\"活動限定潔顏品\">活動限定潔顏品</div> aka getByRole('link', { name: '查看活動限定潔顏品' })\n    2) <a href=\"/events/limited/private-event-cleanser\">活動限定潔顏品 · 200ml</a> aka getByRole('link', { name: '活動限定潔顏品 · 200ml' })\n\nCall log:\n  - waiting for getByText('活動限定潔顏品')\n\n```\n\n"
+  },
+  {
+    "name": "automatic-price-allocation.spec.ts >> 合計同額但活動分配改變，付款前仍需再次確認",
+    "project": "mobile-chrome",
+    "error": "# Error details\n\n```\nError: expect(received).toBe(expected) // Object.is equality\n\nExpected: true\nReceived: false\n\nCall Log:\n- Timeout 8000ms exceeded while waiting on the predicate\n```\n\n"
+  },
+  {
+    "name": "eclado-frontend.spec.ts >> 金流建單失敗時顯示錯誤且不進入付款完成畫面",
+    "project": "mobile-chrome",
+    "error": "# Error details\n\n```\nError: expect(locator).toBeVisible() failed\n\nLocator: getByText('目前無法繼續付款，請稍後再試，或聯繫客服協助。')\nExpected: visible\nTimeout: 8000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 8000ms\n  - waiting for getByText('目前無法繼續付款，請稍後再試，或聯繫客服協助。')\n\n```\n\n"
+  },
+  {
+    "name": "eclado-frontend.spec.ts >> DB 新增的商品會顯示在商城",
+    "project": "mobile-chrome",
+    "error": "# Error details\n\n```\nError: locator.click: Error: strict mode violation: getByText('新款保濕乳霜') resolved to 2 elements:\n    1) <div role=\"img\" aria-label=\"新款保濕乳霜\">新款保濕乳霜</div> aka getByRole('link', { name: '查看新款保濕乳霜' })\n    2) <a href=\"/products/new-hydration-cream\">新款保濕乳霜 · 50ml</a> aka getByRole('link', { name: '新款保濕乳霜 · 50ml' })\n\nCall log:\n  - waiting for getByText('新款保濕乳霜')\n\n```\n\n"
+  },
+  {
+    "name": "checkout-summary-width.spec.ts >> checkout activity and gift text stays inside 390px viewport in both steps",
+    "project": "mobile-chrome",
+    "error": "# Error details\n\n```\nError: expect(received).toBeLessThanOrEqual(expected)\n\nExpected: <= 3\nReceived:    3.828125\n\nCall Log:\n- Timeout 8000ms exceeded while waiting on the predicate\n```\n\n"
+  },
+  {
+    "name": "product-recommendations.spec.ts >> 結帳推薦為緊湊列表，最多顯示三條半並可向下捲動，重複加購累加數量",
+    "project": "chromium",
+    "error": "# Error details\n\n```\nError: expect(received).toBe(expected) // Object.is equality\n\nExpected: 2\nReceived: undefined\n\nCall Log:\n- Timeout 8000ms exceeded while waiting on the predicate\n```\n\n"
+  },
+  {
+    "name": "course-registration.spec.ts >> 課程後台可選取有效報名發送通知、查看結果及收入摘要",
+    "project": "chromium",
+    "error": "# Error details\n\n```\nError: expect(locator).toHaveText(expected) failed\n\nLocator:  getByRole('button', { name: '查看 專業護膚課程 待人工處理' })\nExpected: \"1\"\nReceived: \"1 筆 ›\"\nTimeout:  8000ms\n\nCall log:\n  - Expect \"toHaveText\" with timeout 8000ms\n  - waiting for getByRole('button', { name: '查看 專業護膚課程 待人工處理' })\n    18 × locator resolved to <button type=\"button\" class=\"admin-course-count-link\" aria-label=\"查看 專業護膚課程 待人工處理 1 筆\">…</button>\n       - unexpected value \"1 筆 ›\"\n\n```\n\n"
+  }
+]

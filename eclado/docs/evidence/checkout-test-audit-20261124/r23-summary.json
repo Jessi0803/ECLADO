@@ -1,0 +1,24 @@
+{
+  "date": "2026-11-24",
+  "scope": "Current local worktree; not deployed",
+  "before_fix_mobile_company_invoice": {
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0
+  },
+  "new_regressions": {
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0
+  },
+  "related_regressions": {
+    "passed": 18,
+    "failed": 0,
+    "skipped": 0
+  },
+  "real_device_verified": false,
+  "source_sha256": {
+    "eclado/src/app/App.jsx": "768fb9a6a9bf9da05414d8d0a3646ae604e3e073bfa61a95b61fb0b769258a95",
+    "eclado/tests/checkout-first-member-banner.spec.ts": "7844f2442c7a0678be8604542fa5034cd6c9980e55b39d0ef815d75fa5285fdc"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-24",
+  "node": "v24.16.0",
+  "default_playwright_collection": {
+    "exit": 1,
+    "import_errors": 29,
+    "collected_tests": 0
+  },
+  "spec_only_chromium_collection": {
+    "exit": 0,
+    "tests": 677,
+    "files": 73,
+    "executed": false
+  },
+  "selected_node_tests": {
+    "exit": 0,
+    "pass": 48,
+    "fail": 0,
+    "skip": 0
+  },
+  "payment_api_tests": {
+    "exit": 0,
+    "pass": 107,
+    "fail": 0,
+    "skip": 0,
+    "sandbox_retry": "initial EPERM on localhost listen; permitted rerun succeeded"
+  },
+  "local_pass_total": 155,
+  "full_checkout_e2e_verified": false
+}

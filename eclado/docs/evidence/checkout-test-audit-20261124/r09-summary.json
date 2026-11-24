@@ -1,0 +1,80 @@
+{
+  "date": "2026-11-24",
+  "scope": "Current worktree; isolated tests only; not deployed",
+  "before_fix": {
+    "browser": {
+      "passed": 0,
+      "failed": 4,
+      "skipped": 0
+    },
+    "order_count_assertions": [
+      {
+        "expected_order_count": 26,
+        "actual_order_count": 27
+      },
+      {
+        "expected_order_count": 26,
+        "actual_order_count": 27
+      },
+      {
+        "expected_order_count": 26,
+        "actual_order_count": 27
+      },
+      {
+        "expected_order_count": 26,
+        "actual_order_count": 27
+      }
+    ]
+  },
+  "after_fix": {
+    "new_sql_browser_response_loss_cases": 12,
+    "combined_browser_regression": {
+      "passed": 75,
+      "failed": 0,
+      "skipped": 1
+    },
+    "recovery_guards": {
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0
+    },
+    "postgres_sql": {
+      "tests": 8,
+      "pass": 8,
+      "fail": 0,
+      "skipped": 0
+    },
+    "default_node": {
+      "tests": 245,
+      "pass": 196,
+      "fail": 0,
+      "skipped": 49
+    },
+    "test_mode_build": "passed"
+  },
+  "runtime": {
+    "node": "24.16.0",
+    "playwright": "1.60.0",
+    "pglite": "0.6.0",
+    "native_postgresql": "19.0",
+    "embedded_postgres_package": "19.0.0-beta.20"
+  },
+  "limitations": [
+    "Target Supabase/PostgREST staging and production not verified.",
+    "Native PostgreSQL runtime differs from the target deployment version.",
+    "Real iPhone/LINE and real banking not run.",
+    "Old requests without a key and lost browser capabilities are not automatically deduplicated.",
+    "Old overloads remain for compatibility; deploy SQL before the frontend."
+  ],
+  "sha256": {
+    "src/pages/CheckoutPage.jsx": "97835e696b5603507596d66ff92be5b62a35a2a730688a10e35e223878202571",
+    "src/services/orders.js": "d891aabd845db520a6c2aa7aab5b95571378e768823bfa9e51c4c1f22652c765",
+    "src/services/checkoutRequest.js": "aea43f468a89c0d175432db5ad171d12f9979abd8d3199bb9b4f94ca2f9bf044",
+    "supabase-checkout-order-idempotency.sql": "7bfb9b33ea07b51d2bcf19854990d1107b80615d882ed540d30383ef751dcabc",
+    "supabase-checkout-order-idempotency-verify.sql": "2cd7baa241b04fcc8c707542af7dd78391c3fb7e9463f7175bd172b48ab515da",
+    "tests/checkout-order-response-loss.spec.ts": "b69cb6edb1aa29ea3abc9ae4639c6a97e286f3227dcbcedc7a527a1292801dcb",
+    "tests/checkout-order-recovery.spec.ts": "245fa4aaf8b6f75c18f3733a34c8e59d5cb2c3b759a63add84251180e1035c89",
+    "tests/integration/checkout-order-idempotency-db.test.cjs": "708d3b93a8e324602edd4f4be56f9a66ea6d682b8728360c6063476894abb9cd",
+    "tests/unit/checkout-request.test.mjs": "c21b40979f24065a1db137f6d4e766fded2ac93b14db898e984a47e5c1c5699c"
+  }
+}

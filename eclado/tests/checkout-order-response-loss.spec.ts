@@ -118,7 +118,7 @@ for (const identity of ['guest', 'member', 'wallet'] as const) for (const action
       if (action === 'reload') {
         await page.reload();
         await expect.poll(async () => await page.getByRole('heading', { name: '請完成付款' }).isVisible()
-          || await page.getByRole('button', { name: '繼續確認付款', exact: true }).isEnabled().catch(() => false)).toBe(true);
+          || await page.getByRole('button', { name: '繼續確認付款', exact: true }).and(page.locator(':enabled')).count() > 0).toBe(true);
         if (!await page.getByRole('heading', { name: '請完成付款' }).isVisible()) await fillCheckout(page);
       }
       if (!await page.getByRole('heading', { name: '請完成付款' }).isVisible()) {

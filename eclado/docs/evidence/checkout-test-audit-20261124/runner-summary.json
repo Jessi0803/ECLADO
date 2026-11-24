@@ -1,0 +1,56 @@
+{
+  "date": "2026-11-24",
+  "node_version": "v24.16.0",
+  "playwright_version": "1.60.0",
+  "pglite_version": "0.6.0",
+  "node_without_db": {
+    "tests": 238,
+    "pass": 190,
+    "fail": 0,
+    "skip": 48
+  },
+  "node_with_pglite": {
+    "tests": 262,
+    "pass": 256,
+    "fail": 0,
+    "skip": 6
+  },
+  "payment_api": {
+    "tests": 107,
+    "pass": 107,
+    "fail": 0,
+    "skip": 0
+  },
+  "browser_first_full": {
+    "passed": 1283,
+    "failed": 20,
+    "skipped": 51
+  },
+  "browser_failed_cases_after_test_maintenance": {
+    "passed": 20,
+    "failed": 0,
+    "skipped": 0
+  },
+  "sql_browser_after_test_maintenance": {
+    "passed": 20,
+    "failed": 0,
+    "skipped": 0
+  },
+  "limitations": [
+    "No full browser rerun after test-only maintenance; original failures were rerun.",
+    "First-visit member mobile banner overlap remains unresolved (R23); returning-member fixture is explicit.",
+    "Mobile 390px scroll assertion was intermittent; original threshold retained.",
+    "Embedded PostgreSQL, real providers, real iPhone/LINE, Node 20 CI and release gates not verified."
+  ],
+  "entrypoint_and_fixture_sha256": {
+    "eclado/package.json": "a5011321a1dbe966a4a1c9c1e52f1e2622fbef61ac6a3b56ec0eba518b429b52",
+    "eclado/playwright.config.ts": "671de8ef3c28fc294b9d18c16a5e574cc37bf12c0c8b87af593a26537b7dc8eb",
+    "eclado/scripts/run-node-tests.mjs": "df5b008a89a0264ccb3b8d9ed46b186982a45b2d440e6419ead0ac96435401ae",
+    "eclado/scripts/node-test-bootstrap.mjs": "8e4dd19224ea627bca62d8ea4f2b47c1ff811f157237f77807b79d0ed5a9dabc",
+    "eclado/scripts/node-test-json-loader.mjs": "0676b97c21eb8fbc4e0250a40ad10b5a3340ccb1fe5568941381a829044ba197",
+    "eclado/tests/fixtures/instructor-reward-checkout-db.cjs": "b88baec2a6fc0e9f9383c2ffb665cc1acfd6c7c09a081b9e1ce2ca6d468159b2",
+    "eclado/tests/fixtures/reward-purchase-sales-db.cjs": "2149fd58d839d74dbef308ccf2d9b4d654d1b0eb3625dd20e876e049a7eb1bff",
+    "eclado/tests/fixtures/instructor-student-notifications-db.cjs": "27ecc821a85be08b617738e1d78c2eee4334bc5d0a27e9b670d8495e0805d336",
+    "eclado/tests/fixtures/student-pricing-db.cjs": "9a9f25039ef284ff4e39504daccba474b267b0a4f86b52554b0485942bbcf99b"
+  }
+}

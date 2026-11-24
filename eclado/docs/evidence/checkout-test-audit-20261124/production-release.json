@@ -1,0 +1,61 @@
+{
+  "date": "2026-11-24",
+  "featureCommit": "fa09d1cd6dc6736905c58c553ad936d3f1b06f6b",
+  "deployment": "dpl_Fyc11kD2rwWVGvzsNbquYxqGhdwb",
+  "deploymentState": "READY",
+  "production": "https://ecladotaiwan.com",
+  "postgresVersion": "17.6",
+  "originalFunctionFingerprint": "73e959afef473bb402c260ce3e596b85",
+  "installationChecks": {
+    "request_rls": true,
+    "private_rows": true,
+    "private_creator": true,
+    "recovery_entry": true,
+    "protected_creators": true,
+    "no_public_helper_grants": true
+  },
+  "schemaReload": true,
+  "postgrest": {
+    "recoverUnknown": 200,
+    "ordinaryInvalidKey": "42501",
+    "walletInvalidKey": "42501"
+  },
+  "sqlRollback": {
+    "sameOrderReplay": true,
+    "sameOrderRecovery": true,
+    "orderCountDeltaInsideTransaction": 1,
+    "noTestOrdersAfterRollback": true,
+    "noCommittedRequestsAfterRollback": true
+  },
+  "tests": {
+    "releaseSource": {
+      "passed": 32,
+      "failed": 0
+    },
+    "productionAssetsInitial": {
+      "passed": 31,
+      "failed": 1,
+      "reason": "Test predicate waited for disappeared button; screenshot already at original payment page"
+    },
+    "productionAssetsFinal": {
+      "passed": 32,
+      "failed": 0
+    },
+    "productionAssetsWalletRepeated": {
+      "passed": 12,
+      "failed": 0,
+      "repeatEach": 3
+    }
+  },
+  "apiIsolation": "Only production origin non-api GET allowed; other unmatched requests aborted. Auth/catalog/payment mocks, isolated SQL creators/recovery.",
+  "asset": "/assets/main-ld_ivJRz.js",
+  "http200": [
+    "/",
+    "/shop",
+    "/checkout",
+    "/payment-result",
+    "https://pay.ecladotaiwan.com/health"
+  ],
+  "realBankPayment": false,
+  "physicalIphoneOrLine": false
+}
