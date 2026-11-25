@@ -77,7 +77,7 @@
   "rewrites": [
     { "source": "/courses", "destination": "/" },
     { "source": "/courses/:id/register", "destination": "/" },
-    { "source": "/courses/:id", "destination": "/" },
+    { "source": "/courses/:id", "destination": "/api/course-page?id=:id" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/products/:slug", "destination": "/api/product-page?slug=:slug" },
     { "source": "/events/limited/:slug", "destination": "/events/limited" }

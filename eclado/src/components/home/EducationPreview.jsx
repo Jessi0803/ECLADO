@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getPublishedCourses } from '../../services/courses.js';
 import { isCourseRegistrationOpen } from '../../domain/courses.js';
+import { coursePath } from '../../domain/courseUrls.js';
 import './EducationPreview.css';
 
 const courseDate = new Intl.DateTimeFormat('zh-TW', {
@@ -39,7 +40,7 @@ export default function EducationPreview() {
           {upcoming && (
             <div className="home-education-upcoming">
               <h3>近期開課</h3>
-              <a href={`/courses/${encodeURIComponent(upcoming.id)}`}>
+              <a href={coursePath(upcoming)}>
                 <span>{upcoming.name}</span>
                 <time dateTime={upcoming.starts_at}>{courseDate.format(new Date(upcoming.starts_at))}</time>
               </a>

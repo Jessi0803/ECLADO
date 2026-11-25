@@ -9,6 +9,7 @@ import useDocumentMeta from '../hooks/useDocumentMeta.js';
 import PaymentMethodOptions from '../components/checkout/PaymentMethodOptions.jsx';
 import CourseMeetingActions from '../components/courses/CourseMeetingActions.jsx';
 import CourseEligibilityNotice from '../components/courses/CourseEligibilityNotice.jsx';
+import { COURSE_UUID } from '../domain/courseUrls.js';
 import './CoursesPage.css';
 
 export default function CourseRegistrationPage({ courseId, user, authReady }) {
@@ -24,9 +25,26 @@ export default function CourseRegistrationPage({ courseId, user, authReady }) {
       <h1>課程報名</h1>
       {!authReady ? <p role="status">確認會員身分中…</p>
         : !user ? <p role="status">正在前往會員登入…</p>
-          : <MemberRegistration key={`${user.uid}:${courseId}`} courseId={courseId} role={user.role} userId={user.uid} />}
+          : COURSE_UUID.test(courseId)
+            ? <MemberRegistration key={`${user.uid}:${courseId}`} courseId={courseId} role={user.role} userId={user.uid} />
+            : <SlugRegistration key={`${user.uid}:${courseId}`} courseKey={courseId} user={user} />}
     </main>
   );
+}
+
+function SlugRegistration({ courseKey, user }) {
+  const [result, setResult] = useState(null);
+  useEffect(() => {
+    let active = true;
+    getPublishedCourses(courseKey)
+      .then(rows => { if (active) setResult({ course: rows[0] }); })
+      .catch(() => { if (active) setResult({ error: true }); });
+    return () => { active = false; };
+  }, [courseKey]);
+  if (!result) return <p role="status">載入報名資料中…</p>;
+  if (result.error) return <p role="alert">無法載入課程，請重新整理頁面。</p>;
+  if (!result.course) return <p>找不到此課程，或課程已下架。</p>;
+  return <MemberRegistration courseId={result.course.id} role={user.role} userId={user.uid} />;
 }
 
 function MemberRegistration({ courseId, role, userId }) {

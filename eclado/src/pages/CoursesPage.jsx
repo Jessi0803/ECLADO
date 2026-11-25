@@ -1,7 +1,6 @@
 import FacultySection from '../components/courses/FacultySection.jsx';
 import React, { useEffect, useState } from 'react';
 import CourseDescription from '../components/courses/CourseDescription.jsx';
-import { richTextSummary } from '../domain/richText.js';
 import CourseImage from '../components/courses/CourseImage.jsx';
 import { formatCourseDuration, formatCoursePrice, formatCourseTime, isCourseRegistrationOpen, courseRegistrationNotice } from '../domain/courses.js';
 import { faculty } from '../domain/courseFaculty.js';
@@ -9,6 +8,7 @@ import useCourseClock from '../hooks/useCourseClock.js';
 import useCourseHistory from '../hooks/useCourseHistory.js';
 import useDocumentMeta from '../hooks/useDocumentMeta.js';
 import { getPublishedCourses } from '../services/courses.js';
+import { coursePath } from '../domain/courseUrls.js';
 import './CoursesPage.css';
 
 const courseQuestions = [
@@ -55,16 +55,25 @@ export default function CoursesPage({ courseId = null, canRegister, memberId, on
   const now = useCourseClock();
   const ended = Boolean(course && Date.parse(course.ends_at) <= now);
   const { courses: history, hasRegistrations } = useCourseHistory(!courseId || ended ? memberId : null);
-  const hasCourseRecord = history?.some(item => item.id === courseId);
+  const hasCourseRecord = history?.some(item => item.id === (course?.id || courseId));
   const registrationOpen = isCourseRegistrationOpen(course, now);
   const registrationNotice = courseRegistrationNotice(course, now);
   const showRegistrationLink = ended ? hasCourseRecord : !registrationNotice && (canRegister || registrationOpen);
   useDocumentMeta({
     title: `${course?.name || (courseId ? '專業課程' : '專業教育')} | ECLADO`,
-    description: richTextSummary(course?.description).slice(0, 160) || '探索 ECLADO 專業課程、上課時間與費用。',
-    canonicalPath: courseId ? `/courses/${encodeURIComponent(courseId)}` : '/courses',
+    description: course?.overview?.trim().slice(0, 160) || '探索 ECLADO 專業課程、上課時間與費用。',
+    image: course?.image_path ? `/api/course-share-image?id=${encodeURIComponent(course.id)}` : '/assets/images/hero-cover.jpg',
+    canonicalPath: course ? coursePath(course) : courseId ? `/courses/${encodeURIComponent(courseId)}` : '/courses',
     robots: courseId && !course ? 'noindex,follow' : 'index,follow',
   });
+
+  useEffect(() => {
+    if (!course?.slug) return;
+    const path = coursePath(course);
+    if (window.location.pathname !== path) {
+      window.history.replaceState(window.history.state, '', path + window.location.search + window.location.hash);
+    }
+  }, [course?.id, course?.slug]);
 
   useEffect(() => {
     if (!courseId && window.location.hash === '#education-courses') {
@@ -164,7 +173,7 @@ export default function CoursesPage({ courseId = null, canRegister, memberId, on
             <h2>{label}</h2>
             <div className="course-store-list-grid">
               {items.map(item => (
-                <a key={item.id} className="course-store-card" href={`/courses/${item.id}`} onClick={event => follow(event, () => onOpenCourse(item.id))}>
+                <a key={item.id} className="course-store-card" href={coursePath(item)} onClick={event => follow(event, () => onOpenCourse(item.slug || item.id))}>
                   <CourseImage path={item.image_path} alt="" className="course-store-image" />
                   <div className="course-store-card-content">
                     <CourseSchedule course={item} />

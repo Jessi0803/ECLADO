@@ -1,3 +1,4 @@
+import { COURSE_UUID, isCourseSlug } from '../domain/courseUrls.js';
 // ─── HISTORY / ROUTING ────────────────────────────────────────────────────────
 export const PAGE_PATHS = {
   home: '/', shop: '/shop', cart: '/cart', checkout: '/checkout', 'order-payment':'/order-payment',
@@ -67,5 +68,7 @@ export function productSlugFromPath(path) {
 }
 
 export function courseIdFromPath(path) {
-  return /^\/courses\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\/register)?\/?$/i.exec(path)?.[1]?.toLowerCase() || null;
+  const key = /^\/courses\/([^/]+)(?:\/register)?\/?$/.exec(path)?.[1];
+  if (!key) return null;
+  return COURSE_UUID.test(key) ? key.toLowerCase() : isCourseSlug(key) ? key : null;
 }

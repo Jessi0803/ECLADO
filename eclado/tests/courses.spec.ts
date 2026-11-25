@@ -42,12 +42,12 @@ test(`管理員可以新增、編輯、上下架課程，公開頁面可直接�
     return route.fulfill({ json: { Key: 'course-images/' + uploadedPath } });
   });
   await page.route('**/rest/v1/rpc/get_admin_courses', route => route.fulfill({ json: saved ? [saved] : [] }));
-  await page.route('**/rest/v1/rpc/save_scheduled_course', route => {
+  await page.route('**/rest/v1/rpc/save_course_with_slug', route => {
     const body = route.request().postDataJSON();
     expect(body).toMatchObject({
       p_id: saved?.id ?? null, p_version: saved?.version ?? null, p_image_path: uploadedPath,
       p_starts_at: '2030-11-11T02:00:00.000Z', p_ends_at: '2030-11-11T04:00:00.000Z',
-      p_price_twd: 1200, p_zoom_url: secret, p_publish_at: expectedSchedule.publishAt, p_registration_opens_at: expectedSchedule.opensAt,
+      p_price_twd: 1200, p_zoom_url: secret, p_publish_at: expectedSchedule.publishAt, p_registration_opens_at: expectedSchedule.opensAt, p_slug: null,
     });
     saved = {
       id, version: (saved?.version ?? 0) + 1, name: body.p_name, description: body.p_description,
@@ -67,6 +67,7 @@ test(`管理員可以新增、編輯、上下架課程，公開頁面可直接�
   if ((page.viewportSize()?.width || 0) <= 900) await page.getByRole('button', { name: '開啟選單' }).click();
   await page.locator('.app-sidebar button:not(.sidebar-star)').filter({ hasText: /^課程管理$/ }).click();
   await page.getByRole('button', { name: '新增課程' }).click();
+  await expect(page.getByLabel('課程網址代稱（選填）')).toHaveValue('');
   await page.getByLabel('課程名稱').fill('專業護膚課程');
   if ((page.viewportSize()?.width || 0) <= 900) {
     const panel = page.getByRole('dialog', { name: '新增課程' });
@@ -197,6 +198,8 @@ test(`管理員可以新增、編輯、上下架課程，公開頁面可直接�
   await expect(storefront.getByText('找不到此課程，或課程已下架。')).toBeVisible();
 
 });
+
+
 }
 
 test('已上架課程在報名時間前展示預告，到時自動顯示報名入口', async ({ page }) => {
@@ -223,7 +226,6 @@ test('已上架課程在報名時間前展示預告，到時自動顯示報名�
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-
 test('後台僅在課程上架後顯示複製連結，排程到時自動出現並保留編輯內容', async ({ page }) => {
   await page.clock.install({time:new Date('2030-11-01T00:00:00Z')});
   await page.addInitScript(() => {
@@ -241,7 +243,7 @@ test('後台僅在課程上架後顯示複製連結，排程到時自動出現�
     },
   });
   const base = {
-    version:1,description:'課程介紹',overview:'課程概述',image_path:null,instructor_name:'April',
+    version:1,description:'課程介紹',overview:'課程概述',image_path:'c0ea0000-0000-4000-8000-000000000010.webp',instructor_name:'April',
     starts_at:'2030-11-11T02:00:00Z',ends_at:'2030-11-11T04:00:00Z',price_twd:1200,
     zoom_url:'https://zoom.us/j/123',open_case_count:0,notification_exception_count:0,
   };
@@ -249,7 +251,7 @@ test('後台僅在課程上架後顯示複製連結，排程到時自動出現�
     {...base,id:'c0ea0000-0000-4000-8000-000000000011',name:'已下架課程',published:false,publish_at:null},
     {...base,id:'c0ea0000-0000-4000-8000-000000000012',name:'排程分享課程',published:true,
       publish_at:'2030-11-01T00:01:00Z',registration_opens_at:'2030-11-01T01:00:00Z'},
-    {...base,id:'c0ea0000-0000-4000-8000-000000000013',name:'公開預告課程',published:true,
+    {...base,id:'c0ea0000-0000-4000-8000-000000000013',slug:'2030-gold-care',name:'公開預告課程',published:true,
       publish_at:'2030-10-31T00:00:00Z',registration_opens_at:'2030-11-01T01:00:00Z'},
     {...base,id:'c0ea0000-0000-4000-8000-000000000014',name:'未設定排程課程',published:true,publish_at:null},
   ];
@@ -266,10 +268,11 @@ test('後台僅在課程上架後顯示複製連結，排程到時自動出現�
   await expect(page.getByRole('button',{name:'複製 未設定排程課程 的課程連結'})).toBeVisible();
   await page.getByRole('button',{name:'複製 公開預告課程 的課程連結'}).click();
   await expect(page.getByRole('status').filter({hasText:'課程連結已複製。'})).toBeVisible();
-  const expected = new URL('/courses/'+courses[2].id,page.url()).href;
+  const expected = new URL('/courses/2030-gold-care',page.url()).href;
   expect(await page.evaluate(() => (window as any).__copiedCourseLink)).toBe(expected);
 
   await page.getByRole('button',{name:'編輯 排程分享課程'}).click();
+  await expect(page.getByLabel('課程網址代稱（選填）')).toHaveValue('');
   const name = page.getByLabel('課程名稱');
   await name.fill('保留尚未儲存內容');
   const originalInput = await name.elementHandle();
@@ -289,4 +292,25 @@ test('後台僅在課程上架後顯示複製連結，排程到時自動出現�
   await expect(page.getByRole('alert')).toContainText('無法自動複製，課程連結為');
   await expect(page.getByRole('alert')).toContainText('/courses/'+courses[1].id);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+  await page.route('**/rest/v1/rpc/save_course_with_slug', route => {
+    const args=route.request().postDataJSON();
+    expect(args.p_id).toBe(courses[2].id);
+    Object.assign(courses[2],{slug:args.p_slug,version:courses[2].version+1});
+    return route.fulfill({json:courses[2]});
+  });
+  await page.getByRole('button',{name:'編輯 公開預告課程'}).click();
+  await expect(page.getByLabel('課程網址代稱（選填）')).toHaveValue('2030-gold-care');
+  await page.getByLabel('課程網址代稱（選填）').fill('bad slug');
+  await page.getByRole('button',{name:'儲存課程'}).click();
+  await expect(page.getByRole('alert').filter({hasText:'網址代稱須為'})).toBeVisible();
+  await page.getByLabel('課程網址代稱（選填）').fill(' 2030-GOLD-UPDATED ');
+  await page.getByRole('button',{name:'儲存課程'}).click();
+  await page.getByRole('button',{name:'編輯 公開預告課程'}).click();
+  await expect(page.getByLabel('課程網址代稱（選填）')).toHaveValue('2030-gold-updated');
+  await page.getByLabel('課程網址代稱（選填）').fill('');
+  await page.getByRole('button',{name:'儲存課程'}).click();
+  await page.evaluate(() => {navigator.clipboard.writeText=async text=>{(window as any).__copiedCourseLink=text;};});
+  await page.getByRole('button',{name:'複製 公開預告課程 的課程連結'}).click();
+  expect(await page.evaluate(() => (window as any).__copiedCourseLink)).toBe(new URL('/courses/'+courses[2].id,page.url()).href);
 });

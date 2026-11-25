@@ -41,6 +41,34 @@ test('訪客從立即報名直接登入，帳密登入後返回同一堂課程',
   await expect(page.getByText('美容師本人付費報名', { exact: true })).toBeVisible();
 });
 
+test('課程代稱網址、識別碼轉向與登入返回仍以正確識別碼報名', async ({ page }) => {
+  await mockMember(page, 'pro');
+  const slug='2035-gold-care';
+  await page.route('**/rest/v1/rpc/resolve_course_slug', route => {
+    expect(route.request().postDataJSON()).toEqual({p_slug:slug});
+    return route.fulfill({json:courseId});
+  });
+  await page.route('**/rest/v1/rpc/get_published_courses', route => route.fulfill({json:[{...course,slug}]}));
+  await page.route('**/rest/v1/rpc/get_my_course_orders', route => {
+    const key=route.request().postDataJSON().p_course_id;
+    if(key)expect(key).toBe(courseId);
+    return route.fulfill({json:{orders:[],courses:[]}});
+  });
+  await page.goto('/courses');
+  await expect(page.getByRole('link',{name:/專業護膚課程/})).toHaveAttribute('href','/courses/'+slug);
+  await page.getByRole('link',{name:/專業護膚課程/}).click();
+  await expect(page).toHaveURL('/courses/'+slug);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href','https://ecladotaiwan.com/courses/'+slug);
+  await page.goto('/courses/'+courseId);
+  await expect(page).toHaveURL('/courses/'+slug);
+  await page.getByRole('link',{name:'立即報名',exact:true}).click();
+  await expect(page).toHaveURL('/courses/'+courseId+'/register');
+  await expect(page.getByText('美容師本人付費報名',{exact:true})).toBeVisible();
+  await page.goto('/courses/'+slug+'/register');
+  await expect(page.getByText('美容師本人付費報名',{exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
 for (const scenario of ['consumer', 'pending', 'consumer-pending', 'distributor', 'status-error'] as const) {
   test(`課程報名資格提示與申請入口 ${scenario}`, async ({ page }) => {
     const role = ['consumer-pending', 'status-error'].includes(scenario) ? 'consumer' : scenario;
@@ -422,6 +450,7 @@ for (const method of ['free', 'atm'] as const) {
 
 test('LINE 課程登入回來後會回到原報名頁', async ({ page }) => {
   const id = 'course-line-member';
+  const slug = 'line-gold-care';
   await page.route('https://**/*', route => route.abort());
   await mockEcladoApis(page, {
     authUser: {
@@ -431,15 +460,16 @@ test('LINE 課程登入回來後會回到原報名頁', async ({ page }) => {
     },
     profiles: [{ id, name: 'LINE 會員', role: 'pro' }],
   });
-  await page.route('**/rest/v1/rpc/get_published_courses', route => route.fulfill({ json: [course] }));
+  await page.route('**/rest/v1/rpc/get_published_courses', route => route.fulfill({ json: [{...course,slug}] }));
+  await page.route('**/rest/v1/rpc/resolve_course_slug', route => route.fulfill({json:courseId}));
   await page.route('**/rest/v1/rpc/get_my_course_orders', route => route.fulfill({ json: { orders: [] } }));
   await page.addInitScript(path => {
     if (window.location.pathname !== '/line-callback') return;
     sessionStorage.setItem('eclado_line_login_pending', '1');
     sessionStorage.setItem('eclado_course_line_return', path);
-  }, `/courses/${courseId}/register`);
+  }, `/courses/${slug}/register`);
   await page.goto('/line-callback#access_token=mock-access-token&refresh_token=mock-refresh-token&expires_in=3600&token_type=bearer&type=magiclink');
-  await expect(page).toHaveURL(`/courses/${courseId}/register`);
+  await expect(page).toHaveURL(`/courses/${slug}/register`);
   await expect(page.getByRole('button', { name: '前往付款', exact: true })).toBeVisible();
 });
 

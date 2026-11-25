@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js';
 import { optimizeProductImageFile } from '../utils/imageOptimization.js';
+import { COURSE_UUID, isCourseSlug } from '../domain/courseUrls.js';
 
 const images = supabase.storage.from('course-images');
 
@@ -9,9 +10,17 @@ async function courseRpc(name, args) {
   return data;
 }
 
-export const getPublishedCourses = (id = null) => courseRpc('get_published_courses', { p_id: id });
+export async function getPublishedCourses(key = null) {
+  let id = key;
+  if (key && !COURSE_UUID.test(key)) {
+    if (!isCourseSlug(key)) return [];
+    id = await courseRpc('resolve_course_slug', { p_slug: key });
+    if (!id) return [];
+  }
+  return courseRpc('get_published_courses', { p_id: id });
+}
 export const getAdminCourses = () => courseRpc('get_admin_courses');
-export const saveCourse = args => courseRpc('save_scheduled_course', args);
+export const saveCourse = args => courseRpc('save_course_with_slug', args);
 
 export async function downloadCourseImage(path) {
   const { data, error } = await images.download(path, {}, { cache: 'no-store' });

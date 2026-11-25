@@ -6,6 +6,7 @@ import CourseRoster from './CourseRoster.jsx';
 import CourseImage from '../../components/courses/CourseImage.jsx';
 import { formatCoursePrice, formatCourseTime, toTaipeiInput } from '../../domain/courses.js';
 import { faculty } from '../../domain/courseFaculty.js';
+import { coursePath, isCourseSlug } from '../../domain/courseUrls.js';
 import { getAdminCourses, saveCourse, uploadCourseImage } from '../../services/courses.js';
 import './CoursesPage.css';
 
@@ -68,6 +69,7 @@ function CourseEditor({ course, onSaved, onClose }) {
   const [form, setForm] = useState(() => ({
     name: course?.name || '', description: course?.description || '',
     overview: course?.overview || '',
+    slug: course?.slug || '',
     instructorChoice: !course?.instructor_name || instructorNames.includes(course.instructor_name)
       ? course?.instructor_name || '' : 'custom',
     customInstructor: course?.instructor_name || '',
@@ -116,6 +118,11 @@ function CourseEditor({ course, onSaved, onClose }) {
       setError('請填寫授課講師姓名。');
       return;
     }
+    const slug = form.slug.trim().toLowerCase();
+    if (slug && !isCourseSlug(slug)) {
+      setError('網址代稱須為 3～100 個小寫英文字母、數字或連字號，不可使用保留字或識別碼格式。');
+      return;
+    }
     if (Array.from(form.description).length > 12000) {
       setError('課程介紹過長，請縮短內容或減少格式。');
       return;
@@ -150,6 +157,7 @@ function CourseEditor({ course, onSaved, onClose }) {
         p_id: course?.id || null, p_version: course?.version || null,
         p_name: form.name, p_description: form.description, p_image_path: path,
         p_overview: form.overview,
+        p_slug: slug || null,
         p_instructor_name: form.instructorChoice === 'custom' ? form.customInstructor : form.instructorChoice,
         p_starts_at: new Date(`${form.start}+08:00`).toISOString(),
         p_ends_at: new Date(`${form.end}+08:00`).toISOString(),
@@ -171,6 +179,8 @@ function CourseEditor({ course, onSaved, onClose }) {
       {error && <p className="procurement-error" role="alert">{error}</p>}
       <fieldset disabled={busy}>
         <label>課程名稱<input required maxLength={120} value={form.name} onChange={e => update('name', e.target.value)} /></label>
+        <label>課程網址代稱（選填）<input maxLength={100} autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="例如：2026-12-16-gold-care" aria-describedby="course-slug-hint" value={form.slug} onChange={e => update('slug', e.target.value)} /></label>
+        <p id="course-slug-hint" className="admin-course-image-hint">使用小寫英文字母、數字與連字號，長度 3～100 字。留白使用原識別碼網址；填寫後原識別碼連結會轉向新網址。</p>
         <label>授課講師
           <select value={form.instructorChoice} onChange={e => update('instructorChoice', e.target.value)}>
             <option value="">請選擇講師</option>
@@ -194,7 +204,8 @@ function CourseEditor({ course, onSaved, onClose }) {
         </div>
         <label>課程費用（NT$）<input required type="number" min="0" max="9999999" step="1" value={form.price} onChange={e => update('price', e.target.value)} /></label>
         <label>Zoom 會議連結<input type="url" maxLength={2048} value={form.zoom} onChange={e => update('zoom', e.target.value)} /></label>
-        <label>課程圖片<input type="file" accept="image/*" onChange={e => { if (e.target.files[0]) setFile(e.target.files[0]); e.target.value = ''; }} /></label>
+        <label>課程圖片<input type="file" accept="image/*" aria-describedby="course-cover-hint" onChange={e => { if (e.target.files[0]) setFile(e.target.files[0]); e.target.value = ''; }} /></label>
+        <p id="course-cover-hint" className="admin-course-image-hint">封面建議尺寸 1080 × 1080 px（1:1 正方形）。其他比例也可上傳，前台會完整等比顯示，留白以米白底呈現。圖片限 20 MB 以下。</p>
         {preview ? <img className="admin-course-image" src={preview} alt="課程圖片預覽" />
           : imagePath && <CourseImage path={imagePath} alt="課程圖片預覽" className="admin-course-image" />}
         {(file || imagePath) && <div><button className="admin-secondary-btn" type="button" onClick={() => { setFile(null); setImagePath(null); }}>移除圖片</button></div>}
@@ -257,7 +268,7 @@ export default function AdminCoursesPage({ canNotify }) {
 
   async function copyCourseLink(course) {
     if (!course.published || (course.publish_at && Date.parse(course.publish_at) > Date.now())) return;
-    const url = new URL(`/courses/${course.id}`, window.location.origin).href;
+    const url = new URL(coursePath(course), window.location.origin).href;
     setError('');
     setNotice('');
     try {
