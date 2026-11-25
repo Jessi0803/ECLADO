@@ -73,15 +73,16 @@ export async function hasProfessionalApplication(userId) {
   return Boolean(data);
 }
 
-export async function fetchLatestProApplication(userId) {
+export async function fetchLatestProApplication(userId, { throwOnError = false } = {}) {
   if (!userId) return null;
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('professional_applications')
     .select('status')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (error && throwOnError) throw error;
   return data;
 }
 

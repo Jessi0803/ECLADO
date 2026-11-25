@@ -108,6 +108,26 @@
 .course-registration h2 { margin: 0 0 18px; font: 300 24px/1.4 var(--font-display); color: var(--black); }
 .course-registration h3 { font-size: 12px; font-weight: 600; letter-spacing: .1em; margin: 16px 0 8px; }
 .course-registration p { font-size: 13px; line-height: 1.8; margin: 10px 0; }
+.course-eligibility-notice {
+  margin-top: 24px;
+  padding: 16px 18px;
+  border: 1px solid var(--light);
+  border-inline-start: 3px solid var(--accent);
+  background: var(--accent-tint);
+  overflow-wrap: anywhere;
+}
+.course-eligibility-notice > p:first-child { margin-top: 0; color: var(--accent); }
+.course-eligibility-notice > p:last-child { margin-bottom: 0; }
+.course-eligibility-notice > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.8;
+  text-underline-offset: 3px;
+}
 .course-registration [role="alert"] { border-inline-start: 2px solid var(--accent); background: var(--accent-tint); padding: 10px 14px; }
 .course-registration form > fieldset { border: 0; padding: 0; min-width: 0; }
 .course-registration-form { padding: 24px; border: 1px solid var(--light); }

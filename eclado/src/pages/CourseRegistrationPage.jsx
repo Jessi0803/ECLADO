@@ -8,22 +8,28 @@ import useCourseClock from '../hooks/useCourseClock.js';
 import useDocumentMeta from '../hooks/useDocumentMeta.js';
 import PaymentMethodOptions from '../components/checkout/PaymentMethodOptions.jsx';
 import CourseMeetingActions from '../components/courses/CourseMeetingActions.jsx';
+import CourseEligibilityNotice from '../components/courses/CourseEligibilityNotice.jsx';
 import './CoursesPage.css';
 
 export default function CourseRegistrationPage({ courseId, user, authReady }) {
   useDocumentMeta({ title: '課程報名 | ECLADO', robots: 'noindex,nofollow,noarchive' });
+  useEffect(() => {
+    if (!authReady || user) return;
+    const returnPath = `/courses/${courseId}/register`;
+    window.location.replace(`/login?next=${encodeURIComponent(returnPath)}`);
+  }, [authReady, user, courseId]);
   return (
     <main className="course-store course-store--registration">
       <a className="course-store-back" href={`/courses/${courseId}`}>← 返回課程詳情</a>
       <h1>課程報名</h1>
       {!authReady ? <p role="status">確認會員身分中…</p>
-        : !user ? <p>請先<a href={`/login?next=${encodeURIComponent(`/courses/${courseId}/register`)}`}>登入會員</a>，再回到本頁報名或查詢付款。</p>
-          : <MemberRegistration key={`${user.uid}:${courseId}`} courseId={courseId} role={user.role} />}
+        : !user ? <p role="status">正在前往會員登入…</p>
+          : <MemberRegistration key={`${user.uid}:${courseId}`} courseId={courseId} role={user.role} userId={user.uid} />}
     </main>
   );
 }
 
-function MemberRegistration({ courseId, role }) {
+function MemberRegistration({ courseId, role, userId }) {
   const [course, setCourse] = useState(undefined);
   const [account, setAccount] = useState(null);
   const [students, setStudents] = useState([]);
@@ -232,7 +238,11 @@ function MemberRegistration({ courseId, role }) {
         </form>
       )}
       {ended && <div className="course-ended-status">課程已結束</div>}
-      {course !== undefined && !ended && !mayRegister && !hasSelf && <p>{['pro', 'instructor'].includes(role) ? (courseRegistrationNotice(course, now) || '此課程目前未開放報名。') : '此會員身分無法報名。'}</p>}
+      {course && !ended && !mayRegister && !hasSelf && (
+        ['pro', 'instructor'].includes(role)
+          ? <p>{courseRegistrationNotice(course, now) || '此課程目前未開放報名。'}</p>
+          : <CourseEligibilityNotice key={`${userId}:${role}`} role={role} userId={userId} />
+      )}
       {account?.orders.length > 0 && <section className="course-registration-orders" aria-label="我的課程報名">
         <h2>我的課程報名</h2>
         {account.zoom_url && Date.parse(account.ends_at || course?.ends_at) > Date.now() && (

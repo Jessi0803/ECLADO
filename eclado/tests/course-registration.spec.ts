@@ -8,7 +8,7 @@ const course = {
   starts_at: '2035-11-11T02:00:00Z', ends_at: '2035-11-11T04:00:00Z',
 };
 
-async function mockMember(page: Page, role: string, fromCourse = false) {
+async function mockMember(page: Page, role: string, fromCourse = false, viaDetail = false) {
   const user = {
     id: 'course-test-member', email: 'courses@example.test', user_metadata: { name: '會員甲' },
     app_metadata: { provider: 'email' }, aud: 'authenticated', role: 'authenticated',
@@ -22,12 +22,59 @@ async function mockMember(page: Page, role: string, fromCourse = false) {
     backofficeAccess: { role: 'admin', permissions: ['orders.read', 'courses.manage', 'notifications.send'] },
   });
   await page.route('**/rest/v1/rpc/get_published_courses', route => route.fulfill({ json: [course] }));
-  await page.goto(fromCourse ? `/courses/${courseId}/register` : role === 'staff' ? '/admin' : '/login');
-  if (fromCourse) await page.getByRole('link', { name: '登入會員' }).click();
+  if (viaDetail) await page.route('**/rest/v1/rpc/get_my_course_orders', route => route.fulfill({ json: { orders: [] } }));
+  await page.goto(fromCourse ? `/courses/${courseId}${viaDetail ? '' : '/register'}` : role === 'staff' ? '/admin' : '/login');
+  if (viaDetail) await page.getByRole('link', { name: '立即報名', exact: true }).click();
+  if (fromCourse) {
+    await expect(page).toHaveURL(`/login?next=${encodeURIComponent(`/courses/${courseId}/register`)}`);
+    await expect(page.getByText('再回到本頁報名或查詢付款。')).toHaveCount(0);
+  }
   await page.locator('input[type="email"]').fill(user.email);
   await page.locator('input[type="password"]').fill('local-test-password');
   await page.getByRole('button', { name: role === 'staff' ? '進入後台' : '登入', exact: true }).last().click();
   if (role !== 'staff') await expect(page).not.toHaveURL(/\/login/);
+}
+
+test('訪客從立即報名直接登入，帳密登入後返回同一堂課程', async ({ page }) => {
+  await mockMember(page, 'pro', true, true);
+  await expect(page).toHaveURL(`/courses/${courseId}/register`);
+  await expect(page.getByText('美容師本人付費報名', { exact: true })).toBeVisible();
+});
+
+for (const scenario of ['consumer', 'pending', 'consumer-pending', 'distributor', 'status-error'] as const) {
+  test(`課程報名資格提示與申請入口 ${scenario}`, async ({ page }) => {
+    const role = ['consumer-pending', 'status-error'].includes(scenario) ? 'consumer' : scenario;
+    await mockMember(page, role);
+    await page.route('**/rest/v1/rpc/get_my_course_orders', route => route.fulfill({ json: { orders: [] } }));
+    let failed = scenario === 'status-error';
+    await page.route('**/rest/v1/professional_applications**', route => route.fulfill(
+      failed ? { status: 503, json: { message: 'Temporary outage' } }
+        : { json: scenario === 'consumer-pending' ? { status: 'pending' } : null },
+    ));
+    await page.goto(`/courses/${courseId}/register`);
+    const notice = page.getByRole('region', { name: '報名資格說明' });
+    await expect(notice.getByText('本課程開放美容師及師資會員報名。')).toBeVisible();
+    const apply = notice.getByRole('link', { name: '申請美容師資格 →' });
+    if (scenario === 'consumer') {
+      await expect(apply).toHaveAttribute('href', '/professional-apply');
+      await apply.click();
+      await expect(page).toHaveURL('/professional-apply');
+      await expect(page.getByRole('heading', { name: '申請成為專業會員' })).toBeVisible();
+    } else if (scenario.includes('pending')) {
+      await expect(notice).toContainText('您的美容師資格申請正在審核中');
+      await expect(apply).toHaveCount(0);
+      await expect(notice.getByRole('link', { name: '查看申請狀態 →' })).toHaveAttribute('href', '/account');
+    } else if (scenario === 'distributor') {
+      await expect(notice).toContainText('您目前為經銷商會員');
+      await expect(apply).toHaveCount(0);
+    } else {
+      await expect(notice.getByRole('alert')).toContainText('暫時無法確認申請狀態');
+      await expect(apply).toHaveCount(0);
+      failed = false;
+      await notice.getByRole('button', { name: '重新確認' }).click();
+      await expect(apply).toBeVisible();
+    }
+  });
 }
 
 for (const scenario of ['instructor', 'pro'] as const) {
