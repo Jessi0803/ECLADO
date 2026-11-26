@@ -782,8 +782,8 @@ export default function AdminApp({ adminEmail, adminUserId, backofficeAccess, on
             ⚠ {loadError}
           </div>
         )}
-        <Suspense fallback={<div role="status" style={{ padding: 32, color: 'var(--mid)' }}>載入頁面中…</div>}>{renderPage()}</Suspense>
-        {assistedOrderOpen&&canCreateAssistedOrder&&<Suspense fallback={<div role="status">載入代客訂單中…</div>}><AssistedOrderDialog members={members} products={products} initialMember={assistedInitialMember} onClose={()=>setAssistedOrderOpen(false)} onCreated={refreshCurrentData}/></Suspense>}
+        <Suspense fallback={<div className="admin-message" role="status" style={{ padding: 32, color: 'var(--mid)' }}>載入頁面中…</div>}>{renderPage()}</Suspense>
+        {assistedOrderOpen&&canCreateAssistedOrder&&<Suspense fallback={<div className="admin-message" role="status">載入代客訂單中…</div>}><AssistedOrderDialog members={members} products={products} initialMember={assistedInitialMember} onClose={()=>setAssistedOrderOpen(false)} onCreated={refreshCurrentData}/></Suspense>}
       </main>
     </div>
   );

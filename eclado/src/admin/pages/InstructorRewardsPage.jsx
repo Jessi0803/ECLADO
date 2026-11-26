@@ -42,9 +42,9 @@ export default function InstructorRewardsPage({adminUserId,embedded=false,refres
   return <div className="reward-view"><div className="procurement-header reward-admin-header"><div><Heading>師資返饋帳務</Heading><p>查看老師的返饋餘額、學生訂單與帳務紀錄。</p></div>{!embedded&&<button className="admin-secondary-btn" type="button" onClick={()=>setRevision(r=>r+1)}>重新整理帳戶</button>}</div>
     {error&&<p role="alert" className="reward-message">{error}</p>}
     <RewardRedemptionExport key={adminUserId}/>
-    {!data&&!error&&<p>正在載入返饋帳戶…</p>}
+    {!data&&!error&&<p className="admin-message">正在載入返饋帳戶…</p>}
     {data&&<>
-      {!data.accounts.length&&<p>目前沒有師資帳戶。</p>}
+      {!data.accounts.length&&<p className="admin-message">目前沒有師資帳戶。</p>}
       <div className="reward-account-list">{data.accounts.map(account=><button type="button" key={account.id} onClick={event=>{triggerRef.current=event.currentTarget;setSelected(account.id);}} aria-haspopup="dialog" aria-expanded={selected===account.id} className="reward-account-card">
         <strong>{account.name||'已刪除會員'}</strong><div className="reward-meta">{account.id}</div>
         <div>餘額 NT$ {Number(account.balance).toLocaleString('zh-TW')} · 待入帳 NT$ {Number(account.pending_balance).toLocaleString('zh-TW')}</div>

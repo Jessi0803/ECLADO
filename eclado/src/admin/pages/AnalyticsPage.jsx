@@ -76,10 +76,10 @@ export default function Analytics({ canApproveCosts }) {
       </form>
       <p className="analytics-note">每次查詢最多一年，包含開始與結束日期。</p>
       <div className="analytics-presets">{[['month','本月'],['lastMonth','上月'],['30days','近 30 天'],['6months','近半年']].map(([key,label]) => <button type="button" key={key} onClick={() => preset(key)}>{label}</button>)}</div>
-      {validation && <p role="alert">{validation}</p>}
+      {validation && <p className="admin-message admin-message--error" role="alert">{validation}</p>}
     </section>
-    {loading && <p role="status">載入營業分析中…</p>}
-    {error && <div role="alert"><p>{error}</p><button onClick={() => setQuery({ ...query, version: query.version + 1 })}>重新載入</button></div>}
+    {loading && <p className="admin-message" role="status">載入營業分析中…</p>}
+    {error && <div className="admin-message admin-message--error" role="alert"><p>{error}</p><button onClick={() => setQuery({ ...query, version: query.version + 1 })}>重新載入</button></div>}
     {data && !loading && <>
       <p className="analytics-note">查詢期間：{data.startDate} ～ {data.endDate}（依目前付款狀態更新；後續付款可能使數字增加）</p>
       <div className="analytics-stats">

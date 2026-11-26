@@ -443,8 +443,8 @@ export default function ProcurementPage({ onOpenReceipt }) {
             <span>入庫進度</span>
             {progress?.data?.complete && <span className="procurement-status status-received">已全部入庫</span>}
           </summary>
-          {!progress ? <p role="status">載入入庫進度中…</p> : progress.error ? (
-            <p role="alert">無法載入入庫進度，請重新開啟叫貨單。</p>
+          {!progress ? <p className="admin-message" role="status">載入入庫進度中…</p> : progress.error ? (
+            <p className="admin-message admin-message--error" role="alert">無法載入入庫進度，請重新開啟叫貨單。</p>
           ) : progress.data?.items?.length ? (
             <div className="table-scroll">
               <table className="responsive-admin-table procurement-items-table">
@@ -459,7 +459,7 @@ export default function ProcurementPage({ onOpenReceipt }) {
                 ))}</tbody>
               </table>
             </div>
-          ) : <p>這張叫貨單沒有商品。</p>}
+          ) : <p className="admin-message">這張叫貨單沒有商品。</p>}
         </details>
         <div className="procurement-document-shell"><PurchaseOrderDocument order={displayedOrder} /></div>
       </>}

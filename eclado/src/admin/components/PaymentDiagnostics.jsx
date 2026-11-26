@@ -30,8 +30,8 @@ export default function PaymentDiagnostics({ order }) {
   return <section aria-label="永豐付款診斷" style={{ marginTop:14, paddingTop:12, borderTop:'1px solid var(--border)', fontSize:11, lineHeight:1.7 }}>
     <strong style={{ fontSize:12 }}>永豐付款診斷</strong>
     {order.paymentDiagnosticsStatus === 'unavailable'
-      ? <div role="status">詳細銀行診斷暫時無法載入，原付款狀態仍顯示於上方。請重新載入，並確認診斷功能已部署。</div>
-      : !summary ? <div>尚無詳細銀行診斷。</div>
+      ? <div className="admin-message" role="status">詳細銀行診斷暫時無法載入，原付款狀態仍顯示於上方。請重新載入，並確認診斷功能已部署。</div>
+      : !summary ? <div className="admin-message">尚無詳細銀行診斷。</div>
         : <>
           {paid && <div style={{ color:'var(--green)', marginTop:8 }}>訂單目前已有付款紀錄；以下為銀行觀測紀錄，先前失敗不代表目前未付款。</div>}
           <div style={{ marginTop:8, color:result.tone === 'error' ? 'var(--red)' : result.tone === 'warning' ? '#8a5a16' : 'var(--dark)' }}>

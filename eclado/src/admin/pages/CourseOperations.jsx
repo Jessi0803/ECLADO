@@ -25,7 +25,7 @@ export function CourseIncome({ courseId }) {
     return () => { active = false; };
   }, [courseId]);
   if (error) return <p className="procurement-error" role="alert">{error}</p>;
-  if (!income) return <p role="status">載入課程收入中…</p>;
+  if (!income) return <p className="admin-message" role="status">載入課程收入中…</p>;
   return (
     <dl className="procurement-stats admin-course-income" aria-label="課程收入摘要">
       <div><dt>正常收款 · {income.paid_orders} 筆</dt><dd>{formatCoursePrice(income.paid_twd)}</dd></div>
@@ -131,7 +131,7 @@ export function CourseNotifications({ course, registrations, canSend, initialOnl
                   ))}
                 </div>
               </>
-            ) : <p>目前沒有有效報名可發送。</p>}
+            ) : <p className="admin-message">目前沒有有效報名可發送。</p>}
             <label>補充說明（選填）<textarea rows={3} maxLength={1000} value={message} onChange={event => setMessage(event.target.value)} /></label>
             <button className="admin-primary-btn" disabled={!validSelection.length} type="submit">{sending ? '處理中…' : '排入通知'}</button>
           </fieldset>
@@ -150,8 +150,8 @@ export function CourseNotifications({ course, registrations, canSend, initialOnl
         </div>
       </div>
       {historyError && <p className="procurement-error" role="alert">{historyError}</p>}
-      {historyLoading && <p role="status">載入發送紀錄中…</p>}
-      {!history.length && !historyLoading && !historyError && <p>{onlyExceptions ? '目前沒有通知異常。' : '目前沒有通知紀錄。'}</p>}
+      {historyLoading && <p className="admin-message" role="status">載入發送紀錄中…</p>}
+      {!history.length && !historyLoading && !historyError && <p className="admin-message">{onlyExceptions ? '目前沒有通知異常。' : '目前沒有通知紀錄。'}</p>}
       {history.length > 0 && <div className="table-scroll procurement-list-wrap admin-course-table">
         <table className="responsive-admin-table procurement-items-table">
           <thead><tr>{['收件人', '通知類型', '管道', '結果', '排入／送出時間'].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead>

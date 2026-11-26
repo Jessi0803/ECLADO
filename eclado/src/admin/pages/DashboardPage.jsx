@@ -8,8 +8,8 @@ export default function Dashboard({ summary, loading, error, onRetry, adminEmail
   if (!summary) return (
     <div>
       <h1 style={{ fontSize: 28, fontWeight: 400, marginBottom: 24 }}>儀表板</h1>
-      {error ? <div role="alert">{error} <button type="button" onClick={onRetry}>重新載入</button></div>
-        : <div role="status">載入儀表板資料中…</div>}
+      {error ? <div className="admin-message admin-message--error" role="alert">{error} <button type="button" onClick={onRetry}>重新載入</button></div>
+        : <div className="admin-message" role="status">載入儀表板資料中…</div>}
     </div>
   );
   const today = new Date();
@@ -25,8 +25,8 @@ export default function Dashboard({ summary, loading, error, onRetry, adminEmail
 
   return (
     <div data-testid="dashboard-data" aria-busy={loading}>
-      {error && <div role="alert">{error} <button type="button" onClick={onRetry}>重新載入</button></div>}
-      {loading && <div role="status">更新儀表板資料中…</div>}
+      {error && <div className="admin-message admin-message--error" role="alert">{error} <button type="button" onClick={onRetry}>重新載入</button></div>}
+      {loading && <div className="admin-message" role="status">更新儀表板資料中…</div>}
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontFamily: 'var(--font-d)', fontSize: 28, fontWeight: 400, color: 'var(--dark)', marginBottom: 4 }}>儀表板</h1>
         <p style={{ fontSize: 13, color: 'var(--mid)' }}>{todayLabel} — 歡迎回來，{adminName}</p>

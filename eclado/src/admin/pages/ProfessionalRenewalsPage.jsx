@@ -199,15 +199,15 @@ export default function ProfessionalRenewalsPage({ canWrite = false }) {
             <div style={{ fontSize:11, color:'var(--mid)', marginTop:5 }}>{note}</div>
           </div>)}
         </div>
-        {!migrationReady && <p role="alert" style={{ color:'#92400e', border:'1px solid var(--border)', padding:12, marginBottom:14 }}>目前為唯讀預覽：請先執行 supabase-professional-renewals-manual-processing.sql，才能使用逐人結算與未申請降級。未申請者的採購及獎狀資料將於 SQL 部署後載入。</p>}
+        {!migrationReady && <p className="admin-message admin-message--error" role="alert" style={{ color:'#92400e', border:'1px solid var(--border)', padding:12, marginBottom:14 }}>目前為唯讀預覽：請先執行 supabase-professional-renewals-manual-processing.sql，才能使用逐人結算與未申請降級。未申請者的採購及獎狀資料將於 SQL 部署後載入。</p>}
         <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:18 }}>
           {[['all','全部名單'],['submitted','已提交'],['not_applied','未提交待處理'],['unprocessed','尚待處理'],['processed','已處理／資格已變更']].map(([value,label]) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)} style={{ padding:'8px 12px', border:'1px solid var(--border)', background:filter === value ? 'var(--dark)' : '#fff', color:filter === value ? '#fff' : 'var(--dark)' }}>{label}</button>)}
         </div>
       </>}
-      {message && <div role="status" style={{ padding:12, border:'1px solid var(--border)', marginBottom:14 }}>{message}</div>}
-      {error && <div role="alert" style={{ color:'var(--red)' }}>{error}</div>}
-      {loading && <p>載入中…</p>}
-      {!loading && !error && visibleRows.length === 0 && <p style={{ color:'var(--mid)' }}>此年度或篩選條件下尚無會員。</p>}
+      {message && <div className="admin-message" role="status" style={{ padding:12, border:'1px solid var(--border)', marginBottom:14 }}>{message}</div>}
+      {error && <div className="admin-message admin-message--error" role="alert" style={{ color:'var(--red)' }}>{error}</div>}
+      {loading && <p className="admin-message" role="status">載入中…</p>}
+      {!loading && !error && visibleRows.length === 0 && <p className="admin-message">此年度或篩選條件下尚無會員。</p>}
       <div style={{ display:'grid', gap:16 }}>
         {visibleRows.map(row => {
           const assessment = row.assessment || {};
@@ -223,7 +223,7 @@ export default function ProfessionalRenewalsPage({ canWrite = false }) {
                 <div>年度營業額<br/><strong>{formatRenewalMoney(assessment.annual_sales_amount)}</strong></div>
                 <div>年度門檻<br/><strong>{formatRenewalMoney(assessment.annual_threshold)}</strong></div>
                 <div>續約條件（採購）<br/><strong style={{ color:assessment.a_qualified ? '#166534' : '#b91c1c' }}>{assessment.a_qualified ? '符合' : '未符合'}</strong>
-                  <div style={{ marginTop:4, fontSize:12, color:'var(--text-muted)' }}>
+                  <div style={{ marginTop:4, fontSize:12, color:'var(--mid)' }}>
                     {assessment.quarterly_route_qualified && assessment.annual_route_qualified
                       ? '季度與年度累計皆達標'
                       : assessment.quarterly_route_qualified
@@ -240,14 +240,14 @@ export default function ProfessionalRenewalsPage({ canWrite = false }) {
               {row.assessment && <details style={{ borderTop:'1px solid var(--border)', paddingTop:12, marginBottom:14 }}>
                 <summary style={{ fontSize:13, fontWeight:600, cursor:'pointer' }}>各有效季度採購進度</summary>
                 <p style={{ fontSize:12, color:'#777', lineHeight:1.7, marginTop:10, marginBottom:10 }}>每季 NT$30,000、年度 NT$120,000，皆依有效資格天數比例計算。各有效季度達標，或年度累計達標且各有效季度皆有進貨，即符合續約條件。</p>
-                {(assessment.quarters || []).length === 0 ? <p style={{ fontSize:12, color:'var(--text-muted)' }}>目前尚無有效季度資料。</p> : (
+                {(assessment.quarters || []).length === 0 ? <p style={{ fontSize:12, color:'var(--mid)' }}>目前尚無有效季度資料。</p> : (
                   <div style={{ display:'grid', gap:8 }}>
                     {assessment.quarters.map(quarter => (
                       <div key={quarter.quarter_start} style={{ display:'flex', alignItems:'baseline', flexWrap:'wrap', gap:'6px 16px', fontSize:12 }}>
                         <strong>{quarter.quarter_start?.slice(0, 4)} 年 Q{quarter.calendar_quarter}</strong>
                         <span>採購 {formatRenewalMoney(quarter.sales_amount)}</span>
                         <span>門檻 {formatRenewalMoney(quarter.threshold_amount)}</span>
-                        <span style={{ color:quarter.has_zero_sales ? 'var(--red)' : quarter.meets_quarter_threshold ? '#166534' : 'var(--text-muted)' }}>{quarter.has_zero_sales ? '零進貨' : quarter.meets_quarter_threshold ? '季度達標' : '季度未達標'}</span>
+                        <span style={{ color:quarter.has_zero_sales ? 'var(--red)' : quarter.meets_quarter_threshold ? '#166534' : 'var(--mid)' }}>{quarter.has_zero_sales ? '零進貨' : quarter.meets_quarter_threshold ? '季度達標' : '季度未達標'}</span>
                       </div>
                     ))}
                   </div>
@@ -277,7 +277,7 @@ export default function ProfessionalRenewalsPage({ canWrite = false }) {
               {canWrite && lateWindowForm?.id === row.id && (
                 <form onSubmit={event => openLateWindow(event, row)} style={{ marginTop:16, padding:16, border:'1px solid var(--border)', background:'var(--bg)' }}>
                   <strong>開放學員獎狀補件</strong>
-                  <p style={{ fontSize:12, color:'var(--text-muted)', margin:'8px 0 12px' }}>僅開放此會員 {row.assessment_year} 年度的學員獎狀補件，不延長續約申請期限。</p>
+                  <p style={{ fontSize:12, color:'var(--mid)', margin:'8px 0 12px' }}>僅開放此會員 {row.assessment_year} 年度的學員獎狀補件，不延長續約申請期限。</p>
                   <fieldset disabled={busy === `window-${row.id}`} style={{ border:0, padding:0, margin:0, minWidth:0 }}>
                     <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
                       <label style={{ display:'grid', gap:6 }}>截止日期（台灣時間）
@@ -290,7 +290,7 @@ export default function ProfessionalRenewalsPage({ canWrite = false }) {
                     <label style={{ display:'grid', gap:6, marginTop:12 }}>開放原因
                       <textarea required rows={3} value={lateWindowForm.reason} onChange={event => setLateWindowForm(previous => ({ ...previous, reason:event.target.value }))} placeholder="請說明本次開放補件的原因" style={{ width:'100%', boxSizing:'border-box', padding:10, border:'1px solid var(--border)', resize:'vertical' }} />
                     </label>
-                    {lateWindowError && <p role="alert" style={{ color:'#b91c1c', marginTop:10 }}>{lateWindowError}</p>}
+                    {lateWindowError && <p className="admin-message admin-message--error" role="alert" style={{ color:'#b91c1c', marginTop:10 }}>{lateWindowError}</p>}
                     <div style={{ display:'flex', gap:8, marginTop:12 }}>
                       <button type="submit">{busy === `window-${row.id}` ? '儲存中…' : '確認開放'}</button>
                       <button type="button" onClick={() => { setLateWindowForm(null); setLateWindowError(''); }}>取消</button>

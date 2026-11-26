@@ -159,7 +159,7 @@ export default function AssistedOrderDialog({members=[],products=[],initialMembe
       <div className="assignment-modal-header"><div><h3>新增代客訂單</h3><p>{customerType==='member'&&member?`會員 ${member.name||member.email}`:'由管理員建立線上付款訂單'}</p></div><button type="button" disabled={busy} onClick={onClose} aria-label="關閉代客開單">×</button></div>
       <p style={{fontSize:11,lineHeight:1.7,color:'var(--mid)',marginBottom:16}}>獨立線上訂單，不加入合併出貨。優惠依成交價計算；使用購物金需由客戶確認同意後付款。</p>
       <div className="assisted-order-form">
-      {recovering?<p>正在確認先前開單結果…</p>:result?<>
+      {recovering?<p className="admin-message">正在確認先前開單結果…</p>:result?<>
         <p style={{fontSize:13,marginBottom:8,overflowWrap:'anywhere'}}>訂單已成立：{result.order_id}</p><p style={{fontSize:11,color:'var(--mid)',marginBottom:14}}>商品、金額及收件資料已鎖定。修改需取消原單後重建。</p>
         <label>客戶付款連結<input aria-label="客戶付款連結" readOnly value={assistedLink(result)} style={style}/></label>
         <div className="assignment-actions" style={{flexWrap:'wrap'}}><button type="button" onClick={async()=>{try{await navigator.clipboard.writeText(assistedLink(result));setNotice('付款連結已複製。');}catch{setError('無法自動複製，請選取上方連結手動複製。');}}}>複製付款連結</button>

@@ -64,7 +64,7 @@ export default function StudentPricingSettingsSection() {
     {error && <p role="alert" style={{ color:'var(--red)', fontSize:12 }}>{error}</p>}
     {message && <p role="status" style={{ color:'var(--green)', fontSize:12 }}>{message}</p>}
     <details className="reward-details"><summary>學生折數異動歷史（最近100筆）</summary>
-      {!history.length ? <p>尚無異動</p> : history.map(entry => <div key={entry.id} style={{ padding:'8px 0', borderBottom:'1px solid var(--border)' }}>
+      {!history.length ? <p className="admin-message">尚無異動</p> : history.map(entry => <div key={entry.id} style={{ padding:'8px 0', borderBottom:'1px solid var(--border)' }}>
         {new Date(entry.created_at).toLocaleString('zh-TW', { timeZone:'Asia/Taipei' })} · 操作者 {entry.actor_user_id || '系統'}
         <div>學生1：{formatFold(entry.before_data.student_1)} → {formatFold(entry.after_data.student_1)} 折；學生2：{formatFold(entry.before_data.student_2)} → {formatFold(entry.after_data.student_2)} 折</div>
       </div>)}

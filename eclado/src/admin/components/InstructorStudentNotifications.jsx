@@ -25,10 +25,10 @@ export default function InstructorStudentNotifications({ studentId, revision }) 
   return <details className="reward-details" open={open} onToggle={e => setOpen(e.currentTarget.open)}>
     <summary>師生綁定通知紀錄</summary>
     <p className="reward-note">通知學生與相關老師，優先透過 LINE 發送，無法發送時改以 Email 通知。</p>
-    {error && <p role="alert">{error}</p>}
-    {!error && !data && <p>載入通知紀錄中…</p>}
+    {error && <p className="admin-message admin-message--error" role="alert">{error}</p>}
+    {!error && !data && <p className="admin-message">載入通知紀錄中…</p>}
     {data && <>
-      {!data.notifications?.length && <p>尚無師生綁定通知紀錄。</p>}
+      {!data.notifications?.length && <p className="admin-message">尚無師生綁定通知紀錄。</p>}
       {(data.notifications || []).map(n => <div key={n.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
         <strong>{eventLabels[n.event_type] || '師生異動'} · {audienceLabels[n.audience] || '收件人'}</strong>
         <p>{statusLabels[n.status] || '處理中'}{n.channel && ` · ${n.channel === 'line' ? 'LINE' : 'Email'}`}{n.recipient_mask && ` · ${n.recipient_mask}`}</p>

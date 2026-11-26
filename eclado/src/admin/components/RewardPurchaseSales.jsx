@@ -31,10 +31,10 @@ export default function RewardPurchaseSales({instructorId,revision=0}){
       {Array.from({length:Math.max(1,current.year-2019)},(_,i)=><option key={current.year-i} value={current.year-i}>{current.year-i} 年</option>)}
     </select></label></div>
     {error&&<p role="alert" className="reward-message">{error}</p>}
-    {!data&&!error&&<p role="status">正在載入叫貨統計…</p>}
+    {!data&&!error&&<p className="admin-message" role="status">正在載入叫貨統計…</p>}
     {data&&<>
       <h4>每季叫貨額</h4><p className="reward-note">季度合計包含線下補登；線下只有季度總額，不拆入每月。</p>
-      {!data.quarters.length?<p>此年度沒有有效資格季度。</p>:<div className="table-scroll"><table className="reward-purchase-table"><thead><tr><th>季度</th><th>網站叫貨</th><th>線下補登</th><th>合計</th></tr></thead><tbody>
+      {!data.quarters.length?<p className="admin-message">此年度沒有有效資格季度。</p>:<div className="table-scroll"><table className="reward-purchase-table"><thead><tr><th>季度</th><th>網站叫貨</th><th>線下補登</th><th>合計</th></tr></thead><tbody>
         {data.quarters.map(row=><tr key={row.quarter}><th>{year} Q{row.quarter}</th><td>{money(row.online_amount)}</td><td>{money(row.offline_amount)}</td><td>{money(row.amount)}</td></tr>)}
       </tbody></table></div>}
       <details className="reward-details"><summary>每月網站叫貨額</summary><div className="reward-purchase-months">

@@ -35,6 +35,6 @@ export default function RewardRedemptionExport(){
       </fieldset>
     </form>
     <p className="reward-note">日期依建單時間篩選。金額為匯出當下狀態，含已取消與退貨訂單；不含銀行資料，不會變更帳務。單次最多 10,000 筆。</p>
-    {error&&<p role="alert" className="reward-message">{error}</p>}{message&&<p role="status">{message}</p>}
+    {error&&<p role="alert" className="reward-message">{error}</p>}{message&&<p className="admin-message" role="status">{message}</p>}
   </section>;
 }

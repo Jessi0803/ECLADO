@@ -28,6 +28,17 @@ input, select, textarea { font-family: var(--font); }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--light); border-radius: 2px; }
 
+/* Shared neutral empty/loading messages. Keep layout and semantic feedback local. */
+.app-shell .admin-message,
+.admin-list-empty-message {
+  color: var(--mid);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.app-shell .admin-message--error { color: var(--red); }
+
 /* ── RWD ── */
 .app-shell { display: flex; min-height: 100vh; }
 .app-main { margin-left: var(--sidebar-w); flex: 1; overflow-y: auto; overflow-x: hidden; padding: 36px 40px; background: var(--bg); min-width: 0; }
@@ -384,8 +395,8 @@ input, select, textarea { font-family: var(--font); }
 .procurement-list-table td, .procurement-items-table td { padding: 14px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: middle; }
 .procurement-list-table small, .procurement-items-table small { display: block; margin-top: 4px; color: var(--mid); font-size: 10px; line-height: 1.5; }
 .procurement-link { padding: 0; border: 0; background: transparent; color: var(--dark); font-size: 12px; font-weight: 600; text-decoration: underline; text-decoration-color: var(--light); text-underline-offset: 3px; }
-.procurement-empty { padding: 50px 20px !important; text-align: center; color: var(--mid); }
-.admin-list-empty-message { color: var(--mid); font-size: 13px; text-align: center; }
+.procurement-empty { padding: 50px 20px !important; text-align: center; color: var(--mid); font-size: 13px; line-height: 1.7; }
+.admin-list-empty-message { text-align: center; }
 .procurement-status { display: inline-flex; align-items: center; min-height: 24px; padding: 4px 9px; background: var(--off); color: var(--mid); font-size: 10px; white-space: nowrap; }
 .procurement-status.status-pending { background: oklch(0.78 0.14 80 / .12); color: oklch(0.55 0.13 75); }
 .procurement-status.status-ordered, .procurement-status.status-shipping { background: oklch(0.60 0.12 240 / .1); color: var(--blue); }

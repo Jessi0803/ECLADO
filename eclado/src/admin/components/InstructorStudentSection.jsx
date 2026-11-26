@@ -75,9 +75,9 @@ export default function InstructorStudentSection({ member, members, canManage })
   return <section aria-label="師生綁定設定" className="reward-view reward-binding">
     <div className="reward-binding-header"><h4>師生綁定與學生類型</h4><button type="button" onClick={reload} disabled={busy} className="reward-button">重新載入師生設定</button></div>
     <p className="reward-note">管理師生綁定與學生價格類型。資格符合時，仍須開啟全站學生價才會套用學生價格。</p>
-    {busy && <p>處理中…</p>}
-    {error && <p role="alert" style={{ color:'var(--red)' }}>{error}</p>}
-    {message && <p role="status" style={{ color:'var(--green)' }}>{message}</p>}
+    {busy && <p className="admin-message">處理中…</p>}
+    {error && <p className="admin-message admin-message--error" role="alert" style={{ color:'var(--red)' }}>{error}</p>}
+    {message && <p className="admin-message" role="status" style={{ color:'var(--green)' }}>{message}</p>}
     {data && <>
       {(member.type === 'instructor' || data.instructor_settings) && <div className="reward-details">
         <form onSubmit={saveType} className="reward-type-form">
@@ -110,7 +110,7 @@ export default function InstructorStudentSection({ member, members, canManage })
       </div>}
       {(member.type === 'pro' || context?.has_binding) && <InstructorStudentNotifications studentId={member.id} revision={data} />}
       <details className="reward-details"><summary>師生異動歷史（最近100筆）</summary>
-        {!data.history?.length ? <p>尚無異動</p> : data.history.map(entry => <div key={entry.id} style={{ padding:'8px 0', borderBottom:'1px solid var(--border)', overflowWrap:'anywhere' }}>
+        {!data.history?.length ? <p className="admin-message">尚無異動</p> : data.history.map(entry => <div key={entry.id} style={{ padding:'8px 0', borderBottom:'1px solid var(--border)', overflowWrap:'anywhere' }}>
           {new Date(entry.created_at).toLocaleString('zh-TW', { timeZone:'Asia/Taipei' })} · {labels[entry.event_type] || entry.event_type}
           <div>操作者：{entry.actor_user_id || '系統（會員刪除）'}</div>
           {entry.event_type === 'instructor_type' ? <div>類型：{entry.before_data.student_price_type || '未設定'} → {entry.after_data.student_price_type || '未設定'}</div>

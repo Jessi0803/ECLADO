@@ -63,8 +63,8 @@ export default function ProductCostReport({ from, to, canApprove }) {
 
   return (
     <div className="product-cost-report">
-      {notice && <p role="status">{notice}</p>}
-      {loading && <p role="status">載入營運成本中…</p>}
+      {notice && <p className="admin-message" role="status">{notice}</p>}
+      {loading && <p className="admin-message" role="status">載入營運成本中…</p>}
       {!loading && error && <div className="procurement-error" role="alert">{error}</div>}
       {!loading && summary && !summary.started_at && <p className="procurement-form-card">尚未建立期初成本。</p>}
       {!loading && summary?.started_at && (
@@ -88,7 +88,7 @@ export default function ProductCostReport({ from, to, canApprove }) {
               <strong>{amount(Number(summary.shipment_cost) - Number(summary.return_cost))}</strong></div>
           </div>
           {(Number(summary.estimated_cost) !== 0 || summary.approved_items?.length > 0) && <p className="analytics-note product-cost-estimate-note">淨額含估列成本 {amount(summary.estimated_cost)}。</p>}
-          {summary.pending_quantity > 0 && <p role="status">
+          {summary.pending_quantity > 0 && <p className="admin-message" role="status">
             {summary.pending_orders} 張訂單、{summary.pending_quantity} 件成本待確認
             {summary.shortage_quantity > 0 && `，其中 ${summary.shortage_quantity} 件成本層不足`}
             {summary.unknown_quantity > 0 && `、${summary.unknown_quantity} 件缺少單位成本`}。

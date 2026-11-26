@@ -166,7 +166,7 @@ export default function CourseRoster({ course, destination, canNotify, onClose }
       </header>
       {notice && <p className="admin-course-feedback" role="status">{notice}</p>}
       {error && action?.kind !== 'cancel' && <p className="procurement-error" role="alert">{error}</p>}
-      {!data && !error && <p role="status">載入名單中…</p>}
+      {!data && !error && <p className="admin-message" role="status">載入名單中…</p>}
       {data && <>
         <div className="reward-management-tabs" role="tablist" aria-label="課程管理功能" onKeyDown={handleTabKey}>
           {courseTabs.map(([id, label]) => (
@@ -214,7 +214,7 @@ export default function CourseRoster({ course, destination, canNotify, onClose }
                 ))}
               </tbody>
             </table>
-          </div> : <p>目前沒有符合條件的報名紀錄。</p>}
+          </div> : <p className="admin-message">目前沒有符合條件的報名紀錄。</p>}
 
           {action?.kind === 'cancel' && (
             <CancelRegistrationDialog registration={action.item} note={note} setNote={setNote}
@@ -241,7 +241,7 @@ export default function CourseRoster({ course, destination, canNotify, onClose }
 
           <section className="procurement-section-card admin-course-case-panel">
           <h3 ref={caseHeading} tabIndex={-1}>人工處理案件</h3>
-          {!data.cases.length ? <p>目前沒有案件。</p> : <ul className="admin-course-cases">
+          {!data.cases.length ? <p className="admin-message">目前沒有案件。</p> : <ul className="admin-course-cases">
             {[...data.cases].sort((a, b) => Number(Boolean(a.resolved_at)) - Number(Boolean(b.resolved_at))).map(item => (
               <li key={item.id}>
                 <strong>{caseLabels[item.kind]}</strong> · 訂單 {item.order_id}

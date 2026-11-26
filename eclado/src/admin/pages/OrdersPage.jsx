@@ -634,9 +634,9 @@ export default function Orders({ refreshVersion = 0, persistOrderPatch: persistO
             onChange={event => setSearchInput(event.target.value)} placeholder="搜尋訂單編號、訂購人、Email、電話或托運單號"
             style={{ width: '100%', maxWidth: 520, padding: '10px 12px', border: '1px solid var(--border)', fontSize: 13, background: 'var(--white)' }} />
         </div>
-        {listLoading && <div role="status" style={{ marginBottom: 12 }}>載入訂單列表中…</div>}
-        {listError && <div role="alert" style={{ marginBottom: 12 }}>{listError} <button type="button" style={ORDER_ACTION_STYLE} onClick={invalidateOrders}>重新載入列表</button></div>}
-        {lineNotice && !selectedId && <div role="status" style={{ marginBottom: 12 }}>{lineNotice}</div>}
+        {listLoading && <div className="admin-message" role="status" style={{ marginBottom: 12 }}>載入訂單列表中…</div>}
+        {listError && <div className="admin-message admin-message--error" role="alert" style={{ marginBottom: 12 }}>{listError} <button type="button" style={ORDER_ACTION_STYLE} onClick={invalidateOrders}>重新載入列表</button></div>}
+        {lineNotice && !selectedId && <div className="admin-message" role="status" style={{ marginBottom: 12 }}>{lineNotice}</div>}
         {/* 只有已進入庫存配置流程的訂單才顯示庫存篩選。 */}
         {showInventoryFilters && <div style={{ display: 'flex', gap: 0, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{ fontSize: 11, color: 'var(--mid)', letterSpacing: '0.08em', marginRight: 10, whiteSpace: 'nowrap' }}>庫存狀態</span>
@@ -736,8 +736,8 @@ export default function Orders({ refreshVersion = 0, persistOrderPatch: persistO
             <div><button type="button" className={selected ? 'detail-panel-mobile-back' : undefined} style={selected ? undefined : ORDER_ACTION_STYLE} onClick={closeDetails}>← 返回</button><h3 style={{ fontSize: 15, fontWeight: 500 }}>訂單詳情</h3></div>
             <button type="button" className="hide-mobile" aria-label="關閉訂單詳情" onClick={closeDetails} style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--mid)', cursor: 'pointer', lineHeight: 1 }}>×</button>
           </div>
-          {(!selected || detailLoading) && !detailError && <div role="status">{selected ? '更新訂單詳情中…' : '載入訂單詳情中…'}</div>}
-          {detailError && <div role="alert">{detailError} <button type="button" style={ORDER_ACTION_STYLE} onClick={invalidateOrders}>重新載入詳情</button></div>}
+          {(!selected || detailLoading) && !detailError && <div className="admin-message" role="status">{selected ? '更新訂單詳情中…' : '載入訂單詳情中…'}</div>}
+          {detailError && <div className="admin-message admin-message--error" role="alert">{detailError} <button type="button" style={ORDER_ACTION_STYLE} onClick={invalidateOrders}>重新載入詳情</button></div>}
           {selected && <fieldset disabled={detailLoading || !!detailError || !!actionOrderId} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           {backToMember && selected.user_id === backToMember.id && (
             <button type="button" onClick={() => onOpenMember?.(backToMember.id, '')} style={{ background: 'none', border: 'none', padding: 0, marginBottom: 14, fontSize: 12, color: 'var(--blue)', cursor: 'pointer' }}>← 回到會員 {backToMember.name || ''}</button>
@@ -994,7 +994,7 @@ export default function Orders({ refreshVersion = 0, persistOrderPatch: persistO
                             {selected.shipmentNotificationChannel ? `（${selected.shipmentNotificationChannel === 'line' ? 'LINE' : 'Email'}）` : ''}
                           </div>
                         ) : (
-                          <div>尚無成功通知紀錄</div>
+                          <div className="admin-message">尚無成功通知紀錄</div>
                         )}
                         {selected.shipmentNotificationError && (
                           <div style={{ color: 'var(--red)' }}>最近錯誤：{selected.shipmentNotificationError}</div>
