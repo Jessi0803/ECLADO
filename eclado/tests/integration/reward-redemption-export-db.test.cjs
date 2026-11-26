@@ -1,5 +1,5 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');
-const {runRewardCheckoutDatabaseScenario}=require('./instructor-reward-checkout-db.test.cjs');
+const {runRewardCheckoutDatabaseScenario}=require('../fixtures/instructor-reward-checkout-db.cjs');
 test('redemption export: real lifecycle rows, role ACL, Taipei dates and immutable audit',
  {skip:!process.env.PGLITE_MODULE&&!process.env.EMBEDDED_POSTGRES_MODULE,timeout:180000},()=>runRewardCheckoutDatabaseScenario(async({db,read,actor,one,admin,teacher,student,ordinaryQuote,ordinaryCreate,create,walletQuote,status,bank,consistent})=>{
   await actor(admin);

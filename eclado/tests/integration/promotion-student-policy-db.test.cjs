@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { runStudentPricingDatabaseScenario } = require('./student-pricing-db.test.cjs');
+const { runStudentPricingDatabaseScenario } = require('../fixtures/student-pricing-db.cjs');
 const { solveStudentPolicy } = require('../helpers/student-policy-oracle.cjs');
 
 test('student policy: authoritative allocation, mixed rewards, coupons, snapshots and rollback', {
@@ -214,7 +214,7 @@ test('student policy: authoritative allocation, mixed rewards, coupons, snapshot
   await db.exec('reset role');
 }));
 
-const { runRewardCheckoutDatabaseScenario } = require('./instructor-reward-checkout-db.test.cjs');
+const { runRewardCheckoutDatabaseScenario } = require('../fixtures/instructor-reward-checkout-db.cjs');
 test('student policy migration preserves installed double-wallet checkout and bank amount', {
   skip: !process.env.PGLITE_MODULE && !process.env.EMBEDDED_POSTGRES_MODULE, timeout: 180000,
 }, () => runRewardCheckoutDatabaseScenario(async ({ db, read, fn, one, actor, admin, teacher, student, ordinaryQuote, ordinaryCreate, status, walletQuote, create, consistent }) => {

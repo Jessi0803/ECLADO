@@ -1,6 +1,6 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
-const {runStudentPricingDatabaseScenario}=require('./student-pricing-db.test.cjs');
+const {runStudentPricingDatabaseScenario}=require('../fixtures/student-pricing-db.cjs');
 
 test('2A: private immutable snapshots in existing ordinary/assisted transactions',
   {skip:!process.env.PGLITE_MODULE&&!process.env.EMBEDDED_POSTGRES_MODULE,timeout:180000},()=>

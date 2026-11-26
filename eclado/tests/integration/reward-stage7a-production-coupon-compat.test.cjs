@@ -1,6 +1,6 @@
 // Read exported metadata only; reproduce the existing production mismatch locally.
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
-const {runStudentPricingDatabaseScenario}=require('./student-pricing-db.test.cjs');
+const {runStudentPricingDatabaseScenario}=require('../fixtures/student-pricing-db.cjs');
 test('7A: production member-targeted quote/create mismatch is reproduced without production writes',{skip:!process.env.EMBEDDED_POSTGRES_MODULE,timeout:120000},()=>runStudentPricingDatabaseScenario(async c=>{
  const metadata=JSON.parse(fs.readFileSync('docs/evidence/reward-stage7a/production-metadata.json','utf8'));
  const creator=metadata.functions.find(f=>f.name==='create_order_with_pricing_discount_v2').definition;

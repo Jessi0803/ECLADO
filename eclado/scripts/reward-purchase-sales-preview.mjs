@@ -4,7 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
 import {mockEcladoApis} from '../tests/support/eclado-mocks.ts';
 const require=createRequire(import.meta.url);
-const {purchaseFixture}=require('../tests/integration/reward-purchase-sales-db.test.cjs');
+const {purchaseFixture}=require('../tests/fixtures/reward-purchase-sales-db.cjs');
 const {db,teacher,admin,query,add}=await purchaseFixture();
 const year=Number(new Intl.DateTimeFormat('en',{year:'numeric',timeZone:'Asia/Taipei'}).format(new Date()));
 await db.query("insert into public.professional_memberships values('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',$1,'instructor',$2,null)",[teacher,`${year}-01-01`]);

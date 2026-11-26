@@ -54,11 +54,12 @@ jobs:
       - run: npm test
         working-directory: eclado/payment-api
       - name: Package runtime only
-        if: github.event_name == 'workflow_dispatch'
         run: |
           tar -czf payment-api.tgz -C eclado/payment-api server.js assisted-orders.js course-payments.cjs reward-payment-evidence.cjs checkout-events.cjs sinopac-diagnostics.cjs sinopac-status-codes.json package.json package-lock.json
           sha256sum payment-api.tgz > payment-api.tgz.sha256
           cp eclado/payment-api/deploy-release.sh deploy-release.sh
+      - name: Verify packaged runtime startup
+        run: node eclado/payment-api/verify-release.cjs payment-api.tgz
       - uses: actions/upload-artifact@v4
         if: github.event_name == 'workflow_dispatch'
         with:

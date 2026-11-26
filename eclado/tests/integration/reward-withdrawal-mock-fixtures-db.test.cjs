@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const {runRewardCheckoutDatabaseScenario}=require('./instructor-reward-checkout-db.test.cjs');
+const {runRewardCheckoutDatabaseScenario}=require('../fixtures/instructor-reward-checkout-db.cjs');
 test('test-only withdrawal fixtures create 30 coherent states without changing original available funds',
  {skip:!process.env.EMBEDDED_POSTGRES_MODULE,timeout:180000},()=>runRewardCheckoutDatabaseScenario(async c=>{
  const {db,read,one,teacher,student,admin}=c;

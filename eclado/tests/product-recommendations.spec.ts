@@ -194,7 +194,7 @@ test('結帳推薦為緊湊列表，最多顯示三條半並可向下捲動，�
   await expect(button.locator('svg')).toBeVisible();
   await button.click();
   await expect(list.getByRole('article')).toHaveCount(8);
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('eclado_member_cart_v1:recommendation-member:cache') || '{"items":[]}').items.find((item: any) => item.id === 208)?.qty)).toBe(2);
+  await expect.poll(() => page.evaluate(id => JSON.parse(localStorage.getItem(`eclado_member_cart_v1:${id}:cache`) || '{\"items\":[]}').items.find((item: any) => item.id === 208)?.qty, user.id)).toBe(2);
   await expect(button).toHaveText('＋');
   await section.scrollIntoViewIfNeeded();
   await page.screenshot({path:`/tmp/eclado-recommendations-scroll-${testInfo.project.name}.png`});

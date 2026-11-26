@@ -202,14 +202,14 @@ test('導覽列可將頁面加入常用並依原本選單順序顯示', async ({
   await sidebar.getByRole('button', { name: '將會員管理加入常用' }).click();
   await sidebar.getByRole('button', { name: '將訂單管理加入常用' }).click();
   await expect(sidebar.getByText('常用', { exact: true })).toBeVisible();
-  expect(saves).toEqual([['members'], ['members', 'orders']]);
+  await expect.poll(() => saves).toEqual([['members'], ['members', 'orders']]);
 
   const labels = await sidebar.locator('nav > div').first().locator('button:not(.sidebar-star)').allInnerTexts();
   expect(labels.map(label => label.trim())).toEqual(['訂單管理', '會員管理']);
   await expect(sidebar.getByRole('button', { name: '將訂單管理移出常用' })).toHaveAttribute('aria-pressed', 'true');
 
   await sidebar.getByRole('button', { name: '將訂單管理移出常用' }).click();
-  expect(saves.at(-1)).toEqual(['members']);
+  await expect.poll(() => saves.at(-1)).toEqual(['members']);
   await expect(sidebar.locator('nav > div').nth(1).getByText('訂單管理')).toBeVisible();
 });
 

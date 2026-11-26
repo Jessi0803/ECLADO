@@ -16,6 +16,15 @@ async function expectContained(page:Page){
  await expect(page.getByTestId('checkout-order-summary').getByText('−NT$ 930',{exact:true})).toBeVisible();
  await expect(page.getByTestId('checkout-order-summary').getByText('贈品 × 1',{exact:true})).toBeVisible();
 }
+async function expectFieldsLanding(page:Page){
+ // A short confirmation form can reach the document bottom before its top
+ // reaches 84px. Accept that browser scroll limit while keeping it visible.
+ await expect.poll(()=>page.evaluate(()=>{
+  const top=document.querySelector('[data-testid="checkout-fields"]')!.getBoundingClientRect().top;
+  const atBottom=Math.abs(document.documentElement.scrollHeight-innerHeight-scrollY)<=2;
+  return Math.abs(top-84)<=3 || (atBottom&&top>=84&&top<innerHeight/2);
+ })).toBe(true);
+}
 for(const width of [320,390,1280])test(`checkout activity and gift text stays inside ${width}px viewport in both steps`,async({page})=>{
  await page.setViewportSize({width,height:900});await mockEcladoApis(page);
  await page.route('**/rest/v1/rpc/quote_order_pricing',async route=>{
@@ -44,9 +53,9 @@ for(const width of [320,390,1280])test(`checkout activity and gift text stays in
  await page.getByRole('button',{name:'繼續確認付款',exact:true}).click();await expectContained(page);
  await expectLayout();
  if(width<=900){
-  await expect.poll(async()=>Math.abs((await page.getByTestId('checkout-fields').boundingBox())!.y-84)).toBeLessThanOrEqual(3);
+  await expectFieldsLanding(page);
   await page.getByRole('button',{name:'修改',exact:true}).first().click();
   await expect(page.getByPlaceholder('縣市')).toHaveValue('TEST');
-  await expect.poll(async()=>Math.abs((await page.getByTestId('checkout-fields').boundingBox())!.y-84)).toBeLessThanOrEqual(3);
+  await expectFieldsLanding(page);
  }
 });

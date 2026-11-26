@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const { runStudentPricingDatabaseScenario } = require('./student-pricing-db.test.cjs');
+const { runStudentPricingDatabaseScenario } = require('../fixtures/student-pricing-db.cjs');
 
 test('member-targeted coupon quote and create use the same identity rule', {
   skip: !process.env.EMBEDDED_POSTGRES_MODULE,

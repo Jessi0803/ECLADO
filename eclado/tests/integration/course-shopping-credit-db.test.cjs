@@ -55,9 +55,7 @@ test('ended courses grant each payer the saved fee once per active paid registra
     `);
     for (const file of [
       'supabase-shopping-credit-foundation.sql', 'supabase-courses-foundation.sql',
-      'supabase-course-listing-details.sql', 'supabase-course-description-images.sql',
-      'supabase-course-registration.sql', 'supabase-course-payments.sql', 'supabase-course-income.sql',
-      'supabase-course-notifications.sql', 'supabase-course-shopping-credit.sql',
+      'supabase-course-registration.sql', 'supabase-course-shopping-credit.sql',
     ]) {
       await db.exec(readFileSync(resolve(__dirname, '../..', file), 'utf8'));
     }

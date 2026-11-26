@@ -11,6 +11,9 @@ import {
 } from './support/eclado-mocks';
 
 test.beforeEach(async ({ page }) => {
+  // These checkout cases use a returning member who has dismissed the invite.
+  // First-visit invitations are covered by checkout-first-member-banner.spec.ts.
+  await page.addInitScript(() => localStorage.setItem('eclado_pro_banner_user-e2e-member', '1'));
   await mockEcladoApis(page);
 });
 
@@ -73,7 +76,7 @@ test('活動限定商品只出現在未列出的活動路徑並標示 noindex', 
   await expect(page.getByText('活動限定潔顏品')).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
 
-  await page.getByText('活動限定潔顏品').click();
+  await page.getByRole('link', { name: '查看活動限定潔顏品', exact: true }).click();
   await expect(page).toHaveURL(/\/events\/limited\/private-event-cleanser$/);
   await expect(page.getByRole('heading', { name: '活動限定潔顏品' })).toBeVisible();
   await expect(page.getByText('E2E 測試活動')).toBeVisible();
@@ -948,7 +951,7 @@ test('DB 新增的商品會顯示在商城', async ({ page }) => {
 
   await page.goto('/shop');
   await expect(page.getByText('新款保濕乳霜')).toBeVisible();
-  await page.getByText('新款保濕乳霜').click();
+  await page.getByRole('link', { name: '查看新款保濕乳霜', exact: true }).click();
   await expect(page.getByText('新增商品測試')).toBeVisible();
   await expect(page.getByText('NT$ 1,880').first()).toBeVisible();
 });
@@ -1552,7 +1555,8 @@ for (const state of ['paid', 'failed'] as const) {
     await expect(page.getByRole('button', { name: '前往付款頁' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: '複製付款連結' })).toHaveCount(0);
     if (state === 'failed') {
-      await expect(page.getByText('付款尚未完成，請至「訪客訂單查詢」，輸入查詢碼與結帳手機號碼後重新付款。')).toBeVisible();
+      await expect(page.getByRole('status').filter({ hasText: '付款尚未完成，訂單仍為你保留。' })).toBeVisible();
+      await expect(page.getByRole('button', { name: '繼續付款', exact: true })).toBeVisible();
     }
     await page.getByRole('button', { name: '重新選購商品', exact: true }).click();
     await expect(page).toHaveURL('/shop');
@@ -1700,7 +1704,6 @@ test('登入會員結帳會寫入訂單 payload 與 user_id，付款前不扣庫
   await page.getByPlaceholder('縣市').fill('台北市');
   await page.getByPlaceholder('區域').fill('信義區');
   await page.getByPlaceholder('路/街/巷/弄/號/樓').fill('測試路 99 號');
-  await page.getByRole('button', { name: '×' }).click();
   await page.getByRole('button', { name: /繼續確認付款/ }).click();
   await page.getByRole('button', { name: /虛擬帳號匯款/ }).click();
   await page.getByRole('button', { name: /確認訂單/ }).click();
@@ -2243,7 +2246,7 @@ test('付款失敗頁保留原訂單並建立新的付款嘗試', async ({ page 
 test('金流建單失敗時顯示錯誤且不進入付款完成畫面', async ({ page }) => {
   await mockEcladoApis(page, {
     promotions: [],
-    paymentError: '測試金流暫時不可用',
+    paymentError: 'Mock gateway backend unavailable',
   });
 
   await page.goto('/shop');
@@ -2263,7 +2266,7 @@ test('金流建單失敗時顯示錯誤且不進入付款完成畫面', async ({
   await page.getByRole('button', { name: /確認訂單/ }).click();
 
   await expect(page.getByText('目前無法繼續付款，請稍後再試，或聯繫客服協助。')).toBeVisible();
-  await expect(page.getByText('測試金流暫時不可用', { exact: false })).toHaveCount(0);
+  await expect(page.getByText('Mock gateway backend unavailable', { exact: false })).toHaveCount(0);
   await expect(page.getByText('請完成付款')).toHaveCount(0);
 });
 
@@ -2305,7 +2308,7 @@ test('權威訂單建立失敗時不建立付款單', async ({ page }) => {
   const paymentRequests: Record<string, unknown>[] = [];
   await mockEcladoApis(page, {
     promotions: [],
-    orderWriteError: '測試訂單寫入失敗',
+    orderWriteError: 'Mock internal order write failure',
     onPaymentRequest: request => paymentRequests.push(request),
   });
 
@@ -2328,7 +2331,7 @@ test('權威訂單建立失敗時不建立付款單', async ({ page }) => {
 
   await expect(page.getByText('目前無法繼續付款，請稍後再試，或聯繫客服協助。')).toBeVisible();
   await expect(page.getByRole('heading', { name: '請完成付款' })).toHaveCount(0);
-  await expect(page.getByText('測試訂單寫入失敗', { exact: false })).toHaveCount(0);
+  await expect(page.getByText('Mock internal order write failure', { exact: false })).toHaveCount(0);
   expect(paymentRequests).toHaveLength(0);
 });
 

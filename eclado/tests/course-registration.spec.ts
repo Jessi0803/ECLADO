@@ -288,12 +288,12 @@ test('課程後台可選取有效報名發送通知、查看結果及收入摘�
   if ((page.viewportSize()?.width || 0) <= 900) await page.getByRole('button', { name: '開啟選單' }).click();
   await page.locator('.app-sidebar button:not(.sidebar-star)').filter({ hasText: /^課程管理$/ }).click();
   const cases = page.getByRole('button', { name: '查看 專業護膚課程 待人工處理' });
-  await expect(cases).toContainText('1 筆');
+  await expect(cases).toHaveAccessibleName('查看 專業護膚課程 待人工處理 1 筆');
   await cases.click();
   await expect(page.getByRole('heading', { name: '人工處理案件' })).toBeFocused();
   await page.getByRole('button', { name: /返回課程列表/ }).click();
   const exceptions = page.getByRole('button', { name: '查看 專業護膚課程 通知異常' });
-  await expect(exceptions).toContainText('2 筆');
+  await expect(exceptions).toHaveAccessibleName('查看 專業護膚課程 通知異常 2 筆');
   const filteredRequest = page.waitForRequest('**/rest/v1/rpc/get_admin_course_notifications');
   await exceptions.click();
   expect((await filteredRequest).postDataJSON()).toMatchObject({ p_only_exceptions: true });

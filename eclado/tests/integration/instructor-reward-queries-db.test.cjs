@@ -1,5 +1,5 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');
-const {runStudentPricingDatabaseScenario}=require('./student-pricing-db.test.cjs');
+const {runStudentPricingDatabaseScenario}=require('../fixtures/student-pricing-db.cjs');
 test('3: isolated reward queries, historical ownership, ACL and consistent read pages',
   {skip:!process.env.PGLITE_MODULE&&!process.env.EMBEDDED_POSTGRES_MODULE,timeout:180000},()=>
   runStudentPricingDatabaseScenario(async({db,read,fn,one,actor,student,teacher,ordinaryQuote,ordinaryCreate})=>{

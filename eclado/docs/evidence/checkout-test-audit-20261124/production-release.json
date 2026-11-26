@@ -45,6 +45,10 @@
       "passed": 12,
       "failed": 0,
       "repeatEach": 3
+    },
+    "finalRevisionProductionAssets": {
+      "passed": 32,
+      "failed": 0
     }
   },
   "apiIsolation": "Only production origin non-api GET allowed; other unmatched requests aborted. Auth/catalog/payment mocks, isolated SQL creators/recovery.",
@@ -57,5 +61,36 @@
     "https://pay.ecladotaiwan.com/health"
   ],
   "realBankPayment": false,
-  "physicalIphoneOrLine": false
+  "physicalIphoneOrLine": false,
+  "finalRevision": "f4d5e606ba720aa6264fb69a8f9a05b6f6f08f9a",
+  "finalRevisionState": "READY",
+  "finalAssets": {
+    "revision": "f4d5e606ba720aa6264fb69a8f9a05b6f6f08f9a",
+    "pages": [
+      {
+        "path": "/",
+        "status": 200,
+        "asset": "/assets/main-BoRjubeD.js"
+      },
+      {
+        "path": "/shop",
+        "status": 200,
+        "asset": "/assets/main-BoRjubeD.js"
+      },
+      {
+        "path": "/checkout",
+        "status": 200,
+        "asset": "/assets/main-BoRjubeD.js"
+      },
+      {
+        "path": "/payment-result",
+        "status": 200,
+        "asset": "/assets/main-BoRjubeD.js"
+      }
+    ],
+    "asset": "/assets/main-BoRjubeD.js",
+    "assetStatus": 200,
+    "assetSha256": "e729d04718c5de75560f4b366ba5bb3795694b9993096876e11eacb7b782ccd6",
+    "containsFinalBuildId": true
+  }
 }

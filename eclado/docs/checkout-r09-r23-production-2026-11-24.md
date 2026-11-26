@@ -36,3 +36,5 @@ Supabase `ilvdvlkdpntwmaijncaz` main／PRODUCTION，PostgreSQL 17.6。已執行 
 保留私有請求記錄與新 SQL 函式。需要回復時使用仍能辨識未完成 key 的相容修補；不能只退回會忽略未知結果並重新建單的舊前端。不要刪表／清空 result。
 
 [機器可讀證據](evidence/checkout-test-audit-20261124/production-release.json)；[風險矩陣](checkout-test-risk-matrix-2026-11-24.md)。
+
+最終收據：文件與測試等待修正提交 `f4d5e606ba720aa6264fb69a8f9a05b6f6f08f9a` 已在 Vercel Production Ready。與功能提交的 `src/` 無差異；Vite 將 Git SHA 寫入 build ID，因此資產更新為 `/assets/main-BoRjubeD.js`。已確認正式資產內含該完整 build ID，四個頁面與新資產均 200，並對最終資產再跑 32 項，全部通過。

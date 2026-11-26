@@ -1,7 +1,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto');
-const {runRewardCheckoutDatabaseScenario}=require('./instructor-reward-checkout-db.test.cjs');
+const {runRewardCheckoutDatabaseScenario}=require('../fixtures/instructor-reward-checkout-db.cjs');
 test('partial withdrawals: amount validation, one batch, concurrent requests, failed retry and remaining-wallet spending',
- {skip:!process.env.PGLITE_MODULE&&!process.env.EMBEDDED_POSTGRES_MODULE,timeout:180000},()=>runRewardCheckoutDatabaseScenario(async c=>{
+ {skip:!process.env.PGLITE_MODULE&&!process.env.EMBEDDED_POSTGRES_MODULE,timeout:180000},t=>runRewardCheckoutDatabaseScenario(async c=>{
  const {db,read,one,actor,teacher,student,admin,ordinaryQuote,ordinaryCreate,status,account}=c;
  for(const f of ['withdrawals','notifications','reconciliation','withdrawal-operations'])await db.exec(read(`supabase-instructor-reward-${f}.sql`));
  await db.exec("insert into public.backoffice_role_permissions(role,permission) values('admin','orders.write'),('super_admin','orders.write') on conflict do nothing");
@@ -47,7 +47,9 @@ test('partial withdrawals: amount validation, one batch, concurrent requests, fa
  const q=await quote(10000);assert.equal(q.selection_policy,'single_per_batch_v1');
  await assert.rejects(request({...q,net_amount:10000}),e=>e.code==='40001');
  // Two independently connected sessions compete with different request keys.
- const clients=await Promise.all([db.connect(),db.connect()]);let winner;
+ let winner;
+ await t.test('two independent PostgreSQL sessions compete for one withdrawal batch', {skip:typeof db.connect!=='function'}, async()=>{
+ const clients=await Promise.all([db.connect(),db.connect()]);
  try{
   for(const client of clients)await client.query("select set_config('test.uid',$1,false),set_config('test.access','admin',false)",[teacher]);
   const keys=[crypto.randomUUID(),crypto.randomUUID()];
@@ -57,6 +59,11 @@ test('partial withdrawals: amount validation, one batch, concurrent requests, fa
   const i=results.findIndex(r=>r.status==='fulfilled');winner=results[i].value.rows[0].q;
   assert.equal((await request(q,keys[i])).id,winner.id); // Retry original success even though batch is occupied.
  }finally{for(const client of clients)await client.end();}
+ });
+ if(typeof db.connect!=='function'){
+  const key=crypto.randomUUID();winner=await request(q,key);
+  assert.equal((await request(q,key)).id,winner.id);
+ }
  assert.equal(Number((await account()).balance),initial-10000);assert.equal(Number((await account()).withdrawal_reserved_balance),10000);
  await assert.rejects(quote(1000),e=>e.code==='55000');await assert.rejects(request(q),e=>e.code==='55000');
  await actor(admin);await manage(winner.id,'claim',1);await actor(teacher);await assert.rejects(quote(1000),e=>e.code==='55000');
@@ -80,5 +87,5 @@ test('partial withdrawals: amount validation, one batch, concurrent requests, fa
  assert.deepEqual(await financialFindings(),baselineFindings,'No new financial findings; baseline includes deliberate late-payment exceptions');
  const acl=await one("select has_function_privilege('anon','public.quote_my_reward_withdrawal(bigint)','execute') anon,has_function_privilege('authenticated','public.quote_my_reward_withdrawal(bigint)','execute') member,has_function_privilege('service_role','public.quote_my_reward_withdrawal(bigint)','execute') service");assert.deepEqual(acl,{anon:false,member:true,service:false});
  await db.exec(read('supabase-instructor-reward-withdrawal-deductions-verify.sql'));await db.exec(read('supabase-instructor-reward-withdrawal-partial-verify.sql'));
- console.log('PASS selected amount, exact hold/refund, real remaining-balance shopping, two-session batch race, idempotency, all occupied statuses, next month and reconciliation');
+ console.log('PASS selected amount, exact hold/refund, real remaining-balance shopping, idempotency, all occupied statuses, next month and reconciliation');
  }));

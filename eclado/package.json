@@ -4,7 +4,7 @@
     "dev:test": "vite --mode test",
     "build": "vite build && node scripts/prerender-seo.mjs",
     "preview": "vite preview",
-    "test": "npm run test:e2e",
+    "test": "npm run test:node && npm run test:payment-api && npm run test:e2e",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
@@ -15,7 +15,10 @@
     "test:notify:real": "NOTIFY_TEST_DB_MODE=supabase node scripts/real-notification-test.cjs",
     "test:notify:real:mock": "node scripts/real-notification-test.cjs",
     "images:webp:dry-run": "node scripts/migrate-storage-product-images-to-webp.mjs",
-    "images:webp:apply": "node scripts/migrate-storage-product-images-to-webp.mjs --apply"
+    "images:webp:apply": "node scripts/migrate-storage-product-images-to-webp.mjs --apply",
+    "test:node": "node scripts/run-node-tests.mjs",
+    "test:payment-api": "npm --prefix payment-api test",
+    "test:list": "playwright test --list"
   },
   "dependencies": {
     "@fontsource/open-sans": "^5.3.0",

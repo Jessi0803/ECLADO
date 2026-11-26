@@ -10,7 +10,7 @@ const {dispatchRewards}=require('../api/reward-notification-worker.js')._private
 if(!process.env.EMBEDDED_POSTGRES_MODULE)throw new Error('Set EMBEDDED_POSTGRES_MODULE to the local PostgreSQL 17.6 adapter; no remote database is supported.');
 process.env.REWARD_BANK_ACTIVE_KEY_ID='local-only';
 process.env.REWARD_BANK_ENCRYPTION_KEYS=JSON.stringify({'local-only':crypto.randomBytes(32).toString('base64')});
-await require('../tests/integration/instructor-reward-checkout-db.test.cjs').runRewardCheckoutDatabaseScenario(async c=>{
+await require('../tests/fixtures/instructor-reward-checkout-db.cjs').runRewardCheckoutDatabaseScenario(async c=>{
 const {db,read,one,actor,ordinaryQuote,ordinaryCreate,status}=c;
 await db.exec(read('supabase-instructor-reward-redemption-export.sql'));
 await db.exec(read('supabase-instructor-reward-withdrawals.sql'));

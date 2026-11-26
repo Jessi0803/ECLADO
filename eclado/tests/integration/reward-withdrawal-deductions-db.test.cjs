@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto');
-const {runRewardCheckoutDatabaseScenario}=require('./instructor-reward-checkout-db.test.cjs');
+const {runRewardCheckoutDatabaseScenario}=require('../fixtures/instructor-reward-checkout-db.cjs');
 test('deductions: boundaries, legacy snapshots, real net payments, export and financial reconciliation',
  {skip:!process.env.PGLITE_MODULE&&!process.env.EMBEDDED_POSTGRES_MODULE,timeout:180000},()=>runRewardCheckoutDatabaseScenario(async c=>{
  const {db,read,one,actor,teacher,student,admin,ordinaryQuote,ordinaryCreate,status,account}=c;

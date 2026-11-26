@@ -1,7 +1,7 @@
 // Disposable PG17.6 only. Export actual baseline/expected metadata, no remote DB.
 const fs=require('node:fs'),path=require('node:path');
-const {runStudentPricingDatabaseScenario}=require('../tests/integration/student-pricing-db.test.cjs');
-const {runRewardCheckoutDatabaseScenario}=require('../tests/integration/instructor-reward-checkout-db.test.cjs');
+const {runStudentPricingDatabaseScenario}=require('../tests/fixtures/student-pricing-db.cjs');
+const {runRewardCheckoutDatabaseScenario}=require('../tests/fixtures/instructor-reward-checkout-db.cjs');
 const folder=path.resolve(__dirname,'../docs/evidence/reward-stage7a');
 const source=fs.readFileSync(path.resolve(__dirname,'../docs/reward-stage7a-production-metadata-readonly.sql'),'utf8');
 const query=source.slice(source.indexOf('WITH relations'),source.lastIndexOf('ROLLBACK;'));

@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { runStudentPricingDatabaseScenario } = require('./student-pricing-db.test.cjs');
+const { runStudentPricingDatabaseScenario } = require('../fixtures/student-pricing-db.cjs');
 
 test('cart minimum preview keeps rejected quotes and order guards, including student BOGO and append orders', {
   skip: !process.env.PGLITE_MODULE && !process.env.EMBEDDED_POSTGRES_MODULE, timeout:180000,

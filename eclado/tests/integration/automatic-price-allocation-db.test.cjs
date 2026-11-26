@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { runStudentPricingDatabaseScenario } = require('./student-pricing-db.test.cjs');
+const { runStudentPricingDatabaseScenario } = require('../fixtures/student-pricing-db.cjs');
 const { solveAutomaticPromotions } = require('../helpers/automatic-promotion-oracle.cjs');
 
 test('automatic price allocation: installed pricing, exact differential reference, persistence and rollback', {
@@ -200,7 +200,7 @@ test('automatic price allocation: installed pricing, exact differential referenc
   await db.exec(authority);
 }));
 
-const { runRewardCheckoutDatabaseScenario } = require('./instructor-reward-checkout-db.test.cjs');
+const { runRewardCheckoutDatabaseScenario } = require('../fixtures/instructor-reward-checkout-db.cjs');
 test('automatic allocation preserves double-wallet reservation and authoritative payment amount', {
   skip: !process.env.PGLITE_MODULE && !process.env.EMBEDDED_POSTGRES_MODULE, timeout: 180000,
 }, () => runRewardCheckoutDatabaseScenario(async ({ db, read, fn, one, actor, student, teacher, admin, ordinaryQuote, ordinaryCreate, status, walletQuote, create, consistent }) => {

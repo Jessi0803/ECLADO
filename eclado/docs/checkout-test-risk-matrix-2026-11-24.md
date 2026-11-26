@@ -194,3 +194,5 @@
 正式資產測試僅放行正式網域的 GET 頁面／靜態資產，其他未攔截請求全部阻擋；Auth、目錄、通知及付款為替身，建單／查回使用隔離 SQL。沒有真實付款或發送客戶通知；這些測試加上正式 SQL 回滾驗收，不能宣稱已完成正式銀行端到端或實體 iPhone／LINE 驗收。
 
 發布詳情見 [正式發布紀錄](checkout-r09-r23-production-2026-11-24.md)。上列發布前紀錄為歷史證據，以本節目前狀態為準。
+
+最終收據：文件與測試等待修正提交 `f4d5e606ba720aa6264fb69a8f9a05b6f6f08f9a` 已在 Vercel Production Ready。與功能提交的 `src/` 無差異；Vite 將 Git SHA 寫入 build ID，因此資產更新為 `/assets/main-BoRjubeD.js`。已確認正式資產內含該完整 build ID，四個頁面與新資產均 200，並對最終資產再跑 32 項，全部通過。

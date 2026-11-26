@@ -1,0 +1,75 @@
+{
+  "startedDate": "2026-11-25",
+  "completedDate": "2026-11-26",
+  "timezone": "Asia/Taipei",
+  "baselineCommit": "731e0769ae808e7c7586fe6adbc3a15e3a3a2bab",
+  "scope": "test runners, fixtures, test corrections, packaged-payment startup checks, historical verification documents",
+  "productSourcesChanged": false,
+  "paymentRuntimeChanged": false,
+  "productionDatabaseChanged": false,
+  "productionPaymentDeployed": false,
+  "nodeDefault": {
+    "passed": 205,
+    "failed": 0,
+    "skipped": 50
+  },
+  "nodeWithIsolatedPGlite": {
+    "passed": 279,
+    "failed": 0,
+    "skipped": 7,
+    "skipNames": [
+      "﹣ independent PostgreSQL sessions serialize duplicate creation and recovery before commit (0.239541ms)",
+      "﹣ member-targeted coupon quote and create use the same identity rule (0.684542ms)",
+      "﹣ 1B real PostgreSQL: separate sessions, bind/rebind/unbind/Auth-delete races and ACL (19.690375ms)",
+      "﹣ 7A: production member-targeted quote/create mismatch is reproduced without production writes (0.687208ms)",
+      "﹣ test-only withdrawal fixtures create 30 coherent states without changing original available funds (5.032959ms)",
+      "﹣ withdrawal queue: full batch totals, filtered pagination, service-only audited export and ACL (65.608ms)",
+      "﹣ two independent PostgreSQL sessions compete for one withdrawal batch (4.30325ms)"
+    ]
+  },
+  "paymentApi": {
+    "passed": 107,
+    "failed": 0,
+    "skipped": 0
+  },
+  "browser": {
+    "listed": 1402,
+    "firstFullRun": {
+      "passed": 1335,
+      "failed": 4,
+      "skipped": 63
+    },
+    "lastFailedRecheck": {
+      "passed": 4,
+      "failed": 0
+    },
+    "additionalResponsiveRecheck": {
+      "passed": 8,
+      "failed": 0
+    },
+    "memberCheckoutRecheck": {
+      "passed": 2,
+      "failed": 0
+    },
+    "effectiveDistinctCases": {
+      "passed": 1339,
+      "skipped": 63,
+      "unresolvedFailures": 0
+    },
+    "completeRerunAfterCorrections": false
+  },
+  "packagedRuntime": {
+    "isolatedStartup": true,
+    "healthEndpoint": true,
+    "coursePaymentRoutes": true,
+    "missingCourseModuleRejected": true
+  },
+  "build": {
+    "passed": true,
+    "productsPrerendered": 65,
+    "articlesPrerendered": 8
+  },
+  "realBankPayment": false,
+  "physicalIphoneOrLine": false,
+  "note": "Skipped and unexecuted external/concurrency paths are not counted as passes. Full browser first-run failures were corrected only in test code and rechecked."
+}

@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { mockEcladoApis } from './support/eclado-mocks';
-import { runRewardCheckoutDatabaseScenario } from './integration/instructor-reward-checkout-db.test.cjs';
+import { runRewardCheckoutDatabaseScenario } from './fixtures/instructor-reward-checkout-db.cjs';
 
 // Browser checkout -> actual repository SQL in an isolated PGlite database.
 // Only auth/catalog and bank responses are simulated. No production connections.
@@ -138,6 +138,13 @@ for (const scenario of cases) for (const slowPreview of [false,true]) {
       if(scenario.sc)await expect(page.getByLabel('購物金使用金額')).toHaveValue(String(scenario.sc));
       if(scenario.rc)await expect(page.getByLabel('返饋金使用金額')).toHaveValue(String(scenario.rc));
       await page.getByRole('button',{name:'確認訂單',exact:true}).click();
+      if(slowPreview && !scenario.stack){
+        // The delayed preview leaves the previous total visible. Review the
+        // authoritative amount explicitly before allowing order creation.
+        await expect(page.getByRole('alert',{name:'訂單金額已更新'})).toBeVisible();
+        expect(creates).toHaveLength(0);expect(bankRequests).toHaveLength(0);
+        await page.getByRole('button',{name:'確認更新金額並付款',exact:true}).click();
+      }
       await expect(page.getByRole('heading',{name:'請完成付款'})).toBeVisible();
       releasePreview(); await Promise.all(tasks);
       expect(creates).toHaveLength(1);expect(bankRequests).toHaveLength(1);

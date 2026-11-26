@@ -1,0 +1,156 @@
+{
+  "date": "2026-11-19",
+  "timezone": "Asia/Taipei",
+  "productionUrl": "https://ecladotaiwan.com",
+  "commit": "18bb04f268a64bc64f83814db398eee59161f143",
+  "deploymentId": "dpl_9faNFmNLvgxWwr34NSiZ7VTcDgoN",
+  "deploymentUrl": "https://eclado-iqrf9a7j8-eclado-s-projects.vercel.app",
+  "readyState": "READY",
+  "aliases": [
+    "ecladotaiwan.com",
+    "www.ecladotaiwan.com"
+  ],
+  "previousDeploymentId": "dpl_7jvaveTPU7kLMUYMqTH4uDa6Kkk4",
+  "previousCommit": "8a8a1c2a9fe77ba75c78c51083c74fbcd314af9a",
+  "migration": {
+    "file": "supabase-course-image-jpeg-fallback.sql",
+    "sourceSha256": "68340829d54f2ed017fdcdfca124d8ec5d0ffd6fe41430d12c9c7aab2ccac956",
+    "appliedInProduction": true,
+    "jpgBucketEnabled": true,
+    "jpgConstraint": true,
+    "jpgInlineRead": true,
+    "adminUploadOnly": true,
+    "unrelatedFunctionsBefore": "0dce6a7debe32f9c7582ca34467106c4",
+    "unrelatedFunctionsAfter": "0dce6a7debe32f9c7582ca34467106c4"
+  },
+  "releaseChecks": {
+    "browserTestsPassed": 32,
+    "databaseTestsPassed": 1,
+    "build": "passed",
+    "diffWhitespaceCheck": "passed"
+  },
+  "productionDatabaseTransaction": {
+    "jpgProductMetadata": true,
+    "courseSaveRpc": true,
+    "draftPrivacy": true,
+    "publishedCoverReadPolicy": true,
+    "publishedInlineReadPolicy": true,
+    "allRowsRolledBack": true
+  },
+  "storage": {
+    "files": [
+      {
+        "kind": "product",
+        "bucket": "product-images",
+        "path": "products/77536746-ef54-4b48-b26c-b4a761fb3635/22e8a2a1-25f8-4a85-ba1d-63f68828cbb9.jpg"
+      },
+      {
+        "kind": "course-cover",
+        "bucket": "course-images",
+        "path": "19d444e0-5362-41cc-afa2-c99920a6ea6a.jpg"
+      },
+      {
+        "kind": "course-inline",
+        "bucket": "course-images",
+        "path": "86619ce3-1cde-4356-9219-c7f20d6490b7.jpg"
+      },
+      {
+        "kind": "browser-product",
+        "bucket": "product-images",
+        "path": "products/5c0fecce-5d48-4d96-bbe5-6705c9cac990/3141ebba-cc62-4be2-8141-32b1d7d077ee.jpg"
+      },
+      {
+        "kind": "browser-course-cover",
+        "bucket": "course-images",
+        "path": "80212ff5-4385-4ef3-9e32-c4573d477387.jpg"
+      },
+      {
+        "kind": "browser-course-inline",
+        "bucket": "course-images",
+        "path": "4b510236-052e-47c7-9cf9-e750629ddf88.jpg"
+      }
+    ],
+    "checks": [
+      {
+        "kind": "product",
+        "upload": true,
+        "downloadJpeg": true,
+        "anonymousAllowed": true
+      },
+      {
+        "kind": "course-cover",
+        "upload": true,
+        "downloadJpeg": true,
+        "anonymousAllowed": false
+      },
+      {
+        "kind": "course-inline",
+        "upload": true,
+        "downloadJpeg": true,
+        "anonymousAllowed": false
+      }
+    ],
+    "browser": {
+      "pass": true,
+      "forcedWebpFailures": 3,
+      "checks": [
+        {
+          "kind": "product",
+          "jpeg": true,
+          "realUpload": true,
+          "realDownload": true
+        },
+        {
+          "kind": "course-cover",
+          "jpeg": true,
+          "realUpload": true,
+          "realDownload": true
+        },
+        {
+          "kind": "course-inline",
+          "jpeg": true,
+          "realUpload": true,
+          "realDownload": true
+        }
+      ]
+    },
+    "cleanedUp": true
+  },
+  "httpChecks": [
+    {
+      "path": "/",
+      "status": 200
+    },
+    {
+      "path": "/shop",
+      "status": 200
+    },
+    {
+      "path": "/admin",
+      "status": 200
+    },
+    {
+      "path": "/courses",
+      "status": 200
+    },
+    {
+      "path": "/payment-result",
+      "status": 200
+    },
+    {
+      "path": "/assets/EnvironmentBanner-BIK-AJ-6.js",
+      "status": 200,
+      "jpegFallback": true
+    },
+    {
+      "path": "/assets/RichTextContent-ClTObjT4.js",
+      "status": 200,
+      "jpegFallback": true
+    }
+  ],
+  "limits": [
+    "Browser verification used desktop Chrome with a responsive viewport, not a real iPhone Safari or LINE native picker.",
+    "Production fallback was forced through canvas WebP failure; backend uploads and downloads were real, not mocked.",
+    "Product optimizer and storage upload were exercised in the deployed browser; product save UI was covered by release E2E and metadata constraints by a rolled-back production transaction."
+  ]
+}

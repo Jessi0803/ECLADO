@@ -1,7 +1,7 @@
 // Real pricing/creation/inventory functions in isolated PostgreSQL. No external writes.
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
-const {runStudentPricingDatabaseScenario}=require('./student-pricing-db.test.cjs');
+const {runStudentPricingDatabaseScenario}=require('../fixtures/student-pricing-db.cjs');
 test('buy X get Y: mixed units, repeat, audience, coupons, snapshots and inventory',{
   skip:!process.env.PGLITE_MODULE&&!process.env.EMBEDDED_POSTGRES_MODULE,timeout:120000,
 },()=>runStudentPricingDatabaseScenario(async({db,read,fn,one,actor,student,base,create,ordinaryQuote,ordinaryCreate})=>{
@@ -127,7 +127,7 @@ test('buy X get Y: mixed units, repeat, audience, coupons, snapshots and invento
   await db.exec('reset role');await db.exec("create or replace function public.has_backoffice_permission(p text) returns boolean language sql as $$select false$$");await assert.rejects(save(config),/management access/);
 }));
 
-const {runRewardCheckoutDatabaseScenario}=require('./instructor-reward-checkout-db.test.cjs');
+const {runRewardCheckoutDatabaseScenario}=require('../fixtures/instructor-reward-checkout-db.cjs');
 test('buy X get Y preserves installed reward-wallet and payment wrappers',{
   skip:!process.env.PGLITE_MODULE&&!process.env.EMBEDDED_POSTGRES_MODULE,timeout:180000,
 },()=>runRewardCheckoutDatabaseScenario(async({db,read,fn,one,actor,teacher,admin,walletQuote,create,consistent})=>{

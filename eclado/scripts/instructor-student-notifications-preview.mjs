@@ -3,7 +3,7 @@ import {createServer} from 'vite';
 import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
-const {bindingNotificationFixture}=require('../tests/integration/instructor-student-notifications-db.test.cjs');
+const {bindingNotificationFixture}=require('../tests/fixtures/instructor-student-notifications-db.cjs');
 const {instructorStudentNoticeMessage}=require('../api/_instructor-student-notice.js');
 const {dispatchRewards}=require('../api/reward-notification-worker.js')._private;
 let c;

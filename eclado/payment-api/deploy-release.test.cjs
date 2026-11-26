@@ -8,7 +8,7 @@ const { spawnSync } = require('node:child_process');
 // Real shell/filesystem/archive operations; only process manager, install and
 // HTTP service are simulated. No production credentials, network or /opt writes.
 const old = '1'.repeat(40), next = '2'.repeat(40);
-function fixture(t, failure = '') {
+function fixture(t, failure = '', omitCourseModule = false) {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'payment-release-test-')));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const root = path.join(dir, 'root'), bin = path.join(dir, 'bin');
@@ -33,6 +33,7 @@ function fixture(t, failure = '') {
   write('curl', `active=$(/usr/bin/readlink -f "$PAYMENT_RELEASE_ROOT/current")\nif [[ "$TEST_FAILURE" = health && "$active" = *"/${next}" ]]; then exit 22; fi\nprintf '%s' '{"ok":true,"service":"eclado-payment-api"}'`);
   const source = `${dir}/source`; fs.mkdirSync(source);
   for (const file of ['server.js', 'assisted-orders.js', 'course-payments.cjs', 'reward-payment-evidence.cjs', 'checkout-events.cjs', 'sinopac-diagnostics.cjs']) fs.writeFileSync(`${source}/${file}`, '// fixture\n');
+  if (omitCourseModule) fs.unlinkSync(`${source}/course-payments.cjs`);
   fs.writeFileSync(`${source}/sinopac-status-codes.json`, '{}');
   fs.writeFileSync(`${source}/package.json`, '{}'); fs.writeFileSync(`${source}/package-lock.json`, '{}');
   assert.equal(spawnSync('tar', ['-czf', `${upload}/payment-api.tgz`, '-C', source, ...fs.readdirSync(source)]).status, 0);
@@ -57,6 +58,13 @@ test('complete runtime package activates and preserves the previous release and 
   assert.equal(fs.realpathSync(`${f.root}/current`), `${f.root}/releases/${next}`);
   assert.equal(fs.readFileSync(`${f.root}/shared/.env`, 'utf8'), 'TEST_ONLY=true\n');
   assert.ok(fs.existsSync(`${f.root}/releases/${old}`));
+});
+test('archive missing the course payment module is rejected before activation', t => {
+  const f = fixture(t, '', true), result = f.run();
+  assert.equal(result.status, 7, result.stderr);
+  assert.match(result.stderr, /Unexpected runtime archive contents/);
+  assert.equal(fs.realpathSync(`${f.root}/current`), `${f.root}/releases/${old}`);
+  assert.equal(fs.existsSync(`${f.root}/pm2-calls`), false);
 });
 test('failed candidate health check restores prior release through PM2', t => {
   const f = fixture(t, 'health'), result = f.run();
