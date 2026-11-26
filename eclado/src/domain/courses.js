@@ -49,3 +49,7 @@ export function courseRegistrationNotice(course, now = Date.now()) {
   if (!course?.registration_opens_at || Date.parse(course.registration_opens_at) <= now) return '';
   return `預計於 ${taipeiInput.format(new Date(course.registration_opens_at)).replaceAll('-', '/')} 開放報名（台北時間）`;
 }
+
+export function getCoursePaymentDeadline(course) {
+  return Date.parse(course?.starts_at) - 30 * 60_000;
+}

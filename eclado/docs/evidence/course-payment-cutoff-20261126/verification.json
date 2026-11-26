@@ -1,0 +1,23 @@
+{
+  "environment": "local + Supabase TEST qqlgqasbmbicnmvnlqbr",
+  "productionChanged": false,
+  "deploymentPerformed": false,
+  "paymentDeadline": "class starts_at minus 30 minutes",
+  "example": {
+    "class": "20:00",
+    "paymentDue": "19:30"
+  },
+  "afterCutoff": {
+    "paymentStatus": "expired",
+    "enrollmentStatus": "pending",
+    "automaticCancellation": false
+  },
+  "reminders": "signup +24h; class starts_at -24h, existing coalescing and spacing retained",
+  "checks": {
+    "desktopMobilePassed": 80,
+    "databaseAndReminderPassed": 3,
+    "testBuild": "passed"
+  },
+  "externalNotificationsSent": 0,
+  "bankTransactionsCreated": 0
+}

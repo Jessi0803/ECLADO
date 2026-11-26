@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { getPublishedCourses, getMyCourseOrders, createCourseRegistration } from '../services/courses.js';
 import { fetchMyInstructorStudents } from '../services/instructorStudents.js';
 import { coursePayment } from '../services/coursePaymentApi.js';
-import { isCourseRegistrationOpen, courseRegistrationNotice, formatCoursePrice, COURSE_PAYMENT_LABELS, COURSE_REGISTRATION_LABELS } from '../domain/courses.js';
+import { isCourseRegistrationOpen, courseRegistrationNotice, formatCoursePrice, getCoursePaymentDeadline, COURSE_PAYMENT_LABELS, COURSE_REGISTRATION_LABELS } from '../domain/courses.js';
 import { PAYMENT_METHODS } from '../domain/payments.js';
 import useCourseClock from '../hooks/useCourseClock.js';
 import useDocumentMeta from '../hooks/useDocumentMeta.js';
@@ -127,6 +127,7 @@ function MemberRegistration({ courseId, role, userId }) {
   const mayRegister = course && isCourseRegistrationOpen(course, now)
     && (instructor || (role === 'pro' && !hasSelf));
   const total = (instructor ? rows.length : 1) * (course?.price_twd || 0);
+  const paymentCutoffPassed = course && getCoursePaymentDeadline(course) <= now;
   const selectedMethod = paymentChoice === 'atm' && total > 30000 ? 'card' : paymentChoice;
 
   function submit(event) {
@@ -153,7 +154,7 @@ function MemberRegistration({ courseId, role, userId }) {
       setSelf(false);
       lastRequest.current = null;
       setNotice(order.status === 'free' ? '您的免費報名已成立。' :
-        payload.p_self && instructor ? '您的免費報名已成立。請為其他參加者完成付款。' : '報名已受理，請於開課前完成付款。');
+        payload.p_self && instructor ? '您的免費報名已成立。請為其他參加者完成付款。' : '報名已受理，請於開課前 30 分鐘完成付款。');
       if (order.status === 'pending') {
         setPaymentChoices(previous => ({ ...previous, [order.id]: selectedMethod }));
         try {
@@ -263,16 +264,18 @@ function MemberRegistration({ courseId, role, userId }) {
                 ])}>新增參加者</button>
               </>
             ) : <p>美容師本人付費報名</p>}
+            {paymentCutoffPassed && total > 0 && <p role="status">付費報名與付款已於開課前 30 分鐘截止，如需協助請聯繫客服。</p>}
             <p className="course-registration-total">應付金額 <strong>{formatCoursePrice(total)}</strong></p>
             {instructor && (
               <p className="course-credit-note">預計回饋 {formatCoursePrice(total)} 購物金。課程結束後，依已付款且報名有效的代報人數發給付款會員，師資本人免費報名不計入。</p>
             )}
-            {total > 0 && (
+            {total > 0 && <p className="course-credit-note">付款截止：{new Date(getCoursePaymentDeadline(course)).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })}（開課前 30 分鐘）。</p>}
+            {total > 0 && !paymentCutoffPassed && (
               <div className="course-payment-method">
                 <PaymentMethodOptions value={selectedMethod} unavailableMethod={total > 30000 ? 'atm' : undefined} onChange={setPaymentChoice} />
               </div>
             )}
-            <button className="course-action-primary" type="submit" disabled={instructor && !rows.length && (!self || hasSelf)}>
+            <button className="course-action-primary" type="submit" disabled={(total > 0 && paymentCutoffPassed) || (instructor && !rows.length && (!self || hasSelf))}>
               {busy ? '處理中…' : total > 0 ? (selectedMethod === 'atm' ? '取得虛擬帳號' : '前往付款') : '確認報名'}
             </button>
           </fieldset>
@@ -300,7 +303,7 @@ function MemberRegistration({ courseId, role, userId }) {
             <h3>{order.course_name}</h3>
             <p>{COURSE_PAYMENT_LABELS[order.status]} · {order.status === 'pending' && '應付金額 '}{formatCoursePrice(order.total_twd)}</p>
             {order.status === 'pending' && order.payment_link_expires_at && Date.parse(order.payment_link_expires_at) <= now && <p>原付款連結或帳號已到期，訂單仍保留。點選下方按鈕確認付款狀態並繼續付款。</p>}
-            {order.status === 'pending' && <p>您已報名，請於開課前完成付款。付款完成後可取得上課連結。</p>}
+            {order.status === 'pending' && <p>您已報名，請於開課前 30 分鐘完成付款。付款完成後可取得上課連結。</p>}
             {order.status === 'pending' && <p>付款期限 {new Date(order.payment_due_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}（台北時間）</p>}
             <ul>{order.registrations.map(reg => <li key={reg.id}>{reg.name} · {COURSE_REGISTRATION_LABELS[reg.status]}</li>)}</ul>
             {!ended && order.status === 'pending' && (
@@ -318,7 +321,7 @@ function MemberRegistration({ courseId, role, userId }) {
               </div>
             )}
             <div className="course-actions">
-              {order.status === 'expired' && order.registrations.some(reg => reg.status !== 'cancelled') && <p>付款期限已過，報名仍為您保留。管理員將聯繫確認；如需取消，請聯繫客服。請勿使用原付款連結或虛擬帳號付款。</p>}
+              {order.status === 'expired' && order.registrations.some(reg => reg.status !== 'cancelled') && <p>付款期限已過，報名仍為您保留。付款已於開課前 30 分鐘截止。如仍希望參加課程，請主動聯繫客服；如需取消報名，也請聯繫客服協助。請勿使用原付款連結或虛擬帳號付款。</p>}
               {order.status === 'hold' && <p>此訂單有參加者已取消，其餘報名仍保留。請聯繫客服確認付款金額，請勿使用原付款資料付款。</p>}
               {order.status === 'expired' && order.registrations.every(reg => reg.status === 'cancelled') && mayRegister && <button type="button" className="course-action-primary" disabled={busy} onClick={returnToRegistration}>重新報名</button>}
               {order.status === 'expired' && order.registrations.every(reg => reg.status === 'cancelled') && !mayRegister && course && !isCourseRegistrationOpen(course, now) && <p>課程目前已停止報名，無法重新報名。</p>}

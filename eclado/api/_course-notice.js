@@ -19,11 +19,11 @@ function coursePaymentReminderMessage(payload, origin = 'https://ecladotaiwan.co
   const at = value => new Date(value).toLocaleString('zh-TW', { timeZone:'Asia/Taipei', hour12:false });
   const subject = `ECLADO｜${payload.final ? '課程最後付款提醒' : '課程付款提醒'}｜${payload.name}`;
   const url = new URL(`/courses/${payload.course_id}/register`, origin).href;
-  const text = [subject, '您的課程報名已受理，目前尚未完成付款，請於開課前完成付款。',
+  const text = [subject, '您的課程報名已受理，目前尚未完成付款，請於開課前 30 分鐘完成付款。',
     `課程：${payload.name}`, `上課時間：${at(payload.starts_at)}（台北時間）`,
     `參加者：${payload.participants.join('、')}`, `應付金額：NT$ ${Number(payload.total_twd).toLocaleString('zh-TW')}`,
     `付款截止：${at(payload.payment_due_at)}（台北時間）`,
-    payload.final && '這是開課前的最後付款提醒。逾期未付款仍保留報名，管理員將聯繫確認；如需取消，請聯繫客服。',
+    payload.final && '這是開課前的最後付款提醒，付款將於開課前 30 分鐘截止。付款截止後仍保留報名。如仍希望參加課程，請主動聯繫客服；如需取消報名，也請聯繫客服協助。',
     `繼續付款：${url}`, '如已完成付款，請先查詢付款狀態；若仍有疑問，歡迎聯繫客服。'].filter(Boolean).join('\n\n');
   return { subject, text };
 }

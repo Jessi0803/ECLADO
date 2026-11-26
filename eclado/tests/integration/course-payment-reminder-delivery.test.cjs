@@ -2,13 +2,14 @@ const {test}=require('node:test');const assert=require('node:assert/strict');
 const {deliverRewardNotice}=require('../../api/_reward-notification-delivery');
 const {dispatchCourseNotifications}=require('../../api/reward-notification-worker')._private;
 const payload={kind:'course_payment',name:'付款提醒課程',course_id:'c0ea0000-0000-4000-8000-000000000001',
- order_id:'c0ea0000-0000-4000-8000-000000000002',starts_at:'2035-01-01T12:00:00Z',payment_due_at:'2035-01-01T12:00:00Z',
+ order_id:'c0ea0000-0000-4000-8000-000000000002',starts_at:'2035-01-01T12:00:00Z',payment_due_at:'2035-01-01T11:30:00Z',
  total_twd:2400,participants:['王小美','李小明'],final:true};
 test('payment reminder reuses delivery transport/idempotency key and sends no Zoom URL',async()=>{
  const job={id:'notice',key:'stable-key',channel:'line',target:'test-only',payload};let calls=0;
  const fetchImpl=async(url,opts)=>{calls++;const body=JSON.parse(opts.body);assert.equal(url,'https://api.line.me/v2/bot/message/push');
   assert.equal(opts.headers['X-Line-Retry-Key'],'stable-key');assert.match(body.messages[0].text,/王小美、李小明/);
   assert.match(body.messages[0].text,/課程最後付款提醒/);assert.match(body.messages[0].text,/https:\/\/preview.example.test\/courses\/.+\/register/);
+  assert.match(body.messages[0].text,/開課前 30 分鐘/);assert.match(body.messages[0].text,/19:30/);
   assert.doesNotMatch(body.messages[0].text,/Zoom/);return new Response('{}',{status:200});};
  const result=await deliverRewardNotice(job,{env:{LINE_CHANNEL_ACCESS_TOKEN:'mock-only',COURSE_STOREFRONT_ORIGIN:'https://preview.example.test'},fetchImpl});
  assert.equal(result.result,'accepted');assert.equal(calls,1);

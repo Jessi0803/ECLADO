@@ -12,8 +12,8 @@ import { coursePath } from '../domain/courseUrls.js';
 import './CoursesPage.css';
 
 const courseQuestions = [
-  ['誰可以報名專業課程？', '開放具美容師資格的會員報名。登入後選擇課程送出報名，並請於開課前完成付款。'],
-  ['怎麼確認報名成功？', '送出報名後，登入會員中心的「我的課程」，顯示「已報名」即代表報名已受理。付款狀態會另外顯示，請於開課前完成付款；逾期未付款不會自動取消報名，如需取消請聯繫客服。'],
+  ['誰可以報名專業課程？', '開放具美容師資格的會員報名。登入後選擇課程送出報名，並請於開課前 30 分鐘完成付款。'],
+  ['怎麼確認報名成功？', '送出報名後，登入會員中心的「我的課程」，顯示「已報名」即代表報名已受理。付款狀態會另外顯示，請於開課前 30 分鐘完成付款；逾期未付款不會自動取消報名，如需取消請聯繫客服。'],
   ['報名後如何進入課程？', '完成付款後，登入會員中心，前往「我的課程」並點選「開啟 Zoom 會議」即可加入。也可以從該課程的報名紀錄進入。若由師資代為報名，請向代報師資索取上課連結。Zoom 連結可查看至課程結束。'],
   ['購物金什麼時候會入帳？', '完成付款且報名仍有效，課程結束後會發放購物金給會員。登入會員中心，前往「我的訂單」上方的「購物金」區塊，點選「查看異動明細」即可確認入帳。'],
 ];
@@ -150,7 +150,7 @@ export default function CoursesPage({ courseId = null, canRegister, memberId, on
               <CourseSchedule course={course} />
               <p className="course-store-price">{formatCoursePrice(course.price_twd)}</p>
               {registrationOpen && course.price_twd > 0 && (
-                <p className="course-credit-note">課程結束後將發放購物金</p>
+                <><p className="course-credit-note">付費報名請於開課前 30 分鐘完成付款。</p><p className="course-credit-note">課程結束後將發放購物金</p></>
               )}
               <div className="course-detail-description"><h2>課程介紹</h2><CourseDescription value={course.description} /></div>
               {ended && <div className="course-ended-status">課程已結束</div>}
