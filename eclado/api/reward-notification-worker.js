@@ -38,11 +38,11 @@ async function dispatchRewards({ env = process.env, fetchImpl = fetch, limit = 5
   }
   return { checked: results.length, accepted: results.filter(r => r.result === 'accepted' && r.stored).length };
 }
-async function dispatchCourseNotifications({ env, fetchImpl }) {
+async function dispatchCourseNotifications({ env, fetchImpl, paymentReminders = false }) {
   let checked = 0;
   let accepted = 0;
   for (let index = 0; index < 4; index++) {
-    const job = await rpc('claim_course_notification', {
+    const job = await rpc(paymentReminders ? 'claim_course_payment_reminder' : 'claim_course_notification', {
       p_line_available: Boolean(env.LINE_CHANNEL_ACCESS_TOKEN),
       p_email_from: env.ORDER_EMAIL_FROM || null,
     }, env, fetchImpl);

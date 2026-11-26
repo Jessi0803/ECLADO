@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-26",
+  "branch": "codex/course-payment-resume",
+  "testProject": "qqlgqasbmbicnmvnlqbr",
+  "productionChanged": false,
+  "deployed": false,
+  "pushed": false,
+  "migration": "supabase-course-enrollment-retention.sql",
+  "migrationSha256": "623fbd494caaf154587dabd5ba016c3b4cf316d4c59eac69b8c869b269e60a8a",
+  "testSqlGroupsPassed": 3,
+  "testDataRolledBack": true,
+  "realBankTransactions": false,
+  "realNotificationsSent": false,
+  "browserDesktopAndMobile": {
+    "passed": 74,
+    "failed": 0
+  },
+  "databaseNotificationWorker": {
+    "passed": 12,
+    "failed": 0
+  },
+  "paymentApi": {
+    "passed": 111,
+    "failed": 0
+  },
+  "build": "TEST build/prerender passed",
+  "finalAdminVisualChecks": {
+    "passed": 2,
+    "failed": 0
+  }
+}

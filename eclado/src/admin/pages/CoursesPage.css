@@ -130,3 +130,5 @@ dialog.course-cancel-dialog {
   font-weight: 500;
 }
 .admin-course-count-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.admin-course-roster-filters { max-width: 280px; margin-bottom: 16px; }

@@ -1,0 +1,38 @@
+{
+  "date": "2026-11-26",
+  "baseline": "be2d2d6",
+  "branch": "codex/course-payment-resume",
+  "productionChanged": false,
+  "deployed": false,
+  "testProject": "qqlgqasbmbicnmvnlqbr",
+  "migrationsApplied": [
+    "supabase-course-payment-resume.sql",
+    "supabase-course-payment-reminders.sql"
+  ],
+  "testSqlAcceptanceGroups": 7,
+  "testDataRolledBack": true,
+  "realBankTransactions": false,
+  "realNotificationsSent": false,
+  "paymentApi": {
+    "passed": 111,
+    "failed": 0
+  },
+  "browserDesktopAndMobile": {
+    "passed": 66,
+    "failed": 0
+  },
+  "finalReminderDatabaseAndWorker": {
+    "passed": 11,
+    "failed": 0
+  },
+  "build": "TEST build/prerender passed",
+  "localFrontend": "http://127.0.0.1:4199/courses",
+  "finalReenrollVisualChecks": {
+    "passed": 4,
+    "failed": 0
+  },
+  "migrationSha256": {
+    "supabase-course-payment-resume.sql": "cb59a31f7d62819d2397e10237480813ec1ebba776a4856d7cd034a7e608fd1e",
+    "supabase-course-payment-reminders.sql": "92dde31b4a064b2dc398b5a48c1b72385bb64dc78e064d9c5970bbfeb3602ac4"
+  }
+}

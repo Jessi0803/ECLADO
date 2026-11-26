@@ -157,7 +157,7 @@ export function CourseNotifications({ course, registrations, canSend, initialOnl
           <thead><tr>{['收件人', '通知類型', '管道', '結果', '排入／送出時間'].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead>
           <tbody>{history.map(item => (
             <tr key={item.id}>
-              <td data-label="收件人"><strong>{item.payer_name}</strong></td><td data-label="通知類型">{item.kind === 'automatic' ? '課前提醒' : '手動通知'}</td>
+              <td data-label="收件人"><strong>{item.payer_name}</strong></td><td data-label="通知類型">{{automatic:'課前提醒',manual:'手動通知',payment_first:'課程付款提醒',payment_final:'課程最後付款提醒'}[item.kind] || item.kind}</td>
               <td data-label="管道">{item.channel === 'line' ? 'LINE' : item.channel === 'email' ? 'Email' : '—'}</td>
               <td data-label="結果"><span className={`procurement-status ${item.status === 'sent' ? 'status-received' : item.status === 'failed' ? 'status-cancelled' : ''}`}>{statuses[item.status]}</span>{reasons[item.result] && <small>{reasons[item.result]}</small>}</td>
               <td data-label="排入／送出時間">{date.format(new Date(item.sent_at || item.created_at))}</td>

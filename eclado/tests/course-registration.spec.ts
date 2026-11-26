@@ -182,15 +182,15 @@ for (const scenario of ['instructor', 'pro'] as const) {
     if (instructor) {
       const paymentArea = page.getByRole('article', { name: '接續付款' });
       await expect(paymentArea).toBeFocused();
-      await expect(paymentArea.getByText('會員甲 · 報名成立')).toBeVisible();
-      await expect(paymentArea.getByText('王小美 · 待付款')).toBeVisible();
+      await expect(paymentArea.getByText('會員甲 · 已報名')).toBeVisible();
+      await expect(paymentArea.getByText('王小美 · 已報名')).toBeVisible();
       await expect(paymentArea.getByRole('status')).toContainText('暫時無法啟動付款');
       await expect(paymentArea.getByRole('button', { name: /^Apple Pay/ })).toHaveAttribute('aria-pressed', 'true');
-      await paymentArea.getByRole('button', { name: '前往Apple Pay付款' }).click();
+      await paymentArea.getByRole('button', { name: '繼續Apple Pay付款' }).click();
     }
     await expect(page).toHaveURL('https://course-bank.example.test/pay');
     await page.goBack();
-    await expect(page.getByText(instructor ? '王小美 · 待付款' : '會員甲 · 待付款')).toBeVisible();
+    await expect(page.getByText(instructor ? '王小美 · 已報名' : '會員甲 · 已報名')).toBeVisible();
     await page.getByRole('button', { name: '查詢付款狀態' }).click();
     await expect(page.getByRole('link', { name: '開啟 Zoom 會議' })).toBeVisible();
     await page.evaluate(() => {
@@ -203,7 +203,7 @@ for (const scenario of ['instructor', 'pro'] as const) {
     await expect(page.getByText('會議連結已複製。')).toBeVisible();
     expect(await page.evaluate(() => sessionStorage.getItem('copiedMeetingLink'))).toBe('https://zoom.us/j/123');
 
-    if (instructor) await expect(page.getByText('王小美 · 報名成立')).toBeVisible();
+    if (instructor) await expect(page.getByText('王小美 · 已報名')).toBeVisible();
     await page.route('**/rest/v1/rpc/get_my_course_orders', route => route.fulfill({
       json: { orders: [order], zoom_url: 'https://zoom.us/j/123', ends_at: '2020-01-01T00:00:00Z' },
     }));
@@ -240,20 +240,20 @@ test('後台取消一人、保留同單其他報名並可記錄人工處理', as
   if ((page.viewportSize()?.width || 0) <= 900) await page.getByRole('button', { name: '開啟選單' }).click();
   await page.locator('.app-sidebar button:not(.sidebar-star)').filter({ hasText: /^課程管理$/ }).click();
   await page.getByRole('button', { name: '查看 專業護膚課程 報名名單' }).click();
-  await expect(page.getByText('有效報名 2 人')).toBeVisible();
+  await expect(page.getByText('已報名 2 人')).toBeVisible();
   const cancel = page.getByRole('row', { name: /王小美/ }).getByRole('button', { name: '取消報名', exact: true });
   await cancel.click();
   const dialog = page.getByRole('dialog', { name: '取消報名' });
   await expect(dialog.getByText('王小美', { exact: true })).toBeVisible();
   await dialog.getByRole('button', { name: '保留報名' }).click();
   await expect(dialog).not.toBeVisible();
-  await expect(page.getByText('有效報名 2 人')).toBeVisible();
+  await expect(page.getByText('已報名 2 人')).toBeVisible();
   await cancel.click();
   await dialog.getByLabel('取消原因').fill('參加者臨時無法出席');
   await dialog.getByRole('button', { name: '確認取消報名' }).click();
   await expect(dialog).not.toBeVisible();
-  await expect(page.getByText('有效報名 1 人')).toBeVisible();
-  await expect(page.getByRole('row', { name: /學生乙/ })).toContainText('報名成立');
+  await expect(page.getByText('已報名 1 人')).toBeVisible();
+  await expect(page.getByRole('row', { name: /學生乙/ })).toContainText('已報名');
   await expect(page.getByRole('row', { name: /王小美/ })).toContainText('已付款');
   await page.getByRole('button', { name: '記錄處理結果' }).click();
   await page.getByLabel('處理結果').fill('已人工聯繫並記錄');
@@ -375,7 +375,7 @@ test('會員中心只有待付款及已取消紀錄時仍顯示我的課程', as
   }] } }));
   await page.goto('/account?tab=courses');
   const panel = page.getByRole('tabpanel', { name: '我的課程' });
-  await expect(panel.getByRole('listitem').filter({ hasText: /待付款參加者.*待付款/ })).toBeVisible();
+  await expect(panel.getByRole('listitem').filter({ hasText: /待付款參加者.*已報名/ })).toBeVisible();
   await expect(panel.getByRole('listitem').filter({ hasText: /取消的參加者.*已取消/ })).toBeVisible();
   await expect(panel.getByRole('link', { name: '開啟 Zoom 會議' })).toHaveCount(0);
 });
@@ -437,12 +437,12 @@ for (const method of ['free', 'atm'] as const) {
       await page.getByLabel('我本人也要報名（免費）').check();
       await expect(page.getByRole('group', { name: '付款方式' })).toHaveCount(0);
       await page.getByRole('button', { name: '確認報名' }).click();
-      await expect(page.getByText('會員甲 · 報名成立')).toBeVisible();
+      await expect(page.getByText('會員甲 · 已報名')).toBeVisible();
     } else {
       await page.getByRole('group', { name: '付款方式' }).getByRole('button', { name: /虛擬帳號匯款/ }).click();
       await page.getByRole('button', { name: '取得虛擬帳號' }).click();
       await expect(page.getByLabel('匯款資訊')).toContainText('12345678901234');
-      await expect(page.getByText('會員甲 · 待付款')).toBeVisible();
+      await expect(page.getByText('會員甲 · 已報名')).toBeVisible();
     }
     expect(starts).toBe(free ? 0 : 1);
   });

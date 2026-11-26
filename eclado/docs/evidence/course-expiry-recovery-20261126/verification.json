@@ -1,0 +1,98 @@
+{
+  "checkedAt": "2026-11-26T07:34:19.962Z",
+  "environment": "TEST only",
+  "bank": "Sandbox",
+  "paymentCompleted": false,
+  "tests": {
+    "databaseGroups": 3,
+    "paymentApiGroups": 5
+  },
+  "orders": [
+    {
+      "id": "cab4e573-7cf5-4193-abe8-2566b5cb86dc",
+      "course_id": "d26e1111-0000-4000-8000-000000000001",
+      "status": "pending",
+      "payment_due_at": "2026-12-16T07:28:35.385857+00:00",
+      "course_registrations": [
+        {
+          "id": "509be5cc-3388-4f76-9e4e-fd23f3f0b2be",
+          "status": "pending"
+        }
+      ],
+      "course_payment_attempts": [
+        {
+          "state": "pending",
+          "attempt_no": 1,
+          "retired_at": "2026-11-26T07:31:37.328213+00:00",
+          "payment_method": "apple",
+          "provider_order_no": "CRScab4e5737cf54193abe82566b5cb86dc",
+          "retirement_bank_status": "1M250"
+        },
+        {
+          "state": "pending",
+          "attempt_no": 2,
+          "retired_at": null,
+          "payment_method": "card",
+          "provider_order_no": "CRSf5c3350918504e91882a4044782e1e9a",
+          "retirement_bank_status": null
+        }
+      ],
+      "course_expiry_recoveries": {
+        "bank_status": "1M250",
+        "bank_checked_at": "2026-11-26T07:31:36.966+00:00",
+        "new_payment_due_at": "2026-12-16T07:28:35.385857+00:00",
+        "old_payment_due_at": "2026-11-25T07:31:36.967+00:00",
+        "previous_cancellations": {
+          "status": "cancelled",
+          "cancelled_at": "2026-11-26T07:30:37.069+00:00",
+          "cancelled_by": null,
+          "cancel_reason": "付款期限已過",
+          "registration_id": "509be5cc-3388-4f76-9e4e-fd23f3f0b2be"
+        }
+      }
+    },
+    {
+      "id": "f691cfa7-b5a3-4157-9d60-04951291a280",
+      "course_id": "d26e1111-0000-4000-8000-000000000002",
+      "status": "pending",
+      "payment_due_at": "2026-12-16T07:28:35.385857+00:00",
+      "course_registrations": [
+        {
+          "id": "a05b6edc-e849-4165-9cfd-a00c4e592dd5",
+          "status": "pending"
+        }
+      ],
+      "course_payment_attempts": [
+        {
+          "state": "pending",
+          "attempt_no": 1,
+          "retired_at": "2026-11-26T07:31:37.809+00:00",
+          "payment_method": "card",
+          "provider_order_no": "CRSf691cfa7b5a341579d6004951291a280",
+          "retirement_bank_status": "1C250"
+        },
+        {
+          "state": "pending",
+          "attempt_no": 2,
+          "retired_at": null,
+          "payment_method": "apple",
+          "provider_order_no": "CRS4817ee2f910949e0b86e5c7e81931e0a",
+          "retirement_bank_status": null
+        }
+      ],
+      "course_expiry_recoveries": {
+        "bank_status": "1C250",
+        "bank_checked_at": "2026-11-26T07:31:37.518+00:00",
+        "new_payment_due_at": "2026-12-16T07:28:35.385857+00:00",
+        "old_payment_due_at": "2026-11-25T07:31:37.518+00:00",
+        "previous_cancellations": {
+          "status": "cancelled",
+          "cancelled_at": "2026-11-26T07:30:37.586+00:00",
+          "cancelled_by": null,
+          "cancel_reason": "付款期限已過",
+          "registration_id": "a05b6edc-e849-4165-9cfd-a00c4e592dd5"
+        }
+      }
+    }
+  ]
+}

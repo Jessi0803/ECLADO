@@ -77,3 +77,14 @@ test('host: course dispatch sends the payer a single reminder and records provid
  assert.equal(sent, 1);
  assert.deepEqual(result.courseNotifications, {checked:1, accepted:1});
 });
+
+test('host: course payment reminders require independent opt-in and keep the shared destination allowlist',async()=>{
+ const calls=[];
+ const result=await run({action:'dispatch',source:{...source,COURSE_PAYMENT_REMINDERS_ENABLED:'true',COURSE_STOREFRONT_ORIGIN:'https://preview.example.test'},fetchImpl:async(url)=>{
+  const name=new URL(url).pathname.split('/').pop();calls.push(name);
+  if(name==='claim_reward_notifications')return Response.json([]);
+  assert.equal(name,'claim_course_payment_reminder');return Response.json(null);
+ }});
+ assert.deepEqual(calls.sort(),['claim_course_payment_reminder','claim_reward_notifications']);
+ assert.deepEqual(result.coursePaymentReminders,{checked:0,accepted:0});
+});

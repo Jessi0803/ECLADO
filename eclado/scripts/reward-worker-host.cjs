@@ -1,7 +1,7 @@
 // Host adapter only: no HTTP listener, dotenv, bank secrets, or new financial logic.
 const crypto=require('node:crypto');
 const {dispatchRewards,dispatchCourseNotifications}=require('../api/reward-notification-worker')._private;
-const ALLOWED=['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','SUPABASE_SERVICE_KEY','LINE_CHANNEL_ACCESS_TOKEN','RESEND_API_KEY','ORDER_EMAIL_FROM','REWARD_NOTIFICATION_ADMIN_EMAILS','INSTRUCTOR_STUDENT_NOTIFICATIONS_ENABLED','COURSE_SHOPPING_CREDIT_ENABLED','COURSE_NOTIFICATIONS_ENABLED'];
+const ALLOWED=['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','SUPABASE_SERVICE_KEY','LINE_CHANNEL_ACCESS_TOKEN','RESEND_API_KEY','ORDER_EMAIL_FROM','REWARD_NOTIFICATION_ADMIN_EMAILS','INSTRUCTOR_STUDENT_NOTIFICATIONS_ENABLED','COURSE_SHOPPING_CREDIT_ENABLED','COURSE_NOTIFICATIONS_ENABLED','COURSE_STOREFRONT_ORIGIN','COURSE_PAYMENT_REMINDERS_ENABLED'];
 function configuration(source){
  if(source.REWARD_BANK_ENCRYPTION_KEYS||source.REWARD_BANK_ACTIVE_KEY_ID)throw Error('bank_keys_forbidden');
  const env=Object.fromEntries(ALLOWED.filter(k=>source[k]).map(k=>[k,source[k]]));
@@ -35,6 +35,8 @@ async function run({action,source=process.env,fetchImpl=fetch,at=new Date(),runK
   rpcNames.add('claim_course_notification');
   rpcNames.add('complete_course_notification');
  }
+ const coursePaymentRemindersEnabled = action === 'dispatch' && env.COURSE_PAYMENT_REMINDERS_ENABLED === 'true';
+ if (coursePaymentRemindersEnabled) { rpcNames.add('claim_course_payment_reminder'); rpcNames.add('complete_course_notification'); }
  const restrictedFetch=async(url,options)=>{
   const target=String(url);
   const rpc=target.startsWith(rpcRoot)&&rpcNames.has(target.slice(rpcRoot.length));
@@ -48,6 +50,7 @@ async function run({action,source=process.env,fetchImpl=fetch,at=new Date(),runK
   if (courseNotificationsEnabled) {
    tasks.push(dispatchCourseNotifications({env, fetchImpl:restrictedFetch}).then(courseNotifications => ({courseNotifications})));
   }
+  if (coursePaymentRemindersEnabled) tasks.push(dispatchCourseNotifications({env, fetchImpl:restrictedFetch, paymentReminders:true}).then(coursePaymentReminders=>({coursePaymentReminders})));
   const results = await Promise.allSettled(tasks);
   const failure = results.find(result => result.status === 'rejected');
   if (failure) throw failure.reason;

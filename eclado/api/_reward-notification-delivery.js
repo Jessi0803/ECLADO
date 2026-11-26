@@ -1,4 +1,4 @@
-const { courseNoticeMessage } = require('./_course-notice.js');
+const { courseNoticeMessage, coursePaymentReminderMessage } = require('./_course-notice.js');
 const { buildBrandedEmailHtml } = require('./_email-template.js');
 const { instructorStudentNoticeMessage } = require('./_instructor-student-notice.js');
 
@@ -31,6 +31,7 @@ async function deliverRewardNotice(job, { env = process.env, fetchImpl = fetch, 
   if (!credential || (!line && !job.from && !env.ORDER_EMAIL_FROM)) return { result: 'configuration' };
   let message;
   switch (job.payload.kind) {
+    case 'course_payment': message = coursePaymentReminderMessage(job.payload, env.COURSE_STOREFRONT_ORIGIN); break;
     case 'course': message = courseNoticeMessage(job.payload); break;
     case 'instructor_student': message = instructorStudentNoticeMessage(job.payload, job.audience); break;
     default: message = rewardNoticeMessage(job.payload, job.audience);

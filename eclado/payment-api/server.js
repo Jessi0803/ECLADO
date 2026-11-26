@@ -1415,6 +1415,13 @@ mountCoursePaymentRoutes(app, {
   rpc: callSupabaseRpc, authenticate: getSupabaseAuthUser, rateLimit: enforceSharedRateLimit,
   buildCreateBody, callOrderApi, requireCreatedPayment, formatSinopacDeadline,
   resolvePayment: resolvePaymentStateFromWebhook, requireBankPaymentAmount, requirePaymentOrderHints,
+  coursePaymentAbsent: async provider => {
+    const response = await queryOrderByOrderNo(provider);
+    return (response.ShopNo == null || response.ShopNo === process.env.SINOPAC_SHOP_NO)
+      && ((response.Status === 'F' && /^E2601\b/.test(String(response.Description || '')))
+        || (response.Status === 'S' && /^S0001\b/.test(String(response.Description || ''))
+          && Array.isArray(response.OrderList) && response.OrderList.length === 0));
+  },
 });
 
 app.get('/health', (req, res) => {

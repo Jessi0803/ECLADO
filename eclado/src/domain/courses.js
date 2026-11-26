@@ -32,11 +32,11 @@ export const COURSE_PARTICIPANT_LABELS = {
 };
 
 export const COURSE_REGISTRATION_LABELS = {
-  pending: '待付款', active: '報名成立', cancelled: '已取消', expired: '付款已逾期',
+  pending: '已報名', active: '已報名', cancelled: '已取消', expired: '付款已逾期',
 };
 
 export const COURSE_PAYMENT_LABELS = {
-  free: '免費報名', pending: '待付款', paid: '已付款', expired: '付款已逾期', failed: '未建立付款單', review: '收款待人工確認',
+  free: '免費報名', pending: '待付款', paid: '已付款', expired: '付款已逾期', failed: '未建立付款單', review: '收款待人工確認', hold: '付款暫停，請聯繫客服', cancelled: '付款已取消',
 };
 
 

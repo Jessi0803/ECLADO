@@ -13,7 +13,7 @@ function mountCoursePaymentRoutes(app, deps) {
   const {
     storefrontOrigin = 'https://ecladotaiwan.com',
     rpc, authenticate, rateLimit, buildCreateBody, callOrderApi, requireCreatedPayment,
-    resolvePayment, requireBankPaymentAmount, requirePaymentOrderHints, formatSinopacDeadline,
+    resolvePayment, coursePaymentAbsent, requireBankPaymentAmount, requirePaymentOrderHints, formatSinopacDeadline,
   } = deps;
 
   async function reconcile(payment) {
@@ -23,7 +23,9 @@ function mountCoursePaymentRoutes(app, deps) {
     const method = methods[target.payment_method];
     if (!method || payment.payType !== method.payType) throw new Error('Course payment type mismatch');
     const detail = payment.raw?.payQuery?.TSResultContent;
+    const settled = `1${method.payType}900`;
     const capture = payment.payStatus === method.capture || payment.payFlag === method.capture
+      || payment.payStatus === settled || payment.payFlag === settled
       || (detail?.Status === 'S' && (method.payType === 'C' && detail.APType === 'CaptureOut'
         || method.payType === 'M' && ['PayOut', 'CaptureOut'].includes(detail.APType)));
     if (!capture) return { target };
@@ -48,7 +50,7 @@ function mountCoursePaymentRoutes(app, deps) {
         if (!await rateLimit(req, res, `course-payment:${action}`, action === 'start' ? 20 : 45)) return;
         const user = await authenticate(req).catch(() => null);
         if (!user) return res.status(401).json({ error: '請先登入會員' });
-        const claim = await rpc('claim_course_payment', {
+        let claim = await rpc('claim_course_payment', {
           p_order_id: req.body.orderId, p_payer_id: user.id, p_create: action === 'start', p_method: action === 'start' ? requested : 'card',
         });
         if (!claim) return res.status(404).json({ error: '找不到此課程訂單' });
@@ -66,9 +68,31 @@ function mountCoursePaymentRoutes(app, deps) {
         }
         if (claim.payment_url) return res.json({
           paymentLink: claim.payment_url, paymentMethod: claim.payment_method,
-          atmAccount: claim.summary.atm_account, atmDueAt: claim.summary.atm_due_at,
+          atmAccount: claim.summary.atm_account, atmDueAt: claim.summary.atm_due_at, linkExpiresAt: claim.link_expires_at,
         });
-        if (!claim.create_attempt) return res.status(409).json({ error: '目前無法開啟付款頁，請查看原訂單付款狀態' });
+        if (!claim.create_attempt && claim.provider_order_no && claim.eligible) {
+          // A local expiry alone is not proof of non-payment. Verify with the bank first.
+          let bankStatus;
+          if (claim.attempt_state === 'failed' && coursePaymentAbsent && await coursePaymentAbsent(claim.provider_order_no)) {
+            bankStatus = 'NOT_CREATED';
+          } else {
+            const payment = await resolvePayment({ OrderNo: claim.provider_order_no });
+            const result = await reconcile(payment);
+            if (result.summary) return res.json({ order: result.summary });
+            requireBankPaymentAmount({ ...payment, paid: true }, result.target);
+            const terminal = claim.payment_method === 'atm' ? ['1A250'] : claim.payment_method === 'card'
+              ? ['1C250','1C350','1C351'] : ['1M250','1M350','1M351'];
+            if (!terminal.includes(payment.payStatus) || (payment.payFlag && !terminal.includes(payment.payFlag))) {
+              return res.status(409).json({ error: '銀行付款結果仍在確認中，請稍後查詢；原報名訂單會為您保留。' });
+            }
+            bankStatus = payment.payStatus;
+          }
+          claim = await rpc('renew_course_payment', {
+            p_order_id: req.body.orderId, p_payer_id: user.id,
+            p_previous_provider: claim.provider_order_no, p_bank_status: bankStatus,
+          });
+        }
+        if (!claim?.create_attempt) return res.status(409).json({ error: '目前無法開啟付款頁，請查詢原訂單狀態後再試；請勿重複報名。' });
 
         const origin = process.env.PAYMENT_PUBLIC_URL || 'https://pay.ecladotaiwan.com';
         const method = methods[claim.payment_method];
@@ -87,7 +111,7 @@ function mountCoursePaymentRoutes(app, deps) {
         const { data } = await callOrderApi('OrderCreate', inner);
         if (data?.Status === 'F' && !isAmbiguousGatewayFailure(data)) {
           await rpc('fail_course_payment_creation', { p_provider_order_no: claim.provider_order_no });
-          return res.status(409).json({ error: '銀行未建立付款單，請重新載入後再報名' });
+          return res.status(409).json({ error: '銀行未建立付款單，原報名訂單仍保留，請稍後繼續付款' });
         }
         requireCreatedPayment(data, inner);
         const paymentLink = new URL(data[method.field][method.link]);
@@ -101,6 +125,7 @@ function mountCoursePaymentRoutes(app, deps) {
         return res.json({
           paymentLink: paymentLink.href, paymentMethod: claim.payment_method,
           atmAccount, atmDueAt: atmAccount ? claim.link_expires_at : null,
+          linkExpiresAt: claim.link_expires_at,
         });
       } catch {
         return res.status(503).json({ error: '暫時無法確認課程付款，請稍後查看原訂單' });

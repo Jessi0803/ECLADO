@@ -61,6 +61,7 @@ function MemberRegistration({ courseId, role, userId }) {
   const [notice, setNotice] = useState('');
   const [paymentOrderId, setPaymentOrderId] = useState(null);
   const paymentOrderRef = useRef(null);
+  const registrationFormRef = useRef(null);
   const operation = useRef(false);
   const lastRequest = useRef(null);
   const mounted = useRef(false);
@@ -114,8 +115,14 @@ function MemberRegistration({ courseId, role, userId }) {
     }
   }
 
-  const hasSelf = account?.orders.some(order => order.registrations.some(reg =>
+  const orders = (account?.orders || []).map(order => ({ ...order,
+    atm_account: order.atm_account && Date.parse(order.atm_due_at) > now ? order.atm_account : null,
+    status: order.status === 'pending' && Date.parse(order.payment_due_at) <= now ? 'expired' : order.status,
+    registrations: order.registrations,
+  }));
+  const hasSelf = orders.some(order => order.registrations.some(reg =>
     reg.kind !== 'delegated' && ['active', 'pending'].includes(reg.status)));
+  const hasExpired = orders.some(order => order.status === 'expired' && order.registrations.every(reg => reg.status === 'cancelled'));
   const ended = Date.parse(account?.ends_at || course?.ends_at) <= Date.now();
   const mayRegister = course && isCourseRegistrationOpen(course, now)
     && (instructor || (role === 'pro' && !hasSelf));
@@ -146,7 +153,7 @@ function MemberRegistration({ courseId, role, userId }) {
       setSelf(false);
       lastRequest.current = null;
       setNotice(order.status === 'free' ? '您的免費報名已成立。' :
-        payload.p_self && instructor ? '您的免費報名已成立。請為其他參加者完成付款。' : '報名訂單已建立，請完成付款。');
+        payload.p_self && instructor ? '您的免費報名已成立。請為其他參加者完成付款。' : '報名已受理，請於開課前完成付款。');
       if (order.status === 'pending') {
         setPaymentChoices(previous => ({ ...previous, [order.id]: selectedMethod }));
         try {
@@ -164,11 +171,20 @@ function MemberRegistration({ courseId, role, userId }) {
   }
 
   async function startPayment(order, method) {
-    const { paymentLink, paymentMethod, atmAccount, atmDueAt } = await coursePayment('start', order.id, order.payment_method || method);
+    const { order: verified, paymentLink, paymentMethod, atmAccount, atmDueAt, linkExpiresAt } = await coursePayment('start', order.id, order.payment_method || method);
+    if (verified) {
+      const updated = await getMyCourseOrders(courseId);
+      if (mounted.current) {
+        setAccount(updated);
+        setNotice(verified.status === 'paid' ? '已確認收到付款，報名已成立。' : '已確認收款，請聯繫客服確認報名狀態。');
+        setPaymentOrderId(null);
+      }
+      return;
+    }
     if (!mounted.current) return;
     if (paymentMethod === 'atm') {
       setAccount(previous => ({ ...previous, orders: previous.orders.map(item => item.id === order.id
-        ? { ...item, payment_method: paymentMethod, atm_account: atmAccount, atm_due_at: atmDueAt } : item) }));
+        ? { ...item, payment_method: paymentMethod, atm_account: atmAccount, atm_due_at: atmDueAt, payment_link_expires_at: linkExpiresAt } : item) }));
       return;
     }
     const target = new URL(paymentLink);
@@ -186,6 +202,12 @@ function MemberRegistration({ courseId, role, userId }) {
     });
   }
 
+  function returnToRegistration() {
+    setNotice('請重新選擇付款方式並完成報名。');
+    registrationFormRef.current?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    registrationFormRef.current?.focus({ preventScroll: true });
+  }
+
   return (
     <div className="course-registration">
       {error && <p role="alert">{error}</p>}
@@ -193,7 +215,8 @@ function MemberRegistration({ courseId, role, userId }) {
       {course === undefined && !error && <p role="status">載入報名資料中…</p>}
       {course && <h2>{course.name}</h2>}
       {mayRegister && account && (
-        <form className="course-registration-form" onSubmit={submit}>
+        <form className="course-registration-form" onSubmit={submit} ref={registrationFormRef} tabIndex={-1}>
+          {hasExpired && <p>原報名付款已逾期。課程仍開放報名，您可以在此重新報名。</p>}
           <fieldset disabled={busy}>
             {instructor ? (
               <>
@@ -269,13 +292,15 @@ function MemberRegistration({ courseId, role, userId }) {
             {instructor && <p>請自行轉知您幫忙報名的參加者。</p>}
           </>
         )}
-        {account.orders.map(order => (
+        {orders.map(order => (
           <article className="course-order" key={order.id}
             ref={order.id === paymentOrderId ? paymentOrderRef : null} tabIndex={-1}
             aria-label={order.id === paymentOrderId ? '接續付款' : undefined}>
             {order.id === paymentOrderId && order.status === 'pending' && <p role="status">{notice}</p>}
             <h3>{order.course_name}</h3>
             <p>{COURSE_PAYMENT_LABELS[order.status]} · {order.status === 'pending' && '應付金額 '}{formatCoursePrice(order.total_twd)}</p>
+            {order.status === 'pending' && order.payment_link_expires_at && Date.parse(order.payment_link_expires_at) <= now && <p>原付款連結或帳號已到期，訂單仍保留。點選下方按鈕確認付款狀態並繼續付款。</p>}
+            {order.status === 'pending' && <p>您已報名，請於開課前完成付款。付款完成後可取得上課連結。</p>}
             {order.status === 'pending' && <p>付款期限 {new Date(order.payment_due_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}（台北時間）</p>}
             <ul>{order.registrations.map(reg => <li key={reg.id}>{reg.name} · {COURSE_REGISTRATION_LABELS[reg.status]}</li>)}</ul>
             {!ended && order.status === 'pending' && (
@@ -293,11 +318,15 @@ function MemberRegistration({ courseId, role, userId }) {
               </div>
             )}
             <div className="course-actions">
+              {order.status === 'expired' && order.registrations.some(reg => reg.status !== 'cancelled') && <p>付款期限已過，報名仍為您保留。管理員將聯繫確認；如需取消，請聯繫客服。請勿使用原付款連結或虛擬帳號付款。</p>}
+              {order.status === 'hold' && <p>此訂單有參加者已取消，其餘報名仍保留。請聯繫客服確認付款金額，請勿使用原付款資料付款。</p>}
+              {order.status === 'expired' && order.registrations.every(reg => reg.status === 'cancelled') && mayRegister && <button type="button" className="course-action-primary" disabled={busy} onClick={returnToRegistration}>重新報名</button>}
+              {order.status === 'expired' && order.registrations.every(reg => reg.status === 'cancelled') && !mayRegister && course && !isCourseRegistrationOpen(course, now) && <p>課程目前已停止報名，無法重新報名。</p>}
               {!ended && order.status === 'pending' && !order.atm_account && (
                 <button className="course-action-primary" type="button" disabled={busy}
                   onClick={() => run(() => startPayment(order, paymentChoices[order.id] || 'card'))}>
                   {(order.payment_method || paymentChoices[order.id]) === 'atm' ? '取得虛擬帳號' :
-                    `前往${PAYMENT_METHODS[order.payment_method || paymentChoices[order.id] || 'card'].label}付款`}
+                    `繼續${PAYMENT_METHODS[order.payment_method || paymentChoices[order.id] || 'card'].label}付款`}
                 </button>
               )}
               {['pending', 'expired'].includes(order.status) && <button type="button" disabled={busy} onClick={() => refresh(order)}>查詢付款狀態</button>}

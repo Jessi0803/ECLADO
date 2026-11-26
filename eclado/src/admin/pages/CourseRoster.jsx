@@ -15,7 +15,7 @@ const courseTabs = [
 ];
 
 const caseLabels = {
-  cancelled_paid_registration: '取消後待確認退款', payment_exception: '銀行收款待確認', after_course: '課後人工處理',
+  cancelled_paid_registration: '取消後待確認退款', payment_exception: '銀行收款待確認', after_course: '課後人工處理', cancelled_unpaid_registration: '未付款報名取消待確認',
 };
 
 function CancelRegistrationDialog({ registration, note, setNote, busy, error, onClose, onSubmit }) {
@@ -44,8 +44,9 @@ function CancelRegistrationDialog({ registration, note, setNote, busy, error, on
         </header>
         <div className="admin-course-editor course-cancel-body">
           <p id="course-cancel-description">
-            即將取消 <strong>{registration.name}</strong> 的報名。
+            依客人要求取消 <strong>{registration.name}</strong> 的報名。
             {registration.payment_status === 'paid' && ' 此筆已付款，取消後將建立人工處理案件。'}
+            {registration.status === 'pending' && ' 若同單還有其他待付款參加者，其餘報名保留，原訂單付款暫停並交由人工確認。'}
           </p>
           {error && <p className="procurement-error" role="alert">{error}</p>}
           <label>取消原因
@@ -66,6 +67,7 @@ function CancelRegistrationDialog({ registration, note, setNote, busy, error, on
 
 export default function CourseRoster({ course, destination, canNotify, onClose }) {
   const [data, setData] = useState(null);
+  const [paymentFilter, setPaymentFilter] = useState('all');
   const [action, setAction] = useState(null);
   const [note, setNote] = useState('');
   const [refund, setRefund] = useState('');
@@ -148,7 +150,10 @@ export default function CourseRoster({ course, destination, canNotify, onClose }
   }
 
   const ended = Date.parse(course.ends_at) <= Date.now();
-  const effectiveCount = data?.registrations.filter(item => item.status === 'active').length;
+  const effectiveCount = data?.registrations.filter(item => ['active','pending'].includes(item.status)).length;
+  const unpaidCount = data?.registrations.filter(item => item.status === 'pending' && ['pending','expired','hold'].includes(item.payment_status)).length;
+  const visibleRegistrations = data?.registrations.filter(item => paymentFilter === 'all' || (paymentFilter === 'unpaid'
+    ? item.status === 'pending' && ['pending','expired','hold'].includes(item.payment_status) : item.payment_status === paymentFilter));
 
   return (
     <section>
@@ -156,7 +161,7 @@ export default function CourseRoster({ course, destination, canNotify, onClose }
         <div>
           <button className="procurement-back" type="button" disabled={busy} onClick={onClose}>← 返回課程列表</button>
           <h2>{course.name}</h2>
-          {data && <p>有效報名 {effectiveCount} 人</p>}
+          {data && <p>已報名 {effectiveCount} 人 · 待付款／逾期 {unpaidCount} 人</p>}
         </div>
       </header>
       {notice && <p className="admin-course-feedback" role="status">{notice}</p>}
@@ -176,22 +181,31 @@ export default function CourseRoster({ course, destination, canNotify, onClose }
         </div>
         <div role="tabpanel" id="course-panel-roster" aria-labelledby="course-tab-roster" hidden={tab !== 'roster'} tabIndex={0}>
           <CourseIncome key={incomeVersion} courseId={course.id} />
-          {data.registrations.length > 0 ? <div className="table-scroll procurement-list-wrap admin-course-table">
+          <div className="admin-course-editor admin-course-roster-filters">
+            <label>付款狀態篩選
+              <select value={paymentFilter} onChange={event => setPaymentFilter(event.target.value)}>
+                <option value="all">全部報名</option><option value="unpaid">待付款／逾期（待聯繫）</option>
+                <option value="expired">付款已逾期</option><option value="paid">已付款</option>
+                <option value="free">免費報名</option><option value="review">收款待人工確認</option>
+              </select>
+            </label>
+          </div>
+          {visibleRegistrations.length > 0 ? <div className="table-scroll procurement-list-wrap admin-course-table">
             <table className="responsive-admin-table procurement-items-table">
               <thead><tr>{['參加者', '報名方式', '報名者', '訂單', '付款狀態', '報名狀態', '操作'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead>
               <tbody>
-                {data.registrations.map(item => (
+                {visibleRegistrations.map(item => (
                   <tr key={item.id}>
                     <td data-label="參加者"><strong>{item.name}</strong></td><td data-label="報名方式">{COURSE_PARTICIPANT_LABELS[item.kind]}</td><td data-label="報名者">{item.payer_name}</td>
                     <td data-label="訂單"><span title={item.order_id}>{item.order_id.slice(0, 8)}</span><br />{formatCoursePrice(item.order_total_twd)}</td>
                     <td data-label="付款狀態"><span className={`procurement-status${item.payment_status === 'paid' ? ' status-received' : ''}`}>{COURSE_PAYMENT_LABELS[item.payment_status]}</span></td>
                     <td data-label="報名狀態"><span className={`procurement-status ${item.status === 'active' ? 'status-received' : item.status === 'cancelled' ? 'status-cancelled' : 'status-pending'}`}>{COURSE_REGISTRATION_LABELS[item.status]}</span>{item.cancel_reason && <small>{item.cancel_reason}</small>}</td>
                     <td data-label="操作">
-                      {!ended && item.status === 'active' && (
+                      {(item.status === 'pending' || (!ended && item.status === 'active')) && (
                         <button className="admin-secondary-btn" type="button" disabled={busy}
                           onClick={() => openAction('cancel', item)}>取消報名</button>
                       )}
-                      {ended && !data.cases.some(record => record.registration_id === item.id) && (
+                      {ended && item.status !== 'pending' && !data.cases.some(record => record.registration_id === item.id) && (
                         <button className="admin-secondary-btn" type="button" disabled={busy}
                           onClick={() => openAction('exception', item)}>登記 {item.name} 的課後例外</button>
                       )}
@@ -200,7 +214,7 @@ export default function CourseRoster({ course, destination, canNotify, onClose }
                 ))}
               </tbody>
             </table>
-          </div> : <p>目前沒有報名紀錄。</p>}
+          </div> : <p>目前沒有符合條件的報名紀錄。</p>}
 
           {action?.kind === 'cancel' && (
             <CancelRegistrationDialog registration={action.item} note={note} setNote={setNote}
