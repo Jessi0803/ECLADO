@@ -30,7 +30,7 @@ export default function MyCoursesPanel({ courses }) {
                 {['pending', 'expired'].includes(order.status) && <p>付款截止：{new Date(order.payment_due_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })}（開課前 30 分鐘）。逾期仍保留報名，如需取消請聯繫客服。</p>}
                 <ul>
                   {order.registrations.map(reg => (
-                    <li key={reg.id}>{reg.name} · {COURSE_PARTICIPANT_LABELS[reg.kind]} · {COURSE_REGISTRATION_LABELS[reg.status]}</li>
+                    <li key={reg.id}>{reg.name} · {COURSE_PARTICIPANT_LABELS[reg.kind]} · {COURSE_REGISTRATION_LABELS[reg.status]}{reg.benefit_free && '（師資權益免費報名）'}</li>
                   ))}
                 </ul>
               </div>

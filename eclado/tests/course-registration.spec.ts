@@ -124,7 +124,7 @@ for (const scenario of ['instructor', 'pro'] as const) {
     let created = false;
     let paid = false;
     let paymentStarts = 0;
-    await page.route('**/rest/v1/rpc/get_my_instructor_students', route => route.fulfill({
+    await page.route('**/rest/v1/rpc/get_my_course_students', route => route.fulfill({
       json: [{ binding_id: 'known-binding', student_name: '學生乙' }],
     }));
     await page.route('**/rest/v1/rpc/get_my_course_orders', route => route.fulfill({
@@ -511,4 +511,103 @@ test('已結束課程只向有該堂報名紀錄的會員顯示紀錄入口', as
   await expect(page.getByText('課程已結束', { exact: true })).toBeVisible();
   await expect(page.getByText('歷史參加者 · 已取消')).toBeVisible();
   await expect(page.locator('.course-registration-form')).toHaveCount(0);
+});
+
+for (const allFree of [false, true]) {
+  test(`師資權益：${allFree ? '全免費直接報名' : '混合報名僅收付費名額'}及切換學生清除選項`, async ({ page }) => {
+    await mockMember(page, 'instructor');
+    let saved=false, paymentCalls=0;
+    const result={id:orderId,course_id:courseId,course_name:course.name,status:allFree?'free':'pending',total_twd:allFree?0:1200,
+      registrations:[{id:'free-seat',name:'學生乙',kind:'delegated',status:'active',benefit_free:true}]};
+    await page.route('**/rest/v1/rpc/get_my_course_students',route=>route.fulfill({json:[
+      {binding_id:'own-one',student_name:'學生乙'},{binding_id:'own-two',student_name:'學生丙'},
+    ]}));
+    await page.route('**/rest/v1/rpc/get_my_course_orders',route=>route.fulfill({json:{orders:saved?[result]:[]}}));
+    await page.route('**/rest/v1/rpc/create_course_registration',route=>{
+      expect(route.request().postDataJSON()).toMatchObject({p_self:false,p_expected_price:1200,p_participants:[
+        {binding_id:'own-one',benefit_free:true},...(!allFree?[{family_name:'王',given_name:'同學'}]:[]),
+      ]});saved=true;return route.fulfill({json:result});
+    });
+    await page.route('**/api/courses/payment/start',route=>{paymentCalls++;return route.fulfill({status:503,json:{error:'TEST payment unavailable'}});});
+    await page.goto(`/courses/${courseId}/register`);
+    await page.getByRole('button',{name:'新增參加者'}).click();
+    const first=page.getByRole('group',{name:'參加者 1'}), free=first.getByRole('checkbox',{name:'使用師資權益，免費報名'});
+    await expect(free).toHaveCount(0);
+    await first.getByLabel('如何填寫姓名？').selectOption('binding');await expect(free).toHaveCount(0);
+    await first.getByLabel('學生姓名',{exact:true}).selectOption('own-one');await free.check();
+    await expect(page.locator('form strong')).toHaveText('NT$ 0');
+    await first.getByLabel('學生姓名',{exact:true}).selectOption('own-two');await expect(free).not.toBeChecked();
+    await expect(page.locator('form strong')).toHaveText('NT$ 1,200');await free.check();
+    await first.getByLabel('如何填寫姓名？').selectOption('manual');await expect(free).toHaveCount(0);
+    await expect(page.locator('form strong')).toHaveText('NT$ 1,200');
+    await first.getByLabel('如何填寫姓名？').selectOption('binding');
+    await first.getByLabel('學生姓名',{exact:true}).selectOption('own-one');await free.check();
+    if(!allFree){await page.getByRole('button',{name:'新增參加者'}).click();
+      const second=page.getByRole('group',{name:'參加者 2'});
+      await second.getByLabel('姓',{exact:true}).fill('王');await second.getByLabel('名',{exact:true}).fill('同學');
+      await expect(second.getByRole('checkbox')).toHaveCount(0);}
+    await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await expect(free).toBeChecked();
+    await expect(page.locator('form strong')).toHaveText(allFree?'NT$ 0':'NT$ 1,200');
+    await expect(page.getByText(allFree?/預計回饋 NT\$ 0 購物金/:/預計回饋 NT\$ 1,200 購物金/)).toBeVisible();
+    await page.getByRole('button',{name:allFree?'確認報名':'前往付款',exact:true}).click();
+    await expect(page.getByText('學生乙 · 已報名（師資權益免費報名）')).toBeVisible();
+    if (allFree) expect(paymentCalls).toBe(0);
+    else await expect.poll(() => paymentCalls).toBe(1);
+  });
+}
+
+for (const state of ['pending','active','expired'] as const) {
+  test(`學生報名頁直接顯示師資代報 ${state}，會員中心仍不顯示代報訂單`, async ({page}) => {
+    await mockMember(page,'pro');
+    await page.route('**/rest/v1/rpc/get_my_course_orders',route=>route.fulfill({json:route.request().postDataJSON().p_course_id ? {
+      orders:[],delegated_registration:{status:state==='active'?'active':'pending',payment_status:state==='active'?'free':state,benefit_free:state==='active',payment_due_at:'2035-11-11T01:30:00Z'},
+    }:{courses:[]}}));
+    await page.goto(`/courses/${courseId}/register`);
+    const notice=page.getByRole('region',{name:'師資代報狀態'});
+    await expect(notice.getByText('師資已為您報名',{exact:true})).toBeVisible();
+    await expect(notice.getByText('報名狀態：已報名',{exact:true})).toBeVisible();
+    await expect(notice).not.toContainText(/免費|付費|付款|購物金/);
+    await expect(page.locator('.course-registration-form')).toHaveCount(0);
+    await expect(page.getByRole('button',{name:'前往付款',exact:true})).toHaveCount(0);
+    await expect(page.getByRole('region',{name:'我的課程報名'})).toHaveCount(0);
+    const history = page.waitForResponse('**/rest/v1/rpc/get_my_course_orders');
+    await page.goto('/account');
+    await history;
+    await expect(page.getByRole('heading',{name:'我的訂單',exact:true})).toBeVisible();
+    await expect(page.getByRole('tab',{name:'我的課程',exact:true})).toHaveCount(0);
+  });
+}
+
+test('師資選單標示已報名、取消後可選，背景更新保留輸入並阻擋新重複名額',async({page})=>{
+  await mockMember(page,'instructor');
+  let booked=false;
+  await page.route('**/rest/v1/rpc/get_my_course_orders',route=>route.fulfill({json:{orders:[]}}));
+  await page.route('**/rest/v1/rpc/get_my_course_students',route=>route.fulfill({json:[
+    {binding_id:'active',student_name:'已付學生',registration_status:'active'},
+    {binding_id:'pending',student_name:'未付學生',registration_status:'pending'},
+    {binding_id:'fresh',student_name:'可報學生',registration_status:booked?'pending':null},
+  ]}));
+  await page.goto(`/courses/${courseId}/register`);
+  await page.getByRole('button',{name:'新增參加者'}).click();
+  const first=page.getByRole('group',{name:'參加者 1'});
+  await first.getByLabel('如何填寫姓名？').selectOption('binding');
+  await expect(first.getByRole('option',{name:'已付學生（已報名）',exact:true})).toHaveAttribute('disabled','');
+  await expect(first.getByRole('option',{name:'未付學生（已報名／待付款）',exact:true})).toHaveAttribute('disabled','');
+  await first.getByLabel('學生姓名',{exact:true}).selectOption('fresh');
+  await first.getByRole('checkbox',{name:'使用師資權益，免費報名'}).check();
+  await page.getByRole('button',{name:'新增參加者'}).click();
+  const second=page.getByRole('group',{name:'參加者 2'});
+  await second.getByLabel('姓',{exact:true}).fill('保留');await second.getByLabel('名',{exact:true}).fill('輸入');
+  booked=true;
+  const response=page.waitForResponse('**/rest/v1/rpc/get_my_course_students');
+  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await response;
+  await expect(second.getByLabel('名',{exact:true})).toHaveValue('輸入');
+  await expect(first.getByRole('checkbox',{name:'使用師資權益，免費報名'})).toBeChecked();
+  await expect(first.getByRole('status')).toContainText('此學生已報名');
+  await expect(page.getByRole('button',{name:'前往付款',exact:true})).toBeDisabled();
+  booked=false;
+  const unbook=page.waitForResponse('**/rest/v1/rpc/get_my_course_students');
+  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await unbook;
+  await expect(first.getByRole('option',{name:'可報學生',exact:true})).not.toHaveAttribute('disabled','');
+  await expect(page.getByRole('button',{name:'前往付款',exact:true})).toBeEnabled();
 });

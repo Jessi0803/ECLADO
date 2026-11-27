@@ -196,7 +196,7 @@ export default function CourseRoster({ course, destination, canNotify, onClose }
               <tbody>
                 {visibleRegistrations.map(item => (
                   <tr key={item.id}>
-                    <td data-label="參加者"><strong>{item.name}</strong></td><td data-label="報名方式">{COURSE_PARTICIPANT_LABELS[item.kind]}</td><td data-label="報名者">{item.payer_name}</td>
+                    <td data-label="參加者"><strong>{item.name}</strong></td><td data-label="報名方式">{COURSE_PARTICIPANT_LABELS[item.kind]}{item.benefit_free && <small>師資權益免費報名</small>}</td><td data-label="報名者">{item.payer_name}</td>
                     <td data-label="訂單"><span title={item.order_id}>{item.order_id.slice(0, 8)}</span><br />{formatCoursePrice(item.order_total_twd)}</td>
                     <td data-label="付款狀態"><span className={`procurement-status${item.payment_status === 'paid' ? ' status-received' : ''}`}>{COURSE_PAYMENT_LABELS[item.payment_status]}</span></td>
                     <td data-label="報名狀態"><span className={`procurement-status ${item.status === 'active' ? 'status-received' : item.status === 'cancelled' ? 'status-cancelled' : 'status-pending'}`}>{COURSE_REGISTRATION_LABELS[item.status]}</span>{item.cancel_reason && <small>{item.cancel_reason}</small>}</td>

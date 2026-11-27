@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { getPublishedCourses, getMyCourseOrders, createCourseRegistration } from '../services/courses.js';
-import { fetchMyInstructorStudents } from '../services/instructorStudents.js';
+import { getPublishedCourses, getMyCourseOrders, createCourseRegistration, getMyCourseStudents } from '../services/courses.js';
 import { coursePayment } from '../services/coursePaymentApi.js';
 import { isCourseRegistrationOpen, courseRegistrationNotice, formatCoursePrice, getCoursePaymentDeadline, COURSE_PAYMENT_LABELS, COURSE_REGISTRATION_LABELS } from '../domain/courses.js';
 import { PAYMENT_METHODS } from '../domain/payments.js';
@@ -63,6 +62,7 @@ function MemberRegistration({ courseId, role, userId }) {
   const paymentOrderRef = useRef(null);
   const registrationFormRef = useRef(null);
   const operation = useRef(false);
+  const operationVersion = useRef(0);
   const lastRequest = useRef(null);
   const mounted = useRef(false);
   const instructor = role === 'instructor';
@@ -71,24 +71,53 @@ function MemberRegistration({ courseId, role, userId }) {
   useEffect(() => {
     mounted.current = true;
     let active = true;
-    Promise.all([getPublishedCourses(courseId), getMyCourseOrders(courseId)])
-      .then(([publicCourses, data]) => {
-        if (active) { setCourse(publicCourses[0] || null); setAccount(data); }
-      }).catch(() => {
-        if (active) setError('無法載入課程報名，請重新整理頁面。');
-      });
-    return () => { active = false; mounted.current = false; };
+    let version = 0;
+    async function load(initial = false) {
+      const request = ++version;
+      const mutation = operationVersion.current;
+      try {
+        const [publicCourses, data] = await Promise.all([getPublishedCourses(courseId), getMyCourseOrders(courseId)]);
+        if (active && request === version && mutation === operationVersion.current) { setCourse(publicCourses[0] || null); setAccount(data); }
+      } catch {
+        if (active && initial) setError('無法載入課程報名，請重新整理頁面。');
+      }
+    }
+    const refresh = () => { if (document.visibilityState === 'visible' && !operation.current) load(); };
+    load(true);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      active = false; mounted.current = false;
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
   }, [courseId]);
 
   useEffect(() => {
     if (!instructor) return;
     let active = true;
-    fetchMyInstructorStudents().then(({ data, error: failure }) => {
-      if (failure) throw failure;
-      if (active) setStudents(data.filter(student => student.student_name?.trim()));
-    }).catch(() => { if (active) setStudentError(true); });
-    return () => { active = false; };
-  }, [instructor]);
+    let version = 0;
+    async function load() {
+      const request = ++version;
+      const mutation = operationVersion.current;
+      try {
+        const data = await getMyCourseStudents(courseId);
+        if (active && request === version && mutation === operationVersion.current) {
+          setStudents(data.filter(student => student.student_name?.trim()));
+          setStudentError(false);
+        }
+      } catch { if (active && request === version && mutation === operationVersion.current) setStudentError(true); }
+    }
+    const refresh = () => { if (document.visibilityState === 'visible' && !operation.current) load(); };
+    load();
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      active = false;
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [instructor, courseId]);
 
   useEffect(() => {
     const order = paymentOrderRef.current;
@@ -104,6 +133,7 @@ function MemberRegistration({ courseId, role, userId }) {
   async function run(task) {
     if (operation.current) return;
     operation.current = true;
+    operationVersion.current += 1;
     setBusy(true);
     setError('');
     setNotice('');
@@ -120,23 +150,27 @@ function MemberRegistration({ courseId, role, userId }) {
     status: order.status === 'pending' && Date.parse(order.payment_due_at) <= now ? 'expired' : order.status,
     registrations: order.registrations,
   }));
-  const hasSelf = orders.some(order => order.registrations.some(reg =>
+  const delegatedRegistration = account?.delegated_registration;
+  const hasDelegatedRegistration = ['active', 'pending'].includes(delegatedRegistration?.status);
+  const invalidStudent = rows.some(row => row.mode === 'binding' && (studentError || students.some(student => student.binding_id === row.binding && student.registration_status)));
+  const hasSelf = hasDelegatedRegistration || orders.some(order => order.registrations.some(reg =>
     reg.kind !== 'delegated' && ['active', 'pending'].includes(reg.status)));
   const hasExpired = orders.some(order => order.status === 'expired' && order.registrations.every(reg => reg.status === 'cancelled'));
   const ended = Date.parse(account?.ends_at || course?.ends_at) <= Date.now();
   const mayRegister = course && isCourseRegistrationOpen(course, now)
     && (instructor || (role === 'pro' && !hasSelf));
-  const total = (instructor ? rows.length : 1) * (course?.price_twd || 0);
+  const total = (instructor ? rows.filter(row => !(row.mode === 'binding' && row.binding && row.benefitFree)).length : 1) * (course?.price_twd || 0);
   const paymentCutoffPassed = course && getCoursePaymentDeadline(course) <= now;
   const selectedMethod = paymentChoice === 'atm' && total > 30000 ? 'card' : paymentChoice;
 
   function submit(event) {
     event.preventDefault();
+    if (invalidStudent) { setError('選取的學生已報名，或暫時無法確認報名狀態，請重新選擇後再試。'); return; }
     const payload = {
       p_course_id: courseId,
       p_self: !instructor || (self && !hasSelf),
       p_participants: rows.map(row => row.mode === 'binding'
-        ? { binding_id: row.binding }
+        ? { binding_id: row.binding, ...(row.benefitFree ? { benefit_free: true } : {}) }
         : { family_name: row.family.trim(), given_name: row.given.trim() }),
       p_expected_price: course.price_twd,
     };
@@ -153,6 +187,12 @@ function MemberRegistration({ courseId, role, userId }) {
       setRows([]);
       setSelf(false);
       lastRequest.current = null;
+      if (instructor) {
+        try {
+          const updatedStudents = await getMyCourseStudents(courseId);
+          if (mounted.current) { setStudents(updatedStudents.filter(student => student.student_name?.trim())); setStudentError(false); }
+        } catch { if (mounted.current) setStudentError(true); }
+      }
       setNotice(order.status === 'free' ? '您的免費報名已成立。' :
         payload.p_self && instructor ? '您的免費報名已成立。請為其他參加者完成付款。' : '報名已受理，請於開課前 30 分鐘完成付款。');
       if (order.status === 'pending') {
@@ -215,6 +255,10 @@ function MemberRegistration({ courseId, role, userId }) {
       {notice && !paymentOrderId && <p role="status">{notice}</p>}
       {course === undefined && !error && <p role="status">載入報名資料中…</p>}
       {course && <h2>{course.name}</h2>}
+      {hasDelegatedRegistration && <section className="course-eligibility-notice" aria-label="師資代報狀態">
+        <p>師資已為您報名</p>
+        <p>報名狀態：已報名</p>
+      </section>}
       {mayRegister && account && (
         <form className="course-registration-form" onSubmit={submit} ref={registrationFormRef} tabIndex={-1}>
           {hasExpired && <p>原報名付款已逾期。課程仍開放報名，您可以在此重新報名。</p>}
@@ -225,28 +269,37 @@ function MemberRegistration({ courseId, role, userId }) {
                   <label className="course-self"><input type="checkbox" checked={self} onChange={e => setSelf(e.target.checked)} /> 我本人也要報名（免費）</label>
                 )}
                 <h3>幫其他人報名</h3>
-                {studentError && <p>暫時無法載入您的學生名單，您仍可自行填寫姓名。</p>}
+                {studentError && <p>暫時無法確認您的學生名單與報名狀態，請重新整理後再選取學生。</p>}
                 {rows.map((row, index) => (
                   <fieldset className="course-participant" key={row.id}>
                     <legend>參加者 {index + 1}</legend>
                     <label>如何填寫姓名？
-                      <select value={row.mode} onChange={e => updateRow(row.id, { mode: e.target.value })}>
+                      <select value={row.mode} onChange={e => updateRow(row.id, { mode: e.target.value, benefitFree: false })}>
                         <option value="manual">自行填寫姓名</option>
-                        <option value="binding" disabled={!students.length}>從我的學生名單選擇</option>
+                        <option value="binding" disabled={studentError || !students.length}>從我的學生名單選擇</option>
                       </select>
                     </label>
                     {row.mode === 'binding' ? (
-                      <label>學生姓名
-                        <select aria-label="學生姓名" required value={row.binding} onChange={e => updateRow(row.id, { binding: e.target.value })}>
-                          <option value="">請選擇學生</option>
-                          {students.map(student => (
-                            <option key={student.binding_id} value={student.binding_id}
-                              disabled={rows.some(other => other.id !== row.id && other.mode === 'binding' && other.binding === student.binding_id)}>
-                              {student.student_name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                      <>
+                        <label>學生姓名
+                          <select aria-label="學生姓名" required value={row.binding} onChange={e => updateRow(row.id, { binding: e.target.value, benefitFree: false })}>
+                            <option value="">請選擇學生</option>
+                            {students.map(student => (
+                              <option key={student.binding_id} value={student.binding_id}
+                                disabled={Boolean(student.registration_status) || rows.some(other => other.id !== row.id && other.mode === 'binding' && other.binding === student.binding_id)}>
+                                {student.student_name}{student.registration_status && `（已報名${student.registration_status === 'pending' ? '／待付款' : ''}）`}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        {row.binding && <>
+                          <label className="course-student-benefit">
+                            <input type="checkbox" checked={Boolean(row.benefitFree)} onChange={e => updateRow(row.id, { benefitFree: e.target.checked })} />
+                            使用師資權益，免費報名
+                          </label>
+                          {row.benefitFree && <p className="course-credit-note">此學生免費報名，不計入購物金回饋。</p>}
+                        </>}
+                      </>
                     ) : (
                       <>
                         <p id={`course-name-hint-${row.id}`}>請填寫參加者的真實姓名。</p>
@@ -256,18 +309,19 @@ function MemberRegistration({ courseId, role, userId }) {
                         </div>
                       </>
                     )}
+                    {row.mode === 'binding' && (studentError || students.some(student => student.binding_id === row.binding && student.registration_status)) && <p role="status">此學生已報名，或暫時無法確認報名狀態。請移除此名額或重新選擇學生。</p>}
                     <button type="button" onClick={() => setRows(previous => previous.filter(item => item.id !== row.id))}>移除參加者 {index + 1}</button>
                   </fieldset>
                 ))}
                 <button type="button" disabled={rows.length >= 30} onClick={() => setRows(previous => [
-                  ...previous, { id: crypto.randomUUID(), mode: 'manual', family: '', given: '', binding: '' },
+                  ...previous, { id: crypto.randomUUID(), mode: 'manual', family: '', given: '', binding: '', benefitFree: false },
                 ])}>新增參加者</button>
               </>
             ) : <p>美容師本人付費報名</p>}
             {paymentCutoffPassed && total > 0 && <p role="status">付費報名與付款已於開課前 30 分鐘截止，如需協助請聯繫客服。</p>}
             <p className="course-registration-total">應付金額 <strong>{formatCoursePrice(total)}</strong></p>
             {instructor && (
-              <p className="course-credit-note">預計回饋 {formatCoursePrice(total)} 購物金。課程結束後，依已付款且報名有效的代報人數發給付款會員，師資本人免費報名不計入。</p>
+              <p className="course-credit-note">預計回饋 {formatCoursePrice(total)} 購物金。課程結束後，依已付款且報名有效的付費代報名額發給付款會員；師資本人與使用師資權益的免費名額不計入。</p>
             )}
             {total > 0 && <p className="course-credit-note">付款截止：{new Date(getCoursePaymentDeadline(course)).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })}（開課前 30 分鐘）。</p>}
             {total > 0 && !paymentCutoffPassed && (
@@ -275,7 +329,7 @@ function MemberRegistration({ courseId, role, userId }) {
                 <PaymentMethodOptions value={selectedMethod} unavailableMethod={total > 30000 ? 'atm' : undefined} onChange={setPaymentChoice} />
               </div>
             )}
-            <button className="course-action-primary" type="submit" disabled={(total > 0 && paymentCutoffPassed) || (instructor && !rows.length && (!self || hasSelf))}>
+            <button className="course-action-primary" type="submit" disabled={invalidStudent || (total > 0 && paymentCutoffPassed) || (instructor && !rows.length && (!self || hasSelf))}>
               {busy ? '處理中…' : total > 0 ? (selectedMethod === 'atm' ? '取得虛擬帳號' : '前往付款') : '確認報名'}
             </button>
           </fieldset>
@@ -305,7 +359,7 @@ function MemberRegistration({ courseId, role, userId }) {
             {order.status === 'pending' && order.payment_link_expires_at && Date.parse(order.payment_link_expires_at) <= now && <p>原付款連結或帳號已到期，訂單仍保留。點選下方按鈕確認付款狀態並繼續付款。</p>}
             {order.status === 'pending' && <p>您已報名，請於開課前 30 分鐘完成付款。付款完成後可取得上課連結。</p>}
             {order.status === 'pending' && <p>付款期限 {new Date(order.payment_due_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}（台北時間）</p>}
-            <ul>{order.registrations.map(reg => <li key={reg.id}>{reg.name} · {COURSE_REGISTRATION_LABELS[reg.status]}</li>)}</ul>
+            <ul>{order.registrations.map(reg => <li key={reg.id}>{reg.name} · {COURSE_REGISTRATION_LABELS[reg.status]}{reg.benefit_free && '（師資權益免費報名）'}</li>)}</ul>
             {!ended && order.status === 'pending' && (
               <div className="course-payment-method">
                 {order.payment_method ? <p>付款方式：{PAYMENT_METHODS[order.payment_method]?.label}</p> : (

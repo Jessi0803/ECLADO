@@ -40,6 +40,7 @@ export async function uploadCourseImage(file) {
 }
 
 export const createCourseRegistration = args => courseRpc('create_course_registration', args);
+export const getMyCourseStudents = id => courseRpc('get_my_course_students', { p_course_id: id });
 export const getMyCourseOrders = id => courseRpc('get_my_course_orders', { p_course_id: id });
 export const getAdminCourseRoster = id => courseRpc('get_admin_course_roster', { p_course_id: id });
 export const cancelCourseRegistration = (id, reason) => courseRpc('cancel_course_registration', {

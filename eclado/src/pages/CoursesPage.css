@@ -353,3 +353,6 @@
 
 .course-registration-notice { color: var(--dark); font-size: 14px; line-height: 1.7; }
 .course-registration-notice > p { margin-top: 12px; }
+
+.course-participant label.course-student-benefit { display: flex; align-items: center; gap: 8px; font-size: 13px; letter-spacing: normal; }
+.course-participant .course-student-benefit input { width: 18px; height: 18px; flex: 0 0 18px; padding: 0; accent-color: var(--black); }
